@@ -1,7 +1,7 @@
 $C = "../Common.ui";
 
 Button {
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 48, Width: 520);
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 48);
   Background: $C.@InputBoxBackground;
   Padding: (Left: 12, Right: 12, Top: 8);
   Style: ButtonStyle(

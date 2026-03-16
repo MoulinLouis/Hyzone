@@ -128,6 +128,7 @@ public class MineHudManager {
         UICommandBuilder cb = new UICommandBuilder();
         cb.set("#BagCountLabel.Text", String.valueOf(total));
         cb.set("#BagCapLabel.Text", String.valueOf(capacity));
+        cb.set("#BagCountLabel.Style.TextColor", total >= capacity ? "#ef4444" : "#f0f4f8");
 
         for (int i = 0; i < MAX_BLOCK_ENTRIES; i++) {
             if (i < sorted.size()) {

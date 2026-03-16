@@ -77,7 +77,7 @@ $C.@PageOverlay {
         Label #SelectedBlockText {
           Anchor: (Top: 8);
           Style: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true);
-          Text: "Mine: (none)";
+          Text: "Block: (none)";
         }
 
         Group {

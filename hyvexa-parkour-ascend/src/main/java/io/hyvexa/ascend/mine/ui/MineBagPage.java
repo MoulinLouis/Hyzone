@@ -1,4 +1,4 @@
-package io.hyvexa.ascend.ui;
+package io.hyvexa.ascend.mine.ui;
 
 import java.util.Map;
 
@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
+import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.common.ui.ButtonEventData;
 
 public class MineBagPage extends BaseAscendPage {

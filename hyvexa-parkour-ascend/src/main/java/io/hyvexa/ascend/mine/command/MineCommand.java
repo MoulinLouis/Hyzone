@@ -18,7 +18,7 @@ import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.ui.MineSelectPage;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
 import io.hyvexa.ascend.mine.ui.MinePage;
-import io.hyvexa.ascend.ui.MineBagPage;
+import io.hyvexa.ascend.mine.ui.MineBagPage;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.ModeGate;

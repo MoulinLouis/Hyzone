@@ -15,7 +15,7 @@ $C.@PageOverlay {
 
         Group #CrystalAccent {
           Anchor: (Left: 0, Right: 0, Height: 3);
-          Background: #22d3ee;
+          Background: #a78bfa;
         }
 
         Group #CrystalContent {
@@ -29,7 +29,7 @@ $C.@PageOverlay {
             Anchor: (Top: 0, Bottom: 0);
             Style: (
               FontSize: 30,
-              TextColor: #22d3ee,
+              TextColor: #a78bfa,
               RenderBold: true,
               VerticalAlignment: Center
             );
@@ -238,7 +238,7 @@ $C.@PageOverlay {
         Visible: false;
         LayoutMode: Left;
 
-        Group #MineToast0Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #22d3ee; }
+        Group #MineToast0Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #a78bfa; }
 
         Group #MineToast0Content {
           FlexWeight: 1;
@@ -265,8 +265,8 @@ $C.@PageOverlay {
 
           ProgressBar #MineToast0Bar {
             Anchor: (Left: 0, Right: 0, Height: 3);
-            Bar: #22d3ee;
-            Background: #22d3ee(0.15);
+            Bar: #a78bfa;
+            Background: #a78bfa(0.15);
             Value: 1;
           }
         }
@@ -277,7 +277,7 @@ $C.@PageOverlay {
         Visible: false;
         LayoutMode: Left;
 
-        Group #MineToast1Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #22d3ee; }
+        Group #MineToast1Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #a78bfa; }
 
         Group #MineToast1Content {
           FlexWeight: 1;
@@ -304,8 +304,8 @@ $C.@PageOverlay {
 
           ProgressBar #MineToast1Bar {
             Anchor: (Left: 0, Right: 0, Height: 3);
-            Bar: #22d3ee;
-            Background: #22d3ee(0.15);
+            Bar: #a78bfa;
+            Background: #a78bfa(0.15);
             Value: 1;
           }
         }
@@ -316,7 +316,7 @@ $C.@PageOverlay {
         Visible: false;
         LayoutMode: Left;
 
-        Group #MineToast2Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #22d3ee; }
+        Group #MineToast2Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #a78bfa; }
 
         Group #MineToast2Content {
           FlexWeight: 1;
@@ -343,8 +343,8 @@ $C.@PageOverlay {
 
           ProgressBar #MineToast2Bar {
             Anchor: (Left: 0, Right: 0, Height: 3);
-            Bar: #22d3ee;
-            Background: #22d3ee(0.15);
+            Bar: #a78bfa;
+            Background: #a78bfa(0.15);
             Value: 1;
           }
         }
@@ -355,7 +355,7 @@ $C.@PageOverlay {
         Visible: false;
         LayoutMode: Left;
 
-        Group #MineToast3Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #22d3ee; }
+        Group #MineToast3Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #a78bfa; }
 
         Group #MineToast3Content {
           FlexWeight: 1;
@@ -382,8 +382,8 @@ $C.@PageOverlay {
 
           ProgressBar #MineToast3Bar {
             Anchor: (Left: 0, Right: 0, Height: 3);
-            Bar: #22d3ee;
-            Background: #22d3ee(0.15);
+            Bar: #a78bfa;
+            Background: #a78bfa(0.15);
             Value: 1;
           }
         }
