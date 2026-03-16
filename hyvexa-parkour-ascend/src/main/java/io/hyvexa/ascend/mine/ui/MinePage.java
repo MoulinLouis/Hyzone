@@ -327,7 +327,7 @@ public class MinePage extends BaseAscendPage {
         }
     }
 
-    // ==================== Miner Handlers (from MineUpgradePage) ====================
+    // ==================== Miner Handlers ====================
 
     private void handleBuyMiner(Ref<EntityStore> ref, Store<EntityStore> store, String mineId) {
         Player player = store.getComponent(ref, Player.getComponentType());
@@ -409,7 +409,7 @@ public class MinePage extends BaseAscendPage {
         sendRefresh(ref, store);
     }
 
-    // ==================== Upgrade Handlers (from MineUpgradePage) ====================
+    // ==================== Upgrade Handlers ====================
 
     private void handleBuyUpgrade(Ref<EntityStore> ref, Store<EntityStore> store, String typeName) {
         Player player = store.getComponent(ref, Player.getComponentType());

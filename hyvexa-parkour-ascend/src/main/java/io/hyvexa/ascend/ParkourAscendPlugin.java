@@ -968,7 +968,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 },
                 (plugin, player) -> plugin.getMinePlayerStore() != null,
                 true, true)));
-        // Mine Upgrades -> MineUpgradePage
+        // Mine Upgrades -> MinePage
         registry.register("Mine_Upgrades_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
                 (ref, store, playerRef, plugin) -> {
