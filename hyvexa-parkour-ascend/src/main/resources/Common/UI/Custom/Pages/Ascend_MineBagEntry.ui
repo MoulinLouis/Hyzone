@@ -1,13 +1,16 @@
 $C = "../Common.ui";
 
 Group {
-  Anchor: (Width: 100, Height: 110);
-  LayoutMode: Top;
-  Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
+  Anchor: (Left: 0, Right: 0, Height: 56, Bottom: 4);
+  LayoutMode: Left;
+  Padding: (Left: 10, Right: 10);
+  Background: #ffffff(0.03);
+  OutlineColor: #ffffff(0.06);
+  OutlineSize: 1;
 
-  // Icon container
+  // Icon
   Group #IconWrap {
-    Anchor: (Width: 64, Height: 64);
+    Anchor: (Width: 40, Height: 40, Right: 10);
     LayoutMode: Full;
     Background: #ffffff(0.04);
     OutlineColor: #ffffff(0.06);
@@ -22,17 +25,121 @@ Group {
     Group #IconYellow { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Yellow.png"); Visible: false; }
   }
 
-  // Amount badge
+  // Name
+  Label #BlockName {
+    Anchor: (Width: 120, Height: 56, Right: 4);
+    Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+    Text: "Block";
+  }
+
+  // Quantity
   Label #Amount {
-    Anchor: (Left: 0, Right: 0, Top: 2);
-    Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true, HorizontalAlignment: Center);
+    Anchor: (Width: 60, Height: 56);
+    Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
     Text: "x0";
   }
 
-  // Block name
-  Label #BlockName {
-    Anchor: (Left: 0, Right: 0, Top: 1);
-    Style: (FontSize: 10, TextColor: #9fb0ba, HorizontalAlignment: Center);
-    Text: "Block";
+  // Value (flex fills remaining space)
+  Group {
+    Anchor: (Height: 56, Right: 8);
+    FlexWeight: 1;
+
+    Label #Value {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Style: (FontSize: 13, TextColor: #4ade80, VerticalAlignment: Center, HorizontalAlignment: End);
+      Text: "0 crystals";
+    }
+  }
+
+  // Lock button (unlocked state - visible by default)
+  Group #LockWrap {
+    Anchor: (Width: 52, Height: 32, Right: 4);
+    LayoutMode: Full;
+
+    TextButton #LockButton {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "Lock";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #ffffff(0.06),
+          LabelStyle: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #ffffff(0.1),
+          LabelStyle: (FontSize: 11, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #ffffff(0.04),
+          LabelStyle: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // Unlock button (locked state - hidden by default)
+  Group #UnlockWrap {
+    Anchor: (Width: 52, Height: 32, Right: 4);
+    LayoutMode: Full;
+    Visible: false;
+
+    TextButton #UnlockButton {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "Locked";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #b45309,
+          LabelStyle: (FontSize: 11, TextColor: #fef3c7, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #d97706,
+          LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #92400e,
+          LabelStyle: (FontSize: 11, TextColor: #fef3c7, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // Sell button (active - visible when unlocked)
+  Group #SellWrap {
+    Anchor: (Width: 52, Height: 32);
+    LayoutMode: Full;
+
+    TextButton #SellButton {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "Sell";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #3d6b5a,
+          LabelStyle: (FontSize: 12, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #4d8f7a,
+          LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #2d5a4a,
+          LabelStyle: (FontSize: 12, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // Sell button (disabled - visible when locked)
+  Group #SellDisabledWrap {
+    Anchor: (Width: 52, Height: 32);
+    Background: #ffffff(0.03);
+    Visible: false;
+
+    Label {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Style: (FontSize: 12, TextColor: #4b5563, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+      Text: "Sell";
+    }
   }
 }

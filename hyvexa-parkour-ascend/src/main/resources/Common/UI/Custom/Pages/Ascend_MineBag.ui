@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #MineBagWindow {
-    Anchor: (Width: 480, Height: 520);
+    Anchor: (Width: 480, Height: 540);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -83,8 +83,8 @@ $C.@PageOverlay {
         }
       }
 
-      // Crystals
-      Group #CardCrystals {
+      // Total Value
+      Group #CardTotal {
         Anchor: (Left: 0, Right: 0, Height: 36, Top: 6);
         LayoutMode: Full;
         Background: #ffffff(0.03);
@@ -93,19 +93,19 @@ $C.@PageOverlay {
 
         Group {
           Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
-          Background: #a78bfa;
+          Background: #4ade80;
         }
 
         Label {
           Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 100);
           Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
-          Text: "Crystals";
+          Text: "Total Value";
         }
 
-        Label #CrystalsValue {
+        Label #TotalValue {
           Anchor: (Left: 120, Right: 16, Top: 0, Bottom: 0);
-          Style: (FontSize: 15, TextColor: #a78bfa, RenderBold: true, VerticalAlignment: Center);
-          Text: "0";
+          Style: (FontSize: 15, TextColor: #4ade80, RenderBold: true, VerticalAlignment: Center);
+          Text: "0 crystals";
         }
       }
 
@@ -116,7 +116,7 @@ $C.@PageOverlay {
         Text: "Bag is empty";
       }
 
-      // Block grid
+      // Block cards
       Group #ScrollArea {
         Anchor: (Left: 0, Right: 0, Top: 10);
         FlexWeight: 1;
@@ -124,9 +124,38 @@ $C.@PageOverlay {
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
         Group #BagItems {
-          LayoutMode: LeftCenterWrap;
-          Padding: (Top: 4);
+          LayoutMode: Top;
         }
+      }
+
+      // Sell All button
+      Group #SellAllWrap {
+        Anchor: (Left: 0, Right: 0, Top: 10, Height: 40);
+        LayoutMode: Left;
+
+        Group { FlexWeight: 1; }
+
+        TextButton #SellAllButton {
+          Anchor: (Width: 160, Height: 38);
+          Text: "Sell All";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #3d6b5a,
+              LabelStyle: (FontSize: 14, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #4d8f7a,
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #2d5a4a,
+              LabelStyle: (FontSize: 14, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { FlexWeight: 1; }
       }
     }
   }

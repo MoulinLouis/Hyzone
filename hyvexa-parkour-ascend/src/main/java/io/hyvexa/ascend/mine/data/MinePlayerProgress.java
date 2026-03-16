@@ -6,6 +6,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -63,12 +64,41 @@ public class MinePlayerProgress {
     }
 
     /**
+     * Sells all of a single block type, returns crystals earned.
+     */
+    public synchronized long sellBlock(String blockTypeId, Map<String, BigNumber> blockPrices) {
+        Integer count = inventory.remove(blockTypeId);
+        if (count == null || count <= 0) return 0;
+        BigNumber price = blockPrices.getOrDefault(blockTypeId, BigNumber.ONE);
+        long earned = price.multiply(BigNumber.of(count, 0)).toLong();
+        crystals += earned;
+        return earned;
+    }
+
+    /**
      * Sells all blocks in inventory, returns total crystals earned.
      */
     public synchronized long sellAll(Map<String, BigNumber> blockPrices) {
         long total = calculateInventoryValue(blockPrices);
         crystals += total;
         inventory.clear();
+        return total;
+    }
+
+    /**
+     * Sells all blocks except the ones in the excluded set.
+     */
+    public synchronized long sellAllExcept(Set<String> excludedBlocks, Map<String, BigNumber> blockPrices) {
+        long total = 0;
+        var it = inventory.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            if (excludedBlocks.contains(entry.getKey())) continue;
+            BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
+            total += price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
+            it.remove();
+        }
+        crystals += total;
         return total;
     }
 
