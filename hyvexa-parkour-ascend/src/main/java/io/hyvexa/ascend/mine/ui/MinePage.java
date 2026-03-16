@@ -564,6 +564,7 @@ public class MinePage extends BaseAscendPage {
             mineProgress.setUpgradeLevel(type, 0);
         }
         mineProgress.setPickaxeTier(0);
+        swapPickaxeItem(player);
 
         for (var entry : mineProgress.getMinerStates().entrySet()) {
             String mineId = entry.getKey();
