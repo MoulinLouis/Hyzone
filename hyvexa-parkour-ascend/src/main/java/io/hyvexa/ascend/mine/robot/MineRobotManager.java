@@ -439,14 +439,13 @@ public class MineRobotManager {
         t = t * t * (3.0 - 2.0 * t);
 
         double startX = state.getCurrentX();
-        double startY = state.getCurrentY();
         double startZ = state.getCurrentZ();
 
         double interpX = startX + (targetX - startX) * t;
-        double interpY = startY + (targetY - startY) * t;
         double interpZ = startZ + (targetZ - startZ) * t;
 
-        teleportMiner(state, interpX, interpY, interpZ, true);
+        // Walk horizontally at target surface level — never interpolate Y to avoid clipping through blocks
+        teleportMiner(state, interpX, targetY, interpZ, true);
     }
 
     private void tickMining(MinerRobotState state, long now) {
