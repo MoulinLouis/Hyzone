@@ -78,7 +78,7 @@
           "Ores",
           "Soil"
         ],
-        "DurabilityLossOnHit": 0.25
+        "DurabilityLossOnHit": 0
       }
     ]
   },
