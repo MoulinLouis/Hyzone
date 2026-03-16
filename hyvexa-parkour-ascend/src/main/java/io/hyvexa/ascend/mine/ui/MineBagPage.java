@@ -38,16 +38,6 @@ public class MineBagPage extends BaseAscendPage {
     private static final String LOCK_PREFIX = "Lock:";
     private static final String UNLOCK_PREFIX = "Unlock:";
 
-    private static final Map<String, String> BLOCK_ICONS = Map.of(
-        "Rock_Stone", "#IconStone",
-        "Rock_Crystal_Blue_Block", "#IconBlue",
-        "Rock_Crystal_Green_Block", "#IconGreen",
-        "Rock_Crystal_Pink_Block", "#IconPink",
-        "Rock_Crystal_Red_Block", "#IconRed",
-        "Rock_Crystal_White_Block", "#IconWhite",
-        "Rock_Crystal_Yellow_Block", "#IconYellow"
-    );
-
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
     private final Set<String> lockedBlocks = new HashSet<>();
@@ -95,11 +85,7 @@ public class MineBagPage extends BaseAscendPage {
                 commandBuilder.append("#BagItems", "Pages/Ascend_MineBagEntry.ui");
                 String sel = "#BagItems[" + index + "]";
 
-                // Show the correct icon
-                String iconId = BLOCK_ICONS.get(entry.getKey());
-                if (iconId != null) {
-                    commandBuilder.set(sel + " " + iconId + ".Visible", true);
-                }
+                commandBuilder.set(sel + " #BlockIcon.ItemId", MineBlockDisplay.getItemId(entry.getKey()));
 
                 // Set amount, name, and value
                 commandBuilder.set(sel + " #Amount.Text", "x" + entry.getValue());

@@ -16,13 +16,10 @@ Group {
     OutlineColor: #ffffff(0.06);
     OutlineSize: 1;
 
-    Group #IconStone { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Stone.png"); Visible: false; }
-    Group #IconBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Blue.png"); Visible: false; }
-    Group #IconGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Green.png"); Visible: false; }
-    Group #IconPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Pink.png"); Visible: false; }
-    Group #IconRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Red.png"); Visible: false; }
-    Group #IconWhite { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_White.png"); Visible: false; }
-    Group #IconYellow { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Yellow.png"); Visible: false; }
+    ItemIcon #BlockIcon {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      ShowItemTooltip: true;
+    }
   }
 
   // Name
