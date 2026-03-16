@@ -6,6 +6,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 
 public class MinerRobotState {
+    public enum MinerPhase { IDLE, MOVING, MINING, STOPPED }
+
     private final UUID ownerId;
     private final String mineId;
     private Ref<EntityStore> entityRef;
@@ -14,6 +16,21 @@ public class MinerRobotState {
     private int speedLevel = 0;
     private int stars = 0;
     private long lastProductionTick = 0;
+
+    private MinerPhase phase = MinerPhase.IDLE;
+    private long phaseStartTime = 0;
+    private long cycleStartTime = 0;
+
+    // Target block to mine
+    private int targetBlockX, targetBlockY, targetBlockZ;
+    private boolean hasTarget = false;
+
+    // Current interpolated position (for smooth movement)
+    private double currentX, currentY, currentZ;
+    private boolean positionInitialized = false;
+
+    // World ref name for resolving world each tick
+    private String worldName;
 
     public MinerRobotState(UUID ownerId, String mineId) {
         this.ownerId = ownerId;
@@ -38,6 +55,40 @@ public class MinerRobotState {
         return (long) (60_000.0 / blocksPerMinute);
     }
 
+    /** Milliseconds allocated for walking to the target block. */
+    public long getMoveDurationMs() {
+        return (long) (getProductionIntervalMs() * 0.40);
+    }
+
+    /** Milliseconds allocated for standing at the block before breaking it. */
+    public long getMineDurationMs() {
+        return (long) (getProductionIntervalMs() * 0.50);
+    }
+
+    public void setTargetBlock(int x, int y, int z) {
+        this.targetBlockX = x;
+        this.targetBlockY = y;
+        this.targetBlockZ = z;
+        this.hasTarget = true;
+    }
+
+    public void clearTarget() {
+        this.hasTarget = false;
+    }
+
+    public void setCurrentPosition(double x, double y, double z) {
+        this.currentX = x;
+        this.currentY = y;
+        this.currentZ = z;
+        this.positionInitialized = true;
+    }
+
+    public void resetPhaseForEvolution() {
+        this.phase = MinerPhase.IDLE;
+        this.phaseStartTime = 0;
+        this.hasTarget = false;
+    }
+
     public UUID getOwnerId() { return ownerId; }
     public String getMineId() { return mineId; }
     public Ref<EntityStore> getEntityRef() { return entityRef; }
@@ -50,4 +101,20 @@ public class MinerRobotState {
     public void setStars(int stars) { this.stars = stars; }
     public long getLastProductionTick() { return lastProductionTick; }
     public void setLastProductionTick(long lastProductionTick) { this.lastProductionTick = lastProductionTick; }
+    public MinerPhase getPhase() { return phase; }
+    public void setPhase(MinerPhase phase) { this.phase = phase; }
+    public long getPhaseStartTime() { return phaseStartTime; }
+    public void setPhaseStartTime(long phaseStartTime) { this.phaseStartTime = phaseStartTime; }
+    public long getCycleStartTime() { return cycleStartTime; }
+    public void setCycleStartTime(long cycleStartTime) { this.cycleStartTime = cycleStartTime; }
+    public int getTargetBlockX() { return targetBlockX; }
+    public int getTargetBlockY() { return targetBlockY; }
+    public int getTargetBlockZ() { return targetBlockZ; }
+    public boolean hasTarget() { return hasTarget; }
+    public double getCurrentX() { return currentX; }
+    public double getCurrentY() { return currentY; }
+    public double getCurrentZ() { return currentZ; }
+    public boolean isPositionInitialized() { return positionInitialized; }
+    public String getWorldName() { return worldName; }
+    public void setWorldName(String worldName) { this.worldName = worldName; }
 }
