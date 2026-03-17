@@ -16,10 +16,13 @@ import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.common.math.BigNumber;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -156,6 +159,25 @@ public final class MineAoEBreaker {
         return totalBroken;
     }
 
+    // Cached reverse lookup: block runtime ID -> block type string ID
+    private static volatile Map<Integer, String> reverseBlockMap;
+
+    private static Map<Integer, String> getReverseBlockMap() {
+        Map<Integer, String> map = reverseBlockMap;
+        if (map != null) return map;
+        map = new HashMap<>();
+        var assetMap = BlockType.getAssetMap().getAssetMap();
+        for (var entry : assetMap.entrySet()) {
+            String id = entry.getKey();
+            int index = BlockType.getAssetMap().getIndex(id);
+            if (index >= 0) {
+                map.put(index, id);
+            }
+        }
+        reverseBlockMap = map;
+        return map;
+    }
+
     private static String getBlockTypeAt(World world, int x, int y, int z) {
         long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
         var worldChunk = world.getChunkIfInMemory(chunkIndex);
@@ -163,8 +185,7 @@ public final class MineAoEBreaker {
         if (worldChunk == null) return null;
         int blockId = worldChunk.getBlock(x, y, z);
         if (blockId == 0) return null; // already air
-        BlockType blockType = BlockType.getByRuntimeId(blockId);
-        return blockType != null ? blockType.getId() : null;
+        return getReverseBlockMap().get(blockId);
     }
 
     private static int rollFortune(int fortuneLevel) {
