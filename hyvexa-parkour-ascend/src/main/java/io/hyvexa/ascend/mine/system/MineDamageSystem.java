@@ -18,6 +18,7 @@ import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
@@ -26,6 +27,7 @@ import io.hyvexa.common.math.BigNumber;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Handles block breaking inside mine zones on DamageBlockEvent.
@@ -90,13 +92,6 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
         if (blockTypeName == null) return;
 
-        int blocksGained = 1;
-
-        if (!mineProgress.canAddToInventory(blocksGained)) {
-            sendBagFullMessage(playerId, player);
-            return;
-        }
-
         // Multi-HP: record hit and check if block should break
         BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, zone);
 
@@ -128,6 +123,10 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
             mineHudManager.hideBlockHealth(playerId);
         }
 
+        // Fortune roll
+        int fortuneLevel = mineProgress.getUpgradeLevel(MineUpgradeType.FORTUNE);
+        int blocksGained = rollFortune(fortuneLevel);
+
         // Reward
         int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
         if (stored < blocksGained) {
@@ -136,6 +135,9 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
             int overflow = blocksGained - stored;
             long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
             mineProgress.addCrystals(fallbackCrystals);
+            if (stored == 0) {
+                sendBagFullMessage(playerId, player);
+            }
         }
         minePlayerStore.markDirty(playerId);
 
@@ -150,6 +152,32 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
                 achievementTracker.incrementBlocksMined(playerId, blocksGained);
             }
         }
+
+        // Momentum combo
+        int momentumLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MOMENTUM);
+        if (momentumLevel > 0) {
+            mineProgress.checkComboExpired();
+            mineProgress.incrementCombo();
+            if (mineHudManager != null) {
+                mineHudManager.showCombo(playerId, mineProgress.getComboCount(), 1.0f);
+            }
+        }
+
+        // AoE upgrades (Jackhammer, Stomp, Blast)
+        World aoeWorld = store.getExternalData().getWorld();
+        if (aoeWorld != null) {
+            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, aoeWorld, bx, by, bz, mineManager);
+        }
+    }
+
+    private static int rollFortune(int fortuneLevel) {
+        if (fortuneLevel <= 0) return 1;
+        double tripleChance = fortuneLevel * 0.4 / 100.0;
+        double doubleChance = fortuneLevel * 2.0 / 100.0;
+        double roll = ThreadLocalRandom.current().nextDouble();
+        if (roll < tripleChance) return 3;
+        if (roll < tripleChance + doubleChance) return 2;
+        return 1;
     }
 
     private void sendBagFullMessage(UUID playerId, Player player) {
