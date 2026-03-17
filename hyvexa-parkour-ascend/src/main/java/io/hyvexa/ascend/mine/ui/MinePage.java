@@ -62,12 +62,16 @@ public class MinePage extends BaseAscendPage {
         "#7c3aed", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#f59e0b"
     };
 
-    private static final String[] UPGRADE_ACCENT_COLORS = { "Green" };
-    private static final String[] UPGRADE_ACCENT_HEX = { "#10b981" };
+    private static final String[] UPGRADE_ACCENT_COLORS = {
+        "Green", "Blue", "Gold", "Red", "Orange", "Violet", "Blue"
+    };
+    private static final String[] UPGRADE_ACCENT_HEX = {
+        "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#f97316", "#7c3aed", "#3b82f6"
+    };
     private static final int UPGRADE_SEGMENT_COUNT = 20;
 
     private static final String[] UPGRADE_DISPLAY_NAMES = {
-        "Bag Capacity"
+        "Bag Capacity", "Momentum", "Fortune", "Jackhammer", "Stomp", "Blast", "Haste"
     };
 
     private final MinePlayerProgress mineProgress;
@@ -612,6 +616,12 @@ public class MinePage extends BaseAscendPage {
         double effect = type.getEffect(level);
         return switch (type) {
             case BAG_CAPACITY -> "Capacity: " + (int) effect + " blocks";
+            case MOMENTUM -> level == 0 ? "No combo" : "Max combo: " + (int) effect;
+            case FORTUNE -> level == 0 ? "No bonus drops" : "x2: " + (int) effect + "%, x3: " + String.format("%.1f", level * 0.4) + "%";
+            case JACKHAMMER -> level == 0 ? "No column break" : "Depth: " + (int) effect + " blocks";
+            case STOMP -> level == 0 ? "No layer break" : "Radius: " + (int) effect;
+            case BLAST -> level == 0 ? "No sphere break" : "Radius: " + (int) effect;
+            case HASTE -> level == 0 ? "No speed bonus" : "+" + (int) effect + "% speed";
         };
     }
 

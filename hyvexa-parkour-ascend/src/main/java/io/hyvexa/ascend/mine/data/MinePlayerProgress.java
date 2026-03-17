@@ -20,6 +20,10 @@ public class MinePlayerProgress {
     private final Map<String, MineProgress> mineStates = new ConcurrentHashMap<>();
     private final Map<String, MinerProgress> minerStates = new ConcurrentHashMap<>();
 
+    // Momentum combo state (transient, not persisted)
+    private volatile int comboCount;
+    private volatile long lastBreakTimeMs;
+
     public MinePlayerProgress(UUID playerId) {
         this.playerId = playerId;
     }
@@ -198,6 +202,51 @@ public class MinePlayerProgress {
         ALREADY_MAXED,
         INSUFFICIENT_CRYSTALS,
         REQUIREMENT_NOT_MET
+    }
+
+    // --- Momentum combo ---
+
+    public int getComboCount() { return comboCount; }
+
+    public void incrementCombo() {
+        comboCount++;
+        lastBreakTimeMs = System.currentTimeMillis();
+    }
+
+    public void resetCombo() {
+        comboCount = 0;
+    }
+
+    public long getLastBreakTimeMs() { return lastBreakTimeMs; }
+
+    /**
+     * Returns the max combo for the current Momentum level.
+     * Formula: 5 + level * 3
+     */
+    public int getMaxCombo() {
+        int level = getUpgradeLevel(MineUpgradeType.MOMENTUM);
+        return level > 0 ? (int) MineUpgradeType.MOMENTUM.getEffect(level) : 0;
+    }
+
+    /**
+     * Returns the damage multiplier from the current Momentum combo.
+     * +2% per combo hit.
+     */
+    public double getMomentumMultiplier() {
+        if (comboCount <= 0) return 1.0;
+        return 1.0 + comboCount * 0.02;
+    }
+
+    /**
+     * Checks if combo has expired (3 seconds since last break).
+     * If expired, resets combo and returns true.
+     */
+    public boolean checkComboExpired() {
+        if (comboCount > 0 && System.currentTimeMillis() - lastBreakTimeMs > 3000) {
+            resetCombo();
+            return true;
+        }
+        return false;
     }
 
     public synchronized int getBagCapacity() {

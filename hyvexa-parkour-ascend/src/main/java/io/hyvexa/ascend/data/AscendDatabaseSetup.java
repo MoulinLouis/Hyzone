@@ -1236,7 +1236,13 @@ public final class AscendDatabaseSetup {
             {"mining_speed_level", "INT NOT NULL DEFAULT 0"},
             {"bag_capacity_level", "INT NOT NULL DEFAULT 0"},
             {"multi_break_level", "INT NOT NULL DEFAULT 0"},
-            {"auto_sell_level", "INT NOT NULL DEFAULT 0"}
+            {"auto_sell_level", "INT NOT NULL DEFAULT 0"},
+            {"upgrade_momentum", "INT NOT NULL DEFAULT 0"},
+            {"upgrade_fortune", "INT NOT NULL DEFAULT 0"},
+            {"upgrade_jackhammer", "INT NOT NULL DEFAULT 0"},
+            {"upgrade_stomp", "INT NOT NULL DEFAULT 0"},
+            {"upgrade_blast", "INT NOT NULL DEFAULT 0"},
+            {"upgrade_haste", "INT NOT NULL DEFAULT 0"}
         };
         for (String[] col : columns) {
             if (!columnExists(conn, "mine_players", col[0])) {

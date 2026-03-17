@@ -87,13 +87,21 @@ public class MinePlayerStore {
             // Load player crystals + upgrades
             MinePlayerProgress progress = null;
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT crystals, bag_capacity_level, in_mine, pickaxe_tier FROM mine_players WHERE uuid = ?")) {
+                    "SELECT crystals, bag_capacity_level, upgrade_momentum, upgrade_fortune, " +
+                    "upgrade_jackhammer, upgrade_stomp, upgrade_blast, upgrade_haste, " +
+                    "in_mine, pickaxe_tier FROM mine_players WHERE uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         progress = new MinePlayerProgress(playerId);
                         progress.setCrystals(rs.getLong("crystals"));
                         progress.setUpgradeLevel(MineUpgradeType.BAG_CAPACITY, rs.getInt("bag_capacity_level"));
+                        progress.setUpgradeLevel(MineUpgradeType.MOMENTUM, rs.getInt("upgrade_momentum"));
+                        progress.setUpgradeLevel(MineUpgradeType.FORTUNE, rs.getInt("upgrade_fortune"));
+                        progress.setUpgradeLevel(MineUpgradeType.JACKHAMMER, rs.getInt("upgrade_jackhammer"));
+                        progress.setUpgradeLevel(MineUpgradeType.STOMP, rs.getInt("upgrade_stomp"));
+                        progress.setUpgradeLevel(MineUpgradeType.BLAST, rs.getInt("upgrade_blast"));
+                        progress.setUpgradeLevel(MineUpgradeType.HASTE, rs.getInt("upgrade_haste"));
                         progress.setInMine(rs.getBoolean("in_mine"));
                         progress.setPickaxeTier(rs.getInt("pickaxe_tier"));
                     }
@@ -193,18 +201,32 @@ public class MinePlayerStore {
                 // Save crystals + upgrades
                 try (PreparedStatement ps = conn.prepareStatement("""
                         INSERT INTO mine_players (uuid, crystals,
-                            bag_capacity_level, in_mine, pickaxe_tier)
-                        VALUES (?, ?, ?, ?, ?)
+                            bag_capacity_level, upgrade_momentum, upgrade_fortune,
+                            upgrade_jackhammer, upgrade_stomp, upgrade_blast, upgrade_haste,
+                            in_mine, pickaxe_tier)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE crystals = VALUES(crystals),
                                                 bag_capacity_level = VALUES(bag_capacity_level),
+                                                upgrade_momentum = VALUES(upgrade_momentum),
+                                                upgrade_fortune = VALUES(upgrade_fortune),
+                                                upgrade_jackhammer = VALUES(upgrade_jackhammer),
+                                                upgrade_stomp = VALUES(upgrade_stomp),
+                                                upgrade_blast = VALUES(upgrade_blast),
+                                                upgrade_haste = VALUES(upgrade_haste),
                                                 in_mine = VALUES(in_mine),
                                                 pickaxe_tier = VALUES(pickaxe_tier)
                         """)) {
                     ps.setString(1, playerId.toString());
                     ps.setLong(2, snapshot.crystals());
                     ps.setInt(3, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.BAG_CAPACITY, 0));
-                    ps.setBoolean(4, snapshot.inMine());
-                    ps.setInt(5, snapshot.pickaxeTier());
+                    ps.setInt(4, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MOMENTUM, 0));
+                    ps.setInt(5, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.FORTUNE, 0));
+                    ps.setInt(6, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.JACKHAMMER, 0));
+                    ps.setInt(7, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.STOMP, 0));
+                    ps.setInt(8, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.BLAST, 0));
+                    ps.setInt(9, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.HASTE, 0));
+                    ps.setBoolean(10, snapshot.inMine());
+                    ps.setInt(11, snapshot.pickaxeTier());
                     ps.executeUpdate();
                 }
 
