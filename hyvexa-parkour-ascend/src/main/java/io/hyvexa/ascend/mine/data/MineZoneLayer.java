@@ -9,6 +9,7 @@ public class MineZoneLayer {
     private int minY;
     private int maxY;
     private final Map<String, Double> blockTable = new ConcurrentHashMap<>();
+    private final Map<String, Integer> blockHpTable = new ConcurrentHashMap<>();
 
     public MineZoneLayer(String id, String zoneId, int minY, int maxY) {
         this.id = id;
@@ -26,6 +27,7 @@ public class MineZoneLayer {
     public int getMinY() { return minY; }
     public int getMaxY() { return maxY; }
     public Map<String, Double> getBlockTable() { return blockTable; }
+    public Map<String, Integer> getBlockHpTable() { return blockHpTable; }
 
     public void setMinY(int minY) { this.minY = minY; }
     public void setMaxY(int maxY) { this.maxY = maxY; }

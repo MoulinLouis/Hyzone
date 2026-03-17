@@ -11,6 +11,7 @@ public class MineZone {
     private int minX, minY, minZ;
     private int maxX, maxY, maxZ;
     private final Map<String, Double> blockTable = new ConcurrentHashMap<>();
+    private final Map<String, Integer> blockHpTable = new ConcurrentHashMap<>();
     private double regenThreshold = 0.8;
     private int regenCooldownSeconds = 45;
     private final List<MineZoneLayer> layers = new CopyOnWriteArrayList<>();
@@ -45,6 +46,7 @@ public class MineZone {
     public int getMaxY() { return maxY; }
     public int getMaxZ() { return maxZ; }
     public Map<String, Double> getBlockTable() { return blockTable; }
+    public Map<String, Integer> getBlockHpTable() { return blockHpTable; }
     public List<MineZoneLayer> getLayers() { return layers; }
     public double getRegenThreshold() { return regenThreshold; }
     public int getRegenCooldownSeconds() { return regenCooldownSeconds; }
@@ -60,6 +62,20 @@ public class MineZone {
             }
         }
         return blockTable;
+    }
+
+    /**
+     * Returns the HP for a block type at the given Y coordinate.
+     * Checks layer HP table first, then zone-level fallback. Returns 1 if not configured.
+     */
+    public int getBlockHpForY(String blockTypeId, int y) {
+        for (MineZoneLayer layer : layers) {
+            if (layer.containsY(y)) {
+                Integer layerHp = layer.getBlockHpTable().get(blockTypeId);
+                if (layerHp != null) return layerHp;
+            }
+        }
+        return blockHpTable.getOrDefault(blockTypeId, 1);
     }
 
     public void setMinX(int minX) { this.minX = minX; }

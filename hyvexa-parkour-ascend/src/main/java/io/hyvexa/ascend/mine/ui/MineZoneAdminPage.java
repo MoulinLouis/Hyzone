@@ -187,6 +187,14 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             handleRemoveBlock(ref, store, data.button.substring(ZoneData.BUTTON_REMOVE_BLOCK_PREFIX.length()));
             return;
         }
+        if (data.button.startsWith(ZoneData.BUTTON_HP_UP_PREFIX)) {
+            handleHpChange(ref, store, data.button.substring(ZoneData.BUTTON_HP_UP_PREFIX.length()), 1);
+            return;
+        }
+        if (data.button.startsWith(ZoneData.BUTTON_HP_DOWN_PREFIX)) {
+            handleHpChange(ref, store, data.button.substring(ZoneData.BUTTON_HP_DOWN_PREFIX.length()), -1);
+            return;
+        }
         if (data.button.equals(ZoneData.BUTTON_SET_THRESHOLD)) {
             handleSetThreshold(ref, store);
             return;
@@ -352,6 +360,47 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             String displayName = MineBlockRegistry.getDisplayName(removeBlockId);
             player.sendMessage(Message.raw("Block removed: " + displayName));
         }
+        sendRefresh(ref, store);
+    }
+
+    private void handleHpChange(Ref<EntityStore> ref, Store<EntityStore> store, String hpBlockId, int delta) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        MineZone zone = resolveSelectedZone(player);
+        if (zone == null) return;
+
+        Map<String, Integer> hpTable;
+        boolean isLayer = false;
+        MineZoneLayer layer = null;
+        if (!selectedLayerId.isEmpty()) {
+            layer = findLayer(selectedLayerId);
+            if (layer != null) {
+                hpTable = layer.getBlockHpTable();
+                isLayer = true;
+            } else {
+                hpTable = zone.getBlockHpTable();
+            }
+        } else {
+            hpTable = zone.getBlockHpTable();
+        }
+
+        int currentHp = hpTable.getOrDefault(hpBlockId, 1);
+        int newHp = Math.max(1, currentHp + delta);
+
+        if (newHp <= 1) {
+            hpTable.remove(hpBlockId);
+        } else {
+            hpTable.put(hpBlockId, newHp);
+        }
+
+        if (isLayer) {
+            mineConfigStore.saveLayer(layer);
+        } else {
+            mineConfigStore.saveZone(zone);
+        }
+
+        String displayName = MineBlockRegistry.getDisplayName(hpBlockId);
+        player.sendMessage(Message.raw(displayName + " HP: " + newHp));
         sendRefresh(ref, store);
     }
 
@@ -720,10 +769,12 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
 
         Map<String, Double> tableToShow = zone.getBlockTable();
+        Map<String, Integer> hpToShow = zone.getBlockHpTable();
         if (!selectedLayerId.isEmpty()) {
             MineZoneLayer layer = findLayer(selectedLayerId);
             if (layer != null) {
                 tableToShow = layer.getBlockTable();
+                hpToShow = layer.getBlockHpTable();
             } else {
                 selectedLayerId = "";
             }
@@ -743,9 +794,24 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             commandBuilder.set(sel + " #BlockIcon.ItemId", entry.getKey());
             commandBuilder.set(sel + " #BlockName.Text", displayName);
             commandBuilder.set(sel + " #BlockProb.Text", formatProb(entry.getValue()));
+
+            int hp = hpToShow.getOrDefault(entry.getKey(), 1);
+            commandBuilder.set(sel + " #BlockHp.Text", hp + " HP");
+            if (hp > 1) {
+                commandBuilder.set(sel + " #BlockHp.Style.TextColor", "#ef4444");
+            } else {
+                commandBuilder.set(sel + " #BlockHp.Style.TextColor", "#9fb0ba");
+            }
+
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 sel + " #RemoveBtn",
                 EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_REMOVE_BLOCK_PREFIX + entry.getKey()), false);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #HpUpBtn",
+                EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_HP_UP_PREFIX + entry.getKey()), false);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #HpDownBtn",
+                EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_HP_DOWN_PREFIX + entry.getKey()), false);
             index++;
         }
     }
@@ -832,6 +898,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         static final String BUTTON_CHOOSE_BLOCK = "ChooseBlock";
         static final String BUTTON_ADD_BLOCK = "AddBlock";
         static final String BUTTON_REMOVE_BLOCK_PREFIX = "RemoveBlock:";
+        static final String BUTTON_HP_UP_PREFIX = "HpUp:";
+        static final String BUTTON_HP_DOWN_PREFIX = "HpDown:";
         static final String BUTTON_SET_THRESHOLD = "SetThreshold";
         static final String BUTTON_SET_COOLDOWN = "SetCooldown";
         static final String BUTTON_REGEN = "Regen";

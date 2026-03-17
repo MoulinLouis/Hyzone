@@ -28,13 +28,14 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Handles instant block breaking inside mine zones on first hit (DamageBlockEvent).
- * Cancels normal damage, manually removes the block, and gives rewards.
- * This bypasses BreakBlockEvent entirely for mine blocks.
+ * Handles block breaking inside mine zones on DamageBlockEvent.
+ * Blocks with 1 HP are broken instantly (current behavior).
+ * Blocks with >1 HP require multiple hits — a health bar HUD is shown to the player.
  */
 public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlockEvent> {
     private final MineManager mineManager;
     private final MinePlayerStore minePlayerStore;
+    private final BlockDamageTracker damageTracker = new BlockDamageTracker();
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
 
@@ -96,17 +97,36 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
             return;
         }
 
+        // Multi-HP: record hit and check if block should break
+        BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, zone);
+
+        MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
+
+        if (!hitResult.shouldBreak()) {
+            // Block still has HP — update the health bar HUD
+            if (mineHudManager != null) {
+                mineHudManager.showBlockHealth(playerId, blockTypeName, hitResult.remainingHp(), hitResult.maxHp());
+            }
+            return;
+        }
+
+        // Block HP depleted (or was 1 HP) — break it
         if (!mineManager.tryClaimBlock(zone.getId(), bx, by, bz)) {
             return;
         }
 
-        // Instantly remove the block (set to air)
+        // Remove the block (set to air)
         World world = store.getExternalData().getWorld();
         long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
         var worldChunk = world.getChunkIfInMemory(chunkIndex);
         if (worldChunk == null) worldChunk = world.loadChunkIfInMemory(chunkIndex);
         if (worldChunk == null) return;
         worldChunk.setBlock(bx, by, bz, 0);
+
+        // Hide block health HUD
+        if (mineHudManager != null) {
+            mineHudManager.hideBlockHealth(playerId);
+        }
 
         // Reward
         int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
@@ -119,7 +139,6 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         }
         minePlayerStore.markDirty(playerId);
 
-        MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
         if (mineHudManager != null) {
             mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
         }
@@ -145,6 +164,11 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
     public void evict(UUID playerId) {
         lastBagFullMessage.remove(playerId);
         lastRegenMessage.remove(playerId);
+        damageTracker.evict(playerId);
+    }
+
+    public BlockDamageTracker getDamageTracker() {
+        return damageTracker;
     }
 
     private boolean isExpectedPickaxe(MinePlayerProgress mineProgress, String heldItemId) {

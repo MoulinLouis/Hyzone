@@ -102,7 +102,7 @@ public class MineConfigStore {
 
     private void loadZones(Connection conn) throws SQLException {
         String sql = "SELECT id, mine_id, min_x, min_y, min_z, max_x, max_y, max_z, " +
-            "block_table_json, regen_threshold, regen_cooldown_seconds FROM mine_zones";
+            "block_table_json, block_hp_json, regen_threshold, regen_cooldown_seconds FROM mine_zones";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -132,6 +132,15 @@ public class MineConfigStore {
                         }
                     }
 
+                    String hpJson = rs.getString("block_hp_json");
+                    if (hpJson != null && !hpJson.isEmpty()) {
+                        Map<String, Integer> hpTable = GSON.fromJson(hpJson,
+                            new TypeToken<Map<String, Integer>>(){}.getType());
+                        if (hpTable != null) {
+                            zone.getBlockHpTable().putAll(hpTable);
+                        }
+                    }
+
                     zone.setRegenThreshold(rs.getDouble("regen_threshold"));
                     zone.setRegenCooldownSeconds(rs.getInt("regen_cooldown_seconds"));
                     mine.getZones().add(zone);
@@ -141,7 +150,7 @@ public class MineConfigStore {
     }
 
     private void loadLayers(Connection conn) throws SQLException {
-        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json " +
+        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json, block_hp_json " +
             "FROM mine_zone_layers ORDER BY zone_id, min_y, max_y, id";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -158,6 +167,14 @@ public class MineConfigStore {
                             new TypeToken<Map<String, Double>>(){}.getType());
                         if (table != null) {
                             layer.getBlockTable().putAll(table);
+                        }
+                    }
+                    String hpJson = rs.getString("block_hp_json");
+                    if (hpJson != null && !hpJson.isEmpty()) {
+                        Map<String, Integer> hpTable = GSON.fromJson(hpJson,
+                            new TypeToken<Map<String, Integer>>(){}.getType());
+                        if (hpTable != null) {
+                            layer.getBlockHpTable().putAll(hpTable);
                         }
                     }
                     boolean attached = false;
@@ -358,12 +375,13 @@ public class MineConfigStore {
 
         String sql = """
             INSERT INTO mine_zones (id, mine_id, min_x, min_y, min_z, max_x, max_y, max_z,
-                block_table_json, regen_threshold, regen_cooldown_seconds)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                block_table_json, block_hp_json, regen_threshold, regen_cooldown_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 min_x = VALUES(min_x), min_y = VALUES(min_y), min_z = VALUES(min_z),
                 max_x = VALUES(max_x), max_y = VALUES(max_y), max_z = VALUES(max_z),
                 block_table_json = VALUES(block_table_json),
+                block_hp_json = VALUES(block_hp_json),
                 regen_threshold = VALUES(regen_threshold),
                 regen_cooldown_seconds = VALUES(regen_cooldown_seconds)
             """;
@@ -382,6 +400,7 @@ public class MineConfigStore {
                 stmt.setInt(i++, zone.getMaxY());
                 stmt.setInt(i++, zone.getMaxZ());
                 stmt.setString(i++, GSON.toJson(zone.getBlockTable()));
+                stmt.setString(i++, GSON.toJson(zone.getBlockHpTable()));
                 stmt.setDouble(i++, zone.getRegenThreshold());
                 stmt.setInt(i, zone.getRegenCooldownSeconds());
                 stmt.executeUpdate();
@@ -672,11 +691,12 @@ public class MineConfigStore {
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
         String sql = """
-            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json, block_hp_json)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 min_y = VALUES(min_y), max_y = VALUES(max_y),
-                block_table_json = VALUES(block_table_json)
+                block_table_json = VALUES(block_table_json),
+                block_hp_json = VALUES(block_hp_json)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -688,7 +708,8 @@ public class MineConfigStore {
                 stmt.setString(i++, layer.getZoneId());
                 stmt.setInt(i++, layer.getMinY());
                 stmt.setInt(i++, layer.getMaxY());
-                stmt.setString(i, GSON.toJson(layer.getBlockTable()));
+                stmt.setString(i++, GSON.toJson(layer.getBlockTable()));
+                stmt.setString(i, GSON.toJson(layer.getBlockHpTable()));
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {

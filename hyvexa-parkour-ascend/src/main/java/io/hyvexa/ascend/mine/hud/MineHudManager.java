@@ -244,6 +244,59 @@ public class MineHudManager {
 
     // --- Inner state class ---
 
+    public void showBlockHealth(UUID playerId, String blockTypeId, int currentHp, int maxHp) {
+        MineHudState state = huds.get(playerId);
+        if (state == null) return;
+
+        float fraction = maxHp > 0 ? (float) currentHp / maxHp : 0f;
+        String displayName = MineBlockDisplay.getDisplayName(blockTypeId);
+
+        state.blockHealthVisible = true;
+        state.blockHealthLastUpdateMs = System.currentTimeMillis();
+
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#BlockHealthHud.Visible", true);
+        cb.set("#BlockHealthName.Text", displayName);
+        cb.set("#BlockHealthText.Text", currentHp + "/" + maxHp);
+        cb.set("#BlockHealthBar.Value", fraction);
+
+        // Color: green > yellow > red based on HP fraction
+        String barColor;
+        if (fraction > 0.6f) {
+            barColor = "#22c55e";
+        } else if (fraction > 0.3f) {
+            barColor = "#f59e0b";
+        } else {
+            barColor = "#ef4444";
+        }
+        cb.set("#BlockHealthBar.Bar", barColor);
+
+        state.hud.update(false, cb);
+    }
+
+    public void hideBlockHealth(UUID playerId) {
+        MineHudState state = huds.get(playerId);
+        if (state == null) return;
+        if (!state.blockHealthVisible) return;
+        state.blockHealthVisible = false;
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#BlockHealthHud.Visible", false);
+        state.hud.update(false, cb);
+    }
+
+    private static final long BLOCK_HEALTH_TIMEOUT_MS = 3000;
+
+    /**
+     * Called each tick to auto-hide the block health bar after no hits for 3 seconds.
+     */
+    public void tickBlockHealth(UUID playerId) {
+        MineHudState state = huds.get(playerId);
+        if (state == null || !state.blockHealthVisible) return;
+        if (System.currentTimeMillis() - state.blockHealthLastUpdateMs > BLOCK_HEALTH_TIMEOUT_MS) {
+            hideBlockHealth(playerId);
+        }
+    }
+
     public void showMineToast(UUID playerId, String blockTypeId, int count) {
         MineHudState state = huds.get(playerId);
         if (state == null) {
@@ -277,6 +330,8 @@ public class MineHudManager {
         String lastInventoryKey;
         String lastCooldownKey;
         String lastMineName;
+        boolean blockHealthVisible;
+        long blockHealthLastUpdateMs;
 
         MineHudState(UUID playerId, MineHud hud) {
             this.playerId = playerId;

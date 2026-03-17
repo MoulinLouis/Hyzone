@@ -874,6 +874,7 @@ CREATE TABLE IF NOT EXISTS mine_zones (
   min_x INT NOT NULL, min_y INT NOT NULL, min_z INT NOT NULL,
   max_x INT NOT NULL, max_y INT NOT NULL, max_z INT NOT NULL,
   block_table_json TEXT NOT NULL DEFAULT '{}',
+  block_hp_json TEXT NOT NULL DEFAULT '{}',
   regen_threshold DOUBLE NOT NULL DEFAULT 0.8,
   regen_cooldown_seconds INT NOT NULL DEFAULT 45,
   PRIMARY KEY (id),
@@ -882,9 +883,31 @@ CREATE TABLE IF NOT EXISTS mine_zones (
 ```
 
 Notes:
-- `block_table_json` is a JSON object mapping block type IDs to spawn weight probabilities (e.g., `{"hytale:stone": 0.7, "hytale:iron_ore": 0.3}`)
+- `block_table_json` is a JSON object mapping block type IDs to spawn weight probabilities (e.g., `{"Rock_Stone": 0.7, "Ore_Iron_Stone": 0.3}`)
+- `block_hp_json` is a JSON object mapping block type IDs to hit points (e.g., `{"Ore_Iron_Stone": 3}`). Blocks not listed default to 1 HP (instant break). Configurable via admin UI +/- buttons.
 - `regen_threshold` is the fraction of blocks that must be mined before the zone regenerates (0.0-1.0)
 - `regen_cooldown_seconds` is the cooldown between zone regenerations
+- Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
+
+## mine_zone_layers
+Stores depth layers within mine zones for Y-dependent block distributions and HP overrides.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_zone_layers (
+  id VARCHAR(64) NOT NULL,
+  zone_id VARCHAR(32) NOT NULL,
+  min_y INT NOT NULL,
+  max_y INT NOT NULL,
+  block_table_json TEXT NOT NULL DEFAULT '{}',
+  block_hp_json TEXT NOT NULL DEFAULT '{}',
+  PRIMARY KEY (id),
+  FOREIGN KEY (zone_id) REFERENCES mine_zones(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Each layer overrides the zone's `block_table_json` and `block_hp_json` for its Y range
+- Layers must not overlap in Y range within the same zone
 - Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
 
 ## mine_gate

@@ -670,6 +670,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return mineHudManager;
     }
 
+    public MineDamageSystem getMineDamageSystem() {
+        return mineDamageSystem;
+    }
+
     public MineAchievementTracker getMineAchievementTracker() {
         return mineAchievementTracker;
     }
@@ -819,6 +823,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                                 mineHudManager.updateCooldowns(playerId);
                             }
                             mineHudManager.updateToasts(playerId);
+                            mineHudManager.tickBlockHealth(playerId);
                         } else {
                             if (fullTick) {
                                 runTracker.checkPlayer(ref, store);
