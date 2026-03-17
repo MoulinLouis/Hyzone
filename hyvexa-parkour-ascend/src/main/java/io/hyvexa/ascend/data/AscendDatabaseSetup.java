@@ -299,6 +299,7 @@ public final class AscendDatabaseSetup {
             ensureMineInMineColumn(conn);
             ensurePickaxeTierColumn(conn);
             migrateCrystalsToBigint(conn);
+            ensureBlockHpColumns(conn);
 
             // Mine block sell prices
             stmt.executeUpdate("""
@@ -1296,6 +1297,20 @@ public final class AscendDatabaseSetup {
      * Migrate summit XP column from BIGINT to DOUBLE for uncapped progression.
      * Idempotent: checks current column type before altering.
      */
+    private static void ensureBlockHpColumns(Connection conn) {
+        if (conn == null) return;
+        try (Statement stmt = conn.createStatement()) {
+            if (!columnExists(conn, "mine_zones", "block_hp_json")) {
+                stmt.executeUpdate("ALTER TABLE mine_zones ADD COLUMN block_hp_json TEXT NOT NULL DEFAULT '{}' AFTER block_table_json");
+            }
+            if (!columnExists(conn, "mine_zone_layers", "block_hp_json")) {
+                stmt.executeUpdate("ALTER TABLE mine_zone_layers ADD COLUMN block_hp_json TEXT NOT NULL DEFAULT '{}' AFTER block_table_json");
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to add block_hp_json columns: " + e.getMessage());
+        }
+    }
+
     private static void migrateSummitXpToDouble(Connection conn) {
         if (conn == null) {
             return;
