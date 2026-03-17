@@ -242,6 +242,52 @@ $C.@PageOverlay {
       }
     }
 
+    Group #ComboHud {
+      Anchor: (Width: 180, Height: 36, Bottom: 170);
+      Visible: false;
+      LayoutMode: Left;
+
+      Group #ComboAccent {
+        Anchor: (Width: 3, Top: 0, Bottom: 0);
+        Background: #3b82f6;
+      }
+
+      Group #ComboBox {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.90);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+
+        Group #ComboRow {
+          FlexWeight: 1;
+          Anchor: (Left: 0, Right: 0);
+          LayoutMode: Left;
+          Padding: (Left: 8, Right: 8);
+
+          Label #ComboLabel {
+            Anchor: (Top: 0, Bottom: 0);
+            Style: (FontSize: 12, TextColor: #3b82f6(0.7), RenderUppercase: true, LetterSpacing: 2, RenderBold: true, VerticalAlignment: Center);
+            Text: "COMBO";
+          }
+          Group { FlexWeight: 1; }
+          Label #ComboCount {
+            Anchor: (Top: 0, Bottom: 0);
+            Style: (FontSize: 22, TextColor: #3b82f6, RenderBold: true, VerticalAlignment: Center);
+            Text: "0";
+          }
+        }
+
+        ProgressBar #ComboTimer {
+          Anchor: (Left: 0, Right: 0, Height: 3);
+          Bar: #3b82f6;
+          Background: #3b82f6(0.15);
+          Value: 1;
+        }
+      }
+    }
+
     Group #BlockHealthHud {
       Anchor: (Width: 220, Height: 44, Bottom: 120);
       Visible: false;
@@ -430,6 +476,37 @@ $C.@PageOverlay {
           }
         }
       }
+    }
+
+    Group #ScreenFade {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #000000;
+      Visible: false;
+      LayoutMode: Top;
+
+      Group { FlexWeight: 1; }
+
+      Group #FadeContent {
+        Anchor: (Width: 300);
+        LayoutMode: Top;
+
+        Label #FadeText {
+          Anchor: (Left: 0, Right: 0);
+          Style: (FontSize: 18, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center);
+          Text: "";
+        }
+
+        Group { Anchor: (Height: 14); }
+
+        ProgressBar #FadeBar {
+          Anchor: (Left: 0, Right: 0, Height: 4);
+          Bar: #a78bfa;
+          Background: #ffffff(0.08);
+          Value: 0;
+        }
+      }
+
+      Group { FlexWeight: 1; }
     }
   }
 }

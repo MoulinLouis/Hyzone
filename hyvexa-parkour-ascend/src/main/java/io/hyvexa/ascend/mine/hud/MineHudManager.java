@@ -284,6 +284,7 @@ public class MineHudManager {
         state.hud.update(false, cb);
     }
 
+    private static final long COMBO_TIMEOUT_MS = 3000;
     private static final long BLOCK_HEALTH_TIMEOUT_MS = 3000;
 
     /**
@@ -295,6 +296,67 @@ public class MineHudManager {
         if (System.currentTimeMillis() - state.blockHealthLastUpdateMs > BLOCK_HEALTH_TIMEOUT_MS) {
             hideBlockHealth(playerId);
         }
+    }
+
+    public void showCombo(UUID playerId, int comboCount, float timerPercent) {
+        MineHudState state = huds.get(playerId);
+        if (state == null) return;
+
+        state.comboVisible = true;
+        state.comboLastUpdateMs = System.currentTimeMillis();
+
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#ComboHud.Visible", true);
+        cb.set("#ComboCount.Text", "x" + comboCount);
+        cb.set("#ComboTimer.Value", timerPercent);
+        state.hud.update(false, cb);
+    }
+
+    public void hideCombo(UUID playerId) {
+        MineHudState state = huds.get(playerId);
+        if (state == null) return;
+        if (!state.comboVisible) return;
+        state.comboVisible = false;
+
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#ComboHud.Visible", false);
+        state.hud.update(false, cb);
+    }
+
+    /**
+     * Called each tick to auto-hide the combo display after 3 seconds of no mining.
+     * Also updates the timer bar countdown.
+     */
+    public void tickCombo(UUID playerId) {
+        MineHudState state = huds.get(playerId);
+        if (state == null || !state.comboVisible) return;
+        long elapsed = System.currentTimeMillis() - state.comboLastUpdateMs;
+        if (elapsed >= COMBO_TIMEOUT_MS) {
+            hideCombo(playerId);
+        } else {
+            // Update timer bar
+            float remaining = 1.0f - (float) elapsed / COMBO_TIMEOUT_MS;
+            UICommandBuilder cb = new UICommandBuilder();
+            cb.set("#ComboTimer.Value", remaining);
+            state.hud.update(false, cb);
+        }
+    }
+
+    public void showScreenFade(UUID playerId, boolean visible) {
+        MineHudState state = huds.get(playerId);
+        if (state == null) return;
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#ScreenFade.Visible", visible);
+        state.hud.update(false, cb);
+    }
+
+    public void updateScreenFadeBar(UUID playerId, String text, float progress) {
+        MineHudState state = huds.get(playerId);
+        if (state == null) return;
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#FadeText.Text", text);
+        cb.set("#FadeBar.Value", progress);
+        state.hud.update(false, cb);
     }
 
     public void showMineToast(UUID playerId, String blockTypeId, int count) {
@@ -332,6 +394,8 @@ public class MineHudManager {
         String lastMineName;
         boolean blockHealthVisible;
         long blockHealthLastUpdateMs;
+        boolean comboVisible;
+        long comboLastUpdateMs;
 
         MineHudState(UUID playerId, MineHud hud) {
             this.playerId = playerId;
@@ -343,6 +407,8 @@ public class MineHudManager {
             lastInventoryKey = null;
             lastCooldownKey = null;
             lastMineName = null;
+            comboVisible = false;
+            comboLastUpdateMs = 0;
             toastManager.clear();
         }
     }

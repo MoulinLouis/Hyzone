@@ -18,9 +18,11 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.util.InventoryUtils;
@@ -32,11 +34,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MineGateChecker {
 
     private static final long COOLDOWN_MS = 2000;
+    private static final long FADE_DURATION_MS = 300;
 
     private final MineConfigStore configStore;
     private final AscendPlayerStore playerStore;
     private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastTeleport = new ConcurrentHashMap<>();
+    private final Map<UUID, GateTransition> pendingTransitions = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> playerHasteLevels = new ConcurrentHashMap<>();
 
     public MineGateChecker(MineConfigStore configStore, AscendPlayerStore playerStore, MinePlayerStore minePlayerStore) {
         this.configStore = configStore;
@@ -46,6 +51,13 @@ public class MineGateChecker {
 
     public void checkPlayer(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store) {
         if (ref == null || !ref.isValid()) return;
+
+        // Handle pending fade transitions
+        GateTransition transition = pendingTransitions.get(playerId);
+        if (transition != null) {
+            tickTransition(playerId, ref, store, transition);
+            return;
+        }
 
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) return;
@@ -58,22 +70,83 @@ public class MineGateChecker {
 
         if (isOnCooldown(playerId)) return;
 
-        // Entry gate: ascend >= 1 -> teleport inside mine + give pickaxe
+        // Entry gate: start fade -> teleport inside mine + give pickaxe
         if (configStore.isInsideEntryGate(x, y, z)) {
-            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             Player player = store.getComponent(ref, Player.getComponentType());
             if (denyMineAccess(playerId, player)) return;
-            enterMine(playerId, playerRef, ref, store,
+            startTransition(playerId, true,
                 configStore.getEntryDestX(), configStore.getEntryDestY(), configStore.getEntryDestZ(),
-                configStore.getEntryDestRotX(), configStore.getEntryDestRotY(), configStore.getEntryDestRotZ(),
-                true);
+                configStore.getEntryDestRotX(), configStore.getEntryDestRotY(), configStore.getEntryDestRotZ());
             return;
         }
 
-        // Exit gate: teleport outside mine + restore menu items
+        // Exit gate: start fade -> teleport outside mine + restore menu items
         if (configStore.isInsideExitGate(x, y, z)) {
+            startTransition(playerId, false,
+                configStore.getExitDestX(), configStore.getExitDestY(), configStore.getExitDestZ(),
+                configStore.getExitDestRotX(), configStore.getExitDestRotY(), configStore.getExitDestRotZ());
+        }
+    }
+
+    private void startTransition(UUID playerId, boolean entering,
+                                  double destX, double destY, double destZ,
+                                  float destRotX, float destRotY, float destRotZ) {
+        GateTransition transition = new GateTransition(entering, destX, destY, destZ, destRotX, destRotY, destRotZ);
+        pendingTransitions.put(playerId, transition);
+        markCooldown(playerId);
+
+        // Show black screen on current HUD
+        showFade(playerId, entering, true);
+    }
+
+    private void tickTransition(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store, GateTransition transition) {
+        long elapsed = System.currentTimeMillis() - transition.phaseStartMs;
+
+        if (transition.phase == TransitionPhase.FADE_IN && elapsed >= FADE_DURATION_MS) {
+            // Fade-in complete: do the actual teleport + swap
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-            exitMine(playerId, playerRef, ref, store, true);
+            if (transition.entering) {
+                enterMine(playerId, playerRef, ref, store,
+                    transition.destX, transition.destY, transition.destZ,
+                    transition.destRotX, transition.destRotY, transition.destRotZ,
+                    false);
+            } else {
+                exitMine(playerId, playerRef, ref, store, false);
+            }
+
+            // Show fade on the NEW HUD (after swap)
+            showFade(playerId, !transition.entering, true);
+
+            transition.phase = TransitionPhase.FADE_OUT;
+            transition.phaseStartMs = System.currentTimeMillis();
+            return;
+        }
+
+        if (transition.phase == TransitionPhase.FADE_OUT && elapsed >= FADE_DURATION_MS) {
+            // Fade-out complete: hide black screen
+            showFade(playerId, !transition.entering, false);
+            pendingTransitions.remove(playerId);
+        }
+    }
+
+    /**
+     * Show or hide the fullscreen black overlay on the appropriate HUD.
+     * @param onAscendHud true to target the Ascend HUD, false for the Mine HUD
+     */
+    private void showFade(UUID playerId, boolean onAscendHud, boolean visible) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+
+        if (onAscendHud) {
+            AscendHudManager ascendHud = plugin.getHudManager();
+            if (ascendHud != null) {
+                ascendHud.showScreenFade(playerId, visible);
+            }
+        } else {
+            MineHudManager mineHud = plugin.getMineHudManager();
+            if (mineHud != null) {
+                mineHud.showScreenFade(playerId, visible);
+            }
         }
     }
 
@@ -122,6 +195,13 @@ public class MineGateChecker {
             MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
             progress.setInMine(true);
             minePlayerStore.markDirty(playerId);
+
+            // Apply haste speed boost
+            int hasteLevel = progress.getUpgradeLevel(MineUpgradeType.HASTE);
+            if (hasteLevel > 0) {
+                playerHasteLevels.put(playerId, hasteLevel);
+                applyHasteSpeed(player, hasteLevel);
+            }
         }
         return true;
     }
@@ -149,6 +229,10 @@ public class MineGateChecker {
         if (player != null) {
             AscendInventoryUtils.giveMenuItems(player);
         }
+        // Remove haste speed boost
+        playerHasteLevels.remove(playerId);
+        removeHasteSpeed(player);
+
         if (minePlayerStore != null) {
             MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
             progress.setInMine(false);
@@ -227,5 +311,67 @@ public class MineGateChecker {
 
     public void evict(UUID playerId) {
         lastTeleport.remove(playerId);
+        pendingTransitions.remove(playerId);
+        playerHasteLevels.remove(playerId);
+    }
+
+    private void applyHasteSpeed(Player player, int hasteLevel) {
+        if (player == null) return;
+        double multiplier = 1.0 + (hasteLevel * 0.05); // +5% per level
+        // TODO: Validate Unsafe approach for persistent speed modification.
+        // For now, set horizontalSpeedMultiplier (resets each tick but applies for 1 tick).
+        // A tick-based reapplication system should be added if Unsafe doesn't work.
+        try {
+            player.setHorizontalSpeedMultiplier((float) multiplier);
+        } catch (Exception e) {
+            // Fallback: speed multiplier may not be available
+        }
+    }
+
+    private void removeHasteSpeed(Player player) {
+        if (player == null) return;
+        try {
+            player.setHorizontalSpeedMultiplier(1.0f);
+        } catch (Exception e) {
+            // Fallback: speed multiplier may not be available
+        }
+    }
+
+    /**
+     * Called each tick to reapply haste speed for all players in the mine.
+     * Required because horizontalSpeedMultiplier resets every tick.
+     */
+    public void tickHaste(Map<UUID, Player> onlinePlayers) {
+        for (var entry : playerHasteLevels.entrySet()) {
+            Player player = onlinePlayers.get(entry.getKey());
+            if (player != null) {
+                applyHasteSpeed(player, entry.getValue());
+            }
+        }
+    }
+
+    // --- Fade transition state ---
+
+    private enum TransitionPhase { FADE_IN, FADE_OUT }
+
+    private static class GateTransition {
+        final boolean entering; // true = entering mine, false = exiting
+        final double destX, destY, destZ;
+        final float destRotX, destRotY, destRotZ;
+        TransitionPhase phase;
+        long phaseStartMs;
+
+        GateTransition(boolean entering, double destX, double destY, double destZ,
+                       float destRotX, float destRotY, float destRotZ) {
+            this.entering = entering;
+            this.destX = destX;
+            this.destY = destY;
+            this.destZ = destZ;
+            this.destRotX = destRotX;
+            this.destRotY = destRotY;
+            this.destRotZ = destRotZ;
+            this.phase = TransitionPhase.FADE_IN;
+            this.phaseStartMs = System.currentTimeMillis();
+        }
     }
 }
