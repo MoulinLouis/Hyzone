@@ -15,6 +15,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.VexaStore;
@@ -223,6 +224,35 @@ public class AscendHudManager {
         previewPlayers.remove(playerId);
         economyCache.remove(playerId);
         runnerBarCache.remove(playerId);
+    }
+
+    public void showScreenFade(UUID playerId, boolean visible) {
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#ScreenFade.Visible", visible);
+        AscendHud hud = ascendHuds.get(playerId);
+        if (hud != null) {
+            hud.update(false, cb);
+            return;
+        }
+        HiddenAscendHud hidden = hiddenHuds.get(playerId);
+        if (hidden != null) {
+            hidden.update(false, cb);
+        }
+    }
+
+    public void updateScreenFadeBar(UUID playerId, String text, float progress) {
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#FadeText.Text", text);
+        cb.set("#FadeBar.Value", progress);
+        AscendHud hud = ascendHuds.get(playerId);
+        if (hud != null) {
+            hud.update(false, cb);
+            return;
+        }
+        HiddenAscendHud hidden = hiddenHuds.get(playerId);
+        if (hidden != null) {
+            hidden.update(false, cb);
+        }
     }
 
     public static void showToastSafe(UUID playerId, ToastType type, String message) {

@@ -487,19 +487,19 @@ $C.@PageOverlay {
       Group { FlexWeight: 1; }
 
       Group #FadeContent {
-        Anchor: (Width: 300);
+        Anchor: (Width: 400);
         LayoutMode: Top;
 
         Label #FadeText {
           Anchor: (Left: 0, Right: 0);
-          Style: (FontSize: 18, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center);
+          Style: (FontSize: 32, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center);
           Text: "";
         }
 
-        Group { Anchor: (Height: 14); }
+        Group { Anchor: (Height: 18); }
 
         ProgressBar #FadeBar {
-          Anchor: (Left: 0, Right: 0, Height: 4);
+          Anchor: (Left: 0, Right: 0, Height: 10);
           Bar: #a78bfa;
           Background: #ffffff(0.08);
           Value: 0;

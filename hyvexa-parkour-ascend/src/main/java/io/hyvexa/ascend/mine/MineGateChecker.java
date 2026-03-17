@@ -349,26 +349,15 @@ public class MineGateChecker {
         playerHasteLevels.remove(playerId);
     }
 
+    // TODO: Hytale API does not expose setHorizontalSpeedMultiplier on Player.
+    // Haste upgrade level is tracked but speed modification is not yet implemented.
+    // Investigate Unsafe field access or alternative API when available.
     private void applyHasteSpeed(Player player, int hasteLevel) {
-        if (player == null) return;
-        double multiplier = 1.0 + (hasteLevel * 0.05); // +5% per level
-        // TODO: Validate Unsafe approach for persistent speed modification.
-        // For now, set horizontalSpeedMultiplier (resets each tick but applies for 1 tick).
-        // A tick-based reapplication system should be added if Unsafe doesn't work.
-        try {
-            player.setHorizontalSpeedMultiplier((float) multiplier);
-        } catch (Exception e) {
-            // Fallback: speed multiplier may not be available
-        }
+        // No-op: awaiting Hytale API for player speed modification
     }
 
     private void removeHasteSpeed(Player player) {
-        if (player == null) return;
-        try {
-            player.setHorizontalSpeedMultiplier(1.0f);
-        } catch (Exception e) {
-            // Fallback: speed multiplier may not be available
-        }
+        // No-op: awaiting Hytale API for player speed modification
     }
 
     /**

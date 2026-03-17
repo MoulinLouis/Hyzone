@@ -821,5 +821,36 @@ $C.@PageOverlay {
         }
       }
     }
+
+    Group #ScreenFade {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #000000;
+      Visible: false;
+      LayoutMode: Top;
+
+      Group { FlexWeight: 1; }
+
+      Group #FadeContent {
+        Anchor: (Width: 400);
+        LayoutMode: Top;
+
+        Label #FadeText {
+          Anchor: (Left: 0, Right: 0);
+          Style: (FontSize: 32, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center);
+          Text: "";
+        }
+
+        Group { Anchor: (Height: 18); }
+
+        ProgressBar #FadeBar {
+          Anchor: (Left: 0, Right: 0, Height: 10);
+          Bar: #a78bfa;
+          Background: #ffffff(0.08);
+          Value: 0;
+        }
+      }
+
+      Group { FlexWeight: 1; }
+    }
   }
 }
