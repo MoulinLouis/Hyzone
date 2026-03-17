@@ -814,6 +814,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         if (mineGateChecker != null) {
                             mineGateChecker.checkPlayer(playerId, ref, store);
                         }
+                        // Haste speed reapplication (resets every tick)
+                        if (mineGateChecker != null) {
+                            Player hastePlayer = store.getComponent(ref, Player.getComponentType());
+                            if (hastePlayer != null) {
+                                mineGateChecker.tickHaste(playerId, hastePlayer);
+                            }
+                        }
                         // Mine HUD or Ascend HUD (never both simultaneously)
                         if (mineHudManager != null && mineHudManager.hasHud(playerId)) {
                             if (fullTick) {
@@ -824,6 +831,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                             }
                             mineHudManager.updateToasts(playerId);
                             mineHudManager.tickBlockHealth(playerId);
+                            mineHudManager.tickCombo(playerId);
                         } else {
                             if (fullTick) {
                                 runTracker.checkPlayer(ref, store);

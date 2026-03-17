@@ -34,7 +34,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MineGateChecker {
 
     private static final long COOLDOWN_MS = 2000;
-    private static final long FADE_DURATION_MS = 300;
+    private static final long LOADING_MS = 1500;
+    private static final long FADE_OUT_MS = 400;
+
+    private static final String TEXT_ENTERING = "Entering the Mines...";
+    private static final String TEXT_EXITING = "Returning to Surface...";
 
     private final MineConfigStore configStore;
     private final AscendPlayerStore playerStore;
@@ -91,39 +95,49 @@ public class MineGateChecker {
     private void startTransition(UUID playerId, boolean entering,
                                   double destX, double destY, double destZ,
                                   float destRotX, float destRotY, float destRotZ) {
-        GateTransition transition = new GateTransition(entering, destX, destY, destZ, destRotX, destRotY, destRotZ);
+        String text = entering ? TEXT_ENTERING : TEXT_EXITING;
+        GateTransition transition = new GateTransition(entering, text, destX, destY, destZ, destRotX, destRotY, destRotZ);
         pendingTransitions.put(playerId, transition);
         markCooldown(playerId);
 
-        // Show black screen on current HUD
-        showFade(playerId, entering, true);
+        // Show loading screen on current HUD
+        boolean onAscendHud = entering;
+        showFade(playerId, onAscendHud, true);
+        updateFadeBar(playerId, onAscendHud, text, 0f);
     }
 
     private void tickTransition(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store, GateTransition transition) {
         long elapsed = System.currentTimeMillis() - transition.phaseStartMs;
 
-        if (transition.phase == TransitionPhase.FADE_IN && elapsed >= FADE_DURATION_MS) {
-            // Fade-in complete: do the actual teleport + swap
-            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-            if (transition.entering) {
-                enterMine(playerId, playerRef, ref, store,
-                    transition.destX, transition.destY, transition.destZ,
-                    transition.destRotX, transition.destRotY, transition.destRotZ,
-                    false);
-            } else {
-                exitMine(playerId, playerRef, ref, store, false);
+        if (transition.phase == TransitionPhase.LOADING) {
+            // Animate loading bar each tick
+            float progress = Math.min(1.0f, (float) elapsed / LOADING_MS);
+            boolean onAscendHud = transition.entering;
+            updateFadeBar(playerId, onAscendHud, transition.loadingText, progress);
+
+            if (elapsed >= LOADING_MS) {
+                // Loading complete: do the actual teleport + swap
+                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (transition.entering) {
+                    enterMine(playerId, playerRef, ref, store,
+                        transition.destX, transition.destY, transition.destZ,
+                        transition.destRotX, transition.destRotY, transition.destRotZ,
+                        false);
+                } else {
+                    exitMine(playerId, playerRef, ref, store, false);
+                }
+
+                // Show black screen briefly on the NEW HUD (no text)
+                showFade(playerId, !transition.entering, true);
+
+                transition.phase = TransitionPhase.FADE_OUT;
+                transition.phaseStartMs = System.currentTimeMillis();
             }
-
-            // Show fade on the NEW HUD (after swap)
-            showFade(playerId, !transition.entering, true);
-
-            transition.phase = TransitionPhase.FADE_OUT;
-            transition.phaseStartMs = System.currentTimeMillis();
             return;
         }
 
-        if (transition.phase == TransitionPhase.FADE_OUT && elapsed >= FADE_DURATION_MS) {
-            // Fade-out complete: hide black screen
+        if (transition.phase == TransitionPhase.FADE_OUT && elapsed >= FADE_OUT_MS) {
+            // Reveal the new scene
             showFade(playerId, !transition.entering, false);
             pendingTransitions.remove(playerId);
         }
@@ -146,6 +160,26 @@ public class MineGateChecker {
             MineHudManager mineHud = plugin.getMineHudManager();
             if (mineHud != null) {
                 mineHud.showScreenFade(playerId, visible);
+            }
+        }
+    }
+
+    /**
+     * Update the loading text and progress bar on the appropriate HUD.
+     */
+    private void updateFadeBar(UUID playerId, boolean onAscendHud, String text, float progress) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+
+        if (onAscendHud) {
+            AscendHudManager ascendHud = plugin.getHudManager();
+            if (ascendHud != null) {
+                ascendHud.updateScreenFadeBar(playerId, text, progress);
+            }
+        } else {
+            MineHudManager mineHud = plugin.getMineHudManager();
+            if (mineHud != null) {
+                mineHud.updateScreenFadeBar(playerId, text, progress);
             }
         }
     }
@@ -338,39 +372,40 @@ public class MineGateChecker {
     }
 
     /**
-     * Called each tick to reapply haste speed for all players in the mine.
+     * Called each tick per player to reapply haste speed.
      * Required because horizontalSpeedMultiplier resets every tick.
      */
-    public void tickHaste(Map<UUID, Player> onlinePlayers) {
-        for (var entry : playerHasteLevels.entrySet()) {
-            Player player = onlinePlayers.get(entry.getKey());
-            if (player != null) {
-                applyHasteSpeed(player, entry.getValue());
-            }
+    public void tickHaste(UUID playerId, Player player) {
+        Integer hasteLevel = playerHasteLevels.get(playerId);
+        if (hasteLevel != null && hasteLevel > 0) {
+            applyHasteSpeed(player, hasteLevel);
         }
     }
 
     // --- Fade transition state ---
 
-    private enum TransitionPhase { FADE_IN, FADE_OUT }
+    private enum TransitionPhase { LOADING, FADE_OUT }
 
     private static class GateTransition {
-        final boolean entering; // true = entering mine, false = exiting
+        final boolean entering;
+        final String loadingText;
         final double destX, destY, destZ;
         final float destRotX, destRotY, destRotZ;
         TransitionPhase phase;
         long phaseStartMs;
 
-        GateTransition(boolean entering, double destX, double destY, double destZ,
+        GateTransition(boolean entering, String loadingText,
+                       double destX, double destY, double destZ,
                        float destRotX, float destRotY, float destRotZ) {
             this.entering = entering;
+            this.loadingText = loadingText;
             this.destX = destX;
             this.destY = destY;
             this.destZ = destZ;
             this.destRotX = destRotX;
             this.destRotY = destRotY;
             this.destRotZ = destRotZ;
-            this.phase = TransitionPhase.FADE_IN;
+            this.phase = TransitionPhase.LOADING;
             this.phaseStartMs = System.currentTimeMillis();
         }
     }

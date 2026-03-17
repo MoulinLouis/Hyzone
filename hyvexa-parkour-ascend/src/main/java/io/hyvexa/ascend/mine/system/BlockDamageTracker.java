@@ -20,10 +20,17 @@ public class BlockDamageTracker {
     private final Map<UUID, Map<Long, BlockDamageState>> playerDamage = new ConcurrentHashMap<>();
 
     /**
-     * Records a hit on a block. Returns the result indicating what should happen.
-     * HP is resolved from the zone/layer config based on Y coordinate.
+     * Records a hit on a block with 1 base damage.
      */
     public HitResult recordHit(UUID playerId, int x, int y, int z, String blockTypeId, MineZone zone) {
+        return recordHit(playerId, x, y, z, blockTypeId, zone, 1.0);
+    }
+
+    /**
+     * Records a hit on a block with a damage multiplier (e.g. Momentum combo bonus).
+     * HP is resolved from the zone/layer config based on Y coordinate.
+     */
+    public HitResult recordHit(UUID playerId, int x, int y, int z, String blockTypeId, MineZone zone, double damageMultiplier) {
         int maxHp = zone.getBlockHpForY(blockTypeId, y);
 
         if (maxHp <= 1) {
@@ -42,7 +49,8 @@ public class BlockDamageTracker {
         }
 
         state.lastHitMs = now;
-        state.currentHp--;
+        int damage = Math.max(1, (int) Math.round(damageMultiplier));
+        state.currentHp -= damage;
 
         if (state.currentHp <= 0) {
             blocks.remove(packedPos);

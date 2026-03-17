@@ -92,8 +92,9 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
         if (blockTypeName == null) return;
 
-        // Multi-HP: record hit and check if block should break
-        BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, zone);
+        // Multi-HP: record hit with Momentum damage bonus
+        double damageMultiplier = mineProgress.getMomentumMultiplier();
+        BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, zone, damageMultiplier);
 
         MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
 
@@ -157,7 +158,12 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         int momentumLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MOMENTUM);
         if (momentumLevel > 0) {
             mineProgress.checkComboExpired();
-            mineProgress.incrementCombo();
+            int maxCombo = mineProgress.getMaxCombo();
+            if (mineProgress.getComboCount() < maxCombo) {
+                mineProgress.incrementCombo();
+            } else {
+                mineProgress.incrementCombo(); // refresh timer even at max
+            }
             if (mineHudManager != null) {
                 mineHudManager.showCombo(playerId, mineProgress.getComboCount(), 1.0f);
             }

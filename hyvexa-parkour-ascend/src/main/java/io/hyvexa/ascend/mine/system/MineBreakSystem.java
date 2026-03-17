@@ -159,7 +159,12 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         int momentumLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MOMENTUM);
         if (momentumLevel > 0) {
             mineProgress.checkComboExpired();
-            mineProgress.incrementCombo();
+            int maxCombo = mineProgress.getMaxCombo();
+            if (mineProgress.getComboCount() < maxCombo) {
+                mineProgress.incrementCombo();
+            } else {
+                mineProgress.incrementCombo(); // refresh timer even at max
+            }
             if (mineHudManager != null) {
                 mineHudManager.showCombo(playerId, mineProgress.getComboCount(), 1.0f);
             }
