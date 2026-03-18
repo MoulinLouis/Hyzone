@@ -253,6 +253,9 @@ public class MinePage extends BaseAscendPage {
         cmd.set(sel + " #CardName.Text", UPGRADE_DISPLAY_NAMES[ordinal]);
         cmd.set(sel + " #CardEffect.Text", getEffectDescription(type, level));
 
+        // Tooltip
+        cmd.set(sel + " #CardBuyBtn.TooltipText", buildUpgradeTooltip(type, level, maxLevel));
+
         if (maxed) {
             cmd.set(sel + " #CardLevel.Text", "MAX");
             cmd.set(sel + " #CardCost.Text", "");
@@ -664,6 +667,40 @@ public class MinePage extends BaseAscendPage {
         if (mineStore != null) {
             mineStore.markDirty(playerRef.getUuid());
         }
+    }
+
+    private String buildUpgradeTooltip(MineUpgradeType type, int level, int maxLevel) {
+        boolean maxed = level >= maxLevel;
+        String name = UPGRADE_DISPLAY_NAMES[type.ordinal()];
+        String desc = getUpgradeDescription(type);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(name).append("\n");
+        sb.append(desc).append("\n\n");
+
+        if (maxed) {
+            sb.append("-- Fully Maxed --\n");
+            sb.append(getEffectDescription(type, level));
+        } else {
+            sb.append("Purchase Upgrade:\n");
+            sb.append("- Level ").append(level).append("/").append(maxLevel).append("\n");
+            sb.append("- Price: ").append(type.getCost(level)).append(" crystals\n");
+            sb.append("- Next: ").append(getEffectDescription(type, level + 1)).append("\n\n");
+            sb.append("Left Click to purchase one level");
+        }
+        return sb.toString();
+    }
+
+    private static String getUpgradeDescription(MineUpgradeType type) {
+        return switch (type) {
+            case BAG_CAPACITY -> "Increases how many blocks your bag can hold.";
+            case MOMENTUM -> "Build a combo while mining to deal more damage.";
+            case FORTUNE -> "Chance to get bonus drops from mined blocks.";
+            case JACKHAMMER -> "Breaks a column of blocks below the one you mine.";
+            case STOMP -> "Breaks a layer of blocks around your feet on landing.";
+            case BLAST -> "Breaks blocks in a sphere around your target.";
+            case HASTE -> "Increases your mining speed permanently.";
+        };
     }
 
     private String getEffectDescription(MineUpgradeType type, int level) {
