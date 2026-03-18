@@ -23,7 +23,7 @@ public class MineConfigStore {
     private static final int GATE_ENTRY = 1;
     private static final int GATE_EXIT = 2;
 
-    public record GateConfig(
+    private record GateConfig(
         double minX, double minY, double minZ,
         double maxX, double maxY, double maxZ,
         double destX, double destY, double destZ,
@@ -199,7 +199,7 @@ public class MineConfigStore {
     private void loadGate(Connection conn) throws SQLException {
         String sql = "SELECT id, min_x, min_y, min_z, max_x, max_y, max_z, " +
             "fallback_x, fallback_y, fallback_z, fallback_rot_x, fallback_rot_y, fallback_rot_z " +
-            "FROM mine_gate WHERE id IN (1, 2)";
+            "FROM mine_gate WHERE id IN (" + GATE_ENTRY + ", " + GATE_EXIT + ")";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -508,33 +508,33 @@ public class MineConfigStore {
 
     // Entry gate
     public boolean isEntryGateConfigured() { return entryGate != null; }
-    public double getEntryMinX() { return entryGate != null ? entryGate.minX() : 0; }
-    public double getEntryMinY() { return entryGate != null ? entryGate.minY() : 0; }
-    public double getEntryMinZ() { return entryGate != null ? entryGate.minZ() : 0; }
-    public double getEntryMaxX() { return entryGate != null ? entryGate.maxX() : 0; }
-    public double getEntryMaxY() { return entryGate != null ? entryGate.maxY() : 0; }
-    public double getEntryMaxZ() { return entryGate != null ? entryGate.maxZ() : 0; }
-    public double getEntryDestX() { return entryGate != null ? entryGate.destX() : 0; }
-    public double getEntryDestY() { return entryGate != null ? entryGate.destY() : 0; }
-    public double getEntryDestZ() { return entryGate != null ? entryGate.destZ() : 0; }
-    public float getEntryDestRotX() { return entryGate != null ? entryGate.destRotX() : 0; }
-    public float getEntryDestRotY() { return entryGate != null ? entryGate.destRotY() : 0; }
-    public float getEntryDestRotZ() { return entryGate != null ? entryGate.destRotZ() : 0; }
+    public double getEntryMinX() { GateConfig g = entryGate; return g != null ? g.minX() : 0; }
+    public double getEntryMinY() { GateConfig g = entryGate; return g != null ? g.minY() : 0; }
+    public double getEntryMinZ() { GateConfig g = entryGate; return g != null ? g.minZ() : 0; }
+    public double getEntryMaxX() { GateConfig g = entryGate; return g != null ? g.maxX() : 0; }
+    public double getEntryMaxY() { GateConfig g = entryGate; return g != null ? g.maxY() : 0; }
+    public double getEntryMaxZ() { GateConfig g = entryGate; return g != null ? g.maxZ() : 0; }
+    public double getEntryDestX() { GateConfig g = entryGate; return g != null ? g.destX() : 0; }
+    public double getEntryDestY() { GateConfig g = entryGate; return g != null ? g.destY() : 0; }
+    public double getEntryDestZ() { GateConfig g = entryGate; return g != null ? g.destZ() : 0; }
+    public float getEntryDestRotX() { GateConfig g = entryGate; return g != null ? g.destRotX() : 0; }
+    public float getEntryDestRotY() { GateConfig g = entryGate; return g != null ? g.destRotY() : 0; }
+    public float getEntryDestRotZ() { GateConfig g = entryGate; return g != null ? g.destRotZ() : 0; }
 
     // Exit gate
     public boolean isExitGateConfigured() { return exitGate != null; }
-    public double getExitMinX() { return exitGate != null ? exitGate.minX() : 0; }
-    public double getExitMinY() { return exitGate != null ? exitGate.minY() : 0; }
-    public double getExitMinZ() { return exitGate != null ? exitGate.minZ() : 0; }
-    public double getExitMaxX() { return exitGate != null ? exitGate.maxX() : 0; }
-    public double getExitMaxY() { return exitGate != null ? exitGate.maxY() : 0; }
-    public double getExitMaxZ() { return exitGate != null ? exitGate.maxZ() : 0; }
-    public double getExitDestX() { return exitGate != null ? exitGate.destX() : 0; }
-    public double getExitDestY() { return exitGate != null ? exitGate.destY() : 0; }
-    public double getExitDestZ() { return exitGate != null ? exitGate.destZ() : 0; }
-    public float getExitDestRotX() { return exitGate != null ? exitGate.destRotX() : 0; }
-    public float getExitDestRotY() { return exitGate != null ? exitGate.destRotY() : 0; }
-    public float getExitDestRotZ() { return exitGate != null ? exitGate.destRotZ() : 0; }
+    public double getExitMinX() { GateConfig g = exitGate; return g != null ? g.minX() : 0; }
+    public double getExitMinY() { GateConfig g = exitGate; return g != null ? g.minY() : 0; }
+    public double getExitMinZ() { GateConfig g = exitGate; return g != null ? g.minZ() : 0; }
+    public double getExitMaxX() { GateConfig g = exitGate; return g != null ? g.maxX() : 0; }
+    public double getExitMaxY() { GateConfig g = exitGate; return g != null ? g.maxY() : 0; }
+    public double getExitMaxZ() { GateConfig g = exitGate; return g != null ? g.maxZ() : 0; }
+    public double getExitDestX() { GateConfig g = exitGate; return g != null ? g.destX() : 0; }
+    public double getExitDestY() { GateConfig g = exitGate; return g != null ? g.destY() : 0; }
+    public double getExitDestZ() { GateConfig g = exitGate; return g != null ? g.destZ() : 0; }
+    public float getExitDestRotX() { GateConfig g = exitGate; return g != null ? g.destRotX() : 0; }
+    public float getExitDestRotY() { GateConfig g = exitGate; return g != null ? g.destRotY() : 0; }
+    public float getExitDestRotZ() { GateConfig g = exitGate; return g != null ? g.destRotZ() : 0; }
 
     // --- Block Prices ---
 

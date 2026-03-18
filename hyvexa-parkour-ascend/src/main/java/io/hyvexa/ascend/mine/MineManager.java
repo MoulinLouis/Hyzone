@@ -18,7 +18,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class MineManager {
     private final MineConfigStore configStore;
 
-    // zoneId -> exact broken block positions (packed as long)
+    // zoneId -> set of broken block positions (packed as long: x<<38 | y<<26 | z)
     private final Map<String, Set<Long>> brokenBlocks = new ConcurrentHashMap<>();
 
     // zoneId -> timestamp when cooldown started (0 = not in cooldown)
