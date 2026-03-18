@@ -360,9 +360,9 @@ $C.@PageOverlay {
           );
         }
 
-        TextButton #BlockPricesButton {
+        TextButton #BlockConfigButton {
           Anchor: (Left: 6, Width: 100, Height: 32);
-          Text: "Block Prices";
+          Text: "Block Config";
           Style: TextButtonStyle(
             Default: (
               Background: #ffffff(0.06),

@@ -39,7 +39,10 @@ public class MineConfigStore {
     private volatile List<Mine> sortedCache;
 
     // blockTypeId -> price (global, not per-mine)
-    private final Map<String, BigNumber> blockPrices = new ConcurrentHashMap<>();
+    private final Map<String, Long> blockPrices = new ConcurrentHashMap<>();
+
+    // blockTypeId -> hp (global, not per-zone)
+    private final Map<String, Integer> blockHpMap = new ConcurrentHashMap<>();
 
     private volatile GateConfig entryGate;
     private volatile GateConfig exitGate;
@@ -65,6 +68,7 @@ public class MineConfigStore {
                 loadLayers(conn);
                 loadGate(conn);
                 loadBlockPrices(conn);
+                loadBlockHp(conn);
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to load MineConfigStore: " + e.getMessage());
             }
@@ -104,7 +108,7 @@ public class MineConfigStore {
 
     private void loadZones(Connection conn) throws SQLException {
         String sql = "SELECT id, mine_id, min_x, min_y, min_z, max_x, max_y, max_z, " +
-            "block_table_json, block_hp_json, regen_threshold, regen_cooldown_seconds FROM mine_zones";
+            "block_table_json, regen_threshold, regen_cooldown_seconds FROM mine_zones";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -134,15 +138,6 @@ public class MineConfigStore {
                         }
                     }
 
-                    String hpJson = rs.getString("block_hp_json");
-                    if (hpJson != null && !hpJson.isEmpty()) {
-                        Map<String, Integer> hpTable = GSON.fromJson(hpJson,
-                            new TypeToken<Map<String, Integer>>(){}.getType());
-                        if (hpTable != null) {
-                            zone.getBlockHpTable().putAll(hpTable);
-                        }
-                    }
-
                     zone.setRegenThreshold(rs.getDouble("regen_threshold"));
                     zone.setRegenCooldownSeconds(rs.getInt("regen_cooldown_seconds"));
                     mine.getZones().add(zone);
@@ -152,7 +147,7 @@ public class MineConfigStore {
     }
 
     private void loadLayers(Connection conn) throws SQLException {
-        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json, block_hp_json " +
+        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json " +
             "FROM mine_zone_layers ORDER BY zone_id, min_y, max_y, id";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -169,14 +164,6 @@ public class MineConfigStore {
                             new TypeToken<Map<String, Double>>(){}.getType());
                         if (table != null) {
                             layer.getBlockTable().putAll(table);
-                        }
-                    }
-                    String hpJson = rs.getString("block_hp_json");
-                    if (hpJson != null && !hpJson.isEmpty()) {
-                        Map<String, Integer> hpTable = GSON.fromJson(hpJson,
-                            new TypeToken<Map<String, Integer>>(){}.getType());
-                        if (hpTable != null) {
-                            layer.getBlockHpTable().putAll(hpTable);
                         }
                     }
                     boolean attached = false;
@@ -359,13 +346,12 @@ public class MineConfigStore {
 
         String sql = """
             INSERT INTO mine_zones (id, mine_id, min_x, min_y, min_z, max_x, max_y, max_z,
-                block_table_json, block_hp_json, regen_threshold, regen_cooldown_seconds)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                block_table_json, regen_threshold, regen_cooldown_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 min_x = VALUES(min_x), min_y = VALUES(min_y), min_z = VALUES(min_z),
                 max_x = VALUES(max_x), max_y = VALUES(max_y), max_z = VALUES(max_z),
                 block_table_json = VALUES(block_table_json),
-                block_hp_json = VALUES(block_hp_json),
                 regen_threshold = VALUES(regen_threshold),
                 regen_cooldown_seconds = VALUES(regen_cooldown_seconds)
             """;
@@ -384,7 +370,6 @@ public class MineConfigStore {
                 stmt.setInt(i++, zone.getMaxY());
                 stmt.setInt(i++, zone.getMaxZ());
                 stmt.setString(i++, GSON.toJson(zone.getBlockTable()));
-                stmt.setString(i++, GSON.toJson(zone.getBlockHpTable()));
                 stmt.setDouble(i++, zone.getRegenThreshold());
                 stmt.setInt(i, zone.getRegenCooldownSeconds());
                 stmt.executeUpdate();
@@ -540,31 +525,37 @@ public class MineConfigStore {
 
     private void loadBlockPrices(Connection conn) throws SQLException {
         blockPrices.clear();
-        String sql = "SELECT block_type_id, price_mantissa, price_exp10 FROM block_prices";
+        String sql = "SELECT block_type_id, price FROM block_prices";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    String blockTypeId = rs.getString("block_type_id");
-                    BigNumber price = BigNumber.of(rs.getDouble("price_mantissa"), rs.getInt("price_exp10"));
-                    blockPrices.put(blockTypeId, price);
+                    blockPrices.put(rs.getString("block_type_id"), rs.getLong("price"));
                 }
             }
         }
     }
 
-    public void saveBlockPrice(String blockTypeId, BigNumber price) {
-        if (blockTypeId == null || price == null) return;
+    public void saveBlockPrice(String blockTypeId, long price) {
+        if (blockTypeId == null) return;
 
-        blockPrices.put(blockTypeId, price);
+        if (price <= 1) {
+            blockPrices.remove(blockTypeId);
+        } else {
+            blockPrices.put(blockTypeId, price);
+        }
 
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
+        if (price <= 1) {
+            removeBlockPriceFromDatabase(blockTypeId);
+            return;
+        }
+
         String sql = """
-            INSERT INTO block_prices (block_type_id, price_mantissa, price_exp10)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                price_mantissa = VALUES(price_mantissa), price_exp10 = VALUES(price_exp10)
+            INSERT INTO block_prices (block_type_id, price)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE price = VALUES(price)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -572,8 +563,7 @@ public class MineConfigStore {
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setString(1, blockTypeId);
-                stmt.setDouble(2, price.getMantissa());
-                stmt.setInt(3, price.getExponent());
+                stmt.setLong(2, price);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
@@ -583,9 +573,11 @@ public class MineConfigStore {
 
     public void removeBlockPrice(String blockTypeId) {
         if (blockTypeId == null) return;
-
         blockPrices.remove(blockTypeId);
+        removeBlockPriceFromDatabase(blockTypeId);
+    }
 
+    private void removeBlockPriceFromDatabase(String blockTypeId) {
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -601,12 +593,92 @@ public class MineConfigStore {
         }
     }
 
-    public BigNumber getBlockPrice(String blockTypeId) {
-        return blockPrices.getOrDefault(blockTypeId, BigNumber.ONE);
+    public long getBlockPrice(String blockTypeId) {
+        return blockPrices.getOrDefault(blockTypeId, 1L);
     }
 
-    public Map<String, BigNumber> getBlockPrices() {
+    public Map<String, Long> getBlockPrices() {
         return Collections.unmodifiableMap(blockPrices);
+    }
+
+    // --- Block HP (global) ---
+
+    private void loadBlockHp(Connection conn) throws SQLException {
+        blockHpMap.clear();
+        String sql = "SELECT block_type_id, hp FROM block_hp";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    blockHpMap.put(rs.getString("block_type_id"), rs.getInt("hp"));
+                }
+            }
+        }
+    }
+
+    public void saveBlockHp(String blockTypeId, int hp) {
+        if (blockTypeId == null) return;
+
+        if (hp <= 1) {
+            blockHpMap.remove(blockTypeId);
+        } else {
+            blockHpMap.put(blockTypeId, hp);
+        }
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        if (hp <= 1) {
+            removeBlockHpFromDatabase(blockTypeId);
+            return;
+        }
+
+        String sql = """
+            INSERT INTO block_hp (block_type_id, hp)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE hp = VALUES(hp)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, blockTypeId);
+                stmt.setInt(2, hp);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to save block hp: " + e.getMessage());
+        }
+    }
+
+    public void removeBlockHp(String blockTypeId) {
+        if (blockTypeId == null) return;
+        blockHpMap.remove(blockTypeId);
+        removeBlockHpFromDatabase(blockTypeId);
+    }
+
+    private void removeBlockHpFromDatabase(String blockTypeId) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM block_hp WHERE block_type_id = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, blockTypeId);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to remove block hp: " + e.getMessage());
+        }
+    }
+
+    public int getBlockHp(String blockTypeId) {
+        return blockHpMap.getOrDefault(blockTypeId, 1);
+    }
+
+    public Map<String, Integer> getBlockHpMap() {
+        return Collections.unmodifiableMap(blockHpMap);
     }
 
     // --- Layer CRUD ---
@@ -637,12 +709,11 @@ public class MineConfigStore {
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
         String sql = """
-            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json, block_hp_json)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json)
+            VALUES (?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 min_y = VALUES(min_y), max_y = VALUES(max_y),
-                block_table_json = VALUES(block_table_json),
-                block_hp_json = VALUES(block_hp_json)
+                block_table_json = VALUES(block_table_json)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -654,8 +725,7 @@ public class MineConfigStore {
                 stmt.setString(i++, layer.getZoneId());
                 stmt.setInt(i++, layer.getMinY());
                 stmt.setInt(i++, layer.getMaxY());
-                stmt.setString(i++, GSON.toJson(layer.getBlockTable()));
-                stmt.setString(i, GSON.toJson(layer.getBlockHpTable()));
+                stmt.setString(i, GSON.toJson(layer.getBlockTable()));
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {

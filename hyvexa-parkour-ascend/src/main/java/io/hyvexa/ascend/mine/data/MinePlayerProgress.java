@@ -72,12 +72,12 @@ public class MinePlayerProgress {
     /**
      * Sells all of a single block type, returns crystals earned.
      */
-    public synchronized long sellBlock(String blockTypeId, Map<String, BigNumber> blockPrices) {
+    public synchronized long sellBlock(String blockTypeId, Map<String, Long> blockPrices) {
         Integer count = inventory.remove(blockTypeId);
         if (count == null || count <= 0) return 0;
         inventoryCount -= count;
-        BigNumber price = blockPrices.getOrDefault(blockTypeId, BigNumber.ONE);
-        long earned = price.multiply(BigNumber.of(count, 0)).toLong();
+        long price = blockPrices.getOrDefault(blockTypeId, 1L);
+        long earned = price * count;
         crystals += earned;
         return earned;
     }
@@ -85,7 +85,7 @@ public class MinePlayerProgress {
     /**
      * Sells all blocks in inventory, returns total crystals earned.
      */
-    public synchronized long sellAll(Map<String, BigNumber> blockPrices) {
+    public synchronized long sellAll(Map<String, Long> blockPrices) {
         long total = calculateInventoryValue(blockPrices);
         crystals += total;
         inventory.clear();
@@ -96,15 +96,15 @@ public class MinePlayerProgress {
     /**
      * Sells all blocks except the ones in the excluded set.
      */
-    public synchronized long sellAllExcept(Set<String> excludedBlocks, Map<String, BigNumber> blockPrices) {
+    public synchronized long sellAllExcept(Set<String> excludedBlocks, Map<String, Long> blockPrices) {
         long total = 0;
         int removed = 0;
         var it = inventory.entrySet().iterator();
         while (it.hasNext()) {
             var entry = it.next();
             if (excludedBlocks.contains(entry.getKey())) continue;
-            BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
-            total += price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
+            long price = blockPrices.getOrDefault(entry.getKey(), 1L);
+            total += price * entry.getValue();
             removed += entry.getValue();
             it.remove();
         }
@@ -113,14 +113,14 @@ public class MinePlayerProgress {
         return total;
     }
 
-     /**
+    /**
      * Calculate total value without selling.
      */
-    public synchronized long calculateInventoryValue(Map<String, BigNumber> blockPrices) {
+    public synchronized long calculateInventoryValue(Map<String, Long> blockPrices) {
         long total = 0;
         for (var entry : inventory.entrySet()) {
-            BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
-            total += price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
+            long price = blockPrices.getOrDefault(entry.getKey(), 1L);
+            total += price * entry.getValue();
         }
         return total;
     }

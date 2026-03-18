@@ -13,7 +13,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
-import io.hyvexa.common.math.BigNumber;
+
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -91,7 +91,7 @@ public final class MineAoEBreaker {
             if (blockTypeId == null) continue; // already air or unloaded
 
             // Skip multi-HP blocks (AoE only breaks 1-HP blocks)
-            int blockHp = zone.getBlockHpForY(blockTypeId, y);
+            int blockHp = configStore.getBlockHp(blockTypeId);
             if (blockHp > 1) continue;
 
             // Atomically claim
@@ -114,8 +114,8 @@ public final class MineAoEBreaker {
             int stored = progress.addToInventoryUpTo(blockTypeId, blocksGained);
             if (stored < blocksGained) {
                 int overflow = blocksGained - stored;
-                BigNumber blockPrice = configStore.getBlockPrice(blockTypeId);
-                long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
+                long blockPrice = configStore.getBlockPrice(blockTypeId);
+                long fallbackCrystals = blockPrice * overflow;
                 progress.addCrystals(fallbackCrystals);
             }
 

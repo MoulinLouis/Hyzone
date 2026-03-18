@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
@@ -81,8 +82,10 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (blockTypeName == null) return;
 
         // Multi-HP: record hit with Momentum damage bonus
+        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+        int blockHp = configStore.getBlockHp(blockTypeName);
         double damageMultiplier = mineProgress.getMomentumMultiplier();
-        BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, zone, damageMultiplier);
+        BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, blockHp, damageMultiplier);
 
         MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
 

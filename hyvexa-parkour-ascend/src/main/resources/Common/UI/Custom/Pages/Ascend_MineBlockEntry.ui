@@ -24,50 +24,10 @@ Group {
     Text: "0.0";
   }
 
-  TextButton #HpDownBtn {
-    Anchor: (Left: 296, Top: 8, Width: 20, Height: 20);
-    Text: "-";
-    Style: TextButtonStyle(
-      Default: (
-        Background: #475569(0.5),
-        LabelStyle: (FontSize: 12, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-      ),
-      Hovered: (
-        Background: #475569(0.8),
-        LabelStyle: (FontSize: 12, TextColor: #f0f4f8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-      ),
-      Pressed: (
-        Background: #475569(0.3),
-        LabelStyle: (FontSize: 12, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-      ),
-      Sounds: $C.@ButtonSounds,
-    );
-  }
-
   Label #BlockHp {
-    Anchor: (Left: 318, Top: 0, Bottom: 0, Width: 40);
-    Style: (FontSize: 13, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+    Anchor: (Left: 296, Top: 0, Bottom: 0, Width: 80);
+    Style: (FontSize: 13, TextColor: #9fb0ba, HorizontalAlignment: Center, VerticalAlignment: Center);
     Text: "1 HP";
-  }
-
-  TextButton #HpUpBtn {
-    Anchor: (Left: 360, Top: 8, Width: 20, Height: 20);
-    Text: "+";
-    Style: TextButtonStyle(
-      Default: (
-        Background: #475569(0.5),
-        LabelStyle: (FontSize: 12, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-      ),
-      Hovered: (
-        Background: #475569(0.8),
-        LabelStyle: (FontSize: 12, TextColor: #f0f4f8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-      ),
-      Pressed: (
-        Background: #475569(0.3),
-        LabelStyle: (FontSize: 12, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-      ),
-      Sounds: $C.@ButtonSounds,
-    );
   }
 
   TextButton #RemoveBtn {

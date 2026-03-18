@@ -25,7 +25,7 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.ui.BaseAscendPage;
-import io.hyvexa.common.math.BigNumber;
+
 import io.hyvexa.common.ui.ButtonEventData;
 
 public class MineBagPage extends BaseAscendPage {
@@ -65,7 +65,7 @@ public class MineBagPage extends BaseAscendPage {
 
         commandBuilder.set("#CapacityValue.Text", total + " / " + capacity + " blocks");
 
-        Map<String, BigNumber> prices = gatherAllPrices();
+        Map<String, Long> prices = gatherAllPrices();
         long totalValue = mineProgress.calculateInventoryValue(prices);
         commandBuilder.set("#TotalValue.Text", totalValue + " crystals");
 
@@ -89,8 +89,8 @@ public class MineBagPage extends BaseAscendPage {
                 commandBuilder.set(sel + " #Amount.Text", "x" + entry.getValue());
                 commandBuilder.set(sel + " #BlockName.Text", MineBlockDisplay.getDisplayName(entry.getKey()));
 
-                BigNumber price = prices.getOrDefault(entry.getKey(), BigNumber.ONE);
-                long lineValue = price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
+                long price = prices.getOrDefault(entry.getKey(), 1L);
+                long lineValue = price * entry.getValue();
                 commandBuilder.set(sel + " #Value.Text", lineValue + " crystals");
 
                 // Lock state
@@ -146,7 +146,7 @@ public class MineBagPage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        Map<String, BigNumber> prices = gatherAllPrices();
+        Map<String, Long> prices = gatherAllPrices();
         long earned = mineProgress.sellBlock(blockTypeId, prices);
         if (earned <= 0) {
             player.sendMessage(Message.raw("Nothing to sell."));
@@ -169,7 +169,7 @@ public class MineBagPage extends BaseAscendPage {
             return;
         }
 
-        Map<String, BigNumber> prices = gatherAllPrices();
+        Map<String, Long> prices = gatherAllPrices();
         long earned;
         if (lockedBlocks.isEmpty()) {
             earned = mineProgress.sellAll(prices);
@@ -213,7 +213,7 @@ public class MineBagPage extends BaseAscendPage {
         this.sendUpdate(commandBuilder, eventBuilder, false);
     }
 
-    private Map<String, BigNumber> gatherAllPrices() {
+    private Map<String, Long> gatherAllPrices() {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) return Map.of();
         MineConfigStore config = plugin.getMineConfigStore();

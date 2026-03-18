@@ -10,7 +10,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
-import io.hyvexa.common.math.BigNumber;
+
 
 import java.util.Map;
 import java.util.UUID;
@@ -41,9 +41,9 @@ public final class MineRewardHelper {
         boolean bagFull = false;
         if (stored < blocksGained) {
             MineConfigStore configStore = mineManager.getConfigStore();
-            BigNumber blockPrice = configStore.getBlockPrice(blockTypeName);
+            long blockPrice = configStore.getBlockPrice(blockTypeName);
             int overflow = blocksGained - stored;
-            long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
+            long fallbackCrystals = blockPrice * overflow;
             mineProgress.addCrystals(fallbackCrystals);
             if (stored == 0) {
                 bagFull = true;

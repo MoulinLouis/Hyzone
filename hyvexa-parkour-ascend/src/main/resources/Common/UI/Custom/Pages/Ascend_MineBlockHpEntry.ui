@@ -1,0 +1,30 @@
+$C = "../Common.ui";
+
+Button {
+  Anchor: (Left: 0, Right: 0, Top: 4, Height: 36);
+  Background: #ffffff(0.03);
+  Padding: (Left: 8, Right: 8);
+  Style: ButtonStyle(
+    Default: (Background: #ffffff(0.03)),
+    Hovered: (Background: #253742),
+    Pressed: (Background: #1a2830),
+    Sounds: $C.@ButtonSounds,
+  );
+
+  ItemIcon #BlockIcon {
+    Anchor: (Left: 0, Top: 4, Width: 28, Height: 28);
+    ShowItemTooltip: true;
+  }
+
+  Label #BlockName {
+    Anchor: (Left: 34, Top: 0, Bottom: 0, Width: 280);
+    Style: (FontSize: 13, TextColor: #f0f4f8, VerticalAlignment: Center);
+    Text: "Block";
+  }
+
+  Label #BlockHpLabel {
+    Anchor: (Right: 12, Top: 0, Bottom: 0, Width: 60);
+    Style: (FontSize: 13, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
+    Text: "1 HP";
+  }
+}

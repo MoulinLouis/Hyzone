@@ -1,7 +1,5 @@
 package io.hyvexa.ascend.mine.system;
 
-import io.hyvexa.ascend.mine.data.MineZone;
-
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Tracks per-player block damage for multi-HP blocks.
  * Each player has independent damage progress on each block position.
- * HP values are read from zone/layer config (block_hp_json).
+ * HP values are read from global block_hp config.
  */
 public class BlockDamageTracker {
 
@@ -22,17 +20,14 @@ public class BlockDamageTracker {
     /**
      * Records a hit on a block with 1 base damage.
      */
-    public HitResult recordHit(UUID playerId, int x, int y, int z, String blockTypeId, MineZone zone) {
-        return recordHit(playerId, x, y, z, blockTypeId, zone, 1.0);
+    public HitResult recordHit(UUID playerId, int x, int y, int z, String blockTypeId, int maxHp) {
+        return recordHit(playerId, x, y, z, blockTypeId, maxHp, 1.0);
     }
 
     /**
      * Records a hit on a block with a damage multiplier (e.g. Momentum combo bonus).
-     * HP is resolved from the zone/layer config based on Y coordinate.
      */
-    public HitResult recordHit(UUID playerId, int x, int y, int z, String blockTypeId, MineZone zone, double damageMultiplier) {
-        int maxHp = zone.getBlockHpForY(blockTypeId, y);
-
+    public HitResult recordHit(UUID playerId, int x, int y, int z, String blockTypeId, int maxHp, double damageMultiplier) {
         if (maxHp <= 1) {
             return HitResult.INSTANT_BREAK;
         }
@@ -49,7 +44,7 @@ public class BlockDamageTracker {
         }
 
         state.lastHitMs = now;
-        int damage = Math.max(1, (int) Math.round(damageMultiplier));
+        double damage = Math.max(1.0, damageMultiplier);
         state.currentHp -= damage;
 
         if (state.currentHp <= 0) {
@@ -87,10 +82,10 @@ public class BlockDamageTracker {
     public static class BlockDamageState {
         public final String blockTypeId;
         public final int maxHp;
-        public int currentHp;
+        public double currentHp;
         public long lastHitMs;
 
-        BlockDamageState(String blockTypeId, int maxHp, int currentHp, long lastHitMs) {
+        BlockDamageState(String blockTypeId, int maxHp, double currentHp, long lastHitMs) {
             this.blockTypeId = blockTypeId;
             this.maxHp = maxHp;
             this.currentHp = currentHp;
@@ -98,11 +93,11 @@ public class BlockDamageTracker {
         }
     }
 
-    public record HitResult(int remainingHp, int maxHp, boolean shouldBreak) {
+    public record HitResult(double remainingHp, int maxHp, boolean shouldBreak) {
         public static final HitResult INSTANT_BREAK = new HitResult(0, 1, true);
 
         public float healthFraction() {
-            return maxHp > 0 ? (float) remainingHp / maxHp : 0f;
+            return maxHp > 0 ? (float) (remainingHp / maxHp) : 0f;
         }
     }
 }

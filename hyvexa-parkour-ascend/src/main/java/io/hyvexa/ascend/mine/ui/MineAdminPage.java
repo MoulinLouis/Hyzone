@@ -102,7 +102,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             case MineData.BUTTON_DELETE -> handleDelete(ref, store);
             case MineData.BUTTON_ZONES -> handleZones(ref, store);
             case MineData.BUTTON_GATE -> handleGate(ref, store);
-            case MineData.BUTTON_BLOCK_PRICES -> handleBlockPrices(ref, store);
+            case MineData.BUTTON_BLOCK_CONFIG -> handleBlockConfig(ref, store);
             case MineData.BUTTON_BACK -> handleBack(ref, store);
             default -> {
             }
@@ -260,13 +260,13 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             new MineGateAdminPage(pRef, mineConfigStore));
     }
 
-    private void handleBlockPrices(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void handleBlockConfig(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
         player.getPageManager().openCustomPage(ref, store,
-            new MineBlockPricesPage(pRef, mineConfigStore));
+            new MineBlockHpPage(pRef, mineConfigStore));
     }
 
     private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -327,8 +327,8 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_ZONES), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GateButton",
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_GATE), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BlockPricesButton",
-            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BLOCK_PRICES), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BlockConfigButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BLOCK_CONFIG), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BACK), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
@@ -422,7 +422,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         static final String BUTTON_DELETE = "DeleteMine";
         static final String BUTTON_ZONES = "Zones";
         static final String BUTTON_GATE = "Gate";
-        static final String BUTTON_BLOCK_PRICES = "BlockPrices";
+        static final String BUTTON_BLOCK_CONFIG = "BlockConfig";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 

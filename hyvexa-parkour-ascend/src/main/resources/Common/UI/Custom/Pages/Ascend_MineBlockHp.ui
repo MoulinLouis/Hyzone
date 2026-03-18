@@ -1,0 +1,176 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #BlockConfigWindow {
+    Anchor: (Width: 680, Height: 620);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 52);
+      LayoutMode: Full;
+      Background: #0a1018;
+
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #f59e0b;
+      }
+
+      Label #HeaderTitle {
+        Anchor: (Left: 20, Top: 16, Width: 300, Height: 24);
+        Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true);
+        Text: "Block Config";
+      }
+
+      Group {
+        Anchor: (Right: 16, Top: 10, Width: 72, Height: 32);
+
+        TextButton #BackButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "Back";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+    }
+
+    // === CONTENT ===
+    Group #Content {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 16, Right: 16, Top: 10, Bottom: 12);
+
+      // Selected block info
+      Label #SelectedBlockText {
+        Style: (FontSize: 13, TextColor: #f0f4f8, RenderBold: true);
+        Text: "Select a block below";
+      }
+
+      // Edit row: HP + Price
+      Group #EditRow {
+        Anchor: (Left: 0, Right: 0, Top: 8, Height: 28);
+        LayoutMode: Left;
+        Visible: false;
+
+        Label {
+          Anchor: (Width: 24, Height: 28);
+          Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+          Text: "HP";
+        }
+
+        $C.@TextField #HpField {
+          Anchor: (Width: 50, Height: 28);
+          Style: (FontSize: 13, TextColor: #ffffff(0.85));
+        }
+
+        TextButton #SetHpButton {
+          Anchor: (Left: 4, Width: 55, Height: 28);
+          Text: "Set HP";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ef4444(0.7),
+              LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ef4444,
+              LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #dc2626,
+              LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { Anchor: (Width: 12); }
+
+        Label {
+          Anchor: (Width: 34, Height: 28);
+          Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+          Text: "Price";
+        }
+
+        $C.@TextField #PriceField {
+          Anchor: (Width: 70, Height: 28);
+          Style: (FontSize: 13, TextColor: #ffffff(0.85));
+        }
+
+        TextButton #SetPriceButton {
+          Anchor: (Left: 4, Width: 70, Height: 28);
+          Text: "Set Price";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #22d3ee(0.6),
+              LabelStyle: (FontSize: 11, TextColor: #e0fcff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #22d3ee(0.8),
+              LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #22d3ee(0.4),
+              LabelStyle: (FontSize: 11, TextColor: #e0fcff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // Column headers
+      Group #ColumnHeaders {
+        Anchor: (Left: 0, Right: 0, Top: 8, Height: 20);
+        Padding: (Left: 8, Right: 8);
+
+        Label {
+          Anchor: (Left: 34, Top: 0, Bottom: 0, Width: 200);
+          Style: (FontSize: 10, TextColor: #6b7c8a, RenderUppercase: true, LetterSpacing: 1, VerticalAlignment: Center);
+          Text: "BLOCK";
+        }
+
+        Label {
+          Anchor: (Right: 100, Top: 0, Bottom: 0, Width: 50);
+          Style: (FontSize: 10, TextColor: #6b7c8a, RenderUppercase: true, LetterSpacing: 1, HorizontalAlignment: End, VerticalAlignment: Center);
+          Text: "HP";
+        }
+
+        Label {
+          Anchor: (Right: 8, Top: 0, Bottom: 0, Width: 80);
+          Style: (FontSize: 10, TextColor: #6b7c8a, RenderUppercase: true, LetterSpacing: 1, HorizontalAlignment: End, VerticalAlignment: Center);
+          Text: "PRICE";
+        }
+      }
+
+      // Block list
+      Group #BlockListContainer {
+        Anchor: (Left: 0, Right: 0, Top: 4);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+        Group #BlockEntries {
+          LayoutMode: Top;
+        }
+      }
+    }
+  }
+}

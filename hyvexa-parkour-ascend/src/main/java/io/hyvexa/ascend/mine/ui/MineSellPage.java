@@ -23,7 +23,7 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.ui.BaseAscendPage;
-import io.hyvexa.common.math.BigNumber;
+
 import io.hyvexa.common.ui.ButtonEventData;
 
 public class MineSellPage extends BaseAscendPage {
@@ -60,7 +60,7 @@ public class MineSellPage extends BaseAscendPage {
         commandBuilder.set("#CapacityValue.Text", total + " / " + capacity + " blocks");
         commandBuilder.set("#CrystalsValue.Text", String.valueOf(mineProgress.getCrystals()));
 
-        Map<String, BigNumber> prices = gatherAllPrices();
+        Map<String, Long> prices = gatherAllPrices();
         long totalValue = mineProgress.calculateInventoryValue(prices);
         commandBuilder.set("#TotalValue.Text", totalValue + " crystals");
 
@@ -79,8 +79,8 @@ public class MineSellPage extends BaseAscendPage {
                 commandBuilder.set(sel + " #BlockName.Text", MineBlockDisplay.getDisplayName(entry.getKey()));
                 commandBuilder.set(sel + " #Quantity.Text", "x" + entry.getValue());
 
-                BigNumber price = prices.getOrDefault(entry.getKey(), BigNumber.ONE);
-                long lineValue = price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
+                long price = prices.getOrDefault(entry.getKey(), 1L);
+                long lineValue = price * entry.getValue();
                 commandBuilder.set(sel + " #Value.Text", lineValue + " crystals");
 
                 index++;
@@ -110,7 +110,7 @@ public class MineSellPage extends BaseAscendPage {
             return;
         }
 
-        Map<String, BigNumber> prices = gatherAllPrices();
+        Map<String, Long> prices = gatherAllPrices();
         long earned = mineProgress.sellAll(prices);
 
         MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
@@ -141,7 +141,7 @@ public class MineSellPage extends BaseAscendPage {
         this.sendUpdate(commandBuilder, eventBuilder, false);
     }
 
-    private Map<String, BigNumber> gatherAllPrices() {
+    private Map<String, Long> gatherAllPrices() {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) return Map.of();
         MineConfigStore config = plugin.getMineConfigStore();

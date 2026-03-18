@@ -300,6 +300,7 @@ public final class AscendDatabaseSetup {
             ensurePickaxeTierColumn(conn);
             migrateCrystalsToBigint(conn);
             ensureBlockHpColumns(conn);
+            migrateBlockPricesToSimple(conn);
 
             // Drop old per-mine price table (not in prod, no migration needed)
             stmt.executeUpdate("DROP TABLE IF EXISTS mine_block_prices");
@@ -308,8 +309,15 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS block_prices (
                     block_type_id VARCHAR(64) PRIMARY KEY,
-                    price_mantissa DOUBLE NOT NULL DEFAULT 1,
-                    price_exp10 INT NOT NULL DEFAULT 0
+                    price BIGINT NOT NULL DEFAULT 1
+                ) ENGINE=InnoDB
+                """);
+
+            // Global block HP
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS block_hp (
+                    block_type_id VARCHAR(64) PRIMARY KEY,
+                    hp INT NOT NULL DEFAULT 1
                 ) ENGINE=InnoDB
                 """);
 
@@ -1314,6 +1322,23 @@ public final class AscendDatabaseSetup {
             }
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to add block_hp_json columns: " + e.getMessage());
+        }
+    }
+
+    private static void migrateBlockPricesToSimple(Connection conn) {
+        if (conn == null) return;
+        try (Statement stmt = conn.createStatement()) {
+            // If old mantissa/exp columns exist, migrate data and drop them
+            if (columnExists(conn, "block_prices", "price_mantissa")) {
+                if (!columnExists(conn, "block_prices", "price")) {
+                    stmt.executeUpdate("ALTER TABLE block_prices ADD COLUMN price BIGINT NOT NULL DEFAULT 1");
+                }
+                stmt.executeUpdate("UPDATE block_prices SET price = CAST(price_mantissa * POW(10, price_exp10) AS SIGNED) WHERE price = 1");
+                stmt.executeUpdate("ALTER TABLE block_prices DROP COLUMN price_mantissa");
+                stmt.executeUpdate("ALTER TABLE block_prices DROP COLUMN price_exp10");
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to migrate block_prices to simple format: " + e.getMessage());
         }
     }
 
