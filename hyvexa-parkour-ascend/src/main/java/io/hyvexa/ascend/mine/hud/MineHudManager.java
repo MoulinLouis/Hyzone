@@ -20,6 +20,7 @@ import io.hyvexa.common.util.MultiHudBridge;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -244,20 +245,27 @@ public class MineHudManager {
 
     // --- Inner state class ---
 
-    public void showBlockHealth(UUID playerId, String blockTypeId, int currentHp, int maxHp) {
+    public void showBlockHealth(UUID playerId, String blockTypeId, double currentHp, int maxHp) {
         MineHudState state = huds.get(playerId);
         if (state == null) return;
 
-        float fraction = maxHp > 0 ? (float) currentHp / maxHp : 0f;
+        float fraction = maxHp > 0 ? (float) (currentHp / maxHp) : 0f;
         String displayName = MineBlockDisplay.getDisplayName(blockTypeId);
 
         state.blockHealthVisible = true;
         state.blockHealthLastUpdateMs = System.currentTimeMillis();
 
+        String hpText;
+        if (currentHp == Math.floor(currentHp)) {
+            hpText = (int) currentHp + "/" + maxHp;
+        } else {
+            hpText = String.format(Locale.US, "%.1f/%d", currentHp, maxHp);
+        }
+
         UICommandBuilder cb = new UICommandBuilder();
         cb.set("#BlockHealthHud.Visible", true);
         cb.set("#BlockHealthName.Text", displayName);
-        cb.set("#BlockHealthText.Text", currentHp + "/" + maxHp);
+        cb.set("#BlockHealthText.Text", hpText);
         cb.set("#BlockHealthBar.Value", fraction);
 
         // Color: green > yellow > red based on HP fraction

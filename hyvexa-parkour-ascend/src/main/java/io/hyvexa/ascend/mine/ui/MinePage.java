@@ -692,7 +692,7 @@ public class MinePage extends BaseAscendPage {
         double effect = type.getEffect(level);
         return switch (type) {
             case BAG_CAPACITY -> "Capacity: " + (int) effect + " blocks";
-            case MOMENTUM -> level == 0 ? "No combo" : "Max combo: " + (int) effect;
+            case MOMENTUM -> level == 0 ? "No combo" : "Max combo: " + (int) effect + " (+2% dmg/hit)";
             case FORTUNE -> level == 0 ? "No bonus drops" : "x2: " + (int) effect + "%, x3: " + String.format("%.1f", level * 0.4) + "%";
             case JACKHAMMER -> level == 0 ? "No column break" : "Depth: " + (int) effect + " blocks";
             case STOMP -> level == 0 ? "No layer break" : "Radius: " + (int) effect;
