@@ -69,6 +69,14 @@ public class MinePage extends BaseAscendPage {
         "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#f97316", "#7c3aed", "#3b82f6"
     };
     private static final int UPGRADE_SEGMENT_COUNT = 20;
+    private static final MineUpgradeType[] GRID_UPGRADE_ORDER = {
+        MineUpgradeType.MOMENTUM,
+        MineUpgradeType.FORTUNE,
+        MineUpgradeType.JACKHAMMER,
+        MineUpgradeType.STOMP,
+        MineUpgradeType.BLAST,
+        MineUpgradeType.HASTE
+    };
 
     private static final String[] UPGRADE_DISPLAY_NAMES = {
         "Bag Capacity", "Momentum", "Fortune", "Jackhammer", "Stomp", "Blast", "Haste"
@@ -216,66 +224,108 @@ public class MinePage extends BaseAscendPage {
         // --- Pickaxe Tier Card ---
         populatePickaxeCard(cmd, evt);
 
-        // --- Existing upgrade entries ---
-        MineUpgradeType[] types = MineUpgradeType.values();
-        for (int i = 0; i < types.length; i++) {
-            MineUpgradeType type = types[i];
-            int level = mineProgress.getUpgradeLevel(type);
-            int maxLevel = type.getMaxLevel();
-            boolean maxed = level >= maxLevel;
+        // --- Grid cards (6 power upgrades in 3x2 grid) ---
+        for (int slot = 0; slot < GRID_UPGRADE_ORDER.length; slot++) {
+            MineUpgradeType type = GRID_UPGRADE_ORDER[slot];
+            cmd.append("#Slot" + slot, "Pages/Ascend_MinePageUpgradeCard.ui");
+            String sel = "#Slot" + slot + "[0]";
+            populateUpgradeCard(cmd, evt, sel, type);
+        }
 
-            cmd.append("#UpgradeItems", "Pages/Ascend_MinePageUpgradeEntry.ui");
-            String sel = "#UpgradeItems[" + (i + 1) + "]";  // +1 because pickaxe card is at index 0
+        // --- Bag Capacity (bottom row, uses existing horizontal entry) ---
+        populateBagCapacityEntry(cmd, evt);
+    }
 
-            // Accent color + button zone color
-            String colorName = UPGRADE_ACCENT_COLORS[i];
-            String colorHex = UPGRADE_ACCENT_HEX[i];
-            cmd.set(sel + " #AccentViolet.Visible", false);
-            cmd.set(sel + " #Accent" + colorName + ".Visible", true);
-            cmd.set(sel + " #ButtonBg" + colorName + ".Visible", true);
+    private void populateUpgradeCard(UICommandBuilder cmd, UIEventBuilder evt,
+                                     String sel, MineUpgradeType type) {
+        int level = mineProgress.getUpgradeLevel(type);
+        int maxLevel = type.getMaxLevel();
+        boolean maxed = level >= maxLevel;
+        int ordinal = type.ordinal();
 
-            // Segment colors + progress
-            int filledSegments = maxLevel > 0 ? Math.min(UPGRADE_SEGMENT_COUNT, level * UPGRADE_SEGMENT_COUNT / maxLevel) : 0;
-            for (int seg = 1; seg <= UPGRADE_SEGMENT_COUNT; seg++) {
-                cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
-                if (seg <= filledSegments) {
-                    cmd.set(sel + " #Seg" + seg + ".Visible", true);
-                }
-            }
+        String colorName = UPGRADE_ACCENT_COLORS[ordinal];
+        String colorHex = UPGRADE_ACCENT_HEX[ordinal];
 
-            cmd.set(sel + " #UpgradeName.Text", UPGRADE_DISPLAY_NAMES[i]);
-            cmd.set(sel + " #EffectText.Text", getEffectDescription(type, level));
+        // Accent bar color
+        cmd.set(sel + " #Accent" + colorName + ".Visible", true);
 
-            // Bind buy button
+        // Labels
+        cmd.set(sel + " #CardName.Text", UPGRADE_DISPLAY_NAMES[ordinal]);
+        cmd.set(sel + " #CardEffect.Text", getEffectDescription(type, level));
+
+        if (maxed) {
+            cmd.set(sel + " #CardLevel.Text", "MAX");
+            cmd.set(sel + " #CardCost.Text", "");
             evt.addEventBinding(CustomUIEventBindingType.Activating,
-                sel + " #UpgradeBuyButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, maxed ? "Noop" : BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
+                sel + " #CardBuyBtn",
+                EventData.of(ButtonEventData.KEY_BUTTON, "Noop"), false);
+        } else {
+            cmd.set(sel + " #CardLevel.Text", "Lv." + level);
+            long cost = type.getCost(level);
+            cmd.set(sel + " #CardCost.Text", cost + " cryst");
+            boolean canAfford = mineProgress.getCrystals() >= cost;
+            cmd.set(sel + " #CardDisabled.Visible", !canAfford);
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #CardBuyBtn",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
+        }
+    }
 
-            if (maxed) {
-                cmd.set(sel + " #LevelText.Text", "MAX");
-                cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
-                cmd.set(sel + " #ActionText.Text", "Maxed!");
-                cmd.set(sel + " #ActionPrice.Text", "");
-            } else {
-                cmd.set(sel + " #LevelText.Text", "Lv." + level);
-                cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
-                long cost = type.getCost(level);
-                cmd.set(sel + " #ActionText.Text", "Cost:");
-                cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
-                boolean canAfford = mineProgress.getCrystals() >= cost;
-                cmd.set(sel + " #ButtonDisabledOverlay.Visible", !canAfford);
-                if (!canAfford) {
-                    cmd.set(sel + " #UpgradeStatus.Style.TextColor", "#9fb0ba");
-                    cmd.set(sel + " #ActionText.Style.TextColor", "#9fb0ba");
-                    cmd.set(sel + " #ActionPrice.Style.TextColor", "#9fb0ba");
-                }
+    private void populateBagCapacityEntry(UICommandBuilder cmd, UIEventBuilder evt) {
+        MineUpgradeType type = MineUpgradeType.BAG_CAPACITY;
+        int level = mineProgress.getUpgradeLevel(type);
+        int maxLevel = type.getMaxLevel();
+        boolean maxed = level >= maxLevel;
+
+        cmd.append("#SlotBag", "Pages/Ascend_MinePageUpgradeEntry.ui");
+        String sel = "#SlotBag[0]";
+
+        // Accent + button: Green
+        cmd.set(sel + " #AccentViolet.Visible", false);
+        cmd.set(sel + " #AccentGreen.Visible", true);
+        cmd.set(sel + " #ButtonBgGreen.Visible", true);
+
+        // Segment colors + progress
+        String colorHex = "#10b981";
+        int filledSegments = maxLevel > 0 ? Math.min(UPGRADE_SEGMENT_COUNT, level * UPGRADE_SEGMENT_COUNT / maxLevel) : 0;
+        for (int seg = 1; seg <= UPGRADE_SEGMENT_COUNT; seg++) {
+            cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
+            if (seg <= filledSegments) {
+                cmd.set(sel + " #Seg" + seg + ".Visible", true);
+            }
+        }
+
+        cmd.set(sel + " #UpgradeName.Text", "Bag Capacity");
+        cmd.set(sel + " #EffectText.Text", getEffectDescription(type, level));
+
+        evt.addEventBinding(CustomUIEventBindingType.Activating,
+            sel + " #UpgradeBuyButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, maxed ? "Noop" : BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
+
+        if (maxed) {
+            cmd.set(sel + " #LevelText.Text", "MAX");
+            cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
+            cmd.set(sel + " #ActionText.Text", "Maxed!");
+            cmd.set(sel + " #ActionPrice.Text", "");
+        } else {
+            cmd.set(sel + " #LevelText.Text", "Lv." + level);
+            cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
+            long cost = type.getCost(level);
+            cmd.set(sel + " #ActionText.Text", "Cost:");
+            cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
+            boolean canAfford = mineProgress.getCrystals() >= cost;
+            cmd.set(sel + " #ButtonDisabledOverlay.Visible", !canAfford);
+            if (!canAfford) {
+                cmd.set(sel + " #UpgradeStatus.Style.TextColor", "#9fb0ba");
+                cmd.set(sel + " #ActionText.Style.TextColor", "#9fb0ba");
+                cmd.set(sel + " #ActionPrice.Style.TextColor", "#9fb0ba");
             }
         }
     }
 
     private void populatePickaxeCard(UICommandBuilder cmd, UIEventBuilder evt) {
-        cmd.append("#UpgradeItems", "Pages/Ascend_MinePagePickaxeCard.ui");
-        String sel = "#UpgradeItems[0]";
+        cmd.append("#PickaxeRow", "Pages/Ascend_MinePagePickaxeCard.ui");
+        String sel = "#PickaxeRow[0]";
 
         PickaxeTier current = mineProgress.getPickaxeTierEnum();
         PickaxeTier next = current.next();
@@ -599,7 +649,11 @@ public class MinePage extends BaseAscendPage {
         UICommandBuilder cmd = new UICommandBuilder();
         UIEventBuilder evt = new UIEventBuilder();
         cmd.clear("#MinerEntries");
-        cmd.clear("#UpgradeItems");
+        cmd.clear("#PickaxeRow");
+        for (int slot = 0; slot < GRID_UPGRADE_ORDER.length; slot++) {
+            cmd.clear("#Slot" + slot);
+        }
+        cmd.clear("#SlotBag");
         populateMinerTab(cmd, evt);
         populateUpgradeTab(cmd, evt);
         this.sendUpdate(cmd, evt, false);

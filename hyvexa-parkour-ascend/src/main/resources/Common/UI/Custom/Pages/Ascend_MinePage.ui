@@ -181,7 +181,41 @@ $C.@PageOverlay {
         LayoutMode: TopScrolling;
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
-        Group #UpgradeItems {
+        Group #PickaxeRow {
+          Anchor: (Left: 0, Right: 0);
+          LayoutMode: Top;
+        }
+
+        Group { Anchor: (Height: 8); }
+
+        Group #CardRow1 {
+          Anchor: (Left: 0, Right: 0, Height: 115);
+          LayoutMode: Left;
+
+          Group #Slot0 { Anchor: (Width: 146, Height: 115); }
+          Group { Anchor: (Width: 10); }
+          Group #Slot1 { Anchor: (Width: 146, Height: 115); }
+          Group { Anchor: (Width: 10); }
+          Group #Slot2 { Anchor: (Width: 146, Height: 115); }
+        }
+
+        Group { Anchor: (Height: 10); }
+
+        Group #CardRow2 {
+          Anchor: (Left: 0, Right: 0, Height: 115);
+          LayoutMode: Left;
+
+          Group #Slot3 { Anchor: (Width: 146, Height: 115); }
+          Group { Anchor: (Width: 10); }
+          Group #Slot4 { Anchor: (Width: 146, Height: 115); }
+          Group { Anchor: (Width: 10); }
+          Group #Slot5 { Anchor: (Width: 146, Height: 115); }
+        }
+
+        Group { Anchor: (Height: 10); }
+
+        Group #SlotBag {
+          Anchor: (Left: 0, Right: 0);
           LayoutMode: Top;
         }
       }
