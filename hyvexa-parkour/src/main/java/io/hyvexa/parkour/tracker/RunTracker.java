@@ -27,6 +27,7 @@ import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
+import io.hyvexa.parkour.data.RunStateStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
@@ -60,6 +61,7 @@ public class RunTracker {
     private final RunValidator validator;
     private final RunSessionTracker sessionTracker;
     private final RunTeleporter teleporter;
+    private RunStateStore runStateStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
 
@@ -72,6 +74,10 @@ public class RunTracker {
         this.validator = new RunValidator(mapStore, progressStore);
         this.sessionTracker = new RunSessionTracker(mapStore, progressStore);
         this.teleporter = new RunTeleporter(mapStore, activeRuns);
+    }
+
+    public void setRunStateStore(RunStateStore runStateStore) {
+        this.runStateStore = runStateStore;
     }
 
     public void setGhostRecorder(GhostRecorder ghostRecorder) {
@@ -123,6 +129,9 @@ public class RunTracker {
         if (ghostNpcManager != null) {
             ghostNpcManager.despawnGhost(playerId);
         }
+        if (runStateStore != null) {
+            runStateStore.deleteAsync(playerId);
+        }
     }
 
     public void clearPlayer(UUID playerId) {
@@ -151,6 +160,15 @@ public class RunTracker {
             run.fallState.fallStartTime = null;
             run.fallState.lastY = null;
             run.skipNextTimeIncrement = true;
+            if (runStateStore != null && !run.waitingForStart) {
+                Map map = mapStore.getMapReadonly(run.mapId);
+                if (map != null) {
+                    runStateStore.saveAsync(playerId, run.mapId, run.elapsedMs, run.lastCheckpointIndex,
+                            new HashSet<>(run.touchedCheckpoints),
+                            new java.util.HashMap<>(run.checkpointTouchTimes),
+                            map.getUpdatedAt());
+                }
+            }
         }
         idleFalls.remove(playerId);
         teleporter.clearPlayer(playerId);
@@ -227,7 +245,16 @@ public class RunTracker {
         idleFalls.keySet().removeIf(id -> !onlinePlayers.contains(id));
         readyPlayers.removeIf(id -> !onlinePlayers.contains(id));
         lastSeenAt.keySet().removeIf(id -> onlinePlayers.contains(id));
-        activeRuns.keySet().removeIf(id -> !onlinePlayers.contains(id) && isExpiredOfflineRun(id, now));
+        activeRuns.entrySet().removeIf(entry -> {
+            UUID id = entry.getKey();
+            if (!onlinePlayers.contains(id) && isExpiredOfflineRun(id, now)) {
+                if (runStateStore != null) {
+                    runStateStore.deleteAsync(id);
+                }
+                return true;
+            }
+            return false;
+        });
     }
 
     public String getActiveMapId(UUID playerId) {
@@ -689,6 +716,82 @@ public class RunTracker {
     }
 
     // --- ActiveRun (package-private for collaborator access) ---
+
+    /**
+     * Restore an ActiveRun from saved DB state. Called on reconnect when no in-memory run exists.
+     */
+    public void restoreRun(UUID playerId, RunStateStore.SavedRunState saved) {
+        ActiveRun run = new ActiveRun(saved.mapId(), System.currentTimeMillis());
+        run.elapsedMs = saved.elapsedMs();
+        run.lastCheckpointIndex = saved.lastCheckpointIndex();
+        run.touchedCheckpoints.addAll(saved.touchedCheckpoints());
+        run.checkpointTouchTimes.putAll(saved.checkpointTouchTimes());
+        run.waitingForStart = false;
+        run.skipNextTimeIncrement = true;
+        populatePersonalBestSplits(playerId, run);
+        activeRuns.put(playerId, run);
+        if (ghostNpcManager != null) {
+            ghostNpcManager.spawnGhost(playerId, saved.mapId());
+        }
+    }
+
+    /**
+     * Periodically save eligible active runs asynchronously. Called every 60s as autosave.
+     */
+    public void autosaveActiveRuns(RunStateStore store) {
+        if (store == null) {
+            return;
+        }
+        for (var entry : activeRuns.entrySet()) {
+            UUID playerId = entry.getKey();
+            ActiveRun run = entry.getValue();
+            if (run.waitingForStart) {
+                continue;
+            }
+            Map map = mapStore.getMapReadonly(run.mapId);
+            if (map == null) {
+                continue;
+            }
+            store.saveAsync(playerId, run.mapId, run.elapsedMs, run.lastCheckpointIndex,
+                    new HashSet<>(run.touchedCheckpoints),
+                    new java.util.HashMap<>(run.checkpointTouchTimes),
+                    map.getUpdatedAt());
+        }
+    }
+
+    /**
+     * Save all eligible active runs synchronously. Called during graceful shutdown.
+     */
+    public void saveAllActiveRuns(RunStateStore store) {
+        if (store == null) {
+            return;
+        }
+        int total = activeRuns.size();
+        int saved = 0;
+        int skipped = 0;
+        for (var entry : activeRuns.entrySet()) {
+            UUID playerId = entry.getKey();
+            ActiveRun run = entry.getValue();
+            if (run.waitingForStart) {
+                skipped++;
+                continue;
+            }
+            Map map = mapStore.getMapReadonly(run.mapId);
+            if (map == null) {
+                skipped++;
+                continue;
+            }
+            try {
+                store.saveSync(playerId, run.mapId, run.elapsedMs, run.lastCheckpointIndex,
+                        run.touchedCheckpoints, run.checkpointTouchTimes, map.getUpdatedAt());
+                saved++;
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Shutdown: failed to save run state for " + playerId);
+            }
+        }
+        LOGGER.atInfo().log("Shutdown: saved " + saved + " active run(s), skipped " + skipped
+                + ", total in map: " + total);
+    }
 
     static class ActiveRun implements CheckpointDetector.CheckpointState {
         final String mapId;

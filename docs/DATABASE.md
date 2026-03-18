@@ -475,6 +475,33 @@ CREATE TABLE IF NOT EXISTS player_medals (
 - `medal` values: `BRONZE`, `SILVER`, `GOLD`, `EMERALD`, `INSANE`
 - Manager: `MedalStore` (singleton in `hyvexa-parkour`) -- lazy-loads per player, evicts on disconnect.
 
+## saved_run_state
+Persists in-progress parkour run state so players can resume after disconnect or server restart.
+
+```sql
+CREATE TABLE IF NOT EXISTS saved_run_state (
+    player_uuid         CHAR(36)    NOT NULL PRIMARY KEY,
+    map_id              VARCHAR(64) NOT NULL,
+    elapsed_ms          BIGINT      NOT NULL,
+    last_checkpoint     INT         NOT NULL DEFAULT -1,
+    touched_checkpoints TEXT        NOT NULL,
+    checkpoint_times    TEXT        NOT NULL,
+    map_updated_at      BIGINT      NOT NULL,
+    saved_at            BIGINT      NOT NULL,
+    CONSTRAINT fk_saved_run_map FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
+) ENGINE=InnoDB
+```
+
+Notes:
+- One row per player (only one active run possible at a time)
+- `touched_checkpoints`: comma-separated checkpoint indices (e.g., "0,1,3")
+- `checkpoint_times`: comma-separated index:time pairs (e.g., "0:1234,1:5678,3:12000")
+- `map_updated_at`: snapshot of map's last modification time at save -- if map changed since save, run is discarded on restore
+- `ON DELETE CASCADE` on `map_id` handles map deletion automatically
+- Rows are deleted on run completion, abandoned after 30 days via cleanup
+- Auto-created by `RunStateStore.ensureTable()` on startup
+- Manager: `RunStateStore` in `hyvexa-parkour` -- no in-memory cache, loaded only on reconnect
+
 ---
 
 # Duel Tables

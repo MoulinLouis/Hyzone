@@ -39,6 +39,7 @@ import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
 import io.hyvexa.parkour.data.ProgressStore;
+import io.hyvexa.parkour.data.RunStateStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import io.hyvexa.parkour.interaction.MenuInteraction;
@@ -68,6 +69,7 @@ import io.hyvexa.manager.WorldMapManager;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.AsyncExecutionHelper;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
@@ -167,10 +169,13 @@ public class HyvexaPlugin extends JavaPlugin {
     private ScheduledFuture<?> collisionTask;
     private ScheduledFuture<?> playerCountTask;
     private ScheduledFuture<?> stalePlayerSweepTask;
+    private ScheduledFuture<?> runStateAutosaveTask;
     private ScheduledFuture<?> teleportDebugTask;
     private ScheduledFuture<?> duelTickTask;
     private ScheduledFuture<?> votePollingTask;
 
+    private RunStateStore runStateStore;
+    private Thread shutdownHook;
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
@@ -266,6 +271,26 @@ public class HyvexaPlugin extends JavaPlugin {
         this.globalMessageStore = new GlobalMessageStore();
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore);
+        this.runStateStore = new RunStateStore();
+        this.runStateStore.ensureTable();
+        this.runTracker.setRunStateStore(this.runStateStore);
+        // Clean up abandoned saved runs older than 30 days
+        try {
+            this.runStateStore.cleanupStale(TimeUnit.DAYS.toMillis(30));
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to cleanup stale saved run states");
+        }
+        // JVM shutdown hook — fires on kill/Ctrl+C even when plugin shutdown() is skipped
+        this.shutdownHook = new Thread(() -> {
+            try {
+                if (runTracker != null && runStateStore != null && DatabaseManager.getInstance().isInitialized()) {
+                    runTracker.saveAllActiveRuns(runStateStore);
+                }
+            } catch (Exception e) {
+                // Can't use LOGGER in shutdown hook — JVM may have closed logging
+            }
+        }, "RunStateSaveHook");
+        Runtime.getRuntime().addShutdownHook(this.shutdownHook);
         this.ghostStore = new GhostStore("parkour_ghost_recordings", "parkour");
         this.ghostStore.syncLoad();
         this.ghostRecorder = new GhostRecorder(this.ghostStore);
@@ -311,6 +336,8 @@ public class HyvexaPlugin extends JavaPlugin {
         stalePlayerSweepTask = scheduleTick("stale player sweep", this::tickStalePlayerSweep,
                 ParkourTimingConstants.STALE_PLAYER_SWEEP_INTERVAL_SECONDS,
                 ParkourTimingConstants.STALE_PLAYER_SWEEP_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        runStateAutosaveTask = scheduleTick("run state autosave", this::tickRunStateAutosave,
+                60, 60, TimeUnit.SECONDS);
         teleportDebugTask = scheduleTick("teleport debug", this::tickTeleportDebug,
                 ParkourTimingConstants.TELEPORT_DEBUG_INTERVAL_SECONDS,
                 ParkourTimingConstants.TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
@@ -396,6 +423,60 @@ public class HyvexaPlugin extends JavaPlugin {
                         if (ghostNpcManager != null && playerRef != null) {
                             ghostNpcManager.hideGhostsFromPlayer(playerRef.getUuid());
                         }
+                    }
+                    // Attempt to restore a saved run from DB if no in-memory run exists
+                    if (parkourWorld && playerRef != null && runStateStore != null
+                            && runTracker.getActiveMapId(playerRef.getUuid()) == null) {
+                        final PlayerRef pRef = playerRef;
+                        final Ref<EntityStore> fRef = ref;
+                        final Store<EntityStore> fStore = store;
+                        runStateStore.loadAsync(playerRef.getUuid()).thenAccept(saved -> {
+                            if (saved == null) {
+                                LOGGER.atInfo().log("No saved run state for " + pRef.getUuid());
+                                return;
+                            }
+                            UUID pid = pRef.getUuid();
+                            LOGGER.atInfo().log("Found saved run for " + pid + " on map " + saved.mapId()
+                                    + " (" + saved.elapsedMs() + "ms, cp " + saved.lastCheckpointIndex() + ")");
+                            io.hyvexa.parkour.data.Map savedMap = mapStore.getMapReadonly(saved.mapId());
+                            if (savedMap == null || !savedMap.isActive()
+                                    || savedMap.getUpdatedAt() != saved.mapUpdatedAt()
+                                    || System.currentTimeMillis() - saved.savedAt() > TimeUnit.DAYS.toMillis(30)) {
+                                LOGGER.atInfo().log("Discarding stale saved run for " + pid
+                                        + " (map=" + (savedMap != null) + ", active=" + (savedMap != null && savedMap.isActive())
+                                        + ", updatedMatch=" + (savedMap != null && savedMap.getUpdatedAt() == saved.mapUpdatedAt())
+                                        + ", age=" + (System.currentTimeMillis() - saved.savedAt()) + "ms)");
+                                runStateStore.deleteAsync(pid);
+                                return;
+                            }
+                            World world = fStore.getExternalData().getWorld();
+                            if (world == null) {
+                                runStateStore.deleteAsync(pid);
+                                return;
+                            }
+                            world.execute(() -> {
+                                if (fRef == null || !fRef.isValid()) return;
+                                runTracker.restoreRun(pid, saved);
+                                runTracker.teleportToLastCheckpoint(fRef, fStore, pRef);
+                                inventorySyncManager.syncRunInventoryOnReady(fRef);
+                                try {
+                                    Player p = fStore.getComponent(fRef, Player.getComponentType());
+                                    if (p != null) {
+                                        p.sendMessage(SystemMessageUtils.withParkourPrefix(
+                                                Message.raw("Run restored on ").color(SystemMessageUtils.SECONDARY),
+                                                Message.raw(savedMap.getName()).color(SystemMessageUtils.PRIMARY_TEXT),
+                                                Message.raw(" (" + FormatUtils.formatDuration(saved.elapsedMs()) + " elapsed).").color(SystemMessageUtils.SECONDARY)
+                                        ));
+                                    }
+                                } catch (Exception e) {
+                                    LOGGER.atWarning().withCause(e).log("Failed to send run restore message");
+                                }
+                                runStateStore.deleteAsync(pid);
+                            });
+                        }).exceptionally(ex -> {
+                            LOGGER.atWarning().withCause(ex).log("Failed to restore saved run");
+                            return null;
+                        });
                     }
                 }
             } catch (Exception e) {
@@ -640,6 +721,12 @@ public class HyvexaPlugin extends JavaPlugin {
     private void tickStalePlayerSweep() {
         if (cleanupManager != null) {
             cleanupManager.tickStalePlayerSweep();
+        }
+    }
+
+    private void tickRunStateAutosave() {
+        if (runTracker != null && runStateStore != null) {
+            runTracker.autosaveActiveRuns(runStateStore);
         }
     }
 
@@ -1218,11 +1305,13 @@ public class HyvexaPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        LOGGER.atInfo().log("Shutdown: starting plugin shutdown");
         try { cancelScheduled(hudUpdateTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: hudUpdateTask"); }
         try { cancelScheduled(playtimeTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playtimeTask"); }
         try { cancelScheduled(collisionTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: collisionTask"); }
         try { cancelScheduled(playerCountTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerCountTask"); }
         try { cancelScheduled(stalePlayerSweepTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: stalePlayerSweepTask"); }
+        try { cancelScheduled(runStateAutosaveTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: runStateAutosaveTask"); }
         try { cancelScheduled(teleportDebugTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: teleportDebugTask"); }
         try { cancelScheduled(duelTickTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: duelTickTask"); }
         try { cancelScheduled(votePollingTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: votePollingTask"); }
@@ -1241,6 +1330,13 @@ public class HyvexaPlugin extends JavaPlugin {
 
         try { if (announcementManager != null) { announcementManager.shutdown(); } }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: announcementManager"); }
+
+        // Remove JVM hook to avoid double-save (plugin shutdown is handling it)
+        try { if (shutdownHook != null) { Runtime.getRuntime().removeShutdownHook(shutdownHook); } }
+        catch (Exception ignored) { }
+
+        try { if (runTracker != null && runStateStore != null) { runTracker.saveAllActiveRuns(runStateStore); } }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: saveAllActiveRuns"); }
 
         try { playerRefCache.clear(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerRefCache"); }
