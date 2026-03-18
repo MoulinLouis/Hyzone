@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.mine;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ public final class MineBlockRegistry {
 
     private static final List<BlockDef> ALL_BLOCKS = new ArrayList<>();
     private static final Map<String, List<BlockDef>> BY_CATEGORY = new LinkedHashMap<>();
+    private static final Map<String, String> DISPLAY_NAME_MAP = new HashMap<>();
 
     static {
         register(CAT_ROCK, "Rock_Stone", "Stone");
@@ -85,6 +87,7 @@ public final class MineBlockRegistry {
         BlockDef def = new BlockDef(blockTypeId, displayName, category);
         ALL_BLOCKS.add(def);
         BY_CATEGORY.computeIfAbsent(category, key -> new ArrayList<>()).add(def);
+        DISPLAY_NAME_MAP.put(blockTypeId, displayName);
     }
 
     public static List<BlockDef> getAll() {
@@ -96,12 +99,7 @@ public final class MineBlockRegistry {
     }
 
     public static String getDisplayName(String blockTypeId) {
-        for (BlockDef def : ALL_BLOCKS) {
-            if (def.blockTypeId.equals(blockTypeId)) {
-                return def.displayName;
-            }
-        }
-        return blockTypeId;
+        return DISPLAY_NAME_MAP.getOrDefault(blockTypeId, blockTypeId);
     }
 
     public static class BlockDef {

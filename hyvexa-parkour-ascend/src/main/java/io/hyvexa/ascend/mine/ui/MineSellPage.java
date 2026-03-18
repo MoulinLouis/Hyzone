@@ -135,6 +135,7 @@ public class MineSellPage extends BaseAscendPage {
 
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
         UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.clear("#SellItems");
         UIEventBuilder eventBuilder = new UIEventBuilder();
         populateContent(commandBuilder);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SellAllButton",

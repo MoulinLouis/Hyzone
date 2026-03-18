@@ -52,9 +52,6 @@ public class MinePage extends BaseAscendPage {
     private static final String BUTTON_RESET = "ResetAll";
     private static final String BUTTON_BUY_PICKAXE = "BuyPickaxe";
 
-    private static final int MINER_MAX_SPEED_PER_STAR = 25;
-    private static final int MINER_MAX_STARS = 5;
-
     private static final String[] ACCENT_COLORS = {
         "Violet", "Red", "Orange", "Green", "Blue", "Gold"
     };
@@ -76,10 +73,6 @@ public class MinePage extends BaseAscendPage {
         MineUpgradeType.STOMP,
         MineUpgradeType.BLAST,
         MineUpgradeType.HASTE
-    };
-
-    private static final String[] UPGRADE_DISPLAY_NAMES = {
-        "Bag Capacity", "Momentum", "Fortune", "Jackhammer", "Stomp", "Blast", "Haste"
     };
 
     private final MinePlayerProgress mineProgress;
@@ -139,7 +132,7 @@ public class MinePage extends BaseAscendPage {
             cmd.set(sel + " #ButtonBg" + colorName + ".Visible", true);
 
             // Set segment colors to match accent
-            for (int seg = 1; seg <= MINER_MAX_SPEED_PER_STAR; seg++) {
+            for (int seg = 1; seg <= MinerRobotState.MAX_SPEED_PER_STAR; seg++) {
                 cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
             }
 
@@ -181,7 +174,7 @@ public class MinePage extends BaseAscendPage {
                 cmd.set(sel + " #ActionPrice.Text", "");
                 cmd.set(sel + " #MinerStatus.Text", "");
             } else {
-                boolean fullyMaxed = stars >= MINER_MAX_STARS && speedLevel >= MINER_MAX_SPEED_PER_STAR;
+                boolean fullyMaxed = stars >= MinerRobotState.MAX_STARS && speedLevel >= MinerRobotState.MAX_SPEED_PER_STAR;
                 double blocksPerMin = MinerRobotState.getProductionRate(speedLevel, stars);
                 cmd.set(sel + " #MinerStatus.Text", String.format("%.1f", blocksPerMin) + " blocks/min");
 
@@ -190,7 +183,7 @@ public class MinePage extends BaseAscendPage {
                     cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
                     cmd.set(sel + " #ActionText.Text", "Maxed!");
                     cmd.set(sel + " #ActionPrice.Text", "");
-                } else if (speedLevel >= MINER_MAX_SPEED_PER_STAR) {
+                } else if (speedLevel >= MinerRobotState.MAX_SPEED_PER_STAR) {
                     cmd.set(sel + " #MinerLevel.Text", "Lv." + speedLevel);
                     cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
                     cmd.set(sel + " #ActionText.Text", "Evolve");
@@ -198,7 +191,7 @@ public class MinePage extends BaseAscendPage {
                 } else {
                     cmd.set(sel + " #MinerLevel.Text", "Lv." + speedLevel);
                     cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
-                    long cost = getMinerSpeedCost(speedLevel, stars);
+                    long cost = MinerRobotState.getMinerSpeedCost(speedLevel, stars);
                     cmd.set(sel + " #ActionText.Text", "Cost:");
                     cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
                     boolean canAfford = mineProgress.getCrystals() >= cost;
@@ -215,8 +208,8 @@ public class MinePage extends BaseAscendPage {
 
     private String resolveMinerButtonId(boolean hasMiner, int speedLevel, int stars, String mineId) {
         if (!hasMiner) return BUTTON_BUY_MINER_PREFIX + mineId;
-        if (stars >= MINER_MAX_STARS && speedLevel >= MINER_MAX_SPEED_PER_STAR) return "Noop";
-        if (speedLevel >= MINER_MAX_SPEED_PER_STAR) return BUTTON_MINER_EVOLVE_PREFIX + mineId;
+        if (stars >= MinerRobotState.MAX_STARS && speedLevel >= MinerRobotState.MAX_SPEED_PER_STAR) return "Noop";
+        if (speedLevel >= MinerRobotState.MAX_SPEED_PER_STAR) return BUTTON_MINER_EVOLVE_PREFIX + mineId;
         return BUTTON_MINER_SPEED_PREFIX + mineId;
     }
 
@@ -250,7 +243,7 @@ public class MinePage extends BaseAscendPage {
         cmd.set(sel + " #Accent" + colorName + ".Visible", true);
 
         // Labels
-        cmd.set(sel + " #CardName.Text", UPGRADE_DISPLAY_NAMES[ordinal]);
+        cmd.set(sel + " #CardName.Text", type.getDisplayName());
         cmd.set(sel + " #CardEffect.Text", getEffectDescription(type, level));
 
         // Tooltip
@@ -503,7 +496,7 @@ public class MinePage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        long cost = getMinerBuyCost();
+        long cost = MinerRobotState.getMinerBuyCost();
         MinePlayerProgress.MinerPurchaseResult result = mineProgress.purchaseMiner(mineId, cost);
         if (result == MinePlayerProgress.MinerPurchaseResult.ALREADY_OWNED) {
             player.sendMessage(Message.raw("Already own this miner!"));
@@ -529,9 +522,9 @@ public class MinePage extends BaseAscendPage {
         MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
         int speedLevel = minerState.speedLevel();
 
-        long cost = getMinerSpeedCost(speedLevel, minerState.stars());
+        long cost = MinerRobotState.getMinerSpeedCost(speedLevel, minerState.stars());
         MinePlayerProgress.MinerSpeedUpgradeResult result =
-            mineProgress.upgradeMinerSpeed(mineId, cost, MINER_MAX_SPEED_PER_STAR);
+            mineProgress.upgradeMinerSpeed(mineId, cost, MinerRobotState.MAX_SPEED_PER_STAR);
         if (result == MinePlayerProgress.MinerSpeedUpgradeResult.NO_MINER) return;
         if (result == MinePlayerProgress.MinerSpeedUpgradeResult.SPEED_MAXED) {
             player.sendMessage(Message.raw("Speed maxed! Evolve to continue."));
@@ -556,9 +549,9 @@ public class MinePage extends BaseAscendPage {
         MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
         int stars = minerState.stars();
 
-        long cost = getMinerEvolveCost(stars);
+        long cost = MinerRobotState.getMinerEvolveCost(stars);
         MinePlayerProgress.MinerEvolutionResult result =
-            mineProgress.evolveMiner(mineId, cost, MINER_MAX_SPEED_PER_STAR, MINER_MAX_STARS);
+            mineProgress.evolveMiner(mineId, cost, MinerRobotState.MAX_SPEED_PER_STAR, MinerRobotState.MAX_STARS);
         if (result == MinePlayerProgress.MinerEvolutionResult.NO_MINER) return;
         if (result == MinePlayerProgress.MinerEvolutionResult.SPEED_NOT_MAXED) {
             player.sendMessage(Message.raw("Max speed first before evolving!"));
@@ -619,7 +612,7 @@ public class MinePage extends BaseAscendPage {
             checkMineAchievement(MineAchievement.MAX_UPGRADES);
         }
 
-        player.sendMessage(Message.raw("Upgraded " + UPGRADE_DISPLAY_NAMES[type.ordinal()] + " to Lv " + mineProgress.getUpgradeLevel(type) + "!"));
+        player.sendMessage(Message.raw("Upgraded " + type.getDisplayName() + " to Lv " + mineProgress.getUpgradeLevel(type) + "!"));
         sendRefresh(ref, store);
     }
 
@@ -671,7 +664,7 @@ public class MinePage extends BaseAscendPage {
 
     private String buildUpgradeTooltip(MineUpgradeType type, int level, int maxLevel) {
         boolean maxed = level >= maxLevel;
-        String name = UPGRADE_DISPLAY_NAMES[type.ordinal()];
+        String name = type.getDisplayName();
         String desc = getUpgradeDescription(type);
 
         StringBuilder sb = new StringBuilder();
@@ -692,15 +685,7 @@ public class MinePage extends BaseAscendPage {
     }
 
     private static String getUpgradeDescription(MineUpgradeType type) {
-        return switch (type) {
-            case BAG_CAPACITY -> "Increases how many blocks your bag can hold.";
-            case MOMENTUM -> "Build a combo while mining to deal more damage.";
-            case FORTUNE -> "Chance to get bonus drops from mined blocks.";
-            case JACKHAMMER -> "Breaks a column of blocks below the one you mine.";
-            case STOMP -> "Breaks a layer of blocks around your feet on landing.";
-            case BLAST -> "Breaks blocks in a sphere around your target.";
-            case HASTE -> "Increases your mining speed permanently.";
-        };
+        return type.getDescription();
     }
 
     private String getEffectDescription(MineUpgradeType type, int level) {
@@ -732,19 +717,6 @@ public class MinePage extends BaseAscendPage {
         if (tracker != null) {
             tracker.checkAchievement(playerRef.getUuid(), achievement);
         }
-    }
-
-    private static long getMinerBuyCost() {
-        return 1000L;
-    }
-
-    private static long getMinerSpeedCost(int speedLevel, int stars) {
-        int totalLevel = stars * MINER_MAX_SPEED_PER_STAR + speedLevel;
-        return Math.round(50 * Math.pow(1.15, totalLevel));
-    }
-
-    private static long getMinerEvolveCost(int stars) {
-        return Math.round(5000 * Math.pow(3, stars));
     }
 
     private void syncBoughtMiner(Store<EntityStore> store, String mineId) {

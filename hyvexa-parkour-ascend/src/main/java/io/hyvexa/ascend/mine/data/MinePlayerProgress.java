@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MinePlayerProgress {
     private final UUID playerId;
     private final Map<String, Integer> inventory = new HashMap<>(); // blockTypeId -> count
+    private int inventoryCount;
     private long crystals;
     private volatile boolean inMine;
     private volatile int pickaxeTier;
@@ -41,6 +42,7 @@ public class MinePlayerProgress {
             return 0;
         }
         inventory.merge(blockTypeId, toAdd, Integer::sum);
+        inventoryCount += toAdd;
         return toAdd;
     }
 
@@ -56,7 +58,7 @@ public class MinePlayerProgress {
     }
 
     private int getInventoryTotalLocked() {
-        return inventory.values().stream().mapToInt(Integer::intValue).sum();
+        return inventoryCount;
     }
 
     private int getRemainingBagSpaceLocked() {
@@ -73,6 +75,7 @@ public class MinePlayerProgress {
     public synchronized long sellBlock(String blockTypeId, Map<String, BigNumber> blockPrices) {
         Integer count = inventory.remove(blockTypeId);
         if (count == null || count <= 0) return 0;
+        inventoryCount -= count;
         BigNumber price = blockPrices.getOrDefault(blockTypeId, BigNumber.ONE);
         long earned = price.multiply(BigNumber.of(count, 0)).toLong();
         crystals += earned;
@@ -86,6 +89,7 @@ public class MinePlayerProgress {
         long total = calculateInventoryValue(blockPrices);
         crystals += total;
         inventory.clear();
+        inventoryCount = 0;
         return total;
     }
 
@@ -94,14 +98,17 @@ public class MinePlayerProgress {
      */
     public synchronized long sellAllExcept(Set<String> excludedBlocks, Map<String, BigNumber> blockPrices) {
         long total = 0;
+        int removed = 0;
         var it = inventory.entrySet().iterator();
         while (it.hasNext()) {
             var entry = it.next();
             if (excludedBlocks.contains(entry.getKey())) continue;
             BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
             total += price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
+            removed += entry.getValue();
             it.remove();
         }
+        inventoryCount -= removed;
         crystals += total;
         return total;
     }
@@ -128,6 +135,7 @@ public class MinePlayerProgress {
 
     public synchronized void clearInventory() {
         inventory.clear();
+        inventoryCount = 0;
     }
 
     public synchronized void loadInventoryItem(String blockTypeId, int amount) {
@@ -135,6 +143,7 @@ public class MinePlayerProgress {
             return;
         }
         inventory.put(blockTypeId, amount);
+        inventoryCount += amount;
     }
 
     public synchronized long getCrystals() {
@@ -168,6 +177,12 @@ public class MinePlayerProgress {
 
     public PickaxeTier getPickaxeTierEnum() { return PickaxeTier.fromTier(pickaxeTier); }
 
+    public boolean isHoldingExpectedPickaxe(String heldItemId) {
+        if (heldItemId == null || heldItemId.isEmpty()) return false;
+        String expectedItemId = getPickaxeTierEnum().getItemId();
+        return expectedItemId != null && expectedItemId.equals(heldItemId);
+    }
+
     // --- Upgrades ---
 
     public synchronized int getUpgradeLevel(MineUpgradeType type) {
@@ -200,8 +215,7 @@ public class MinePlayerProgress {
     public enum PickaxeUpgradeResult {
         SUCCESS,
         ALREADY_MAXED,
-        INSUFFICIENT_CRYSTALS,
-        REQUIREMENT_NOT_MET
+        INSUFFICIENT_CRYSTALS
     }
 
     // --- Momentum combo ---

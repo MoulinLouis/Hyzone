@@ -18,8 +18,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public class MineManager {
     private final MineConfigStore configStore;
 
-    // zoneId -> exact broken block positions
-    private final Map<String, Set<BlockPositionKey>> brokenBlocks = new ConcurrentHashMap<>();
+    // zoneId -> exact broken block positions (packed as long)
+    private final Map<String, Set<Long>> brokenBlocks = new ConcurrentHashMap<>();
 
     // zoneId -> timestamp when cooldown started (0 = not in cooldown)
     private final Map<String, Long> zoneCooldownStart = new ConcurrentHashMap<>();
@@ -47,16 +47,16 @@ public class MineManager {
      */
     public boolean tryClaimBlock(String zoneId, int x, int y, int z) {
         return brokenBlocks.computeIfAbsent(zoneId, k -> ConcurrentHashMap.newKeySet())
-            .add(blockKey(x, y, z));
+            .add(packPosition(x, y, z));
     }
 
     /**
      * Rolls back a claim (e.g. when bag is full after claiming but before breaking).
      */
     public void unclaimBlock(String zoneId, int x, int y, int z) {
-        Set<BlockPositionKey> broken = brokenBlocks.get(zoneId);
+        Set<Long> broken = brokenBlocks.get(zoneId);
         if (broken != null) {
-            broken.remove(blockKey(x, y, z));
+            broken.remove(packPosition(x, y, z));
         }
     }
 
@@ -68,7 +68,7 @@ public class MineManager {
     public int[] pickRandomUnbrokenBlock(MineZone zone) {
         if (zone == null) return null;
 
-        Set<BlockPositionKey> broken = brokenBlocks.get(zone.getId());
+        Set<Long> broken = brokenBlocks.get(zone.getId());
         int totalBlocks = zone.getTotalBlocks();
         int brokenCount = broken != null ? broken.size() : 0;
 
@@ -107,14 +107,14 @@ public class MineManager {
     }
 
     public boolean isBlockBroken(String zoneId, int x, int y, int z) {
-        Set<BlockPositionKey> broken = brokenBlocks.get(zoneId);
-        return broken != null && broken.contains(blockKey(x, y, z));
+        Set<Long> broken = brokenBlocks.get(zoneId);
+        return broken != null && broken.contains(packPosition(x, y, z));
     }
 
     public double getBrokenRatio(String zoneId) {
         MineZone zone = findZoneById(zoneId);
         if (zone == null) return 0;
-        Set<BlockPositionKey> broken = brokenBlocks.get(zoneId);
+        Set<Long> broken = brokenBlocks.get(zoneId);
         if (broken == null) return 0;
         return (double) broken.size() / zone.getTotalBlocks();
     }
@@ -302,10 +302,9 @@ public class MineManager {
         return new ResolvedZoneTable(blockIds, cumulativeWeights, totalWeight);
     }
 
-    private static BlockPositionKey blockKey(int x, int y, int z) {
-        return new BlockPositionKey(x, y, z);
+    private static long packPosition(int x, int y, int z) {
+        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (y & 0xFFF) << 26) | (z & 0x3FFFFFF);
     }
 
-    private record BlockPositionKey(int x, int y, int z) {}
     private record ResolvedZoneTable(int[] blockIds, double[] cumulativeWeights, double totalWeight) {}
 }

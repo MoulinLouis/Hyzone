@@ -55,4 +55,28 @@ public enum MineUpgradeType {
             case HASTE -> "upgrade_haste";
         };
     }
+
+    public String getDisplayName() {
+        return switch (this) {
+            case BAG_CAPACITY -> "Bag Capacity";
+            case MOMENTUM -> "Momentum";
+            case FORTUNE -> "Fortune";
+            case JACKHAMMER -> "Jackhammer";
+            case STOMP -> "Stomp";
+            case BLAST -> "Blast";
+            case HASTE -> "Haste";
+        };
+    }
+
+    public String getDescription() {
+        return switch (this) {
+            case BAG_CAPACITY -> "Increases how many blocks your bag can hold.";
+            case MOMENTUM -> "Build a combo while mining to deal more damage.";
+            case FORTUNE -> "Chance to get bonus drops from mined blocks.";
+            case JACKHAMMER -> "Breaks a column of blocks below the one you mine.";
+            case STOMP -> "Breaks a layer of blocks around your feet on landing.";
+            case BLAST -> "Breaks blocks in a sphere around your target.";
+            case HASTE -> "Increases your mining speed permanently.";
+        };
+    }
 }

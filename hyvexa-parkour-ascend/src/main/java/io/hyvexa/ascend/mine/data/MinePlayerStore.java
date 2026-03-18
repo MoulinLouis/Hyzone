@@ -14,15 +14,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MinePlayerStore {
     private static final FluentLogger LOGGER = FluentLogger.forEnclosingClass();
 
     private final Map<UUID, MinePlayerProgress> players = new ConcurrentHashMap<>();
     private final Map<UUID, Long> dirtyVersions = new ConcurrentHashMap<>();
-    private volatile ScheduledFuture<?> pendingSave;
+    private final AtomicBoolean saveScheduled = new AtomicBoolean(false);
 
     public MinePlayerProgress getPlayer(UUID playerId) {
         return players.get(playerId);
@@ -73,10 +73,12 @@ public class MinePlayerStore {
     }
 
     private void queueSave() {
-        if (pendingSave != null && !pendingSave.isDone()) return;
-        pendingSave = HytaleServer.SCHEDULED_EXECUTOR.schedule(
-            this::flushAll, 5, TimeUnit.SECONDS
-        );
+        if (saveScheduled.compareAndSet(false, true)) {
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                saveScheduled.set(false);
+                flushAll();
+            }, 5, TimeUnit.SECONDS);
+        }
     }
 
     private MinePlayerProgress loadFromDatabase(UUID playerId) {

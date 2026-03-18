@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -15,19 +14,15 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineManager;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZone;
-import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
-import io.hyvexa.common.math.BigNumber;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Handles block breaking inside mine zones on DamageBlockEvent.
@@ -73,19 +68,12 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
 
         MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
         if (!mineProgress.getMineState(zone.getMineId()).isUnlocked()) return;
-        if (!isExpectedPickaxe(mineProgress, event.getItemInHand() != null ? event.getItemInHand().getItemId() : null)) {
+        if (!mineProgress.isHoldingExpectedPickaxe(event.getItemInHand() != null ? event.getItemInHand().getItemId() : null)) {
             return;
         }
 
         if (mineManager.isZoneInCooldown(zone.getId())) {
-            long now = System.currentTimeMillis();
-            Long last = lastRegenMessage.get(playerId);
-            if (last == null || now - last > 3000) {
-                lastRegenMessage.put(playerId, now);
-                long remaining = mineManager.getZoneCooldownRemainingMs(zone.getId());
-                int secondsLeft = (int) Math.ceil(remaining / 1000.0);
-                player.sendMessage(Message.raw("Zone regenerating... " + secondsLeft + "s remaining"));
-            }
+            MineRewardHelper.sendRegenMessageIfNeeded(playerId, player, mineManager, zone.getId(), lastRegenMessage);
             return;
         }
 
@@ -126,72 +114,22 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
 
         // Fortune roll
         int fortuneLevel = mineProgress.getUpgradeLevel(MineUpgradeType.FORTUNE);
-        int blocksGained = rollFortune(fortuneLevel);
+        int blocksGained = MineRewardHelper.rollFortune(fortuneLevel);
 
         // Reward
-        int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
-        if (stored < blocksGained) {
-            MineConfigStore configStore = mineManager.getConfigStore();
-            BigNumber blockPrice = configStore.getBlockPrice(zone.getMineId(), blockTypeName);
-            int overflow = blocksGained - stored;
-            long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
-            mineProgress.addCrystals(fallbackCrystals);
-            if (stored == 0) {
-                sendBagFullMessage(playerId, player);
-            }
-        }
-        minePlayerStore.markDirty(playerId);
-
-        if (mineHudManager != null) {
-            mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
-        }
-
-        ParkourAscendPlugin achPlugin = ParkourAscendPlugin.getInstance();
-        if (achPlugin != null) {
-            MineAchievementTracker achievementTracker = achPlugin.getMineAchievementTracker();
-            if (achievementTracker != null) {
-                achievementTracker.incrementBlocksMined(playerId, blocksGained);
-            }
+        boolean bagFull = MineRewardHelper.rewardBlock(playerId, mineProgress, blockTypeName, blocksGained,
+                zone.getMineId(), mineManager, minePlayerStore);
+        if (bagFull) {
+            MineRewardHelper.sendBagFullMessageIfNeeded(playerId, player, lastBagFullMessage);
         }
 
         // Momentum combo
-        int momentumLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MOMENTUM);
-        if (momentumLevel > 0) {
-            mineProgress.checkComboExpired();
-            int maxCombo = mineProgress.getMaxCombo();
-            if (mineProgress.getComboCount() < maxCombo) {
-                mineProgress.incrementCombo();
-            } else {
-                mineProgress.incrementCombo(); // refresh timer even at max
-            }
-            if (mineHudManager != null) {
-                mineHudManager.showCombo(playerId, mineProgress.getComboCount(), 1.0f);
-            }
-        }
+        MineRewardHelper.handleMomentumCombo(playerId, mineProgress);
 
         // AoE upgrades (Jackhammer, Stomp, Blast)
         World aoeWorld = store.getExternalData().getWorld();
         if (aoeWorld != null) {
             MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, aoeWorld, bx, by, bz, mineManager);
-        }
-    }
-
-    private static int rollFortune(int fortuneLevel) {
-        if (fortuneLevel <= 0) return 1;
-        double tripleChance = fortuneLevel * 0.4 / 100.0;
-        double doubleChance = fortuneLevel * 2.0 / 100.0;
-        double roll = ThreadLocalRandom.current().nextDouble();
-        if (roll < tripleChance) return 3;
-        if (roll < tripleChance + doubleChance) return 2;
-        return 1;
-    }
-
-    private void sendBagFullMessage(UUID playerId, Player player) {
-        long now = System.currentTimeMillis();
-        Long last = lastBagFullMessage.get(playerId);
-        if (last == null || now - last > 3000) {
-            lastBagFullMessage.put(playerId, now);
-            player.sendMessage(Message.raw("Bag full! Sell your blocks with /mine sell"));
         }
     }
 
@@ -203,14 +141,6 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
 
     public BlockDamageTracker getDamageTracker() {
         return damageTracker;
-    }
-
-    private boolean isExpectedPickaxe(MinePlayerProgress mineProgress, String heldItemId) {
-        if (mineProgress == null || heldItemId == null || heldItemId.isEmpty()) {
-            return false;
-        }
-        String expectedItemId = mineProgress.getPickaxeTierEnum().getItemId();
-        return expectedItemId != null && expectedItemId.equals(heldItemId);
     }
 
     @Override

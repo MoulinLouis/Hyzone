@@ -22,7 +22,6 @@ import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
-import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.util.InventoryUtils;
@@ -45,7 +44,6 @@ public class MineGateChecker {
     private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastTeleport = new ConcurrentHashMap<>();
     private final Map<UUID, GateTransition> pendingTransitions = new ConcurrentHashMap<>();
-    private final Map<UUID, Integer> playerHasteLevels = new ConcurrentHashMap<>();
 
     public MineGateChecker(MineConfigStore configStore, AscendPlayerStore playerStore, MinePlayerStore minePlayerStore) {
         this.configStore = configStore;
@@ -229,13 +227,6 @@ public class MineGateChecker {
             MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
             progress.setInMine(true);
             minePlayerStore.markDirty(playerId);
-
-            // Apply haste speed boost
-            int hasteLevel = progress.getUpgradeLevel(MineUpgradeType.HASTE);
-            if (hasteLevel > 0) {
-                playerHasteLevels.put(playerId, hasteLevel);
-                applyHasteSpeed(player, hasteLevel);
-            }
         }
         return true;
     }
@@ -263,10 +254,6 @@ public class MineGateChecker {
         if (player != null) {
             AscendInventoryUtils.giveMenuItems(player);
         }
-        // Remove haste speed boost
-        playerHasteLevels.remove(playerId);
-        removeHasteSpeed(player);
-
         if (minePlayerStore != null) {
             MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
             progress.setInMine(false);
@@ -346,29 +333,6 @@ public class MineGateChecker {
     public void evict(UUID playerId) {
         lastTeleport.remove(playerId);
         pendingTransitions.remove(playerId);
-        playerHasteLevels.remove(playerId);
-    }
-
-    // TODO: Hytale API does not expose setHorizontalSpeedMultiplier on Player.
-    // Haste upgrade level is tracked but speed modification is not yet implemented.
-    // Investigate Unsafe field access or alternative API when available.
-    private void applyHasteSpeed(Player player, int hasteLevel) {
-        // No-op: awaiting Hytale API for player speed modification
-    }
-
-    private void removeHasteSpeed(Player player) {
-        // No-op: awaiting Hytale API for player speed modification
-    }
-
-    /**
-     * Called each tick per player to reapply haste speed.
-     * Required because horizontalSpeedMultiplier resets every tick.
-     */
-    public void tickHaste(UUID playerId, Player player) {
-        Integer hasteLevel = playerHasteLevels.get(playerId);
-        if (hasteLevel != null && hasteLevel > 0) {
-            applyHasteSpeed(player, hasteLevel);
-        }
     }
 
     // --- Fade transition state ---

@@ -21,7 +21,7 @@ public enum MineAchievement {
     // Upgrade milestones
     FIRST_MINER("first_miner", "Automation Begins", "Buy your first miner", 500),
     EVOLVE_STAR1("evolve_star1", "Star Power", "Evolve a miner to Star 1", 2_500),
-    MAX_UPGRADES("max_upgrades", "Completionist", "Max all 3 global upgrades", 50_000),
+    MAX_UPGRADES("max_upgrades", "Completionist", "Max all upgrades", 50_000),
 
     // Exploration
     EXPLORER("explorer", "Explorer", "Unlock all mines", 10_000);

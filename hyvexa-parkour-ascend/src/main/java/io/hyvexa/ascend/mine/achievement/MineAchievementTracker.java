@@ -18,8 +18,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -32,7 +32,7 @@ public class MineAchievementTracker {
 
     private final Map<UUID, PlayerAchievementState> states = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyStats = ConcurrentHashMap.newKeySet();
-    private volatile ScheduledFuture<?> pendingSave;
+    private final AtomicBoolean saveScheduled = new AtomicBoolean(false);
 
     // ── State class ──────────────────────────────────────────────────────
 
@@ -237,10 +237,12 @@ public class MineAchievementTracker {
     }
 
     private void queueSave() {
-        if (pendingSave != null && !pendingSave.isDone()) return;
-        pendingSave = HytaleServer.SCHEDULED_EXECUTOR.schedule(
-            this::flushAll, 5, TimeUnit.SECONDS
-        );
+        if (saveScheduled.compareAndSet(false, true)) {
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                saveScheduled.set(false);
+                flushAll();
+            }, 5, TimeUnit.SECONDS);
+        }
     }
 
     private void flushPlayer(UUID playerId) {

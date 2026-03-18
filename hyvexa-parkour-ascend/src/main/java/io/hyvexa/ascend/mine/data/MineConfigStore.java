@@ -20,6 +20,19 @@ public class MineConfigStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Gson GSON = new Gson();
+    private static final int GATE_ENTRY = 1;
+    private static final int GATE_EXIT = 2;
+
+    public record GateConfig(
+        double minX, double minY, double minZ,
+        double maxX, double maxY, double maxZ,
+        double destX, double destY, double destZ,
+        float destRotX, float destRotY, float destRotZ
+    ) {
+        boolean contains(double x, double y, double z) {
+            return x >= minX && x <= maxX && y >= minY && y <= maxY && z >= minZ && z <= maxZ;
+        }
+    }
 
     private final Map<String, Mine> mines = new LinkedHashMap<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -28,19 +41,8 @@ public class MineConfigStore {
     // mineId -> blockTypeId -> price
     private final Map<String, Map<String, BigNumber>> blockPrices = new ConcurrentHashMap<>();
 
-    // Entry gate (id=1): teleports ascended players INTO the mine
-    private volatile double entryMinX, entryMinY, entryMinZ;
-    private volatile double entryMaxX, entryMaxY, entryMaxZ;
-    private volatile double entryDestX, entryDestY, entryDestZ;
-    private volatile float entryDestRotX, entryDestRotY, entryDestRotZ;
-    private volatile boolean entryGateConfigured;
-
-    // Exit gate (id=2): teleports players OUT of the mine
-    private volatile double exitMinX, exitMinY, exitMinZ;
-    private volatile double exitMaxX, exitMaxY, exitMaxZ;
-    private volatile double exitDestX, exitDestY, exitDestZ;
-    private volatile float exitDestRotX, exitDestRotY, exitDestRotZ;
-    private volatile boolean exitGateConfigured;
+    private volatile GateConfig entryGate;
+    private volatile GateConfig exitGate;
 
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
@@ -203,34 +205,16 @@ public class MineConfigStore {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     int id = rs.getInt("id");
-                    if (id == 1) {
-                        entryMinX = rs.getDouble("min_x");
-                        entryMinY = rs.getDouble("min_y");
-                        entryMinZ = rs.getDouble("min_z");
-                        entryMaxX = rs.getDouble("max_x");
-                        entryMaxY = rs.getDouble("max_y");
-                        entryMaxZ = rs.getDouble("max_z");
-                        entryDestX = rs.getDouble("fallback_x");
-                        entryDestY = rs.getDouble("fallback_y");
-                        entryDestZ = rs.getDouble("fallback_z");
-                        entryDestRotX = rs.getFloat("fallback_rot_x");
-                        entryDestRotY = rs.getFloat("fallback_rot_y");
-                        entryDestRotZ = rs.getFloat("fallback_rot_z");
-                        entryGateConfigured = true;
-                    } else if (id == 2) {
-                        exitMinX = rs.getDouble("min_x");
-                        exitMinY = rs.getDouble("min_y");
-                        exitMinZ = rs.getDouble("min_z");
-                        exitMaxX = rs.getDouble("max_x");
-                        exitMaxY = rs.getDouble("max_y");
-                        exitMaxZ = rs.getDouble("max_z");
-                        exitDestX = rs.getDouble("fallback_x");
-                        exitDestY = rs.getDouble("fallback_y");
-                        exitDestZ = rs.getDouble("fallback_z");
-                        exitDestRotX = rs.getFloat("fallback_rot_x");
-                        exitDestRotY = rs.getFloat("fallback_rot_y");
-                        exitDestRotZ = rs.getFloat("fallback_rot_z");
-                        exitGateConfigured = true;
+                    GateConfig gate = new GateConfig(
+                        rs.getDouble("min_x"), rs.getDouble("min_y"), rs.getDouble("min_z"),
+                        rs.getDouble("max_x"), rs.getDouble("max_y"), rs.getDouble("max_z"),
+                        rs.getDouble("fallback_x"), rs.getDouble("fallback_y"), rs.getDouble("fallback_z"),
+                        rs.getFloat("fallback_rot_x"), rs.getFloat("fallback_rot_y"), rs.getFloat("fallback_rot_z")
+                    );
+                    if (id == GATE_ENTRY) {
+                        entryGate = gate;
+                    } else if (id == GATE_EXIT) {
+                        exitGate = gate;
                     }
                 }
             }
@@ -451,21 +435,10 @@ public class MineConfigStore {
                               double maxX, double maxY, double maxZ,
                               double destX, double destY, double destZ,
                               float destRotX, float destRotY, float destRotZ) {
-        this.entryMinX = minX;
-        this.entryMinY = minY;
-        this.entryMinZ = minZ;
-        this.entryMaxX = maxX;
-        this.entryMaxY = maxY;
-        this.entryMaxZ = maxZ;
-        this.entryDestX = destX;
-        this.entryDestY = destY;
-        this.entryDestZ = destZ;
-        this.entryDestRotX = destRotX;
-        this.entryDestRotY = destRotY;
-        this.entryDestRotZ = destRotZ;
-        this.entryGateConfigured = true;
+        this.entryGate = new GateConfig(minX, minY, minZ, maxX, maxY, maxZ,
+            destX, destY, destZ, destRotX, destRotY, destRotZ);
 
-        saveGateToDatabase(1, minX, minY, minZ, maxX, maxY, maxZ,
+        saveGateToDatabase(GATE_ENTRY, minX, minY, minZ, maxX, maxY, maxZ,
             destX, destY, destZ, destRotX, destRotY, destRotZ);
     }
 
@@ -473,21 +446,10 @@ public class MineConfigStore {
                              double maxX, double maxY, double maxZ,
                              double destX, double destY, double destZ,
                              float destRotX, float destRotY, float destRotZ) {
-        this.exitMinX = minX;
-        this.exitMinY = minY;
-        this.exitMinZ = minZ;
-        this.exitMaxX = maxX;
-        this.exitMaxY = maxY;
-        this.exitMaxZ = maxZ;
-        this.exitDestX = destX;
-        this.exitDestY = destY;
-        this.exitDestZ = destZ;
-        this.exitDestRotX = destRotX;
-        this.exitDestRotY = destRotY;
-        this.exitDestRotZ = destRotZ;
-        this.exitGateConfigured = true;
+        this.exitGate = new GateConfig(minX, minY, minZ, maxX, maxY, maxZ,
+            destX, destY, destZ, destRotX, destRotY, destRotZ);
 
-        saveGateToDatabase(2, minX, minY, minZ, maxX, maxY, maxZ,
+        saveGateToDatabase(GATE_EXIT, minX, minY, minZ, maxX, maxY, maxZ,
             destX, destY, destZ, destRotX, destRotY, destRotZ);
     }
 
@@ -535,48 +497,44 @@ public class MineConfigStore {
     }
 
     public boolean isInsideEntryGate(double x, double y, double z) {
-        if (!entryGateConfigured) return false;
-        return x >= entryMinX && x <= entryMaxX
-            && y >= entryMinY && y <= entryMaxY
-            && z >= entryMinZ && z <= entryMaxZ;
+        GateConfig gate = entryGate;
+        return gate != null && gate.contains(x, y, z);
     }
 
     public boolean isInsideExitGate(double x, double y, double z) {
-        if (!exitGateConfigured) return false;
-        return x >= exitMinX && x <= exitMaxX
-            && y >= exitMinY && y <= exitMaxY
-            && z >= exitMinZ && z <= exitMaxZ;
+        GateConfig gate = exitGate;
+        return gate != null && gate.contains(x, y, z);
     }
 
     // Entry gate
-    public boolean isEntryGateConfigured() { return entryGateConfigured; }
-    public double getEntryMinX() { return entryMinX; }
-    public double getEntryMinY() { return entryMinY; }
-    public double getEntryMinZ() { return entryMinZ; }
-    public double getEntryMaxX() { return entryMaxX; }
-    public double getEntryMaxY() { return entryMaxY; }
-    public double getEntryMaxZ() { return entryMaxZ; }
-    public double getEntryDestX() { return entryDestX; }
-    public double getEntryDestY() { return entryDestY; }
-    public double getEntryDestZ() { return entryDestZ; }
-    public float getEntryDestRotX() { return entryDestRotX; }
-    public float getEntryDestRotY() { return entryDestRotY; }
-    public float getEntryDestRotZ() { return entryDestRotZ; }
+    public boolean isEntryGateConfigured() { return entryGate != null; }
+    public double getEntryMinX() { return entryGate != null ? entryGate.minX() : 0; }
+    public double getEntryMinY() { return entryGate != null ? entryGate.minY() : 0; }
+    public double getEntryMinZ() { return entryGate != null ? entryGate.minZ() : 0; }
+    public double getEntryMaxX() { return entryGate != null ? entryGate.maxX() : 0; }
+    public double getEntryMaxY() { return entryGate != null ? entryGate.maxY() : 0; }
+    public double getEntryMaxZ() { return entryGate != null ? entryGate.maxZ() : 0; }
+    public double getEntryDestX() { return entryGate != null ? entryGate.destX() : 0; }
+    public double getEntryDestY() { return entryGate != null ? entryGate.destY() : 0; }
+    public double getEntryDestZ() { return entryGate != null ? entryGate.destZ() : 0; }
+    public float getEntryDestRotX() { return entryGate != null ? entryGate.destRotX() : 0; }
+    public float getEntryDestRotY() { return entryGate != null ? entryGate.destRotY() : 0; }
+    public float getEntryDestRotZ() { return entryGate != null ? entryGate.destRotZ() : 0; }
 
     // Exit gate
-    public boolean isExitGateConfigured() { return exitGateConfigured; }
-    public double getExitMinX() { return exitMinX; }
-    public double getExitMinY() { return exitMinY; }
-    public double getExitMinZ() { return exitMinZ; }
-    public double getExitMaxX() { return exitMaxX; }
-    public double getExitMaxY() { return exitMaxY; }
-    public double getExitMaxZ() { return exitMaxZ; }
-    public double getExitDestX() { return exitDestX; }
-    public double getExitDestY() { return exitDestY; }
-    public double getExitDestZ() { return exitDestZ; }
-    public float getExitDestRotX() { return exitDestRotX; }
-    public float getExitDestRotY() { return exitDestRotY; }
-    public float getExitDestRotZ() { return exitDestRotZ; }
+    public boolean isExitGateConfigured() { return exitGate != null; }
+    public double getExitMinX() { return exitGate != null ? exitGate.minX() : 0; }
+    public double getExitMinY() { return exitGate != null ? exitGate.minY() : 0; }
+    public double getExitMinZ() { return exitGate != null ? exitGate.minZ() : 0; }
+    public double getExitMaxX() { return exitGate != null ? exitGate.maxX() : 0; }
+    public double getExitMaxY() { return exitGate != null ? exitGate.maxY() : 0; }
+    public double getExitMaxZ() { return exitGate != null ? exitGate.maxZ() : 0; }
+    public double getExitDestX() { return exitGate != null ? exitGate.destX() : 0; }
+    public double getExitDestY() { return exitGate != null ? exitGate.destY() : 0; }
+    public double getExitDestZ() { return exitGate != null ? exitGate.destZ() : 0; }
+    public float getExitDestRotX() { return exitGate != null ? exitGate.destRotX() : 0; }
+    public float getExitDestRotY() { return exitGate != null ? exitGate.destRotY() : 0; }
+    public float getExitDestRotZ() { return exitGate != null ? exitGate.destRotZ() : 0; }
 
     // --- Block Prices ---
 

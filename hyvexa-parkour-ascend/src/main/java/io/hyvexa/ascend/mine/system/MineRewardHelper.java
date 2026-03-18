@@ -1,0 +1,107 @@
+package io.hyvexa.ascend.mine.system;
+
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinePlayerProgress;
+import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.data.MineUpgradeType;
+import io.hyvexa.ascend.mine.hud.MineHudManager;
+import io.hyvexa.common.math.BigNumber;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+
+public final class MineRewardHelper {
+
+    private MineRewardHelper() {}
+
+    public static int rollFortune(int fortuneLevel) {
+        if (fortuneLevel <= 0) return 1;
+        double tripleChance = fortuneLevel * 0.4 / 100.0;
+        double doubleChance = fortuneLevel * 2.0 / 100.0;
+        double roll = ThreadLocalRandom.current().nextDouble();
+        if (roll < tripleChance) return 3;
+        if (roll < tripleChance + doubleChance) return 2;
+        return 1;
+    }
+
+    /**
+     * Adds blocks to inventory, auto-sells overflow, shows toast, tracks achievements, and marks dirty.
+     * Returns true if the bag was completely full (stored == 0).
+     */
+    public static boolean rewardBlock(UUID playerId, MinePlayerProgress mineProgress, String blockTypeName,
+                                       int blocksGained, String mineId, MineManager mineManager,
+                                       MinePlayerStore minePlayerStore) {
+        int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
+        boolean bagFull = false;
+        if (stored < blocksGained) {
+            MineConfigStore configStore = mineManager.getConfigStore();
+            BigNumber blockPrice = configStore.getBlockPrice(mineId, blockTypeName);
+            int overflow = blocksGained - stored;
+            long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
+            mineProgress.addCrystals(fallbackCrystals);
+            if (stored == 0) {
+                bagFull = true;
+            }
+        }
+        minePlayerStore.markDirty(playerId);
+
+        MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
+        if (mineHudManager != null) {
+            mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
+        }
+
+        ParkourAscendPlugin achPlugin = ParkourAscendPlugin.getInstance();
+        if (achPlugin != null) {
+            MineAchievementTracker achievementTracker = achPlugin.getMineAchievementTracker();
+            if (achievementTracker != null) {
+                achievementTracker.incrementBlocksMined(playerId, blocksGained);
+            }
+        }
+
+        return bagFull;
+    }
+
+    public static void handleMomentumCombo(UUID playerId, MinePlayerProgress mineProgress) {
+        int momentumLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MOMENTUM);
+        if (momentumLevel > 0) {
+            mineProgress.checkComboExpired();
+            int maxCombo = mineProgress.getMaxCombo();
+            if (mineProgress.getComboCount() < maxCombo) {
+                mineProgress.incrementCombo();
+            } else {
+                mineProgress.incrementCombo(); // refresh timer even at max
+            }
+            MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
+            if (mineHudManager != null) {
+                mineHudManager.showCombo(playerId, mineProgress.getComboCount(), 1.0f);
+            }
+        }
+    }
+
+    public static void sendBagFullMessageIfNeeded(UUID playerId, Player player, Map<UUID, Long> lastBagFullMessage) {
+        long now = System.currentTimeMillis();
+        Long last = lastBagFullMessage.get(playerId);
+        if (last == null || now - last > 3000) {
+            lastBagFullMessage.put(playerId, now);
+            player.sendMessage(Message.raw("Bag full! Sell your blocks with /mine sell"));
+        }
+    }
+
+    public static void sendRegenMessageIfNeeded(UUID playerId, Player player, MineManager mineManager,
+                                                 String zoneId, Map<UUID, Long> lastRegenMessage) {
+        long now = System.currentTimeMillis();
+        Long last = lastRegenMessage.get(playerId);
+        if (last == null || now - last > 3000) {
+            lastRegenMessage.put(playerId, now);
+            long remaining = mineManager.getZoneCooldownRemainingMs(zoneId);
+            int secondsLeft = (int) Math.ceil(remaining / 1000.0);
+            player.sendMessage(Message.raw("Zone regenerating... " + secondsLeft + "s remaining"));
+        }
+    }
+}

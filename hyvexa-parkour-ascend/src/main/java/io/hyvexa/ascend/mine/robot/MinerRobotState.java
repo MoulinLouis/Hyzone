@@ -8,6 +8,9 @@ import java.util.UUID;
 public class MinerRobotState {
     public enum MinerPhase { IDLE, MOVING, MINING, STOPPED }
 
+    public static final int MAX_SPEED_PER_STAR = 25;
+    public static final int MAX_STARS = 5;
+
     private final UUID ownerId;
     private final String mineId;
     private Ref<EntityStore> entityRef;
@@ -113,4 +116,17 @@ public class MinerRobotState {
     public boolean isPositionInitialized() { return positionInitialized; }
     public String getWorldName() { return worldName; }
     public void setWorldName(String worldName) { this.worldName = worldName; }
+
+    public static long getMinerBuyCost() {
+        return 1000L;
+    }
+
+    public static long getMinerSpeedCost(int speedLevel, int stars) {
+        int totalLevel = stars * MAX_SPEED_PER_STAR + speedLevel;
+        return Math.round(50 * Math.pow(1.15, totalLevel));
+    }
+
+    public static long getMinerEvolveCost(int stars) {
+        return Math.round(5000 * Math.pow(3, stars));
+    }
 }

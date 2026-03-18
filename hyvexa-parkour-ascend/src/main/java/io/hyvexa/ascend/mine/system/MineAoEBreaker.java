@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Static utility for AoE block breaking: Jackhammer (column), Stomp (layer), Blast (sphere).
@@ -110,7 +108,7 @@ public final class MineAoEBreaker {
             worldChunk.setBlock(x, y, z, 0);
 
             // Fortune roll for each AoE block
-            int blocksGained = rollFortune(fortuneLevel);
+            int blocksGained = MineRewardHelper.rollFortune(fortuneLevel);
 
             // Add to inventory, auto-sell overflow
             int stored = progress.addToInventoryUpTo(blockTypeId, blocksGained);
@@ -160,9 +158,9 @@ public final class MineAoEBreaker {
     }
 
     // Cached reverse lookup: block runtime ID -> block type string ID
-    private static volatile Map<Integer, String> reverseBlockMap;
+    private static Map<Integer, String> reverseBlockMap;
 
-    private static Map<Integer, String> getReverseBlockMap() {
+    private static synchronized Map<Integer, String> getReverseBlockMap() {
         Map<Integer, String> map = reverseBlockMap;
         if (map != null) return map;
         map = new HashMap<>();
@@ -186,16 +184,6 @@ public final class MineAoEBreaker {
         int blockId = worldChunk.getBlock(x, y, z);
         if (blockId == 0) return null; // already air
         return getReverseBlockMap().get(blockId);
-    }
-
-    private static int rollFortune(int fortuneLevel) {
-        if (fortuneLevel <= 0) return 1;
-        double tripleChance = fortuneLevel * 0.4 / 100.0;
-        double doubleChance = fortuneLevel * 2.0 / 100.0;
-        double roll = ThreadLocalRandom.current().nextDouble();
-        if (roll < tripleChance) return 3;
-        if (roll < tripleChance + doubleChance) return 2;
-        return 1;
     }
 
     private static List<Vector3i> buildJackhammerPositions(int centerX, int centerY, int centerZ, int depth) {
