@@ -41,7 +41,7 @@ public final class MineRewardHelper {
         boolean bagFull = false;
         if (stored < blocksGained) {
             MineConfigStore configStore = mineManager.getConfigStore();
-            BigNumber blockPrice = configStore.getBlockPrice(mineId, blockTypeName);
+            BigNumber blockPrice = configStore.getBlockPrice(blockTypeName);
             int overflow = blocksGained - stored;
             long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
             mineProgress.addCrystals(fallbackCrystals);

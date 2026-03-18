@@ -38,8 +38,8 @@ public class MineConfigStore {
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private volatile List<Mine> sortedCache;
 
-    // mineId -> blockTypeId -> price
-    private final Map<String, Map<String, BigNumber>> blockPrices = new ConcurrentHashMap<>();
+    // blockTypeId -> price (global, not per-mine)
+    private final Map<String, BigNumber> blockPrices = new ConcurrentHashMap<>();
 
     private volatile GateConfig entryGate;
     private volatile GateConfig exitGate;
@@ -540,32 +540,29 @@ public class MineConfigStore {
 
     private void loadBlockPrices(Connection conn) throws SQLException {
         blockPrices.clear();
-        String sql = "SELECT mine_id, block_type_id, price_mantissa, price_exp10 FROM mine_block_prices";
+        String sql = "SELECT block_type_id, price_mantissa, price_exp10 FROM block_prices";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    String mineId = rs.getString("mine_id");
                     String blockTypeId = rs.getString("block_type_id");
                     BigNumber price = BigNumber.of(rs.getDouble("price_mantissa"), rs.getInt("price_exp10"));
-                    blockPrices.computeIfAbsent(mineId, k -> new ConcurrentHashMap<>())
-                        .put(blockTypeId, price);
+                    blockPrices.put(blockTypeId, price);
                 }
             }
         }
     }
 
-    public void saveBlockPrice(String mineId, String blockTypeId, BigNumber price) {
-        if (mineId == null || blockTypeId == null || price == null) return;
+    public void saveBlockPrice(String blockTypeId, BigNumber price) {
+        if (blockTypeId == null || price == null) return;
 
-        blockPrices.computeIfAbsent(mineId, k -> new ConcurrentHashMap<>())
-            .put(blockTypeId, price);
+        blockPrices.put(blockTypeId, price);
 
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
         String sql = """
-            INSERT INTO mine_block_prices (mine_id, block_type_id, price_mantissa, price_exp10)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO block_prices (block_type_id, price_mantissa, price_exp10)
+            VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 price_mantissa = VALUES(price_mantissa), price_exp10 = VALUES(price_exp10)
             """;
@@ -574,10 +571,9 @@ public class MineConfigStore {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, mineId);
-                stmt.setString(2, blockTypeId);
-                stmt.setDouble(3, price.getMantissa());
-                stmt.setInt(4, price.getExponent());
+                stmt.setString(1, blockTypeId);
+                stmt.setDouble(2, price.getMantissa());
+                stmt.setInt(3, price.getExponent());
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
@@ -585,23 +581,19 @@ public class MineConfigStore {
         }
     }
 
-    public void removeBlockPrice(String mineId, String blockTypeId) {
-        if (mineId == null || blockTypeId == null) return;
+    public void removeBlockPrice(String blockTypeId) {
+        if (blockTypeId == null) return;
 
-        Map<String, BigNumber> prices = blockPrices.get(mineId);
-        if (prices != null) {
-            prices.remove(blockTypeId);
-        }
+        blockPrices.remove(blockTypeId);
 
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(
-                    "DELETE FROM mine_block_prices WHERE mine_id = ? AND block_type_id = ?")) {
+                    "DELETE FROM block_prices WHERE block_type_id = ?")) {
                 DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, mineId);
-                stmt.setString(2, blockTypeId);
+                stmt.setString(1, blockTypeId);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
@@ -609,16 +601,12 @@ public class MineConfigStore {
         }
     }
 
-    public BigNumber getBlockPrice(String mineId, String blockTypeId) {
-        Map<String, BigNumber> prices = blockPrices.get(mineId);
-        if (prices == null) return BigNumber.ONE;
-        return prices.getOrDefault(blockTypeId, BigNumber.ONE);
+    public BigNumber getBlockPrice(String blockTypeId) {
+        return blockPrices.getOrDefault(blockTypeId, BigNumber.ONE);
     }
 
-    public Map<String, BigNumber> getBlockPrices(String mineId) {
-        Map<String, BigNumber> prices = blockPrices.get(mineId);
-        if (prices == null) return Collections.emptyMap();
-        return Collections.unmodifiableMap(prices);
+    public Map<String, BigNumber> getBlockPrices() {
+        return Collections.unmodifiableMap(blockPrices);
     }
 
     // --- Layer CRUD ---

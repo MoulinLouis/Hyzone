@@ -28,16 +28,14 @@ public class MineBlockPricesPage extends InteractiveCustomUIPage<MineBlockPrices
 
     private final PlayerRef playerRef;
     private final MineConfigStore mineConfigStore;
-    private final String mineId;
     private String blockId = "";
     private String priceMantissa = "";
     private String priceExp = "";
 
-    public MineBlockPricesPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore, String mineId) {
+    public MineBlockPricesPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PriceData.CODEC);
         this.playerRef = playerRef;
         this.mineConfigStore = mineConfigStore;
-        this.mineId = mineId;
     }
 
     @Override
@@ -72,7 +70,7 @@ public class MineBlockPricesPage extends InteractiveCustomUIPage<MineBlockPrices
         if (data.button.startsWith(PriceData.BUTTON_SELECT_PREFIX)) {
             String selectedBlock = data.button.substring(PriceData.BUTTON_SELECT_PREFIX.length());
             blockId = selectedBlock;
-            BigNumber price = mineConfigStore.getBlockPrice(mineId, selectedBlock);
+            BigNumber price = mineConfigStore.getBlockPrice(selectedBlock);
             if (price != null && !price.equals(BigNumber.ONE)) {
                 priceMantissa = String.valueOf(price.getMantissa());
                 priceExp = String.valueOf(price.getExponent());
@@ -107,7 +105,7 @@ public class MineBlockPricesPage extends InteractiveCustomUIPage<MineBlockPrices
             double mantissa = Double.parseDouble(priceMantissa);
             int exp = priceExp.isEmpty() ? 0 : Integer.parseInt(priceExp);
             BigNumber price = BigNumber.of(mantissa, exp);
-            mineConfigStore.saveBlockPrice(mineId, blockId, price);
+            mineConfigStore.saveBlockPrice(blockId, price);
             player.sendMessage(Message.raw("Price set: " + blockId + " -> " + price));
             sendRefresh(ref, store);
         } catch (NumberFormatException e) {
@@ -122,7 +120,7 @@ public class MineBlockPricesPage extends InteractiveCustomUIPage<MineBlockPrices
             player.sendMessage(Message.raw("Block type ID is required."));
             return;
         }
-        mineConfigStore.removeBlockPrice(mineId, blockId);
+        mineConfigStore.removeBlockPrice(blockId);
         player.sendMessage(Message.raw("Price removed: " + blockId));
         blockId = "";
         priceMantissa = "";
@@ -158,12 +156,12 @@ public class MineBlockPricesPage extends InteractiveCustomUIPage<MineBlockPrices
         commandBuilder.set("#BlockIdField.Value", blockId);
         commandBuilder.set("#PriceMantissaField.Value", priceMantissa);
         commandBuilder.set("#PriceExpField.Value", priceExp);
-        commandBuilder.set("#SelectedBlockText.Text", "Mine: " + mineId);
+        commandBuilder.set("#SelectedBlockText.Text", "Global Block Prices");
     }
 
     private void buildPriceList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#PriceCards");
-        Map<String, BigNumber> prices = mineConfigStore.getBlockPrices(mineId);
+        Map<String, BigNumber> prices = mineConfigStore.getBlockPrices();
         List<String> sortedKeys = new ArrayList<>(prices.keySet());
         sortedKeys.sort(Comparator.naturalOrder());
         int index = 0;

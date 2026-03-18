@@ -301,15 +301,15 @@ public final class AscendDatabaseSetup {
             migrateCrystalsToBigint(conn);
             ensureBlockHpColumns(conn);
 
-            // Mine block sell prices
+            // Drop old per-mine price table (not in prod, no migration needed)
+            stmt.executeUpdate("DROP TABLE IF EXISTS mine_block_prices");
+
+            // Global block sell prices
             stmt.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS mine_block_prices (
-                    mine_id VARCHAR(32) NOT NULL,
-                    block_type_id VARCHAR(64) NOT NULL,
+                CREATE TABLE IF NOT EXISTS block_prices (
+                    block_type_id VARCHAR(64) PRIMARY KEY,
                     price_mantissa DOUBLE NOT NULL DEFAULT 1,
-                    price_exp10 INT NOT NULL DEFAULT 0,
-                    PRIMARY KEY (mine_id, block_type_id),
-                    FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+                    price_exp10 INT NOT NULL DEFAULT 0
                 ) ENGINE=InnoDB
                 """);
 

@@ -995,21 +995,18 @@ CREATE TABLE IF NOT EXISTS mine_player_inventory (
 ```
 
 Notes:
-- Stored blocks are sold for crystals at prices defined in `mine_block_prices`
+- Stored blocks are sold for crystals at prices defined in `block_prices`
 - Inventory is delete+re-insert on save (full replace strategy)
 - Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`)
 
-## mine_block_prices
-Stores sell prices for each block type per mine.
+## block_prices
+Stores global sell prices for each block type (not per-mine).
 
 ```sql
-CREATE TABLE IF NOT EXISTS mine_block_prices (
-  mine_id VARCHAR(32) NOT NULL,
-  block_type_id VARCHAR(64) NOT NULL,
+CREATE TABLE IF NOT EXISTS block_prices (
+  block_type_id VARCHAR(64) PRIMARY KEY,
   price_mantissa DOUBLE NOT NULL DEFAULT 1,
-  price_exp10 INT NOT NULL DEFAULT 0,
-  PRIMARY KEY (mine_id, block_type_id),
-  FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+  price_exp10 INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 ```
 

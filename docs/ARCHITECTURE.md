@@ -99,7 +99,7 @@ Module boundaries:
 | `mine_gate` | Entry/exit gate AABB bounds + teleport destinations (id=1 entry, id=2 exit) |
 | `mine_players` | Per-player crystals + upgrade levels |
 | `mine_player_inventory` | Per-player block inventory (block type ID + amount) |
-| `mine_block_prices` | Per-mine block sell prices (BigNumber mantissa + exponent) |
+| `block_prices` | Global block sell prices (BigNumber mantissa + exponent) |
 | `mine_player_mines` | Per-player mine unlock + manual completion state |
 | `mine_player_miners` | Per-player automated miner state (has_miner, speed_level, stars) |
 
@@ -447,7 +447,7 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `mine_gate` | Entry/exit gate bounds + teleport destinations |
 | `mine_players` | Per-player crystals + upgrade levels |
 | `mine_player_inventory` | Per-player block inventory (type + amount) |
-| `mine_block_prices` | Per-mine block sell prices |
+| `block_prices` | Global block sell prices |
 | `mine_player_mines` | Per-player mine unlock + completion state |
 | `mine_player_miners` | Per-player automated miner state |
 | `player_vexa` | Global vexa currency balance per player |

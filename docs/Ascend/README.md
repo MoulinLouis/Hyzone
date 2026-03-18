@@ -88,7 +88,7 @@ Mine subsystem:
 - `mine_gate` -- gate position and access rules
 - `mine_players` -- per-player mine progress (crystals, selected mine)
 - `mine_player_inventory` -- mined block inventory
-- `mine_block_prices` -- sell prices per block type
+- `block_prices` -- global sell prices per block type
 - `mine_player_mines` -- per-player mine unlock state
 - `mine_player_miners` -- automated miner state
 - `mine_zone_layers` -- depth layers per zone (Y-range + block distribution)

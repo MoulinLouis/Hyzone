@@ -1,6 +1,5 @@
 package io.hyvexa.ascend.mine.ui;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
@@ -20,7 +19,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
-import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -149,10 +147,6 @@ public class MineSellPage extends BaseAscendPage {
         MineConfigStore config = plugin.getMineConfigStore();
         if (config == null) return Map.of();
 
-        Map<String, BigNumber> prices = new HashMap<>();
-        for (Mine mine : config.listMinesSorted()) {
-            prices.putAll(config.getBlockPrices(mine.getId()));
-        }
-        return prices;
+        return config.getBlockPrices();
     }
 }

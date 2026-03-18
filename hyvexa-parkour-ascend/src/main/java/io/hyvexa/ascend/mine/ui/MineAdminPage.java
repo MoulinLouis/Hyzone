@@ -263,14 +263,10 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
     private void handleBlockPrices(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
-        if (selectedMineId.isEmpty()) {
-            player.sendMessage(Message.raw("Select a mine first."));
-            return;
-        }
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
         player.getPageManager().openCustomPage(ref, store,
-            new MineBlockPricesPage(pRef, mineConfigStore, selectedMineId));
+            new MineBlockPricesPage(pRef, mineConfigStore));
     }
 
     private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {

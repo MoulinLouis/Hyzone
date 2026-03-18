@@ -114,7 +114,7 @@ public final class MineAoEBreaker {
             int stored = progress.addToInventoryUpTo(blockTypeId, blocksGained);
             if (stored < blocksGained) {
                 int overflow = blocksGained - stored;
-                BigNumber blockPrice = configStore.getBlockPrice(zone.getMineId(), blockTypeId);
+                BigNumber blockPrice = configStore.getBlockPrice(blockTypeId);
                 long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
                 progress.addCrystals(fallbackCrystals);
             }

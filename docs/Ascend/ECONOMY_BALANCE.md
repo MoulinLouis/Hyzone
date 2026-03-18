@@ -965,9 +965,9 @@ The mine is a separate progression system within Ascend mode where players break
 
 ### Block Sell Prices
 
-Each mine has its own block price table, configured per-mine by admins.
+Block prices are global (not per-mine), configured by admins in the Block Prices page.
 
-- **DB table:** `mine_block_prices` (columns: `mine_id`, `block_type_id`, `price_mantissa`, `price_exp10`)
+- **DB table:** `block_prices` (columns: `block_type_id`, `price_mantissa`, `price_exp10`)
 - **Price format:** `BigNumber` (mantissa + base-10 exponent), supporting arbitrarily large values
 - **Default price:** `BigNumber.ONE` (1 crystal) if a block type has no configured price
 - **Per-mine isolation:** The same block type can have different prices in different mines

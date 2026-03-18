@@ -63,7 +63,7 @@ Audit du mode Mine au 2026-03-15.
 | `mine_definitions` | Config mines (id, name, order, cost, spawn) |
 | `mine_zones` | Zones minables (AABB, block table, regen config) |
 | `mine_gate` | Entry/exit gates (AABB + destination) |
-| `mine_block_prices` | Prix par bloc par mine |
+| `block_prices` | Prix global par bloc |
 | `mine_players` | Progression joueur (cristaux, niveaux upgrades) |
 | `mine_player_inventory` | Inventaire blocs minés |
 | `mine_player_mines` | État unlock/completion par mine |
