@@ -11,15 +11,14 @@
 1. [Philosophie de design](#1-philosophie-de-design)
 2. [Vue d'ensemble de la progression](#2-vue-densemble-de-la-progression)
 3. [Définition des 5 mines](#3-définition-des-5-mines)
-4. [Catalogue complet des blocs](#4-catalogue-complet-des-blocs)
-5. [Distribution des blocs par mine et couche](#5-distribution-des-blocs-par-mine-et-couche)
-6. [Projections de revenus](#6-projections-de-revenus)
-7. [Progression pioche](#7-progression-pioche)
-8. [Analyse des upgrades](#8-analyse-des-upgrades)
-9. [Économie des miners](#9-économie-des-miners)
-10. [Timeline de progression](#10-timeline-de-progression)
-11. [Bonus cross-progression](#11-bonus-cross-progression)
-12. [Leviers d'ajustement](#12-leviers-dajustement)
+4. [Blocs par mine](#4-blocs-par-mine)
+5. [Projections de revenus](#5-projections-de-revenus)
+6. [Progression pioche](#6-progression-pioche)
+7. [Analyse des upgrades](#7-analyse-des-upgrades)
+8. [Économie des miners](#8-économie-des-miners)
+9. [Timeline de progression](#9-timeline-de-progression)
+10. [Bonus cross-progression](#10-bonus-cross-progression)
+11. [Leviers d'ajustement](#11-leviers-dajustement)
 
 ---
 
@@ -187,392 +186,247 @@ Mine 1 (Carrière)          Mine 2 (Cristaux)         Mine 3 (Volcanique)
 
 ---
 
-## 4. Catalogue complet des blocs
+## 4. Blocs par mine
 
-### Légende
+Chaque mine a une zone divisée en 3 couches par profondeur (Y). Les couches profondes contiennent plus de blocs rares et précieux.
 
-- **HP** : nombre de coups (base) pour casser le bloc
-- **Prix** : cristaux reçus par bloc vendu
-- **Ratio** : prix ÷ HP = cristaux par coup investi (mesure d'efficacité)
-- **Tier** : mine où le bloc apparaît pour la première fois
-- **Rôle** : Filler (commun, >25%), Standard (15-25%), Uncommon (5-15%), Rare (<8%), Jackpot (<3%)
+**Légende :** HP = coups pour casser, Prix = cristaux/bloc vendu, Ratio = prix/HP (efficacité par coup).
 
-### Roches
+---
 
-| Block Type ID | Nom | HP | Prix | Ratio | Tier | Rôle |
-|--------------|-----|-----|------|-------|------|------|
-| `Rock_Stone` | Stone | 1 | 1 | 1.00 | Mine 1 | Filler |
-| `Rock_Stone_Mossy` | Mossy Stone | 1 | 2 | 2.00 | Mine 1 | Standard |
-| `Rock_Sandstone` | Sandstone | 1 | 2 | 2.00 | Mine 1 | Standard |
-| `Rock_Chalk` | Chalk | 1 | 3 | 3.00 | Mine 1 | Uncommon |
-| `Rock_Shale` | Shale | 2 | 4 | 2.00 | Mine 2 | Filler |
-| `Rock_Slate` | Slate | 2 | 5 | 2.50 | Mine 2 | Standard |
-| `Rock_Quartzite` | Quartzite | 3 | 7 | 2.33 | Mine 2 | Uncommon |
-| `Rock_Basalt` | Basalt | 3 | 9 | 3.00 | Mine 3 | Filler |
-| `Rock_Volcanic` | Volcanic | 4 | 14 | 3.50 | Mine 3 | Standard |
-| `Rock_Marble` | Marble | 5 | 22 | 4.40 | Mine 4 | Filler |
-| `Rock_Calcite` | Calcite | 5 | 25 | 5.00 | Mine 4 | Standard |
-| `Rock_Aqua` | Aqua | 6 | 35 | 5.83 | Mine 4 | Uncommon |
-| `Rock_Bedrock` | Bedrock | 8 | 40 | 5.00 | Mine 5 | Filler |
-| `Rock_Salt` | Salt | 6 | 35 | 5.83 | Mine 5 | Standard |
-| `Rock_Sandstone_Red` | Red Sandstone | 1 | 2 | 2.00 | Mine 1 | (variante Sandstone) |
-| `Rock_Sandstone_White` | White Sandstone | 2 | 4 | 2.00 | Mine 2 | (variante, si utilisé) |
+### Mine 1 — Surface Quarry (Y 60-74, 15 blocs de haut)
 
-### Cristaux
+#### Couche Surface (Y 70-74) — avg 1.47 cryst/bloc
 
-| Block Type ID | Nom | HP | Prix | Ratio | Tier | Rôle |
-|--------------|-----|-----|------|-------|------|------|
-| `Rock_Crystal_Blue_Block` | Blue Crystal | 3 | 12 | 4.00 | Mine 2 | Rare |
-| `Rock_Crystal_Green_Block` | Green Crystal | 3 | 12 | 4.00 | Mine 2 | Rare |
-| `Rock_Crystal_White_Block` | White Crystal | 4 | 16 | 4.00 | Mine 2 | Rare |
-| `Rock_Crystal_Red_Block` | Red Crystal | 4 | 20 | 5.00 | Mine 3 | Rare |
-| `Rock_Crystal_Pink_Block` | Pink Crystal | 4 | 20 | 5.00 | Mine 3 | Rare |
-| `Rock_Crystal_Yellow_Block` | Yellow Crystal | 7 | 50 | 7.14 | Mine 4 | Rare |
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Stone` | Stone | 1 | 1 | 1.00 | 65% |
+| `Rock_Stone_Mossy` | Mossy Stone | 1 | 2 | 2.00 | 20% |
+| `Rock_Sandstone` | Sandstone | 1 | 2 | 2.00 | 12% |
+| `Rock_Chalk` | Chalk | 1 | 3 | 3.00 | 3% |
+| `Ore_Copper_Stone` | Copper Stone | 2 | 6 | 3.00 | 0% |
 
-**Pattern cristaux :** le ratio augmente avec la rareté. Blue/Green (×4.0) → Red/Pink (×5.0) → Yellow (×7.14). Yellow Crystal est le cristal le plus précieux, réservé à Mine 4+.
+#### Couche Coeur (Y 65-69) — avg 1.91 cryst/bloc
 
-### Minerais
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Stone` | Stone | 1 | 1 | 1.00 | 50% |
+| `Rock_Stone_Mossy` | Mossy Stone | 1 | 2 | 2.00 | 20% |
+| `Rock_Sandstone` | Sandstone | 1 | 2 | 2.00 | 13% |
+| `Rock_Chalk` | Chalk | 1 | 3 | 3.00 | 9% |
+| `Ore_Copper_Stone` | Copper Stone | 2 | 6 | 3.00 | 8% |
 
-| Block Type ID | Nom | HP | Prix | Ratio | Tier | Rôle |
-|--------------|-----|-----|------|-------|------|------|
-| `Ore_Copper_Stone` | Copper Stone | 2 | 6 | 3.00 | Mine 1 | Rare |
-| `Ore_Copper_Sandstone` | Copper Sandstone | 2 | 6 | 3.00 | Mine 1 | (variante) |
-| `Ore_Iron_Shale` | Iron Shale | 3 | 10 | 3.33 | Mine 2 | Uncommon |
-| `Ore_Iron_Slate` | Iron Slate | 3 | 10 | 3.33 | Mine 2 | (variante) |
-| `Ore_Gold_Basalt` | Gold Basalt | 5 | 25 | 5.00 | Mine 3 | Uncommon |
-| `Ore_Gold_Volcanic` | Gold Volcanic | 5 | 25 | 5.00 | Mine 3 | (variante) |
-| `Ore_Cobalt_Shale` | Cobalt Shale | 5 | 22 | 4.40 | Mine 3 | Uncommon |
-| `Ore_Cobalt_Slate` | Cobalt Slate | 5 | 22 | 4.40 | Mine 3 | (variante) |
-| `Ore_Silver_Basalt` | Silver Basalt | 7 | 45 | 6.43 | Mine 4 | Uncommon |
-| `Ore_Silver_Slate` | Silver Slate | 7 | 45 | 6.43 | Mine 4 | (variante) |
-| `Ore_Mithril_Stone` | Mithril Stone | 8 | 60 | 7.50 | Mine 4 | Rare |
-| `Ore_Thorium_Sandstone` | Thorium Sandstone | 12 | 100 | 8.33 | Mine 5 | Jackpot |
+#### Couche Profonde (Y 60-64) — avg 2.35 cryst/bloc
 
-**Pattern minerais :** chaque mine a 1-2 minerais thématiques. Le ratio progresse : Copper (3.0) → Iron (3.33) → Gold/Cobalt (4.4-5.0) → Silver (6.43) → Mithril (7.50) → Thorium (8.33). L'augmentation est lente mais constante, reflétant la vraie progression.
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Stone` | Stone | 1 | 1 | 1.00 | 35% |
+| `Rock_Stone_Mossy` | Mossy Stone | 1 | 2 | 2.00 | 18% |
+| `Rock_Sandstone` | Sandstone | 1 | 2 | 2.00 | 15% |
+| `Rock_Chalk` | Chalk | 1 | 3 | 3.00 | 14% |
+| `Ore_Copper_Stone` | Copper Stone | 2 | 6 | 3.00 | 18% |
 
-### Résumé ratio par tier
+> Copper passe de 0% en surface a 18% en profondeur — creuser profond recompense clairement.
 
-| Tier | Ratio filler | Ratio rare | Ratio jackpot | Gain vs. tier précédent |
-|------|-------------|-----------|--------------|------------------------|
+**Moyenne globale (1/3 par couche) : avg price 1.91, avg HP 1.09**
+
+---
+
+### Mine 2 — Crystal Caverns (Y 40-59, 20 blocs de haut)
+
+#### Couche Surface (Y 53-59) — avg 5.74 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Shale` | Shale | 2 | 4 | 2.00 | 40% |
+| `Rock_Slate` | Slate | 2 | 5 | 2.50 | 28% |
+| `Rock_Quartzite` | Quartzite | 3 | 7 | 2.33 | 15% |
+| `Ore_Iron_Shale` | Iron Shale | 3 | 10 | 3.33 | 7% |
+| `Rock_Crystal_Blue_Block` | Blue Crystal | 3 | 12 | 4.00 | 5% |
+| `Rock_Crystal_Green_Block` | Green Crystal | 3 | 12 | 4.00 | 3% |
+| `Rock_Crystal_White_Block` | White Crystal | 4 | 16 | 4.00 | 2% |
+
+#### Couche Coeur (Y 46-52) — avg 7.19 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Shale` | Shale | 2 | 4 | 2.00 | 30% |
+| `Rock_Slate` | Slate | 2 | 5 | 2.50 | 23% |
+| `Rock_Quartzite` | Quartzite | 3 | 7 | 2.33 | 15% |
+| `Ore_Iron_Shale` | Iron Shale | 3 | 10 | 3.33 | 10% |
+| `Rock_Crystal_Blue_Block` | Blue Crystal | 3 | 12 | 4.00 | 9% |
+| `Rock_Crystal_Green_Block` | Green Crystal | 3 | 12 | 4.00 | 7% |
+| `Rock_Crystal_White_Block` | White Crystal | 4 | 16 | 4.00 | 6% |
+
+#### Couche Profonde (Y 40-45) — avg 8.55 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Shale` | Shale | 2 | 4 | 2.00 | 20% |
+| `Rock_Slate` | Slate | 2 | 5 | 2.50 | 18% |
+| `Rock_Quartzite` | Quartzite | 3 | 7 | 2.33 | 14% |
+| `Ore_Iron_Shale` | Iron Shale | 3 | 10 | 3.33 | 13% |
+| `Rock_Crystal_Blue_Block` | Blue Crystal | 3 | 12 | 4.00 | 13% |
+| `Rock_Crystal_Green_Block` | Green Crystal | 3 | 12 | 4.00 | 11% |
+| `Rock_Crystal_White_Block` | White Crystal | 4 | 16 | 4.00 | 11% |
+
+> En surface surtout du Shale/Slate gris. En descendant, les cristaux bleus et verts apparaissent de plus en plus. White Crystal profond = mini-jackpot de Mine 2.
+
+**Moyenne globale : avg price 7.16, avg HP 2.47**
+
+---
+
+### Mine 3 — Volcanic Forge (Y 20-44, 25 blocs de haut)
+
+#### Couche Surface (Y 37-44) — avg 12.03 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Basalt` | Basalt | 3 | 9 | 3.00 | 38% |
+| `Rock_Volcanic` | Volcanic | 4 | 14 | 3.50 | 28% |
+| `Rock_Quartzite` | Quartzite | 3 | 7 | 2.33 | 12% |
+| `Ore_Gold_Basalt` | Gold Basalt | 5 | 25 | 5.00 | 7% |
+| `Ore_Cobalt_Shale` | Cobalt Shale | 5 | 22 | 4.40 | 5% |
+| `Rock_Crystal_Red_Block` | Red Crystal | 4 | 20 | 5.00 | 5% |
+| `Rock_Crystal_Pink_Block` | Pink Crystal | 4 | 20 | 5.00 | 5% |
+
+#### Couche Coeur (Y 28-36) — avg 15.10 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Basalt` | Basalt | 3 | 9 | 3.00 | 28% |
+| `Rock_Volcanic` | Volcanic | 4 | 14 | 3.50 | 24% |
+| `Rock_Quartzite` | Quartzite | 3 | 7 | 2.33 | 8% |
+| `Ore_Gold_Basalt` | Gold Basalt | 5 | 25 | 5.00 | 12% |
+| `Ore_Cobalt_Shale` | Cobalt Shale | 5 | 22 | 4.40 | 10% |
+| `Rock_Crystal_Red_Block` | Red Crystal | 4 | 20 | 5.00 | 9% |
+| `Rock_Crystal_Pink_Block` | Pink Crystal | 4 | 20 | 5.00 | 9% |
+
+#### Couche Profonde (Y 20-27) — avg 18.01 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Basalt` | Basalt | 3 | 9 | 3.00 | 18% |
+| `Rock_Volcanic` | Volcanic | 4 | 14 | 3.50 | 17% |
+| `Rock_Quartzite` | Quartzite | 3 | 7 | 2.33 | 5% |
+| `Ore_Gold_Basalt` | Gold Basalt | 5 | 25 | 5.00 | 16% |
+| `Ore_Cobalt_Shale` | Cobalt Shale | 5 | 22 | 4.40 | 14% |
+| `Rock_Crystal_Red_Block` | Red Crystal | 4 | 20 | 5.00 | 15% |
+| `Rock_Crystal_Pink_Block` | Pink Crystal | 4 | 20 | 5.00 | 15% |
+
+> Couche profonde : 60% de blocs a haute valeur (Gold, Cobalt, Red/Pink Crystal). Le tournant mid-game ou les AoE (Jackhammer, Blast) deviennent tres rentables.
+
+**Moyenne globale : avg price 15.04, avg HP 3.80**
+
+---
+
+### Mine 4 — Frozen Abyss (Y 5-29, 25 blocs de haut)
+
+#### Couche Surface (Y 22-29) — avg 27.31 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Marble` | Marble | 5 | 22 | 4.40 | 33% |
+| `Rock_Calcite` | Calcite | 5 | 25 | 5.00 | 25% |
+| `Rock_Aqua` | Aqua | 6 | 35 | 5.83 | 14% |
+| `Ore_Silver_Basalt` | Silver Basalt | 7 | 45 | 6.43 | 10% |
+| `Rock_Slate` | Slate | 2 | 5 | 2.50 | 8% |
+| `Rock_Crystal_Yellow_Block` | Yellow Crystal | 7 | 50 | 7.14 | 6% |
+| `Ore_Mithril_Stone` | Mithril Stone | 8 | 60 | 7.50 | 4% |
+
+#### Couche Coeur (Y 14-21) — avg 32.56 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Marble` | Marble | 5 | 22 | 4.40 | 25% |
+| `Rock_Calcite` | Calcite | 5 | 25 | 5.00 | 20% |
+| `Rock_Aqua` | Aqua | 6 | 35 | 5.83 | 16% |
+| `Ore_Silver_Basalt` | Silver Basalt | 7 | 45 | 6.43 | 13% |
+| `Rock_Crystal_Yellow_Block` | Yellow Crystal | 7 | 50 | 7.14 | 10% |
+| `Ore_Mithril_Stone` | Mithril Stone | 8 | 60 | 7.50 | 8% |
+| `Rock_Slate` | Slate | 2 | 5 | 2.50 | 8% |
+
+#### Couche Profonde (Y 5-13) — avg 38.19 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Marble` | Marble | 5 | 22 | 4.40 | 18% |
+| `Rock_Aqua` | Aqua | 6 | 35 | 5.83 | 17% |
+| `Ore_Silver_Basalt` | Silver Basalt | 7 | 45 | 6.43 | 16% |
+| `Rock_Calcite` | Calcite | 5 | 25 | 5.00 | 14% |
+| `Rock_Crystal_Yellow_Block` | Yellow Crystal | 7 | 50 | 7.14 | 14% |
+| `Ore_Mithril_Stone` | Mithril Stone | 8 | 60 | 7.50 | 14% |
+| `Rock_Slate` | Slate | 2 | 5 | 2.50 | 7% |
+
+> Mithril Stone (60 cryst, 8 HP) passe de 4% en surface a 14% en profondeur. Yellow Crystal (50 cryst) idem. La couche profonde de Mine 4 est le premier vrai "premium layer".
+
+**Moyenne globale : avg price 32.69, avg HP 5.55**
+
+---
+
+### Mine 5 — Void Core (Y -25 a 5, 30 blocs de haut)
+
+#### Couche Surface (Y -2 a 5) — avg 35.14 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Bedrock` | Bedrock | 8 | 40 | 5.00 | 28% |
+| `Rock_Salt` | Salt | 6 | 35 | 5.83 | 20% |
+| `Ore_Gold_Basalt` | Gold Basalt | 5 | 25 | 5.00 | 12% |
+| `Rock_Crystal_Red_Block` | Red Crystal | 4 | 20 | 5.00 | 10% |
+| `Ore_Mithril_Stone` | Mithril Stone | 8 | 60 | 7.50 | 8% |
+| `Rock_Crystal_Pink_Block` | Pink Crystal | 4 | 20 | 5.00 | 8% |
+| `Rock_Volcanic` | Volcanic | 4 | 14 | 3.50 | 7% |
+| `Rock_Crystal_Yellow_Block` | Yellow Crystal | 7 | 50 | 7.14 | 4% |
+| `Ore_Thorium_Sandstone` | Thorium Sandstone | 12 | 100 | 8.33 | 3% |
+
+#### Couche Coeur (Y -14 a -3) — avg 43.54 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Rock_Bedrock` | Bedrock | 8 | 40 | 5.00 | 22% |
+| `Rock_Salt` | Salt | 6 | 35 | 5.83 | 18% |
+| `Ore_Mithril_Stone` | Mithril Stone | 8 | 60 | 7.50 | 13% |
+| `Ore_Gold_Basalt` | Gold Basalt | 5 | 25 | 5.00 | 10% |
+| `Rock_Crystal_Yellow_Block` | Yellow Crystal | 7 | 50 | 7.14 | 10% |
+| `Rock_Crystal_Red_Block` | Red Crystal | 4 | 20 | 5.00 | 8% |
+| `Ore_Thorium_Sandstone` | Thorium Sandstone | 12 | 100 | 8.33 | 8% |
+| `Rock_Crystal_Pink_Block` | Pink Crystal | 4 | 20 | 5.00 | 7% |
+| `Rock_Volcanic` | Volcanic | 4 | 14 | 3.50 | 4% |
+
+#### Couche Profonde (Y -25 a -15) — avg 53.21 cryst/bloc
+
+| Block ID | Nom | HP | Prix | Ratio | Proba |
+|----------|-----|----|------|-------|-------|
+| `Ore_Thorium_Sandstone` | Thorium Sandstone | 12 | 100 | 8.33 | 18% |
+| `Ore_Mithril_Stone` | Mithril Stone | 8 | 60 | 7.50 | 17% |
+| `Rock_Bedrock` | Bedrock | 8 | 40 | 5.00 | 15% |
+| `Rock_Crystal_Yellow_Block` | Yellow Crystal | 7 | 50 | 7.14 | 14% |
+| `Rock_Salt` | Salt | 6 | 35 | 5.83 | 12% |
+| `Rock_Crystal_Red_Block` | Red Crystal | 4 | 20 | 5.00 | 8% |
+| `Rock_Crystal_Pink_Block` | Pink Crystal | 4 | 20 | 5.00 | 7% |
+| `Ore_Gold_Basalt` | Gold Basalt | 5 | 25 | 5.00 | 6% |
+| `Rock_Volcanic` | Volcanic | 4 | 14 | 3.50 | 3% |
+
+> **Le paradis du mineur.** 18% Thorium (100 cryst), 17% Mithril (60 cryst), 14% Yellow Crystal (50 cryst). Chaque bloc casse en couche profonde a une chance significative d'etre un jackpot. C'est la recompense ultime pour avoir investi dans Jackhammer et toutes les upgrades.
+
+**Moyenne globale : avg price 43.96, avg HP 6.62**
+
+### Progression des ratios entre mines
+
+| Mine | Ratio filler | Ratio rare | Ratio jackpot | Gain vs. mine precedente |
+|------|-------------|-----------|--------------|--------------------------|
 | Mine 1 | 1.0-2.0 | 3.0 | — | (base) |
 | Mine 2 | 2.0-2.5 | 3.3-4.0 | — | +50-75% |
 | Mine 3 | 3.0-3.5 | 4.4-5.0 | — | +40-50% |
 | Mine 4 | 4.4-5.0 | 6.4-7.5 | — | +40-50% |
 | Mine 5 | 5.0-5.8 | 7.5 | 8.33 | +15-20% |
 
-> **Note :** Mine 5 a un gain plus faible en ratio parce que sa valeur vient du volume (gros blocs, AoE) et du Thorium jackpot, pas d'un ratio base meilleur sur les fillers.
+> Mine 5 a un gain plus faible en ratio parce que sa valeur vient du volume (gros blocs, AoE) et du Thorium jackpot, pas d'un ratio base meilleur sur les fillers.
 
 ---
 
-## 5. Distribution des blocs par mine et couche
-
-Chaque mine a une zone unique divisée en 3 couches par profondeur (Y). Les couches profondes contiennent plus de blocs rares et précieux.
-
-### Mine 1 — Surface Quarry (Y 60-74, 15 blocs de haut)
-
-#### Couche Surface (Y 70-74)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Stone | 65% | Filler dominant |
-| Rock_Stone_Mossy | 20% | Standard |
-| Rock_Sandstone | 12% | Standard |
-| Rock_Chalk | 3% | Rare ici |
-| Ore_Copper_Stone | 0% | Absent en surface |
-
-**Avg price :** 1.47 — La surface est "facile et rapide", pas très rentable.
-
-#### Couche Cœur (Y 65-69)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Stone | 50% | Filler |
-| Rock_Stone_Mossy | 20% | Standard |
-| Rock_Sandstone | 13% | Standard |
-| Rock_Chalk | 9% | Uncommon |
-| Ore_Copper_Stone | 8% | Rare |
-
-**Avg price :** 1.91 — Plus de variété, le Copper commence à apparaître.
-
-#### Couche Profonde (Y 60-64)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Stone | 35% | Filler réduit |
-| Rock_Stone_Mossy | 18% | Standard |
-| Rock_Sandstone | 15% | Standard |
-| Rock_Chalk | 14% | Plus fréquent |
-| Ore_Copper_Stone | 18% | Beaucoup plus fréquent |
-
-**Avg price :** 2.35 — Creuser profond récompense. Le Copper à 18% contre 0% en surface crée un incentive clair.
-
-#### Moyenne pondérée Mine 1 (1/3 par couche)
-
-| Bloc | Poids global | HP | Prix |
-|------|-------------|-----|------|
-| Rock_Stone | 50.0% | 1 | 1 |
-| Rock_Stone_Mossy | 19.3% | 1 | 2 |
-| Rock_Sandstone | 13.3% | 1 | 2 |
-| Rock_Chalk | 8.7% | 1 | 3 |
-| Ore_Copper_Stone | 8.7% | 2 | 6 |
-
-**Avg price global : 1.91** — **Avg HP : 1.09**
-
----
-
-### Mine 2 — Crystal Caverns (Y 40-59, 20 blocs de haut)
-
-#### Couche Surface (Y 53-59)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Shale | 40% | Filler |
-| Rock_Slate | 28% | Standard |
-| Rock_Quartzite | 15% | Uncommon |
-| Ore_Iron_Shale | 7% | Uncommon |
-| Rock_Crystal_Blue_Block | 5% | Rare |
-| Rock_Crystal_Green_Block | 3% | Rare |
-| Rock_Crystal_White_Block | 2% | Très rare |
-
-**Avg price :** 5.74
-
-#### Couche Cœur (Y 46-52)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Shale | 30% | Filler |
-| Rock_Slate | 23% | Standard |
-| Rock_Quartzite | 15% | Uncommon |
-| Ore_Iron_Shale | 10% | Uncommon |
-| Rock_Crystal_Blue_Block | 9% | Plus fréquent |
-| Rock_Crystal_Green_Block | 7% | Plus fréquent |
-| Rock_Crystal_White_Block | 6% | Rare |
-
-**Avg price :** 7.19
-
-#### Couche Profonde (Y 40-45)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Shale | 20% | Filler réduit |
-| Rock_Slate | 18% | Standard |
-| Rock_Quartzite | 14% | Uncommon |
-| Ore_Iron_Shale | 13% | Fréquent |
-| Rock_Crystal_Blue_Block | 13% | Fréquent |
-| Rock_Crystal_Green_Block | 11% | Fréquent |
-| Rock_Crystal_White_Block | 11% | Bien plus fréquent |
-
-**Avg price :** 8.55
-
-> **Sensation visée :** En surface, le joueur mine surtout du Shale/Slate gris. En descendant, les cristaux bleus et verts apparaissent en grappes de plus en plus denses. Le White Crystal profond est le "mini-jackpot" de Mine 2.
-
-#### Moyenne pondérée Mine 2
-
-| Bloc | Poids global | HP | Prix |
-|------|-------------|-----|------|
-| Rock_Shale | 30.0% | 2 | 4 |
-| Rock_Slate | 23.0% | 2 | 5 |
-| Rock_Quartzite | 14.7% | 3 | 7 |
-| Ore_Iron_Shale | 10.0% | 3 | 10 |
-| Rock_Crystal_Blue_Block | 9.0% | 3 | 12 |
-| Rock_Crystal_Green_Block | 7.0% | 3 | 12 |
-| Rock_Crystal_White_Block | 6.3% | 4 | 16 |
-
-**Avg price global : 7.16** — **Avg HP : 2.47**
-
----
-
-### Mine 3 — Volcanic Forge (Y 20-44, 25 blocs de haut)
-
-#### Couche Surface (Y 37-44)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Basalt | 38% | Filler |
-| Rock_Volcanic | 28% | Standard |
-| Rock_Quartzite | 12% | Filler léger |
-| Ore_Gold_Basalt | 7% | Uncommon |
-| Ore_Cobalt_Shale | 5% | Uncommon |
-| Rock_Crystal_Red_Block | 5% | Rare |
-| Rock_Crystal_Pink_Block | 5% | Rare |
-
-**Avg price :** 12.03
-
-#### Couche Cœur (Y 28-36)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Basalt | 28% | Filler |
-| Rock_Volcanic | 24% | Standard |
-| Rock_Quartzite | 8% | Filler léger |
-| Ore_Gold_Basalt | 12% | Plus fréquent |
-| Ore_Cobalt_Shale | 10% | Plus fréquent |
-| Rock_Crystal_Red_Block | 9% | Plus fréquent |
-| Rock_Crystal_Pink_Block | 9% | Plus fréquent |
-
-**Avg price :** 15.10
-
-#### Couche Profonde (Y 20-27)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Basalt | 18% | Filler réduit |
-| Rock_Volcanic | 17% | Standard |
-| Rock_Quartzite | 5% | Minimal |
-| Ore_Gold_Basalt | 16% | Abondant |
-| Ore_Cobalt_Shale | 14% | Abondant |
-| Rock_Crystal_Red_Block | 15% | Abondant |
-| Rock_Crystal_Pink_Block | 15% | Abondant |
-
-**Avg price :** 18.01
-
-#### Moyenne pondérée Mine 3
-
-| Bloc | Poids global | HP | Prix |
-|------|-------------|-----|------|
-| Rock_Basalt | 28.0% | 3 | 9 |
-| Rock_Volcanic | 23.0% | 4 | 14 |
-| Rock_Quartzite | 8.3% | 3 | 7 |
-| Ore_Gold_Basalt | 11.7% | 5 | 25 |
-| Ore_Cobalt_Shale | 9.7% | 5 | 22 |
-| Rock_Crystal_Red_Block | 9.7% | 4 | 20 |
-| Rock_Crystal_Pink_Block | 9.7% | 4 | 20 |
-
-**Avg price global : 15.04** — **Avg HP : 3.80**
-
----
-
-### Mine 4 — Frozen Abyss (Y 5-29, 25 blocs de haut)
-
-#### Couche Surface (Y 22-29)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Marble | 33% | Filler |
-| Rock_Calcite | 25% | Standard |
-| Rock_Aqua | 14% | Uncommon |
-| Ore_Silver_Basalt | 10% | Uncommon |
-| Rock_Crystal_Yellow_Block | 6% | Rare |
-| Ore_Mithril_Stone | 4% | Rare |
-| Rock_Slate | 8% | Filler léger (rappel Mine 2) |
-
-**Avg price :** 27.31
-
-#### Couche Cœur (Y 14-21)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Marble | 25% | Filler |
-| Rock_Calcite | 20% | Standard |
-| Rock_Aqua | 16% | Plus fréquent |
-| Ore_Silver_Basalt | 13% | Plus fréquent |
-| Rock_Crystal_Yellow_Block | 10% | Plus fréquent |
-| Ore_Mithril_Stone | 8% | Plus fréquent |
-| Rock_Slate | 8% | Filler |
-
-**Avg price :** 32.56
-
-#### Couche Profonde (Y 5-13)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Marble | 18% | Filler réduit |
-| Rock_Calcite | 14% | Standard |
-| Rock_Aqua | 17% | Abondant |
-| Ore_Silver_Basalt | 16% | Abondant |
-| Rock_Crystal_Yellow_Block | 14% | Abondant |
-| Ore_Mithril_Stone | 14% | Abondant |
-| Rock_Slate | 7% | Minimal |
-
-**Avg price :** 38.19
-
-#### Moyenne pondérée Mine 4
-
-| Bloc | Poids global | HP | Prix |
-|------|-------------|-----|------|
-| Rock_Marble | 25.3% | 5 | 22 |
-| Rock_Calcite | 19.7% | 5 | 25 |
-| Rock_Aqua | 15.7% | 6 | 35 |
-| Ore_Silver_Basalt | 13.0% | 7 | 45 |
-| Rock_Crystal_Yellow_Block | 10.0% | 7 | 50 |
-| Ore_Mithril_Stone | 8.7% | 8 | 60 |
-| Rock_Slate | 7.7% | 2 | 5 |
-
-**Avg price global : 32.69** — **Avg HP : 5.55**
-
----
-
-### Mine 5 — Void Core (Y -25 à 5, 30 blocs de haut)
-
-#### Couche Surface (Y -2 à 5)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Bedrock | 28% | Filler |
-| Rock_Salt | 20% | Standard |
-| Ore_Gold_Basalt | 12% | Recyclé |
-| Rock_Crystal_Red_Block | 10% | Recyclé |
-| Ore_Mithril_Stone | 8% | Uncommon |
-| Rock_Crystal_Pink_Block | 8% | Recyclé |
-| Rock_Volcanic | 7% | Filler léger |
-| Rock_Crystal_Yellow_Block | 4% | Rare |
-| Ore_Thorium_Sandstone | 3% | Jackpot rare |
-
-**Avg price :** 35.14
-
-#### Couche Cœur (Y -14 à -3)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Bedrock | 22% | Filler |
-| Rock_Salt | 18% | Standard |
-| Ore_Mithril_Stone | 13% | Plus fréquent |
-| Ore_Gold_Basalt | 10% | Recyclé |
-| Rock_Crystal_Yellow_Block | 10% | Plus fréquent |
-| Rock_Crystal_Red_Block | 8% | Recyclé |
-| Rock_Crystal_Pink_Block | 7% | Recyclé |
-| Ore_Thorium_Sandstone | 8% | Plus fréquent |
-| Rock_Volcanic | 4% | Minimal |
-
-**Avg price :** 43.54
-
-#### Couche Profonde (Y -25 à -15)
-
-| Bloc | Poids | Rôle |
-|------|-------|------|
-| Rock_Bedrock | 15% | Filler réduit |
-| Rock_Salt | 12% | Standard |
-| Ore_Thorium_Sandstone | 18% | ABONDANT — le jackpot |
-| Ore_Mithril_Stone | 17% | Abondant |
-| Rock_Crystal_Yellow_Block | 14% | Abondant |
-| Rock_Crystal_Red_Block | 8% | Recyclé |
-| Rock_Crystal_Pink_Block | 7% | Recyclé |
-| Ore_Gold_Basalt | 6% | Minimal |
-| Rock_Volcanic | 3% | Minimal |
-
-**Avg price :** 53.21
-
-> **Sensation visée :** La couche profonde de Mine 5 est le "paradis du mineur". 18% de Thorium (100 cryst chacun), 17% de Mithril (60 cryst), 14% de Yellow Crystal (50 cryst). Chaque bloc cassé a une chance significative d'être un jackpot. C'est la récompense ultime pour avoir investi dans Jackhammer (pour atteindre les couches profondes) et toutes les upgrades.
-
-#### Moyenne pondérée Mine 5
-
-| Bloc | Poids global | HP | Prix |
-|------|-------------|-----|------|
-| Rock_Bedrock | 21.7% | 8 | 40 |
-| Rock_Salt | 16.7% | 6 | 35 |
-| Ore_Thorium_Sandstone | 9.7% | 12 | 100 |
-| Ore_Mithril_Stone | 12.7% | 8 | 60 |
-| Ore_Gold_Basalt | 9.3% | 5 | 25 |
-| Rock_Crystal_Yellow_Block | 9.3% | 7 | 50 |
-| Rock_Crystal_Red_Block | 8.7% | 4 | 20 |
-| Rock_Crystal_Pink_Block | 7.3% | 4 | 20 |
-| Rock_Volcanic | 4.7% | 4 | 14 |
-
-**Avg price global : 43.96** — **Avg HP : 6.62**
-
----
-
-## 6. Projections de revenus
+## 5. Projections de revenus
 
 ### Méthode de calcul
 
@@ -636,7 +490,7 @@ Avec AoE (Blast/Jackhammer ajoutent ~2-4× blocs supplémentaires en pratique) :
 
 ---
 
-## 7. Progression pioche
+## 6. Progression pioche
 
 ### Valeurs actuelles (code)
 
@@ -671,7 +525,7 @@ Les valeurs actuelles sont **globalement bien calibrées** pour cette propositio
 
 ---
 
-## 8. Analyse des upgrades
+## 7. Analyse des upgrades
 
 ### Coût total par upgrade (formules du code)
 
@@ -725,7 +579,7 @@ Les 10 derniers niveaux (41-50) coûtent ~831,500 pour +100 slots. C'est un sink
 
 ---
 
-## 9. Économie des miners
+## 8. Économie des miners
 
 ### Coûts actuels (code)
 
@@ -789,7 +643,7 @@ Le coût fixe de 1,000 pour acheter un miner est trop bas pour les mines tardive
 
 ---
 
-## 10. Timeline de progression
+## 9. Timeline de progression
 
 ### Scénario "joueur efficace" (focus mining, dépense raisonnable en upgrades)
 
@@ -861,7 +715,7 @@ Avec un income endgame de ~15,000/min, il faut ~159 min de farm pure en Mine 5 p
 
 ---
 
-## 11. Bonus cross-progression
+## 10. Bonus cross-progression
 
 Rappel des bonus existants dans le code (`MineBonusCalculator`) :
 
@@ -890,7 +744,7 @@ Le système actuel fonctionne bien en termes d'incentives. Les joueurs parkour-f
 
 ---
 
-## 12. Leviers d'ajustement
+## 11. Leviers d'ajustement
 
 Voici les paramètres les plus impactants à tourner si l'équilibrage ne convient pas après test :
 
