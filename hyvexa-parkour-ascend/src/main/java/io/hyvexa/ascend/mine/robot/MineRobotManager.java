@@ -148,6 +148,7 @@ public class MineRobotManager {
 
         for (MinerRobotState state : playerMiners.values()) {
             despawnNpc(state);
+            clearMinerBlock(state);
         }
     }
 
@@ -262,6 +263,8 @@ public class MineRobotManager {
         if (entityUuid != null && state.getEntityUuid() != null) {
             orphanCleanup.addOrphan(entityUuid);
         }
+
+        clearMinerBlock(state);
     }
 
     public void syncPurchasedMiner(UUID ownerId, String mineId, World world) {
@@ -631,6 +634,25 @@ public class MineRobotManager {
         if (world != null) {
             breakAndReplaceBlock(world, slot, nextBlockType, state.getOwnerId(), mineId);
         }
+    }
+
+    // ── Block cleanup ──────────────────────────────────────────────────
+
+    private void clearMinerBlock(MinerRobotState state) {
+        MinerSlot slot = configStore.getMinerSlot(state.getMineId());
+        if (slot == null || !slot.isConfigured()) return;
+
+        String worldName = state.getWorldName();
+        World world = worldName != null ? Universe.get().getWorld(worldName) : null;
+        if (world == null) return;
+
+        int bx = slot.getBlockX(), by = slot.getBlockY(), bz = slot.getBlockZ();
+        world.execute(() -> {
+            long ci = ChunkUtil.indexChunkFromBlock(bx, bz);
+            var chunk = world.getChunkIfInMemory(ci);
+            if (chunk == null) chunk = world.loadChunkIfInMemory(ci);
+            if (chunk != null) chunk.setBlock(bx, by, bz, 0);
+        });
     }
 
     // ── Block placement helpers ────────────────────────────────────────
