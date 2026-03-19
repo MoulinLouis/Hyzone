@@ -6,9 +6,13 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.entity.AnimationUtils;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
@@ -16,7 +20,6 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -29,6 +32,7 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.ascend.mine.data.MinerSlot;
 import io.hyvexa.common.util.OrphanedEntityCleanup;
 
 import java.nio.file.Path;
@@ -58,6 +62,8 @@ public class MineRobotManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String MINER_UUIDS_FILE = "miner_uuids.txt";
     private static final long TICK_INTERVAL_MS = 50L;
+    private static final long ANIM_REPLAY_MS = 500L;
+    private static final long STOPPED_RECHECK_MS = 2000L;
 
     private final MineConfigStore configStore;
     private final MinePlayerStore playerStore;
@@ -149,70 +155,54 @@ public class MineRobotManager {
 
     public void spawnMiner(UUID ownerId, String mineId, World world) {
         if (ownerId == null || mineId == null || world == null) return;
+        if (getMinerState(ownerId, mineId) != null) return; // already spawned
 
-        Mine mine = configStore.getMine(mineId);
-        if (mine == null) return;
+        MinerSlot slot = configStore.getMinerSlot(mineId);
+        if (slot == null || !slot.isConfigured()) {
+            LOGGER.atWarning().log("No miner slot configured for mine: " + mineId);
+            return;
+        }
+        if (npcPlugin == null) return;
 
-        List<MineZone> zones = mine.getZones();
-        if (zones.isEmpty()) return;
-
-        MineZone zone = zones.get(0);
-        double cx = (zone.getMinX() + zone.getMaxX()) / 2.0;
-        double cy = zone.getMaxY() + 1.0; // Stand on top of the zone
-        double cz = (zone.getMinZ() + zone.getMaxZ()) / 2.0;
-
-        // Load speed/star levels from player progress
         MinePlayerProgress progress = playerStore.getOrCreatePlayer(ownerId);
         MinePlayerProgress.MinerProgressSnapshot minerProg = progress != null
-                ? progress.getMinerSnapshot(mineId)
-                : null;
+                ? progress.getMinerSnapshot(mineId) : null;
 
         MinerRobotState state = new MinerRobotState(ownerId, mineId);
         if (minerProg != null) {
             state.setSpeedLevel(minerProg.speedLevel());
             state.setStars(minerProg.stars());
         }
-        state.setCurrentPosition(cx, cy, cz);
         state.setWorldName(world.getName());
-        state.setCycleStartTime(System.currentTimeMillis());
+        state.setLastBreakTime(System.currentTimeMillis());
 
         Map<String, MinerRobotState> playerMiners = miners.computeIfAbsent(ownerId,
                 k -> new ConcurrentHashMap<>());
-        if (playerMiners.putIfAbsent(mineId, state) != null) {
-            return; // Already spawned
-        }
+        if (playerMiners.putIfAbsent(mineId, state) != null) return;
 
-        if (npcPlugin == null) return;
-
-        String entityType = getMinerEntityType(state.getStars());
         world.execute(() -> {
             cleanupOrphanedMinersOnWorldThread(world);
-            spawnNpcOnWorldThread(state, entityType, world, cx, cy, cz);
+            spawnNpcOnWorldThread(state, world, slot);
         });
     }
 
-    private void spawnNpcOnWorldThread(MinerRobotState state, String entityType,
-                                       World world, double x, double y, double z) {
+    private void spawnNpcOnWorldThread(MinerRobotState state, World world, MinerSlot slot) {
         try {
             Store<EntityStore> store = world.getEntityStore().getStore();
             if (store == null) return;
 
-            Vector3d position = new Vector3d(x, y, z);
-            Vector3f rotation = new Vector3f(0f, 0f, 0f);
+            Vector3d position = new Vector3d(slot.getNpcX(), slot.getNpcY(), slot.getNpcZ());
+            Vector3f rotation = new Vector3f(0f, slot.getNpcYaw(), 0f);
 
-            Object result = npcPlugin.spawnNPC(store, entityType, "Miner", position, rotation);
+            Object result = npcPlugin.spawnNPC(store, "Kweebec_Seedling", "Miner", position, rotation);
             if (result == null) return;
-
             Ref<EntityStore> entityRef = extractEntityRef(result);
             if (entityRef == null) return;
-
             state.setEntityRef(entityRef);
 
             try {
-                UUIDComponent uuidComponent = store.getComponent(entityRef, UUIDComponent.getComponentType());
-                if (uuidComponent != null) {
-                    state.setEntityUuid(uuidComponent.getUuid());
-                }
+                UUIDComponent uuidComp = store.getComponent(entityRef, UUIDComponent.getComponentType());
+                if (uuidComp != null) state.setEntityUuid(uuidComp.getUuid());
             } catch (Exception e) {
                 LOGGER.atWarning().log("Failed to get miner NPC UUID: " + e.getMessage());
             }
@@ -233,19 +223,20 @@ public class MineRobotManager {
                 NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
                 if (npcEntity != null) {
                     Inventory inv = npcEntity.getInventory();
-                    if (inv == null) {
-                        inv = new Inventory();
-                        npcEntity.setInventory(inv);
-                    }
-                    ItemStack pickaxe = new ItemStack("Tool_Pickaxe_Wood");
-                    inv.getHotbar().setItemStackForSlot((short) 0, pickaxe);
+                    if (inv == null) { inv = new Inventory(); npcEntity.setInventory(inv); }
+                    inv.getHotbar().setItemStackForSlot((short) 0, new ItemStack("Tool_Pickaxe_Wood"));
                     inv.setActiveHotbarSlot((byte) 0);
                     npcEntity.invalidateEquipmentNetwork();
                 }
             } catch (Exception e) {
-                LOGGER.atWarning().log("Failed to equip miner NPC with pickaxe: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.atWarning().log("Failed to equip miner NPC: " + e.getMessage());
             }
+
+            // Place initial block and start mining animation
+            placeInitialBlock(world, slot, state);
+            AnimationUtils.playAnimation(entityRef, AnimationSlot.Action, "Pickaxe", "Mine", store);
+            state.setAnimating(true);
+            state.setLastAnimTime(System.currentTimeMillis());
         } catch (Exception e) {
             LOGGER.atWarning().log("Failed to spawn miner NPC: " + e.getMessage());
         }
@@ -301,27 +292,21 @@ public class MineRobotManager {
             return;
         }
 
+        // Respawn with new entity type (future: different Kweebec for different star levels)
         UUID entityUuid = state.getEntityUuid();
         despawnNpc(state);
         if (entityUuid != null && state.getEntityUuid() != null) {
             orphanCleanup.addOrphan(entityUuid);
         }
 
-        Mine mine = configStore.getMine(mineId);
-        if (mine == null || mine.getZones().isEmpty()) {
-            return;
-        }
-        MineZone zone = mine.getZones().get(0);
-        double cx = (zone.getMinX() + zone.getMaxX()) / 2.0;
-        double cy = zone.getMaxY() + 1.0; // Stand on top of the zone
-        double cz = (zone.getMinZ() + zone.getMaxZ()) / 2.0;
-        String entityType = getMinerEntityType(stars);
-        state.setCurrentPosition(cx, cy, cz);
+        MinerSlot slot = configStore.getMinerSlot(mineId);
+        if (slot == null || !slot.isConfigured()) return;
+
         state.setWorldName(world.getName());
-        state.resetPhaseForEvolution();
+        state.setLastBreakTime(System.currentTimeMillis());
         world.execute(() -> {
             cleanupOrphanedMinersOnWorldThread(world);
-            spawnNpcOnWorldThread(state, entityType, world, cx, cy, cz);
+            spawnNpcOnWorldThread(state, world, slot);
         });
     }
 
@@ -572,227 +557,163 @@ public class MineRobotManager {
     }
 
     private void tickMiner(MinerRobotState state, long now) {
-        switch (state.getPhase()) {
-            case IDLE -> tickIdle(state, now);
-            case MOVING -> tickMoving(state, now);
-            case MINING -> tickMining(state, now);
-            case STOPPED -> tickStopped(state, now);
-        }
-    }
+        Ref<EntityStore> ref = state.getEntityRef();
+        if (ref == null || !ref.isValid()) return;
 
-    private void tickIdle(MinerRobotState state, long now) {
-        long cycleStart = state.getCycleStartTime();
-        if (now - cycleStart < state.getProductionIntervalMs()) {
-            return;
-        }
+        String mineId = state.getMineId();
+        MinerSlot slot = configStore.getMinerSlot(mineId);
+        if (slot == null) return;
 
+        // --- Full bag: pause mining, stop animation, recheck periodically ---
         MinePlayerProgress progress = playerStore.getPlayer(state.getOwnerId());
         if (progress == null || progress.isInventoryFull()) {
-            state.setPhase(MinerRobotState.MinerPhase.STOPPED);
-            state.setPhaseStartTime(now);
-            return;
-        }
-
-        Mine mine = configStore.getMine(state.getMineId());
-        if (mine == null || mine.getZones().isEmpty()) return;
-
-        MineZone zone = mine.getZones().get(0);
-
-        if (mineManager.isZoneInCooldown(zone.getId())) {
-            return;
-        }
-
-        int[] target = mineManager.pickRandomUnbrokenBlock(zone);
-        if (target == null) {
-            state.setPhase(MinerRobotState.MinerPhase.STOPPED);
-            state.setPhaseStartTime(now);
-            return;
-        }
-
-        state.setCycleStartTime(now);
-        state.setTargetBlock(target[0], target[1], target[2]);
-        state.setPhase(MinerRobotState.MinerPhase.MOVING);
-        state.setPhaseStartTime(now);
-    }
-
-    private void tickMoving(MinerRobotState state, long now) {
-        if (!state.hasTarget() || !state.isPositionInitialized()) {
-            state.setPhase(MinerRobotState.MinerPhase.IDLE);
-            return;
-        }
-
-        long elapsed = now - state.getPhaseStartTime();
-        long moveDuration = state.getMoveDurationMs();
-
-        double targetX = state.getTargetBlockX() + 0.5;
-        double targetY = state.getTargetBlockY() + 1.0; // Stand on top of the block
-        double targetZ = state.getTargetBlockZ() + 0.5;
-
-        if (elapsed >= moveDuration) {
-            state.setCurrentPosition(targetX, targetY, targetZ);
-            state.setPhase(MinerRobotState.MinerPhase.MINING);
-            state.setPhaseStartTime(now);
-            teleportMiner(state, targetX, targetY, targetZ, true);
-            return;
-        }
-
-        double t = (double) elapsed / moveDuration;
-        t = t * t * (3.0 - 2.0 * t);
-
-        double startX = state.getCurrentX();
-        double startZ = state.getCurrentZ();
-
-        double interpX = startX + (targetX - startX) * t;
-        double interpZ = startZ + (targetZ - startZ) * t;
-
-        // Walk horizontally at target surface level — never interpolate Y to avoid clipping through blocks
-        teleportMiner(state, interpX, targetY, interpZ, true);
-    }
-
-    private void tickMining(MinerRobotState state, long now) {
-        long elapsed = now - state.getPhaseStartTime();
-        if (elapsed < state.getMineDurationMs()) {
-            return;
-        }
-
-        Mine mine = configStore.getMine(state.getMineId());
-        if (mine == null || mine.getZones().isEmpty()) {
-            state.setPhase(MinerRobotState.MinerPhase.IDLE);
-            return;
-        }
-
-        MineZone zone = mine.getZones().get(0);
-
-        if (!state.hasTarget()
-                || !mineManager.tryClaimBlock(zone.getId(),
-                    state.getTargetBlockX(), state.getTargetBlockY(), state.getTargetBlockZ())) {
-            state.setCurrentPosition(
-                state.getTargetBlockX() + 0.5,
-                state.getTargetBlockY() + 1.0,
-                state.getTargetBlockZ() + 0.5
-            );
-            state.clearTarget();
-            state.setPhase(MinerRobotState.MinerPhase.IDLE);
-            return;
-        }
-
-        readBlockTypeAndReward(state, zone);
-
-        state.setCurrentPosition(
-            state.getTargetBlockX() + 0.5,
-            state.getTargetBlockY(),
-            state.getTargetBlockZ() + 0.5
-        );
-        state.clearTarget();
-
-        state.setPhase(MinerRobotState.MinerPhase.IDLE);
-    }
-
-    private static final long STOPPED_RECHECK_INTERVAL_MS = 2000L;
-
-    private void tickStopped(MinerRobotState state, long now) {
-        if (now - state.getPhaseStartTime() < STOPPED_RECHECK_INTERVAL_MS) {
-            return;
-        }
-        state.setPhaseStartTime(now);
-
-        MinePlayerProgress progress = playerStore.getPlayer(state.getOwnerId());
-        if (progress != null && !progress.isInventoryFull()) {
-            Mine mine = configStore.getMine(state.getMineId());
-            if (mine != null && !mine.getZones().isEmpty()) {
-                MineZone zone = mine.getZones().get(0);
-                if (!mineManager.isZoneInCooldown(zone.getId())
-                        && mineManager.pickRandomUnbrokenBlock(zone) != null) {
-                    state.setPhase(MinerRobotState.MinerPhase.IDLE);
+            if (!state.isStopped()) {
+                state.setStopped(true);
+                if (state.isAnimating()) {
+                    stopMineAnimation(state);
+                    state.setAnimating(false);
                 }
             }
-        }
-    }
-
-    private void teleportMiner(MinerRobotState state, double x, double y, double z, boolean faceTarget) {
-        Ref<EntityStore> entityRef = state.getEntityRef();
-        if (entityRef == null || !entityRef.isValid()) return;
-
-        String worldName = state.getWorldName();
-        if (worldName == null) return;
-
-        World world = Universe.get().getWorld(worldName);
-        if (world == null) return;
-
-        float yaw = 0f;
-        if (faceTarget && state.hasTarget()) {
-            double dx = (state.getTargetBlockX() + 0.5) - x;
-            double dz = (state.getTargetBlockZ() + 0.5) - z;
-            if (dx * dx + dz * dz > 0.001) {
-                yaw = (float) Math.toDegrees(Math.atan2(dx, dz));
+            if (now - state.getLastBreakTime() >= STOPPED_RECHECK_MS) {
+                state.setLastBreakTime(now);
             }
-        }
-
-        final float finalYaw = yaw;
-        world.execute(() -> {
-            try {
-                if (!entityRef.isValid()) return;
-                Store<EntityStore> store = world.getEntityStore().getStore();
-                if (store == null) return;
-                store.addComponent(entityRef, Teleport.getComponentType(),
-                    new Teleport(world, new Vector3d(x, y, z), new Vector3f(0, finalYaw, 0)));
-            } catch (Exception e) {
-                LOGGER.atWarning().log("Failed to teleport miner: " + e.getMessage());
-            }
-        });
-    }
-
-    private void readBlockTypeAndReward(MinerRobotState state, MineZone zone) {
-        int bx = state.getTargetBlockX();
-        int by = state.getTargetBlockY();
-        int bz = state.getTargetBlockZ();
-        UUID ownerId = state.getOwnerId();
-
-        MinePlayerProgress progress = playerStore.getPlayer(ownerId);
-        if (progress == null || progress.isInventoryFull()) {
-            mineManager.unclaimBlock(zone.getId(), bx, by, bz);
             return;
         }
 
-        String blockType = pickRandomBlock(zone.getBlockTableForY(by));
-        if (blockType == null) {
-            mineManager.unclaimBlock(zone.getId(), bx, by, bz);
+        // --- Resume from stopped state ---
+        if (state.isStopped()) {
+            state.setStopped(false);
+            state.setAnimating(true);
+            state.setLastAnimTime(now);
+            replayMineAnimation(state);
+            state.setLastBreakTime(now);
             return;
         }
 
-        boolean added = progress.addToInventory(blockType, 1);
-        if (!added) {
-            mineManager.unclaimBlock(zone.getId(), bx, by, bz);
-            return;
+        // --- Replay mine animation to keep it looping ---
+        if (state.isAnimating() && now - state.getLastAnimTime() >= ANIM_REPLAY_MS) {
+            replayMineAnimation(state);
+            state.setLastAnimTime(now);
         }
 
-        playerStore.markDirty(ownerId);
+        // --- Check if it's time to break the block ---
+        long intervalMs = (long) (slot.getIntervalSeconds() * 1000);
+        if (now - state.getLastBreakTime() < intervalMs) return;
+        state.setLastBreakTime(now);
+
+        // Loot = the block currently displayed
+        String lootType = state.getCurrentBlockType();
+        if (lootType != null) {
+            progress.addToInventory(lootType, 1);
+            playerStore.markDirty(state.getOwnerId());
+        }
 
         // Track blocks mined for achievements
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             MineAchievementTracker tracker = plugin.getMineAchievementTracker();
             if (tracker != null) {
-                tracker.incrementBlocksMined(ownerId, 1);
+                tracker.incrementBlocksMined(state.getOwnerId(), 1);
             }
         }
 
-        // Break the block visually via MineManager's canonical world reference
-        mineManager.breakBlockVisually(bx, by, bz);
+        // Break current block and place a NEW random block
+        Mine mine = configStore.getMine(mineId);
+        if (mine == null || mine.getZones().isEmpty()) return;
+        MineZone zone = mine.getZones().get(0);
+
+        Map<String, Double> blockTable = zone.getBlockTableForY(slot.getBlockY());
+        String nextBlockType = pickRandomBlock(blockTable);
+        state.setCurrentBlockType(nextBlockType);
+
+        String worldName = state.getWorldName();
+        World world = Universe.get().getWorld(worldName);
+        if (world != null) {
+            breakAndReplaceBlock(world, slot, nextBlockType, state.getOwnerId(), mineId);
+        }
+    }
+
+    // ── Block placement helpers ────────────────────────────────────────
+
+    private void placeInitialBlock(World world, MinerSlot slot, MinerRobotState state) {
+        Mine mine = configStore.getMine(slot.getMineId());
+        if (mine == null || mine.getZones().isEmpty()) return;
+        MineZone zone = mine.getZones().get(0);
+        Map<String, Double> blockTable = zone.getBlockTableForY(slot.getBlockY());
+        String blockType = pickRandomBlock(blockTable);
+        if (blockType == null) return;
+
+        state.setCurrentBlockType(blockType);
+
+        int blockId = BlockType.getAssetMap().getIndex(blockType);
+        if (blockId < 0) return;
+
+        int bx = slot.getBlockX(), by = slot.getBlockY(), bz = slot.getBlockZ();
+        // Already on world thread (called from spawnNpcOnWorldThread)
+        long ci = ChunkUtil.indexChunkFromBlock(bx, bz);
+        var chunk = world.getChunkIfInMemory(ci);
+        if (chunk != null) chunk.setBlock(bx, by, bz, blockId);
+    }
+
+    private void breakAndReplaceBlock(World world, MinerSlot slot, String nextBlockType,
+                                       UUID ownerId, String mineId) {
+        int bx = slot.getBlockX(), by = slot.getBlockY(), bz = slot.getBlockZ();
+        int newBlockId = nextBlockType != null ? BlockType.getAssetMap().getIndex(nextBlockType) : -1;
+
+        world.execute(() -> {
+            long ci = ChunkUtil.indexChunkFromBlock(bx, bz);
+            var chunk = world.getChunkIfInMemory(ci);
+            if (chunk == null) return;
+
+            // Break (set to air)
+            chunk.setBlock(bx, by, bz, 0);
+
+            // Schedule block regeneration after a short delay
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                if (getMinerState(ownerId, mineId) == null) return;
+                world.execute(() -> {
+                    if (newBlockId >= 0) {
+                        var c = world.getChunkIfInMemory(ci);
+                        if (c != null) c.setBlock(bx, by, bz, newBlockId);
+                    }
+                });
+            }, 300, TimeUnit.MILLISECONDS);
+        });
+    }
+
+    // ── Animation helpers ──────────────────────────────────────────────
+
+    private void replayMineAnimation(MinerRobotState state) {
+        Ref<EntityStore> ref = state.getEntityRef();
+        if (ref == null || !ref.isValid()) return;
+        String worldName = state.getWorldName();
+        World world = Universe.get().getWorld(worldName);
+        if (world == null) return;
+        world.execute(() -> {
+            if (!ref.isValid()) return;
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            if (store != null) {
+                AnimationUtils.playAnimation(ref, AnimationSlot.Action, "Pickaxe", "Mine", store);
+            }
+        });
+    }
+
+    private void stopMineAnimation(MinerRobotState state) {
+        Ref<EntityStore> ref = state.getEntityRef();
+        if (ref == null || !ref.isValid()) return;
+        String worldName = state.getWorldName();
+        World world = Universe.get().getWorld(worldName);
+        if (world == null) return;
+        world.execute(() -> {
+            if (!ref.isValid()) return;
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            if (store != null) {
+                AnimationUtils.stopAnimation(ref, AnimationSlot.Action, store);
+            }
+        });
     }
 
     // ── Helpers ────────────────────────────────────────────────────────
-
-    static String getMinerEntityType(int stars) {
-        return switch (stars) {
-            case 0 -> "Kweebec_Seedling";
-            case 1 -> "Kweebec_Sapling";
-            case 2 -> "Kweebec_Sproutling";
-            case 3 -> "Kweebec_Sapling_Pink";
-            case 4 -> "Kweebec_Razorleaf";
-            default -> "Kweebec_Rootling";
-        };
-    }
 
     static String pickRandomBlock(Map<String, Double> blockTable) {
         double totalWeight = 0.0;
