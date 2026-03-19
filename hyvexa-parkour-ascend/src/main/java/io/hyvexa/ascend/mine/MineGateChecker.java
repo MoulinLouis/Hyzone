@@ -19,9 +19,11 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
+import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.data.MinerSlot;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.util.InventoryUtils;
@@ -34,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MineGateChecker {
 
+    private static final double COLLECTION_RADIUS_SQ = 4.0; // 2 blocks squared
     private static final long COOLDOWN_MS = 2000;
     private static final long LOADING_MS = 1500;
     private static final long FADE_OUT_MS = 400;
@@ -89,6 +92,39 @@ public class MineGateChecker {
             startTransition(playerId, false,
                 configStore.getExitDestX(), configStore.getExitDestY(), configStore.getExitDestZ(),
                 configStore.getExitDestRotX(), configStore.getExitDestRotY(), configStore.getExitDestRotZ());
+            return;
+        }
+
+        // Conveyor collection zone: transfer buffered blocks to inventory
+        checkConveyorCollection(playerId, ref, store, x, y, z);
+    }
+
+    private void checkConveyorCollection(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store,
+                                          double x, double y, double z) {
+        if (minePlayerStore == null) return;
+        MinePlayerProgress progress = minePlayerStore.getPlayer(playerId);
+        if (progress == null || !progress.hasConveyorItems()) return;
+
+        for (Mine mine : configStore.listMinesSorted()) {
+            MinerSlot slot = configStore.getMinerSlot(mine.getId());
+            if (slot == null || !slot.isConveyorConfigured()) continue;
+
+            double dx = x - slot.getConveyorEndX();
+            double dy = y - slot.getConveyorEndY();
+            double dz = z - slot.getConveyorEndZ();
+            double distSq = dx * dx + dy * dy + dz * dz;
+
+            if (distSq <= COLLECTION_RADIUS_SQ) {
+                int transferred = progress.transferBufferToInventory();
+                if (transferred > 0) {
+                    minePlayerStore.markDirty(playerId);
+                    Player player = store.getComponent(ref, Player.getComponentType());
+                    if (player != null) {
+                        player.sendMessage(Message.raw("Collected " + transferred + " blocks from conveyor."));
+                    }
+                }
+                return;
+            }
         }
     }
 
@@ -137,8 +173,9 @@ public class MineGateChecker {
         }
 
         if (transition.phase == TransitionPhase.FADE_OUT && elapsed >= FADE_OUT_MS) {
-            // Reveal the new scene
-            showFade(playerId, !transition.entering, false);
+            // Reveal the new scene — hide fade on both HUDs since the Ascend HUD persists
+            showFade(playerId, true, false);
+            showFade(playerId, false, false);
             pendingTransitions.remove(playerId);
         }
     }
@@ -283,7 +320,7 @@ public class MineGateChecker {
         if (plugin == null) {
             return;
         }
-        plugin.getHudManager().removePlayer(playerId);
+        // Keep the Ascend HUD visible — only add the mine HUD alongside it
         MineHudManager mineHud = plugin.getMineHudManager();
         if (mineHud != null && playerRef != null) {
             mineHud.attachHud(playerRef, player);
@@ -298,12 +335,10 @@ public class MineGateChecker {
         if (plugin == null) {
             return;
         }
+        // Ascend HUD was never removed — only detach the mine HUD
         MineHudManager mineHud = plugin.getMineHudManager();
         if (mineHud != null) {
-            mineHud.detachHud(playerId);
-        }
-        if (playerRef != null) {
-            plugin.getHudManager().attach(playerRef, player);
+            mineHud.detachHud(playerId, playerRef, player);
         }
     }
 

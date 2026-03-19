@@ -47,15 +47,18 @@ public class MineHudManager {
         }
         UUID playerId = playerRef.getUuid();
         MineHudState state = huds.computeIfAbsent(playerId, id -> new MineHudState(playerId, new MineHud(playerRef)));
-        MultiHudBridge.setCustomHud(player, playerRef, state.hud);
+        MultiHudBridge.setCustomHud(player, playerRef, MultiHudBridge.KEY_MINE, state.hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
         state.resetCache();
         MultiHudBridge.showIfNeeded(state.hud);
         state.readyAtMs = System.currentTimeMillis() + 250L;
     }
 
-    public void detachHud(UUID playerId) {
+    public void detachHud(UUID playerId, PlayerRef playerRef, Player player) {
         huds.remove(playerId);
+        if (player != null && playerRef != null) {
+            MultiHudBridge.hideCustomHud(player, playerRef, MultiHudBridge.KEY_MINE);
+        }
     }
 
     public void updateFull(UUID playerId) {

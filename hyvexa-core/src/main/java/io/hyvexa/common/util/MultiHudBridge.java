@@ -21,7 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class MultiHudBridge {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String KEY = "hyvexa";
+    public static final String KEY = "hyvexa";
+    public static final String KEY_MINE = "hyvexa-mine";
 
     private static volatile boolean checked;
     private static volatile boolean available;
@@ -30,6 +31,8 @@ public final class MultiHudBridge {
     private static Method getInstanceMethod;
     // MultipleHUD.setCustomHud(Player, PlayerRef, String, CustomUIHud)
     private static Method setCustomHudMethod;
+    // MultipleHUD.hideCustomHud(Player, PlayerRef, String)
+    private static Method hideCustomHudMethod;
 
     // MultipleCustomUIHud class and get(String) method for skip-if-same optimization
     private static Class<?> multipleCustomUIHudClass;
@@ -62,6 +65,8 @@ public final class MultiHudBridge {
                 getInstanceMethod = multipleHudClass.getMethod("getInstance");
                 setCustomHudMethod = multipleHudClass.getMethod("setCustomHud",
                         Player.class, PlayerRef.class, String.class, CustomUIHud.class);
+                hideCustomHudMethod = multipleHudClass.getMethod("hideCustomHud",
+                        Player.class, PlayerRef.class, String.class);
 
                 multipleCustomUIHudClass = Class.forName("com.buuz135.mhud.MultipleCustomUIHud");
                 getHudMethod = multipleCustomUIHudClass.getMethod("get", String.class);
@@ -87,15 +92,22 @@ public final class MultiHudBridge {
     }
 
     /**
-     * Registers a custom HUD on the player. If MultipleHUD is present, the HUD is added
-     * to the composite (preserving other plugins' HUDs like Hyguns). Otherwise falls back
-     * to direct {@code setCustomHud()}.
+     * Registers a custom HUD on the player under the default "hyvexa" key.
+     */
+    public static void setCustomHud(Player player, PlayerRef playerRef, CustomUIHud hud) {
+        setCustomHud(player, playerRef, KEY, hud);
+    }
+
+    /**
+     * Registers a custom HUD on the player under a specific key. If MultipleHUD is present,
+     * the HUD is added to the composite (preserving other plugins' HUDs like Hyguns).
+     * Otherwise falls back to direct {@code setCustomHud()}.
      *
      * <p>When MultipleHUD is used, the HUD is automatically built and sent to the client
      * by {@code add()}, so callers should NOT call {@code hud.show()} afterwards.
      * Use {@link #showIfNeeded(CustomUIHud)} for that.
      */
-    public static void setCustomHud(Player player, PlayerRef playerRef, CustomUIHud hud) {
+    public static void setCustomHud(Player player, PlayerRef playerRef, String key, CustomUIHud hud) {
         init();
         if (available) {
             try {
@@ -103,7 +115,7 @@ public final class MultiHudBridge {
 
                 // Skip if the composite already has our exact HUD object registered
                 if (current != null && multipleCustomUIHudClass.isInstance(current)) {
-                    Object existing = getHudMethod.invoke(current, KEY);
+                    Object existing = getHudMethod.invoke(current, key);
                     if (existing == hud) {
                         return;
                     }
@@ -123,7 +135,7 @@ public final class MultiHudBridge {
                 }
 
                 Object instance = getInstanceMethod.invoke(null);
-                setCustomHudMethod.invoke(instance, player, playerRef, KEY, hud);
+                setCustomHudMethod.invoke(instance, player, playerRef, key, hud);
 
                 // Cache the (possibly new) composite for future world transitions
                 if (playerId != null) {
@@ -138,6 +150,33 @@ public final class MultiHudBridge {
             }
         }
         player.getHudManager().setCustomHud(playerRef, hud);
+    }
+
+    /**
+     * Removes a HUD registered under the given key from the player's composite.
+     * Only effective when MultipleHUD is available; otherwise a no-op (the direct
+     * fallback only supports a single HUD, so removal is implicit on next setCustomHud).
+     */
+    public static void hideCustomHud(Player player, PlayerRef playerRef, String key) {
+        init();
+        if (!available) {
+            return;
+        }
+        try {
+            Object instance = getInstanceMethod.invoke(null);
+            hideCustomHudMethod.invoke(instance, player, playerRef, key);
+
+            // Update the composite cache
+            UUID playerId = playerRef.getUuid();
+            if (playerId != null) {
+                CustomUIHud afterHide = player.getHudManager().getCustomHud();
+                if (afterHide != null && multipleCustomUIHudClass.isInstance(afterHide)) {
+                    compositeCache.put(playerId, afterHide);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.atWarning().log("MultipleHUD hideCustomHud failed: " + e.getMessage());
+        }
     }
 
     /**

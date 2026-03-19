@@ -816,7 +816,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         if (mineGateChecker != null) {
                             mineGateChecker.checkPlayer(playerId, ref, store);
                         }
-                        // Mine HUD or Ascend HUD (never both simultaneously)
+                        // Always update the Ascend HUD (global, always visible)
+                        if (fullTick) {
+                            hudManager.updateFull(ref, store, playerRef);
+                        }
+                        hudManager.updateToasts(playerRef.getUuid());
+                        // Mine HUD updates when in mine mode, run tracker when not
                         if (mineHudManager != null && mineHudManager.hasHud(playerId)) {
                             if (fullTick) {
                                 mineHudManager.updateFull(playerId);
@@ -828,13 +833,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                             mineHudManager.tickBlockHealth(playerId);
                             mineHudManager.tickCombo(playerId);
                         } else {
-                            if (fullTick) {
-                                runTracker.checkPlayer(ref, store);
-                                hudManager.updateFull(ref, store, playerRef);
-                            }
+                            runTracker.checkPlayer(ref, store);
                             hudManager.updateTimer(playerRef);
                             hudManager.updateRunnerBars(playerRef);
-                            hudManager.updateToasts(playerRef.getUuid());
                         }
                     }
                 } finally {
