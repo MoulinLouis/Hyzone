@@ -25,6 +25,8 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.util.InventoryUtils;
+import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
+import com.hypixel.hytale.protocol.MovementSettings;
 
 import java.util.Map;
 import java.util.UUID;
@@ -227,6 +229,7 @@ public class MineGateChecker {
             MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
             progress.setInMine(true);
             minePlayerStore.markDirty(playerId);
+            applyHasteSpeed(progress, ref, store, playerRef);
         }
         return true;
     }
@@ -248,6 +251,8 @@ public class MineGateChecker {
             configStore.getExitDestX(), configStore.getExitDestY(), configStore.getExitDestZ(),
             configStore.getExitDestRotX(), configStore.getExitDestRotY(), configStore.getExitDestRotZ());
         markCooldown(playerId);
+
+        resetSpeed(ref, store, playerRef);
 
         Player player = store.getComponent(ref, Player.getComponentType());
         swapToAscendHud(playerId, playerRef, player);
@@ -299,6 +304,39 @@ public class MineGateChecker {
         }
         if (playerRef != null) {
             plugin.getHudManager().attach(playerRef, player);
+        }
+    }
+
+    public void applyHasteSpeed(MinePlayerProgress progress, Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        double multiplier = progress.getHasteMultiplier();
+        if (multiplier <= 1.0) return;
+        MovementManager movementManager = store.getComponent(ref, MovementManager.getComponentType());
+        if (movementManager == null) return;
+        movementManager.refreshDefaultSettings(ref, store);
+        movementManager.applyDefaultSettings();
+        MovementSettings settings = movementManager.getSettings();
+        if (settings == null) return;
+        float m = (float) multiplier;
+        settings.maxSpeedMultiplier *= m;
+        settings.forwardRunSpeedMultiplier *= m;
+        settings.backwardRunSpeedMultiplier *= m;
+        settings.strafeRunSpeedMultiplier *= m;
+        settings.forwardSprintSpeedMultiplier *= m;
+        var packetHandler = playerRef != null ? playerRef.getPacketHandler() : null;
+        if (packetHandler != null) {
+            movementManager.update(packetHandler);
+        }
+    }
+
+    private void resetSpeed(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (ref == null || !ref.isValid() || store == null) return;
+        MovementManager movementManager = store.getComponent(ref, MovementManager.getComponentType());
+        if (movementManager == null) return;
+        movementManager.refreshDefaultSettings(ref, store);
+        movementManager.applyDefaultSettings();
+        var packetHandler = playerRef != null ? playerRef.getPacketHandler() : null;
+        if (packetHandler != null) {
+            movementManager.update(packetHandler);
         }
     }
 

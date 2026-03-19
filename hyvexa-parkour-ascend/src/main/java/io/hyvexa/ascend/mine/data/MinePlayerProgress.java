@@ -252,6 +252,16 @@ public class MinePlayerProgress {
     }
 
     /**
+     * Returns the movement speed multiplier from the Haste upgrade.
+     * +5% per level (max level 20 = +100%).
+     */
+    public double getHasteMultiplier() {
+        int level = getUpgradeLevel(MineUpgradeType.HASTE);
+        if (level <= 0) return 1.0;
+        return 1.0 + MineUpgradeType.HASTE.getEffect(level) / 100.0;
+    }
+
+    /**
      * Checks if combo has expired (3 seconds since last break).
      * If expired, resets combo and returns true.
      */

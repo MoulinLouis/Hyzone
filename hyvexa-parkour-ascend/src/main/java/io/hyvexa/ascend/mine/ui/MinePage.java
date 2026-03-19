@@ -612,6 +612,14 @@ public class MinePage extends BaseAscendPage {
             checkMineAchievement(MineAchievement.MAX_UPGRADES);
         }
 
+        // Apply Haste speed boost immediately if player is in mine
+        if (type == MineUpgradeType.HASTE && mineProgress.isInMine()) {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin != null && plugin.getMineGateChecker() != null) {
+                plugin.getMineGateChecker().applyHasteSpeed(mineProgress, ref, store, playerRef);
+            }
+        }
+
         player.sendMessage(Message.raw("Upgraded " + type.getDisplayName() + " to Lv " + mineProgress.getUpgradeLevel(type) + "!"));
         sendRefresh(ref, store);
     }
@@ -694,9 +702,9 @@ public class MinePage extends BaseAscendPage {
             case BAG_CAPACITY -> "Capacity: " + (int) effect + " blocks";
             case MOMENTUM -> level == 0 ? "No combo" : "Max combo: " + (int) effect + " (+2% dmg/hit)";
             case FORTUNE -> level == 0 ? "No bonus drops" : "x2: " + (int) effect + "%, x3: " + String.format("%.1f", level * 0.4) + "%";
-            case JACKHAMMER -> level == 0 ? "No column break" : "Depth: " + (int) effect + " blocks";
-            case STOMP -> level == 0 ? "No layer break" : "Radius: " + (int) effect;
-            case BLAST -> level == 0 ? "No sphere break" : "Radius: " + (int) effect;
+            case JACKHAMMER -> level == 0 ? "No column break" : String.format("%.0f%%", type.getChance(level) * 100) + " | Depth: " + (int) effect;
+            case STOMP -> level == 0 ? "No layer break" : String.format("%.0f%%", type.getChance(level) * 100) + " | Radius: " + (int) effect;
+            case BLAST -> level == 0 ? "No sphere break" : String.format("%.0f%%", type.getChance(level) * 100) + " | Radius: " + (int) effect;
             case HASTE -> level == 0 ? "No speed bonus" : "+" + (int) effect + "% speed";
         };
     }

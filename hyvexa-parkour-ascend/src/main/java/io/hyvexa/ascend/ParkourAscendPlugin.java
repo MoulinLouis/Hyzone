@@ -405,8 +405,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         return;
                     }
                     boolean restoreToMine = false;
+                    MinePlayerProgress mineProgress = null;
                     if (minePlayerStore != null && mineGateChecker != null && mineGateChecker.canAccessMine(playerId)) {
-                        MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
+                        mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
                         restoreToMine = mineProgress.isInMine();
                     }
 
@@ -417,6 +418,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         if (mhm != null) {
                             mhm.attachHud(playerRef, player);
                         }
+                        mineGateChecker.applyHasteSpeed(mineProgress, ref, store, playerRef);
                     } else {
                         AscendInventoryUtils.giveMenuItems(player);
                         hudManager.attach(playerRef, player);
