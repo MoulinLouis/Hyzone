@@ -366,6 +366,7 @@ public class MineRobotManager {
         for (Map<String, MinerRobotState> playerMiners : miners.values()) {
             for (MinerRobotState state : playerMiners.values()) {
                 despawnNpc(state);
+                clearMinerBlock(state);
             }
         }
     }
@@ -674,6 +675,7 @@ public class MineRobotManager {
         // Already on world thread (called from spawnNpcOnWorldThread)
         long ci = ChunkUtil.indexChunkFromBlock(bx, bz);
         var chunk = world.getChunkIfInMemory(ci);
+        if (chunk == null) chunk = world.loadChunkIfInMemory(ci);
         if (chunk != null) chunk.setBlock(bx, by, bz, blockId);
     }
 
@@ -685,6 +687,7 @@ public class MineRobotManager {
         world.execute(() -> {
             long ci = ChunkUtil.indexChunkFromBlock(bx, bz);
             var chunk = world.getChunkIfInMemory(ci);
+            if (chunk == null) chunk = world.loadChunkIfInMemory(ci);
             if (chunk == null) return;
 
             // Break (set to air)
@@ -696,6 +699,7 @@ public class MineRobotManager {
                 world.execute(() -> {
                     if (newBlockId >= 0) {
                         var c = world.getChunkIfInMemory(ci);
+                        if (c == null) c = world.loadChunkIfInMemory(ci);
                         if (c != null) c.setBlock(bx, by, bz, newBlockId);
                     }
                 });
