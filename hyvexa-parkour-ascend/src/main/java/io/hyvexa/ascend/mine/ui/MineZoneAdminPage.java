@@ -173,7 +173,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 MineBlockPickerPage picker = new MineBlockPickerPage(
-                    playerRef, mineConfigStore, mineId, selectedZoneId, blockId
+                    playerRef, mineConfigStore, selectedZoneId, blockId
                 );
                 player.getPageManager().openCustomPage(ref, store, picker);
             }

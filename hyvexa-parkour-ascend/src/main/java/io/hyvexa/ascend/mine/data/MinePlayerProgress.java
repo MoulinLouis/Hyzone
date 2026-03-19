@@ -1,7 +1,5 @@
 package io.hyvexa.ascend.mine.data;
 
-import io.hyvexa.common.math.BigNumber;
-
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -18,8 +16,7 @@ public class MinePlayerProgress {
     private volatile boolean inMine;
     private volatile int pickaxeTier;
     private final Map<MineUpgradeType, Integer> upgradeLevels = new ConcurrentHashMap<>();
-    private final Map<String, MineProgress> mineStates = new ConcurrentHashMap<>();
-    private final Map<String, MinerProgress> minerStates = new ConcurrentHashMap<>();
+    private final Map<Integer, MinerProgress> minerStates = new ConcurrentHashMap<>();
 
     // Momentum combo state (transient, not persisted)
     private volatile int comboCount;
@@ -281,44 +278,7 @@ public class MinePlayerProgress {
         return (int) MineUpgradeType.BAG_CAPACITY.getEffect(getUpgradeLevel(MineUpgradeType.BAG_CAPACITY));
     }
 
-    // --- Per-mine state ---
-
-    public static class MineProgress {
-        volatile boolean unlocked;
-        volatile boolean completedManually;
-
-        public MineProgress() {}
-        public boolean isUnlocked() { return unlocked; }
-        public void setUnlocked(boolean u) { unlocked = u; }
-        public boolean isCompletedManually() { return completedManually; }
-        public void setCompletedManually(boolean c) { completedManually = c; }
-    }
-
-    public MineProgress getMineState(String mineId) {
-        return mineStates.computeIfAbsent(mineId, k -> new MineProgress());
-    }
-
-    public synchronized MineProgressSnapshot getMineSnapshot(String mineId) {
-        MineProgress state = getMineState(mineId);
-        return new MineProgressSnapshot(state.isUnlocked(), state.isCompletedManually());
-    }
-
-    public synchronized Map<String, MineProgressSnapshot> getMineStates() {
-        Map<String, MineProgressSnapshot> copy = new HashMap<>();
-        for (var entry : mineStates.entrySet()) {
-            MineProgress state = entry.getValue();
-            copy.put(entry.getKey(), new MineProgressSnapshot(state.isUnlocked(), state.isCompletedManually()));
-        }
-        return copy;
-    }
-
-    public synchronized void loadMineState(String mineId, boolean unlocked, boolean completedManually) {
-        MineProgress state = getMineState(mineId);
-        state.setUnlocked(unlocked);
-        state.setCompletedManually(completedManually);
-    }
-
-    // --- Per-mine miner state ---
+    // --- Per-slot miner state (single mine) ---
 
     public static class MinerProgress {
         volatile boolean hasMiner;
@@ -334,31 +294,17 @@ public class MinePlayerProgress {
         public void setStars(int s) { stars = s; }
     }
 
-    private static String minerKey(String mineId, int slotIndex) {
-        return mineId + ":" + slotIndex;
+    public MinerProgress getMinerState(int slotIndex) {
+        return minerStates.computeIfAbsent(slotIndex, k -> new MinerProgress());
     }
 
-    public MinerProgress getMinerState(String mineId, int slotIndex) {
-        return minerStates.computeIfAbsent(minerKey(mineId, slotIndex), k -> new MinerProgress());
-    }
-
-    /** Backward-compat: slot 0. */
-    public MinerProgress getMinerState(String mineId) {
-        return getMinerState(mineId, 0);
-    }
-
-    public synchronized MinerProgressSnapshot getMinerSnapshot(String mineId, int slotIndex) {
-        MinerProgress state = getMinerState(mineId, slotIndex);
+    public synchronized MinerProgressSnapshot getMinerSnapshot(int slotIndex) {
+        MinerProgress state = getMinerState(slotIndex);
         return new MinerProgressSnapshot(state.isHasMiner(), state.getSpeedLevel(), state.getStars());
     }
 
-    /** Backward-compat: slot 0. */
-    public synchronized MinerProgressSnapshot getMinerSnapshot(String mineId) {
-        return getMinerSnapshot(mineId, 0);
-    }
-
-    public synchronized Map<String, MinerProgressSnapshot> getMinerStates() {
-        Map<String, MinerProgressSnapshot> copy = new HashMap<>();
+    public synchronized Map<Integer, MinerProgressSnapshot> getMinerStates() {
+        Map<Integer, MinerProgressSnapshot> copy = new HashMap<>();
         for (var entry : minerStates.entrySet()) {
             MinerProgress state = entry.getValue();
             copy.put(entry.getKey(), new MinerProgressSnapshot(
@@ -370,20 +316,15 @@ public class MinePlayerProgress {
         return copy;
     }
 
-    public synchronized void loadMinerState(String mineId, int slotIndex, boolean hasMiner, int speedLevel, int stars) {
-        MinerProgress state = getMinerState(mineId, slotIndex);
+    public synchronized void loadMinerState(int slotIndex, boolean hasMiner, int speedLevel, int stars) {
+        MinerProgress state = getMinerState(slotIndex);
         state.setHasMiner(hasMiner);
         state.setSpeedLevel(speedLevel);
         state.setStars(stars);
     }
 
-    /** Backward-compat: slot 0. */
-    public synchronized void loadMinerState(String mineId, boolean hasMiner, int speedLevel, int stars) {
-        loadMinerState(mineId, 0, hasMiner, speedLevel, stars);
-    }
-
-    public synchronized MinerPurchaseResult purchaseMiner(String mineId, int slotIndex, long cost) {
-        MinerProgress state = getMinerState(mineId, slotIndex);
+    public synchronized MinerPurchaseResult purchaseMiner(int slotIndex, long cost) {
+        MinerProgress state = getMinerState(slotIndex);
         if (state.isHasMiner()) {
             return MinerPurchaseResult.ALREADY_OWNED;
         }
@@ -394,13 +335,8 @@ public class MinePlayerProgress {
         return MinerPurchaseResult.SUCCESS;
     }
 
-    /** Backward-compat: slot 0. */
-    public synchronized MinerPurchaseResult purchaseMiner(String mineId, long cost) {
-        return purchaseMiner(mineId, 0, cost);
-    }
-
-    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(String mineId, int slotIndex, long cost, int maxSpeedLevel) {
-        MinerProgress state = getMinerState(mineId, slotIndex);
+    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(int slotIndex, long cost, int maxSpeedLevel) {
+        MinerProgress state = getMinerState(slotIndex);
         if (!state.isHasMiner()) {
             return MinerSpeedUpgradeResult.NO_MINER;
         }
@@ -414,13 +350,8 @@ public class MinePlayerProgress {
         return MinerSpeedUpgradeResult.SUCCESS;
     }
 
-    /** Backward-compat: slot 0. */
-    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(String mineId, long cost, int maxSpeedLevel) {
-        return upgradeMinerSpeed(mineId, 0, cost, maxSpeedLevel);
-    }
-
-    public synchronized MinerEvolutionResult evolveMiner(String mineId, int slotIndex, long cost, int maxSpeedLevel, int maxStars) {
-        MinerProgress state = getMinerState(mineId, slotIndex);
+    public synchronized MinerEvolutionResult evolveMiner(int slotIndex, long cost, int maxSpeedLevel, int maxStars) {
+        MinerProgress state = getMinerState(slotIndex);
         if (!state.isHasMiner()) {
             return MinerEvolutionResult.NO_MINER;
         }
@@ -438,19 +369,6 @@ public class MinePlayerProgress {
         return MinerEvolutionResult.SUCCESS;
     }
 
-    /** Backward-compat: slot 0. */
-    public synchronized MinerEvolutionResult evolveMiner(String mineId, long cost, int maxSpeedLevel, int maxStars) {
-        return evolveMiner(mineId, 0, cost, maxSpeedLevel, maxStars);
-    }
-
-    public synchronized boolean unlockMine(String mineId, BigNumber cost) {
-        MineProgress state = getMineState(mineId);
-        if (state.isUnlocked()) return false;
-        if (!trySpendCrystals(cost.toLong())) return false;
-        state.setUnlocked(true);
-        return true;
-    }
-
     public synchronized PlayerSaveSnapshot createSaveSnapshot() {
         Map<MineUpgradeType, Integer> upgradeSnapshot = new EnumMap<>(MineUpgradeType.class);
         upgradeSnapshot.putAll(upgradeLevels);
@@ -458,7 +376,6 @@ public class MinePlayerProgress {
             crystals,
             upgradeSnapshot,
             new LinkedHashMap<>(inventory),
-            getMineStates(),
             getMinerStates(),
             inMine,
             pickaxeTier,
@@ -564,15 +481,12 @@ public class MinePlayerProgress {
         INSUFFICIENT_CRYSTALS
     }
 
-    public record MineProgressSnapshot(boolean unlocked, boolean completedManually) {}
-
     public record MinerProgressSnapshot(boolean hasMiner, int speedLevel, int stars) {}
 
     public record PlayerSaveSnapshot(long crystals,
                                      Map<MineUpgradeType, Integer> upgradeLevels,
                                      Map<String, Integer> inventory,
-                                     Map<String, MineProgressSnapshot> mineStates,
-                                     Map<String, MinerProgressSnapshot> minerStates,
+                                     Map<Integer, MinerProgressSnapshot> minerStates,
                                      boolean inMine,
                                      int pickaxeTier,
                                      Map<String, Integer> conveyorBuffer) {}

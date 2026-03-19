@@ -155,7 +155,7 @@ public class MineHudManager {
         // Update mine name
         String mineName = "";
         if (currentZone != null) {
-            Mine mine = configStore.getMine(currentZone.getMineId());
+            Mine mine = configStore.getMine();
             if (mine != null) {
                 mineName = mine.getName();
             }

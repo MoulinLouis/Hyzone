@@ -68,7 +68,6 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (playerId == null) return;
 
         MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
-        if (!mineProgress.getMineState(zone.getMineId()).isUnlocked()) return;
         if (!mineProgress.isHoldingExpectedPickaxe(event.getItemInHand() != null ? event.getItemInHand().getItemId() : null)) {
             return;
         }

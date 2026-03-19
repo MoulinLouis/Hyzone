@@ -1,5 +1,10 @@
 package io.hyvexa.ascend.mine.ui;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Nonnull;
+
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -19,15 +24,12 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinerSlot;
-import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.ascend.ui.AscendAdminPanelPage;
-
-import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.List;
+import io.hyvexa.common.math.BigNumber;
 
 public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineData> {
 
@@ -294,9 +296,9 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         float yaw = rot.getY();
 
         // Block position: 1 block in +Z direction from NPC
-        int blockX = (int) Math.floor(pos.getX());
+        int blockX = (int) Math.floor(pos.getX()) + 2;
         int blockY = (int) Math.floor(pos.getY());
-        int blockZ = (int) Math.floor(pos.getZ()) + 1;
+        int blockZ = (int) Math.floor(pos.getZ());
 
         MinerSlot slot = mineConfigStore.getMinerSlot(mine.getId(), selectedSlotIndex);
         if (slot == null) {

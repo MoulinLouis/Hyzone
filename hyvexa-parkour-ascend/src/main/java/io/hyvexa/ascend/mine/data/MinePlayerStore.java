@@ -37,19 +37,7 @@ public class MinePlayerStore {
             ensurePlayerRow(playerId);
         }
         MinePlayerProgress existing = players.putIfAbsent(playerId, progress);
-        if (existing != null) return existing;
-
-        // Auto-unlock first mine for all players
-        List<Mine> mines = ParkourAscendPlugin.getInstance().getMineConfigStore().listMinesSorted();
-        if (!mines.isEmpty()) {
-            MinePlayerProgress.MineProgress firstMineState = progress.getMineState(mines.get(0).getId());
-            if (!firstMineState.isUnlocked()) {
-                firstMineState.setUnlocked(true);
-                markDirty(playerId);
-            }
-        }
-
-        return progress;
+        return existing != null ? existing : progress;
     }
 
     public void markDirty(UUID playerId) {
@@ -125,29 +113,13 @@ public class MinePlayerStore {
                 }
             }
 
-            // Load mine states
+            // Load miner states (keyed by slot_index only, mine_id ignored)
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT mine_id, unlocked, completed_manually FROM mine_player_mines WHERE player_uuid = ?")) {
-                ps.setString(1, playerId.toString());
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        progress.loadMineState(
-                            rs.getString("mine_id"),
-                            rs.getBoolean("unlocked"),
-                            rs.getBoolean("completed_manually")
-                        );
-                    }
-                }
-            }
-
-            // Load miner states (with slot_index)
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT mine_id, slot_index, has_miner, speed_level, stars FROM mine_player_miners WHERE player_uuid = ?")) {
+                    "SELECT slot_index, has_miner, speed_level, stars FROM mine_player_miners WHERE player_uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         progress.loadMinerState(
-                            rs.getString("mine_id"),
                             rs.getInt("slot_index"),
                             rs.getBoolean("has_miner"),
                             rs.getInt("speed_level"),
@@ -267,27 +239,6 @@ public class MinePlayerStore {
                     }
                 }
 
-                // Save mine states
-                Map<String, MinePlayerProgress.MineProgressSnapshot> mineStates = snapshot.mineStates();
-                if (!mineStates.isEmpty()) {
-                    try (PreparedStatement ps = conn.prepareStatement("""
-                            INSERT INTO mine_player_mines (player_uuid, mine_id, unlocked, completed_manually)
-                            VALUES (?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE unlocked = VALUES(unlocked),
-                                                    completed_manually = VALUES(completed_manually)
-                            """)) {
-                        for (var entry : mineStates.entrySet()) {
-                            ps.setString(1, playerId.toString());
-                            ps.setString(2, entry.getKey());
-                            MinePlayerProgress.MineProgressSnapshot state = entry.getValue();
-                            ps.setBoolean(3, state.unlocked());
-                            ps.setBoolean(4, state.completedManually());
-                            ps.addBatch();
-                        }
-                        ps.executeBatch();
-                    }
-                }
-
                 // Save conveyor buffer — delete + re-insert
                 try (PreparedStatement ps = conn.prepareStatement(
                         "DELETE FROM mine_player_conveyor_buffer WHERE player_uuid = ?")) {
@@ -309,9 +260,11 @@ public class MinePlayerStore {
                     }
                 }
 
-                // Save miner states (compound key "mineId:slotIndex")
-                Map<String, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.minerStates();
+                // Save miner states (keyed by slot index, write single mine's ID)
+                Map<Integer, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.minerStates();
                 if (!minerStates.isEmpty()) {
+                    String mineId = ParkourAscendPlugin.getInstance().getMineConfigStore().getMineId();
+                    if (mineId == null) mineId = "";
                     try (PreparedStatement ps = conn.prepareStatement("""
                             INSERT INTO mine_player_miners (player_uuid, mine_id, slot_index, has_miner, speed_level, stars)
                             VALUES (?, ?, ?, ?, ?, ?)
@@ -320,25 +273,9 @@ public class MinePlayerStore {
                                                     stars = VALUES(stars)
                             """)) {
                         for (var entry : minerStates.entrySet()) {
-                            String compoundKey = entry.getKey();
-                            int colonIdx = compoundKey.lastIndexOf(':');
-                            String mineId;
-                            int slotIndex;
-                            if (colonIdx > 0) {
-                                mineId = compoundKey.substring(0, colonIdx);
-                                try {
-                                    slotIndex = Integer.parseInt(compoundKey.substring(colonIdx + 1));
-                                } catch (NumberFormatException e) {
-                                    mineId = compoundKey;
-                                    slotIndex = 0;
-                                }
-                            } else {
-                                mineId = compoundKey;
-                                slotIndex = 0;
-                            }
                             ps.setString(1, playerId.toString());
                             ps.setString(2, mineId);
-                            ps.setInt(3, slotIndex);
+                            ps.setInt(3, entry.getKey());
                             MinePlayerProgress.MinerProgressSnapshot state = entry.getValue();
                             ps.setBoolean(4, state.hasMiner());
                             ps.setInt(5, state.speedLevel());

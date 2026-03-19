@@ -16,7 +16,6 @@ import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.ui.MineAchievementsPage;
-import io.hyvexa.ascend.mine.ui.MineSelectPage;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
 import io.hyvexa.ascend.mine.ui.MinePage;
 import io.hyvexa.ascend.mine.ui.MineBagPage;
@@ -101,10 +100,6 @@ public class MineCommand extends AbstractAsyncCommand {
                     MinePage page = new MinePage(playerRef, progress);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
-                case "select" -> {
-                    MineSelectPage page = new MineSelectPage(playerRef, progress);
-                    player.getPageManager().openCustomPage(ref, store, page);
-                }
                 case "achievements" -> {
                     MineAchievementsPage page = new MineAchievementsPage(playerRef);
                     player.getPageManager().openCustomPage(ref, store, page);
@@ -131,7 +126,7 @@ public class MineCommand extends AbstractAsyncCommand {
                         player.sendMessage(Message.raw("[Mine] Invalid number: " + args[1]).color(SystemMessageUtils.SECONDARY));
                     }
                 }
-                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades, /mine select, /mine achievements"));
+                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades, /mine achievements"));
             }
         }, world);
     }

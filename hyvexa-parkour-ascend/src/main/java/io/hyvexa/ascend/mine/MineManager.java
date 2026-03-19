@@ -1,6 +1,5 @@
 package io.hyvexa.ascend.mine;
 
-import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
@@ -31,12 +30,9 @@ public class MineManager {
     }
 
     public MineZone findZoneAt(int x, int y, int z) {
-        for (Mine mine : configStore.listMinesSorted()) {
-            for (MineZone zone : mine.getZones()) {
-                if (zone.contains(x, y, z)) {
-                    return zone;
-                }
-            }
+        MineZone zone = configStore.getZone();
+        if (zone != null && zone.contains(x, y, z)) {
+            return zone;
         }
         return null;
     }
@@ -135,12 +131,9 @@ public class MineManager {
     }
 
     private MineZone findZoneById(String zoneId) {
-        for (Mine mine : configStore.listMinesSorted()) {
-            for (MineZone zone : mine.getZones()) {
-                if (zone.getId().equals(zoneId)) {
-                    return zone;
-                }
-            }
+        MineZone zone = configStore.getZone();
+        if (zone != null && zone.getId().equals(zoneId)) {
+            return zone;
         }
         return null;
     }
@@ -169,46 +162,43 @@ public class MineManager {
     }
 
     public void tick() {
+        MineZone zone = configStore.getZone();
+        if (zone == null) return;
+
         long now = System.currentTimeMillis();
+        String zoneId = zone.getId();
 
-        for (Mine mine : configStore.listMinesSorted()) {
-            for (MineZone zone : mine.getZones()) {
-                String zoneId = zone.getId();
-
-                // Check if zone is in cooldown
-                Long cooldownStart = zoneCooldownStart.get(zoneId);
-                if (cooldownStart != null && cooldownStart > 0) {
-                    // Check if cooldown is over
-                    long cooldownMs = zone.getRegenCooldownSeconds() * 1000L;
-                    if (now - cooldownStart >= cooldownMs) {
-                        // Regenerate on world thread
-                        World world = mineWorld;
-                        if (world != null) {
-                            world.execute(() -> {
-                                if (generateZone(world, zone)) {
-                                    zoneCooldownStart.remove(zoneId, cooldownStart);
-                                }
-                            });
+        // Check if zone is in cooldown
+        Long cooldownStart = zoneCooldownStart.get(zoneId);
+        if (cooldownStart != null && cooldownStart > 0) {
+            // Check if cooldown is over
+            long cooldownMs = zone.getRegenCooldownSeconds() * 1000L;
+            if (now - cooldownStart >= cooldownMs) {
+                // Regenerate on world thread
+                World world = mineWorld;
+                if (world != null) {
+                    world.execute(() -> {
+                        if (generateZone(world, zone)) {
+                            zoneCooldownStart.remove(zoneId, cooldownStart);
                         }
-                    }
-                    continue; // skip threshold check while in cooldown
-                }
-
-                // Check if threshold is reached
-                double ratio = getBrokenRatio(zoneId);
-                if (ratio >= zone.getRegenThreshold()) {
-                    // Start cooldown
-                    zoneCooldownStart.put(zoneId, now);
+                    });
                 }
             }
+            return; // skip threshold check while in cooldown
+        }
+
+        // Check if threshold is reached
+        double ratio = getBrokenRatio(zoneId);
+        if (ratio >= zone.getRegenThreshold()) {
+            // Start cooldown
+            zoneCooldownStart.put(zoneId, now);
         }
     }
 
     public void generateAllZones(World world) {
-        for (Mine mine : configStore.listMinesSorted()) {
-            for (MineZone zone : mine.getZones()) {
-                generateZone(world, zone);
-            }
+        MineZone zone = configStore.getZone();
+        if (zone != null) {
+            generateZone(world, zone);
         }
     }
 

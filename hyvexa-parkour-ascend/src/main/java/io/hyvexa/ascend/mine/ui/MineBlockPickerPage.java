@@ -26,15 +26,13 @@ public class MineBlockPickerPage extends InteractiveCustomUIPage<MineBlockPicker
     private static final String SELECT_PREFIX = "Select:";
 
     private final MineConfigStore mineConfigStore;
-    private final String mineId;
     private final String selectedZoneId;
     private final String currentBlockId;
 
     public MineBlockPickerPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore,
-                               String mineId, String selectedZoneId, String currentBlockId) {
+                               String selectedZoneId, String currentBlockId) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PickerData.CODEC);
         this.mineConfigStore = mineConfigStore;
-        this.mineId = mineId;
         this.selectedZoneId = selectedZoneId;
         this.currentBlockId = currentBlockId != null ? currentBlockId : "";
     }
@@ -87,6 +85,8 @@ public class MineBlockPickerPage extends InteractiveCustomUIPage<MineBlockPicker
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) return;
 
+        String mineId = mineConfigStore.getMineId();
+        if (mineId == null) return;
         MineZoneAdminPage page = new MineZoneAdminPage(playerRef, mineConfigStore, mineId);
         page.setSelectedZoneId(selectedZoneId);
         page.setSelectedBlockId(selectedBlockId);

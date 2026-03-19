@@ -216,6 +216,74 @@ public class MineConfigStore {
         }
     }
 
+    // --- Single-mine convenience methods ---
+
+    /** Returns the single mine, or null if none configured. */
+    public Mine getMine() {
+        lock.readLock().lock();
+        try {
+            var it = mines.values().iterator();
+            return it.hasNext() ? it.next() : null;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /** Returns the single zone of the single mine, or null. */
+    public MineZone getZone() {
+        Mine mine = getMine();
+        if (mine == null || mine.getZones().isEmpty()) return null;
+        return mine.getZones().get(0);
+    }
+
+    /** Returns layers of the single zone. */
+    public List<MineZoneLayer> getLayers() {
+        MineZone zone = getZone();
+        return zone != null ? zone.getLayers() : Collections.emptyList();
+    }
+
+    /** Miner slots for the single mine. */
+    public List<MinerSlot> getMinerSlots() {
+        Mine mine = getMine();
+        return mine != null ? getMinerSlots(mine.getId()) : Collections.emptyList();
+    }
+
+    /** Slot waypoints for the single mine. */
+    public List<double[]> getSlotWaypoints(int slotIndex) {
+        Mine mine = getMine();
+        return mine != null ? getSlotWaypoints(mine.getId(), slotIndex) : Collections.emptyList();
+    }
+
+    /** Main line waypoints for the single mine. */
+    public List<double[]> getMainLineWaypoints() {
+        Mine mine = getMine();
+        return mine != null ? getMainLineWaypoints(mine.getId()) : Collections.emptyList();
+    }
+
+    /** Conveyor speed for the single mine. */
+    public double getConveyorSpeed() {
+        Mine mine = getMine();
+        return mine != null ? getConveyorSpeed(mine.getId()) : 2.0;
+    }
+
+    /** Whether conveyor is configured for the single mine. */
+    public boolean isConveyorConfigured() {
+        Mine mine = getMine();
+        return mine != null && isConveyorConfigured(mine.getId());
+    }
+
+    /** Returns the ID of the single mine, or null if none configured. */
+    public String getMineId() {
+        Mine mine = getMine();
+        return mine != null ? mine.getId() : null;
+    }
+
+    /** A specific miner slot for the single mine. */
+    public MinerSlot getMinerSlot(int slotIndex) {
+        String id = getMineId();
+        return id != null ? getMinerSlot(id, slotIndex) : null;
+    }
+
     // --- Mine CRUD ---
 
     public Mine getMine(String id) {
