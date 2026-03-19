@@ -11,7 +11,10 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
+import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -224,6 +227,24 @@ public class MineRobotManager {
                 store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
             } catch (Exception e) {
                 LOGGER.atWarning().log("Failed to freeze miner NPC: " + e.getMessage());
+            }
+
+            try {
+                NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
+                if (npcEntity != null) {
+                    Inventory inv = npcEntity.getInventory();
+                    if (inv == null) {
+                        inv = new Inventory();
+                        npcEntity.setInventory(inv);
+                    }
+                    ItemStack pickaxe = new ItemStack("Tool_Pickaxe_Wood");
+                    inv.getHotbar().setItemStackForSlot((short) 0, pickaxe);
+                    inv.setActiveHotbarSlot((byte) 0);
+                    npcEntity.invalidateEquipmentNetwork();
+                }
+            } catch (Exception e) {
+                LOGGER.atWarning().log("Failed to equip miner NPC with pickaxe: " + e.getMessage());
+                e.printStackTrace();
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("Failed to spawn miner NPC: " + e.getMessage());
