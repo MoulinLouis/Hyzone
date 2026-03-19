@@ -1,30 +1,22 @@
 package io.hyvexa.ascend.robot;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.entity.Frozen;
-import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.mine.MineBonusCalculator;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
-import io.hyvexa.ascend.ascension.ChallengeManager;
-import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -33,7 +25,6 @@ import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostSample;
 import io.hyvexa.ascend.summit.SummitManager;
-import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.OrphanedEntityCleanup;
@@ -58,9 +49,10 @@ public class RobotManager {
      * - robots, onlinePlayers, dirtyPlayers, teleportWarningByRobot:
      *   ConcurrentHashMap/newKeySet collections (thread-safe by construction).
      * - orphanCleanup: owns orphan UUID + pending-removal concurrency state.
-     * - npcPlugin: volatile, set once in start(), thereafter read-only.
-     * - lastRefreshMs, lastAutoUpgradeMs, viewerContext:
-     *   volatile, read/written from scheduled executor tick.
+     * - spawner: owns volatile npcPlugin (set once in start(), thereafter read-only).
+     * - refreshSystem: owns volatile refresh timestamps and viewerContext.
+     * - autoRunnerUpgradeEngine: owns per-player cooldown maps.
+     * - lastAutoUpgradeMs: volatile, read/written from scheduled executor tick.
      * - tickTask: only accessed in start()/stop() (single-threaded lifecycle).
      *
      * Entity operations (spawn/despawn) must run on the World thread via world.execute().
@@ -71,11 +63,6 @@ public class RobotManager {
     private static final long AUTO_UPGRADE_INTERVAL_MS = 50L;
     private static final long HEADLESS_MOVEMENT_INTERVAL_MS = 50L;
     private static final long VISIBLE_MOVEMENT_INTERVAL_MS = AscendConstants.RUNNER_TICK_INTERVAL_MS;
-    private static final long CACHE_REFRESH_INTERVAL_MS = 1000L;
-    private static final long VIEWER_CONTEXT_REFRESH_INTERVAL_MS = 250L;
-    private static final long FULL_REFRESH_INTERVAL_MS = TimeUnit.SECONDS.toMillis(30L);
-    private static final double RELEVANT_MAP_DISTANCE = 96.0d;
-    private static final double FAST_MAP_DISTANCE = 48.0d;
     private static final long TELEPORT_WARNING_THROTTLE_MS = 10_000L;
     private static final long TELEPORT_WARNING_CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(30L);
     private static final long TELEPORT_WARNING_CLEANUP_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5L);
@@ -87,20 +74,13 @@ public class RobotManager {
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
     private final OrphanedEntityCleanup orphanCleanup;
+    private final AutoRunnerUpgradeEngine autoRunnerUpgradeEngine;
+    private final RobotSpawner spawner;
+    private final RobotRefreshSystem refreshSystem;
     private final Map<String, Long> teleportWarningByRobot = new ConcurrentHashMap<>();
     private ScheduledFuture<?> tickTask;
-    private volatile long lastRefreshMs;
-    private volatile long lastFullRefreshMs;
-    private volatile long lastViewerContextRefreshMs;
-    private volatile NPCPlugin npcPlugin;
     private volatile long lastAutoUpgradeMs = 0;
     private volatile long lastTeleportWarningCleanupMs = 0L;
-    private volatile long lastHealthLogMs = 0L;
-    private static final long HEALTH_LOG_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5L);
-    private final Map<UUID, Long> lastAutoElevationMs = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> lastAutoSummitMs = new ConcurrentHashMap<>();
-    private volatile ViewerContext viewerContext = ViewerContext.empty();
-    private volatile boolean viewerContextRefreshPending = false;
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
@@ -108,18 +88,14 @@ public class RobotManager {
         this.ghostStore = ghostStore;
         this.orphanCleanup = new OrphanedEntityCleanup(LOGGER,
                 Path.of("mods", "Parkour", RUNNER_UUIDS_FILE));
+        this.autoRunnerUpgradeEngine = new AutoRunnerUpgradeEngine(this);
+        this.spawner = new RobotSpawner(this);
+        this.refreshSystem = new RobotRefreshSystem(this);
     }
 
     public void start() {
         orphanCleanup.loadOrphanedUuids();
-
-        try {
-            npcPlugin = NPCPlugin.get();
-        } catch (Exception e) {
-            LOGGER.atWarning().log("NPCPlugin not available, robots will be invisible: " + e.getMessage());
-            npcPlugin = null;
-        }
-
+        spawner.initNpcPlugin();
         registerCleanupSystem();
 
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
@@ -147,7 +123,7 @@ public class RobotManager {
         despawnAllRobots();
         onlinePlayers.clear();
         dirtyPlayers.clear();
-        viewerContext = ViewerContext.empty();
+        refreshSystem.resetViewerContext();
     }
 
     public void onPlayerJoin(UUID playerId) {
@@ -162,8 +138,7 @@ public class RobotManager {
         if (playerId != null) {
             onlinePlayers.remove(playerId);
             dirtyPlayers.remove(playerId);
-            lastAutoElevationMs.remove(playerId);
-            lastAutoSummitMs.remove(playerId);
+            autoRunnerUpgradeEngine.onPlayerLeave(playerId);
             // Despawn all robots for this player
             removeTrackedRobotsForPlayer(playerId);
         }
@@ -189,123 +164,12 @@ public class RobotManager {
         }
 
         // Spawn NPC entity if NPCPlugin is available
-        if (npcPlugin != null && mapStore != null) {
+        if (spawner.isNpcAvailable() && mapStore != null) {
             AscendMap map = mapStore.getMap(mapId);
             if (map != null) {
-                spawnNpcForRobot(state, map);
+                spawner.spawnNpcForRobot(state, map);
             }
         }
-    }
-
-    private void spawnNpcForRobot(RobotState state, AscendMap map) {
-        if (npcPlugin == null || map == null) {
-            return;
-        }
-        // Prevent duplicate spawns
-        if (state.isSpawning()) {
-            return;
-        }
-        // Check if we already have a valid entity
-        Ref<EntityStore> existingRef = state.getEntityRef();
-        if (existingRef != null && existingRef.isValid()) {
-            return;
-        }
-        // HARD CAP: If entityUuid is set, an entity may still exist in world
-        // (e.g., in unloaded chunk). Don't spawn another one.
-        UUID existingUuid = state.getEntityUuid();
-        if (existingUuid != null) {
-            return;
-        }
-        state.setSpawning(true);
-        String worldName = map.getWorld();
-        if (worldName == null || worldName.isEmpty()) {
-            state.setSpawning(false);
-            return;
-        }
-        World world = Universe.get().getWorld(worldName);
-        if (world == null) {
-            state.setSpawning(false);
-            return;
-        }
-
-        // Must run on World thread for entity operations
-        world.execute(() -> spawnNpcOnWorldThread(state, map, world));
-    }
-
-    private void spawnNpcOnWorldThread(RobotState state, AscendMap map, World world) {
-        try {
-            Store<EntityStore> store = world.getEntityStore().getStore();
-            if (store == null) {
-                return;
-            }
-            Vector3d position = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
-            Vector3f rotation = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
-            String displayName = "Runner";
-
-            String npcRoleName = AscendConstants.getRunnerEntityType(state.getStars());
-            Object result = npcPlugin.spawnNPC(store, npcRoleName, displayName, position, rotation);
-            if (result != null) {
-                Ref<EntityStore> entityRef = extractEntityRef(result);
-                if (entityRef != null) {
-                    state.setEntityRef(entityRef);
-                    // Extract and store entity UUID for visibility filtering
-                    try {
-                        UUIDComponent uuidComponent = store.getComponent(entityRef, UUIDComponent.getComponentType());
-                        if (uuidComponent != null) {
-                            UUID entityUuid = uuidComponent.getUuid();
-                            state.setEntityUuid(entityUuid);
-
-                            // Hide from players currently running on this map
-                            hideFromActiveRunners(state.getMapId(), entityUuid);
-                            // Hide from players with "hide other runners" setting
-                            hideFromViewersWithSetting(state.getOwnerId(), entityUuid);
-                        }
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to get NPC UUID: " + e.getMessage());
-                    }
-                    // Make NPC invulnerable so players can't kill it
-                    try {
-                        store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to make NPC invulnerable: " + e.getMessage());
-                    }
-                    // Freeze NPC to disable AI movement (we control it via teleport)
-                    try {
-                        store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to freeze NPC: " + e.getMessage());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to spawn NPC: " + e.getMessage());
-        } finally {
-            state.setSpawning(false);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Ref<EntityStore> extractEntityRef(Object pairResult) {
-        if (pairResult == null) {
-            return null;
-        }
-        try {
-            // Try common Pair accessor methods
-            for (String methodName : List.of("getFirst", "getLeft", "getKey", "first", "left")) {
-                try {
-                    java.lang.reflect.Method method = pairResult.getClass().getMethod(methodName);
-                    Object value = method.invoke(pairResult);
-                    if (value instanceof Ref<?> ref) {
-                        return (Ref<EntityStore>) ref;
-                    }
-                } catch (NoSuchMethodException ignored) {
-                    // Try next method
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to extract entity ref from NPC result: " + e.getMessage());
-        }
-        return null;
     }
 
     public void despawnRobot(UUID ownerId, String mapId) {
@@ -315,60 +179,15 @@ public class RobotManager {
         if (state != null) {
             UUID entityUuid = state.getEntityUuid();
             clearTeleportWarning(state);
-            despawnNpcForRobot(state);
+            spawner.despawnNpcForRobot(state);
             queueOrphanIfDespawnFailed(entityUuid, state);
-        }
-    }
-
-    private void despawnNpcForRobot(RobotState state) {
-        if (state == null) {
-            return;
-        }
-        Ref<EntityStore> entityRef = state.getEntityRef();
-        if (entityRef == null || !entityRef.isValid()) {
-            state.setEntityRef(null);
-            // Note: We intentionally do NOT clear entityUuid here.
-            // If isValid() is false due to chunk unload, the entity still exists
-            // and will reappear when chunks reload. Only clear UUID on successful despawn.
-            return;
-        }
-        // Get world from map to run on world thread
-        AscendMap map = mapStore != null ? mapStore.getMap(state.getMapId()) : null;
-        if (map != null && map.getWorld() != null) {
-            World world = Universe.get().getWorld(map.getWorld());
-            if (world != null) {
-                world.execute(() -> despawnNpcOnWorldThread(state, entityRef));
-                return;
-            }
-        }
-        // Fallback: try without world thread (may fail)
-        despawnNpcOnWorldThread(state, entityRef);
-    }
-
-    private void despawnNpcOnWorldThread(RobotState state, Ref<EntityStore> entityRef) {
-        boolean despawnSuccess = false;
-        try {
-            Store<EntityStore> store = entityRef.getStore();
-            if (store != null) {
-                store.removeEntity(entityRef, RemoveReason.REMOVE);
-                despawnSuccess = true;
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to despawn NPC: " + e.getMessage());
-        }
-        state.setEntityRef(null);
-        // Only clear entityUuid if despawn was successful.
-        // If despawn failed, the entity may still exist (e.g., in unloaded chunk)
-        // and we don't want to spawn a duplicate when it reloads.
-        if (despawnSuccess) {
-            state.setEntityUuid(null);
         }
     }
 
     public void despawnAllRobots() {
         for (RobotState state : robots.values()) {
             clearTeleportWarning(state);
-            despawnNpcForRobot(state);
+            spawner.despawnNpcForRobot(state);
         }
         robots.clear();
     }
@@ -422,14 +241,14 @@ public class RobotManager {
         state.setStars(newStars);
         state.setSpeedLevel(0);
         // Despawn old NPC and spawn new one with updated entity type
-        despawnNpcForRobot(state);
-        if (npcPlugin != null && mapStore != null) {
+        spawner.despawnNpcForRobot(state);
+        if (spawner.isNpcAvailable() && mapStore != null) {
             AscendMap map = mapStore.getMap(mapId);
             if (map != null) {
                 long now = System.currentTimeMillis();
-                refreshRobotCache(state, map, now);
-                if (getViewerContext(now).isRelevantMap(mapId)) {
-                    spawnNpcForRobot(state, map);
+                refreshSystem.refreshRobotCache(state, map, now);
+                if (refreshSystem.getViewerContext(now).isRelevantMap(mapId)) {
+                    spawner.spawnNpcForRobot(state, map);
                 }
             }
         }
@@ -443,24 +262,24 @@ public class RobotManager {
                 lastTeleportWarningCleanupMs = now;
             }
             orphanCleanup.processPendingRemovals();
-            refreshRobots(now);
+            refreshSystem.refreshRobots(now);
 
             boolean doAutoOps = now - lastAutoUpgradeMs >= AUTO_UPGRADE_INTERVAL_MS;
             if (doAutoOps) {
                 try {
-                    performAutoElevation(now);
+                    autoRunnerUpgradeEngine.performAutoElevation(now);
                 } catch (Exception e) {
                     LOGGER.atWarning().withCause(e).log("Error in auto-elevation");
                 }
                 try {
-                    performAutoSummit(now);
+                    autoRunnerUpgradeEngine.performAutoSummit(now);
                 } catch (Exception e) {
                     LOGGER.atWarning().withCause(e).log("Error in auto-summit");
                 }
             }
 
-            ViewerContext currentViewerContext = getViewerContext(now);
-            syncRobotNpcState(currentViewerContext, now);
+            RobotRefreshSystem.ViewerContext currentViewerContext = refreshSystem.getViewerContext(now);
+            refreshSystem.syncRobotNpcState(currentViewerContext, now);
 
             List<AscendMap> sortedMaps = mapStore != null ? mapStore.listMapsSorted() : List.of();
             Map<World, List<PendingTeleport>> teleportsByWorld = new HashMap<>();
@@ -473,7 +292,7 @@ public class RobotManager {
             if (doAutoOps) {
                 lastAutoUpgradeMs = now;
                 try {
-                    performAutoRunnerUpgrades();
+                    autoRunnerUpgradeEngine.performAutoRunnerUpgrades();
                 } catch (Exception e) {
                     LOGGER.atWarning().withCause(e).log("Error in auto-upgrades");
                 }
@@ -483,7 +302,7 @@ public class RobotManager {
         }
     }
 
-    private void tickRobotMovement(RobotState robot, long now, ViewerContext currentViewerContext,
+    private void tickRobotMovement(RobotState robot, long now, RobotRefreshSystem.ViewerContext currentViewerContext,
                                    Map<World, List<PendingTeleport>> teleportsByWorld) {
         if (!robot.isEntityDesired()) {
             return;
@@ -493,9 +312,9 @@ public class RobotManager {
             return;
         }
 
-        AscendMap map = getCachedMap(robot, now);
-        GhostRecording ghost = getCachedGhost(robot, now);
-        World world = getCachedWorld(robot, now);
+        AscendMap map = refreshSystem.getCachedMap(robot, now);
+        GhostRecording ghost = refreshSystem.getCachedGhost(robot, now);
+        World world = refreshSystem.getCachedWorld(robot, now);
         if (map == null || ghost == null || world == null) {
             return;
         }
@@ -572,7 +391,7 @@ public class RobotManager {
         );
     }
 
-    private void clearTeleportWarning(RobotState state) {
+    void clearTeleportWarning(RobotState state) {
         if (state == null) {
             return;
         }
@@ -588,121 +407,7 @@ public class RobotManager {
         return String.format("(%.2f, %.2f, %.2f)", x, y, z);
     }
 
-    private void refreshRobots(long now) {
-        if (playerStore == null || mapStore == null) {
-            return;
-        }
-        if (now - lastRefreshMs < AscendConstants.RUNNER_REFRESH_INTERVAL_MS) {
-            return;
-        }
-        lastRefreshMs = now;
-
-        Set<UUID> playersToRefresh = drainDirtyPlayers();
-        if (now - lastFullRefreshMs >= FULL_REFRESH_INTERVAL_MS) {
-            playersToRefresh.addAll(onlinePlayers);
-            lastFullRefreshMs = now;
-        }
-        if (playersToRefresh.isEmpty()) {
-            logRobotHealth(now);
-            return;
-        }
-
-        for (UUID playerId : playersToRefresh) {
-            refreshPlayerRobots(playerId, now);
-        }
-        logRobotHealth(now);
-    }
-
-    private Set<UUID> drainDirtyPlayers() {
-        Set<UUID> drained = new HashSet<>();
-        for (UUID playerId : new HashSet<>(dirtyPlayers)) {
-            if (playerId != null && dirtyPlayers.remove(playerId)) {
-                drained.add(playerId);
-            }
-        }
-        return drained;
-    }
-
-    private void refreshPlayerRobots(UUID playerId, long now) {
-        if (playerId == null) {
-            return;
-        }
-        if (!onlinePlayers.contains(playerId) || !isPlayerInAscendWorld(playerId)) {
-            removeTrackedRobotsForPlayer(playerId);
-            return;
-        }
-
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) {
-            removeTrackedRobotsForPlayer(playerId);
-            return;
-        }
-
-        Set<String> activeKeys = new HashSet<>();
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> mapEntry : progress.getMapProgress().entrySet()) {
-            String mapId = mapEntry.getKey();
-            AscendPlayerProgress.MapProgress mapProgress = mapEntry.getValue();
-            if (mapId == null || mapProgress == null || !mapProgress.hasRobot()) {
-                continue;
-            }
-
-            AscendMap map = mapStore.getMap(mapId);
-            if (map == null) {
-                continue;
-            }
-
-            String key = robotKey(playerId, mapId);
-            RobotState state = robots.computeIfAbsent(key, ignored -> new RobotState(playerId, mapId));
-            state.setSpeedLevel(mapProgress.getRobotSpeedLevel());
-            state.setStars(mapProgress.getRobotStars());
-            if (state.getLastCompletionMs() <= 0L) {
-                state.setLastCompletionMs(now);
-            }
-            refreshRobotCache(state, map, now);
-
-            Ref<EntityStore> existingRef = state.getEntityRef();
-            boolean refIsValid = existingRef != null && existingRef.isValid();
-            boolean hasExistingEntity = state.getEntityUuid() != null;
-            if (refIsValid) {
-                state.clearInvalid();
-            } else if (hasExistingEntity) {
-                state.markInvalid(now);
-                if (state.isInvalidForTooLong(now, AscendConstants.RUNNER_INVALID_RECOVERY_MS)) {
-                    // Clear immediately to prevent repeated dispatch (re-arms after 3s if check fails)
-                    state.clearInvalid();
-                    World cachedWorld = state.getCachedWorld();
-                    if (cachedWorld != null) {
-                        cachedWorld.execute(() -> {
-                            if (isPlayerNearMapSpawn(playerId, map)) {
-                                UUID oldUuid = state.getEntityUuid();
-                                if (oldUuid != null) {
-                                    orphanCleanup.addOrphan(oldUuid);
-                                }
-                                state.setEntityRef(null);
-                                state.setEntityUuid(null);
-                            }
-                        });
-                    }
-                }
-            }
-
-            activeKeys.add(key);
-        }
-
-        pruneStaleRobotsForPlayer(playerId, activeKeys);
-    }
-
-    private void pruneStaleRobotsForPlayer(UUID playerId, Set<String> activeKeys) {
-        String prefix = playerId.toString() + ":";
-        for (String key : List.copyOf(robots.keySet())) {
-            if (!key.startsWith(prefix) || activeKeys.contains(key)) {
-                continue;
-            }
-            removeRobotState(key);
-        }
-    }
-
-    private void removeTrackedRobotsForPlayer(UUID playerId) {
+    void removeTrackedRobotsForPlayer(UUID playerId) {
         String prefix = playerId.toString() + ":";
         for (String key : List.copyOf(robots.keySet())) {
             if (key.startsWith(prefix)) {
@@ -711,171 +416,15 @@ public class RobotManager {
         }
     }
 
-    private void removeRobotState(String key) {
+    void removeRobotState(String key) {
         RobotState removed = robots.remove(key);
         if (removed == null) {
             return;
         }
         UUID entityUuid = removed.getEntityUuid();
         clearTeleportWarning(removed);
-        despawnNpcForRobot(removed);
+        spawner.despawnNpcForRobot(removed);
         queueOrphanIfDespawnFailed(entityUuid, removed);
-    }
-
-    private void logRobotHealth(long now) {
-        if (now - lastHealthLogMs < HEALTH_LOG_INTERVAL_MS) {
-            return;
-        }
-        lastHealthLogMs = now;
-
-        int ghostCount = 0;
-        int visibleNpcCount = 0;
-        for (RobotState robot : robots.values()) {
-            if (getCachedGhost(robot, now) != null) {
-                ghostCount++;
-            }
-            if (robot.getEntityUuid() != null) {
-                visibleNpcCount++;
-            }
-        }
-        LOGGER.atInfo().log("Runner health: robots=%d, visibleNpcs=%d, online=%d, dirty=%d, withGhost=%d, npc=%s",
-                robots.size(), visibleNpcCount, onlinePlayers.size(), dirtyPlayers.size(),
-                ghostCount, npcPlugin != null ? "available" : "NULL");
-    }
-
-    private ViewerContext getViewerContext(long now) {
-        ViewerContext current = viewerContext;
-        if (current != null && now - lastViewerContextRefreshMs < VIEWER_CONTEXT_REFRESH_INTERVAL_MS) {
-            return current;
-        }
-        if (!viewerContextRefreshPending) {
-            viewerContextRefreshPending = true;
-            World ascendWorld = Universe.get().getWorld("Ascend");
-            if (ascendWorld != null) {
-                ascendWorld.execute(() -> {
-                    try {
-                        ViewerContext refreshed = buildViewerContext();
-                        viewerContext = refreshed;
-                        lastViewerContextRefreshMs = System.currentTimeMillis();
-                    } catch (Exception e) {
-                        LOGGER.atWarning().withCause(e).log("Error refreshing viewer context");
-                    } finally {
-                        viewerContextRefreshPending = false;
-                    }
-                });
-            } else {
-                viewerContextRefreshPending = false;
-            }
-        }
-        return current != null ? current : ViewerContext.empty();
-    }
-
-    private ViewerContext buildViewerContext() {
-        if (mapStore == null || onlinePlayers.isEmpty()) {
-            return ViewerContext.empty();
-        }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return ViewerContext.empty();
-        }
-
-        AscendRunTracker runTracker = plugin.getRunTracker();
-        List<AscendMap> maps = mapStore.listMapsSorted();
-        Set<String> relevantMapIds = new HashSet<>();
-        Set<String> highFrequencyMapIds = new HashSet<>();
-        double relevantDistanceSq = RELEVANT_MAP_DISTANCE * RELEVANT_MAP_DISTANCE;
-        double fastDistanceSq = FAST_MAP_DISTANCE * FAST_MAP_DISTANCE;
-
-        for (UUID playerId : onlinePlayers) {
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef == null) {
-                continue;
-            }
-            Ref<EntityStore> ref = playerRef.getReference();
-            if (ref == null || !ref.isValid()) {
-                continue;
-            }
-            Store<EntityStore> store = ref.getStore();
-            if (store == null) {
-                continue;
-            }
-            World world = store.getExternalData().getWorld();
-            if (!ModeGate.isAscendWorld(world)) {
-                continue;
-            }
-            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-            if (transform == null || transform.getPosition() == null) {
-                continue;
-            }
-
-            String activeMapId = runTracker != null ? runTracker.getActiveMapId(playerId) : null;
-            if (activeMapId != null) {
-                relevantMapIds.add(activeMapId);
-                highFrequencyMapIds.add(activeMapId);
-            }
-
-            Vector3d position = transform.getPosition();
-            String worldName = world != null ? world.getName() : null;
-            for (AscendMap map : maps) {
-                if (map == null || map.getId() == null) {
-                    continue;
-                }
-                if (worldName == null || !worldName.equals(map.getWorld())) {
-                    continue;
-                }
-                double dx = position.getX() - map.getStartX();
-                double dy = position.getY() - map.getStartY();
-                double dz = position.getZ() - map.getStartZ();
-                double distSq = (dx * dx) + (dy * dy) + (dz * dz);
-                if (distSq <= relevantDistanceSq) {
-                    relevantMapIds.add(map.getId());
-                }
-                if (distSq <= fastDistanceSq) {
-                    highFrequencyMapIds.add(map.getId());
-                }
-            }
-        }
-
-        return new ViewerContext(relevantMapIds, highFrequencyMapIds);
-    }
-
-    private void syncRobotNpcState(ViewerContext currentViewerContext, long now) {
-        for (RobotState robot : robots.values()) {
-            syncRobotNpcState(robot, currentViewerContext, now);
-        }
-    }
-
-    private void syncRobotNpcState(RobotState robot, ViewerContext currentViewerContext, long now) {
-        AscendMap map = getCachedMap(robot, now);
-        World world = getCachedWorld(robot, now);
-        boolean shouldHaveNpc = npcPlugin != null
-                && map != null
-                && world != null
-                && currentViewerContext.isRelevantMap(robot.getMapId());
-        robot.setEntityDesired(shouldHaveNpc);
-
-        Ref<EntityStore> entityRef = robot.getEntityRef();
-        boolean refIsValid = entityRef != null && entityRef.isValid();
-        boolean hasEntityUuid = robot.getEntityUuid() != null;
-
-        if (shouldHaveNpc) {
-            if (refIsValid) {
-                robot.clearInvalid();
-                return;
-            }
-            if (!hasEntityUuid && !robot.isSpawning()) {
-                spawnNpcForRobot(robot, map);
-            }
-            return;
-        }
-
-        if (!refIsValid && !hasEntityUuid) {
-            return;
-        }
-        UUID entityUuid = robot.getEntityUuid();
-        clearTeleportWarning(robot);
-        despawnNpcForRobot(robot);
-        queueOrphanIfDespawnFailed(entityUuid, robot);
     }
 
     private void flushTeleportBatches(Map<World, List<PendingTeleport>> teleportsByWorld) {
@@ -907,41 +456,7 @@ public class RobotManager {
         robot.setPreviousPosition(x, y, z);
     }
 
-    private void refreshRobotCache(RobotState robot, AscendMap resolvedMap, long now) {
-        if (robot == null) {
-            return;
-        }
-        if (resolvedMap == null && now - robot.getCacheRefreshedAtMs() < CACHE_REFRESH_INTERVAL_MS) {
-            return;
-        }
-
-        AscendMap map = resolvedMap != null ? resolvedMap : mapStore.getMap(robot.getMapId());
-        robot.setCachedMap(map);
-        if (map == null || map.getWorld() == null || map.getWorld().isEmpty()) {
-            robot.setCachedWorld(null);
-        } else {
-            robot.setCachedWorld(Universe.get().getWorld(map.getWorld()));
-        }
-        robot.setCachedGhost(ghostStore.getRecording(robot.getOwnerId(), robot.getMapId()));
-        robot.setCacheRefreshedAtMs(now);
-    }
-
-    private AscendMap getCachedMap(RobotState robot, long now) {
-        refreshRobotCache(robot, null, now);
-        return robot.getCachedMap();
-    }
-
-    private World getCachedWorld(RobotState robot, long now) {
-        refreshRobotCache(robot, null, now);
-        return robot.getCachedWorld();
-    }
-
-    private GhostRecording getCachedGhost(RobotState robot, long now) {
-        refreshRobotCache(robot, null, now);
-        return robot.getCachedGhost();
-    }
-
-    private void queueOrphanIfDespawnFailed(UUID previousEntityUuid, RobotState state) {
+    void queueOrphanIfDespawnFailed(UUID previousEntityUuid, RobotState state) {
         if (previousEntityUuid == null || state == null) {
             return;
         }
@@ -956,12 +471,12 @@ public class RobotManager {
         if (robot.isWaiting()) {
             return;
         }
-        AscendMap map = getCachedMap(robot, now);
+        AscendMap map = refreshSystem.getCachedMap(robot, now);
         if (map == null) {
             return;
         }
         UUID ownerId = robot.getOwnerId();
-        GhostRecording ghost = getCachedGhost(robot, now);
+        GhostRecording ghost = refreshSystem.getCachedGhost(robot, now);
         long intervalMs = computeCompletionIntervalMs(map, ghost, robot.getSpeedLevel(), ownerId);
         if (intervalMs <= 0L) {
             return;
@@ -1018,288 +533,11 @@ public class RobotManager {
 
         // Teleport NPC back to start after completion and reset previous position
         Ref<EntityStore> entityRef = robot.getEntityRef();
-        World world = getCachedWorld(robot, now);
+        World world = refreshSystem.getCachedWorld(robot, now);
         if (entityRef != null && entityRef.isValid() && world != null) {
             queueTeleport(teleportsByWorld, world, robot, entityRef,
                     map.getStartX(), map.getStartY(), map.getStartZ(), map.getStartRotY());
             robot.clearPreviousPosition();
-        }
-    }
-
-    // Auto Runner Upgrades (Skill Tree)
-
-    private void performAutoRunnerUpgrades() {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        AscensionManager ascensionManager = plugin.getAscensionManager();
-        if (ascensionManager == null) return;
-
-        for (UUID playerId : onlinePlayers) {
-            if (!ascensionManager.hasAutoRunners(playerId)) continue;
-            autoUpgradeRunners(playerId);
-        }
-    }
-
-    private void autoUpgradeRunners(UUID playerId) {
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) return;
-        if (!progress.isAutoUpgradeEnabled()) return;
-
-        List<AscendMap> maps = mapStore.listMapsSorted();
-
-        // First priority: buy runners on unlocked maps that have been completed (free)
-        for (AscendMap map : maps) {
-            AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
-            if (mp == null || !mp.isUnlocked() || mp.hasRobot()) continue;
-
-            // Accept ghost recording OR best time as proof of completion
-            GhostRecording ghost = ghostStore.getRecording(playerId, map.getId());
-            if (ghost == null && mp.getBestTimeMs() == null) continue;
-
-            playerStore.setHasRobot(playerId, map.getId(), true);
-            return; // One action per call for smooth visual
-        }
-
-        // Auto-evolve eligible maps (free, all at once — each map independent of others)
-        // Runs before speed upgrades so a map at max level evolves immediately,
-        // even while other maps still have affordable speed upgrades.
-        if (progress.isAutoEvolutionEnabled()) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            AscensionManager am = plugin != null ? plugin.getAscensionManager() : null;
-            if (am != null && am.hasAutoEvolution(playerId)) {
-                boolean anyEvolved = false;
-                for (AscendMap map : maps) {
-                    AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
-                    if (mp == null || !mp.hasRobot()) continue;
-                    if (mp.getRobotSpeedLevel() >= AscendConstants.MAX_SPEED_LEVEL
-                            && mp.getRobotStars() < AscendConstants.MAX_ROBOT_STARS) {
-                        int newStars = playerStore.evolveRobot(playerId, map.getId());
-                        respawnRobot(playerId, map.getId(), newStars);
-                        anyEvolved = true;
-                    }
-                }
-                if (anyEvolved && plugin.getAchievementManager() != null) {
-                    plugin.getAchievementManager().checkAndUnlockAchievements(playerId, null);
-                }
-            }
-        }
-
-        // Speed upgrade: find cheapest across all maps (one per call for smooth visual)
-        BigNumber volt = progress.getVolt();
-        String cheapestMapId = null;
-        BigNumber cheapestCost = null;
-
-        for (AscendMap map : maps) {
-            AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
-            if (mp == null || !mp.hasRobot()) continue;
-
-            int speedLevel = mp.getRobotSpeedLevel();
-            if (speedLevel >= AscendConstants.MAX_SPEED_LEVEL) continue;
-
-            BigNumber cost = AscendConstants.getRunnerUpgradeCost(
-                speedLevel, map.getDisplayOrder(), mp.getRobotStars());
-
-            if (cheapestCost == null || cost.lt(cheapestCost)) {
-                cheapestCost = cost;
-                cheapestMapId = map.getId();
-            }
-        }
-
-        if (cheapestMapId != null && cheapestCost != null && volt.gte(cheapestCost)) {
-            if (!playerStore.atomicSpendVolt(playerId, cheapestCost)) return;
-            playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
-            playerStore.checkAndUnlockEligibleMaps(playerId, mapStore);
-        }
-    }
-
-    // Auto-Elevation
-
-    private void performAutoElevation(long now) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
-        AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
-        ChallengeManager challengeMgr = plugin != null ? plugin.getChallengeManager() : null;
-        for (UUID playerId : onlinePlayers) {
-            if (ascensionMgr == null || !ascensionMgr.hasAutoElevation(playerId)) continue;
-            // Skip if player is actively playing a map — don't reset progress mid-run
-            if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
-            // Skip if elevation is blocked by active challenge
-            if (challengeMgr != null && challengeMgr.isElevationBlocked(playerId)) continue;
-            try {
-                autoElevatePlayer(playerId, now);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Auto-elevation failed for " + playerId);
-            }
-        }
-    }
-
-    private void autoElevatePlayer(UUID playerId, long now) {
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) return;
-        if (!progress.isAutoElevationEnabled()) return;
-
-        List<Long> targets = progress.getAutoElevationTargets();
-        int targetIndex = progress.getAutoElevationTargetIndex();
-
-        // Skip targets already surpassed by current multiplier
-        int currentLevel = progress.getElevationMultiplier();
-        long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
-        while (targetIndex < targets.size() && targets.get(targetIndex) <= currentActualMultiplier) {
-            targetIndex++;
-        }
-        if (targetIndex != progress.getAutoElevationTargetIndex()) {
-            playerStore.setAutoElevationTargetIndex(playerId, targetIndex);
-        }
-
-        if (targets.isEmpty() || targetIndex >= targets.size()) return;
-
-        // Check timer
-        int timerSeconds = progress.getAutoElevationTimerSeconds();
-        if (timerSeconds > 0) {
-            Long lastMs = lastAutoElevationMs.get(playerId);
-            if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
-        }
-
-        // Calculate purchasable levels
-        BigNumber accumulatedVolt = progress.getElevationAccumulatedVolt();
-        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVolt, BigNumber.ONE);
-        if (result.levels <= 0) return;
-
-        int newLevel = currentLevel + result.levels;
-        long newMultiplier = Math.round(AscendConstants.getElevationMultiplier(newLevel));
-        long nextTarget = targets.get(targetIndex);
-        if (newMultiplier < nextTarget) return;
-
-        // Execute elevation — reset progress first, then despawn robots.
-        // resetProgressForElevation sets hasRobot=false, so refreshRobots() will clean up stale
-        // robots on the next cycle. We despawn after to accelerate cleanup, but the critical part
-        // is that the reset happens first — if despawn fails or throws, robots won't be re-created
-        // because hasRobot is already false.
-        playerStore.atomicSetElevationAndResetVolt(playerId, newLevel);
-
-        // Get first map ID for reset
-        List<AscendMap> maps = mapStore.listMapsSorted();
-        String firstMapId = maps.isEmpty() ? null : maps.get(0).getId();
-
-        playerStore.resetProgressForElevation(playerId, firstMapId);
-
-        // Now despawn robot NPCs (safe — even if this fails, hasRobot=false prevents re-creation)
-        despawnRobotsForPlayer(playerId);
-
-        // Send chat message
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef != null) {
-                playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                    "[Auto-Elevation] Elevated to x" + newMultiplier)
-                    .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-            }
-        }
-
-        // Advance targetIndex past all surpassed targets
-        int newIndex = targetIndex;
-        while (newIndex < targets.size() && newMultiplier >= targets.get(newIndex)) {
-            newIndex++;
-        }
-        playerStore.setAutoElevationTargetIndex(playerId, newIndex);
-
-        lastAutoElevationMs.put(playerId, now);
-        playerStore.markDirty(playerId);
-
-        // Close the player's ascend page so they see fresh state on reopen
-        AscendCommand.forceCloseActivePage(playerId);
-    }
-
-    // Auto-Summit
-
-    private void performAutoSummit(long now) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
-        AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
-        ChallengeManager challengeMgr = plugin != null ? plugin.getChallengeManager() : null;
-        for (UUID playerId : onlinePlayers) {
-            if (ascensionMgr == null || !ascensionMgr.hasAutoSummit(playerId)) continue;
-            // Skip if player is actively playing a map — don't reset progress mid-run
-            if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
-            // Skip if all summit is blocked by active challenge
-            if (challengeMgr != null && challengeMgr.isAllSummitBlocked(playerId)) continue;
-            try {
-                autoSummitPlayer(playerId, now);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Auto-summit failed for " + playerId);
-            }
-        }
-    }
-
-    private void autoSummitPlayer(UUID playerId, long now) {
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) return;
-        if (!progress.isAutoSummitEnabled()) return;
-
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        SummitManager summitManager = plugin.getSummitManager();
-        if (summitManager == null) return;
-
-        if (!summitManager.canSummit(playerId)) return;
-
-        // Check timer
-        int timerSeconds = progress.getAutoSummitTimerSeconds();
-        if (timerSeconds > 0) {
-            Long lastMs = lastAutoSummitMs.get(playerId);
-            if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
-        }
-
-        List<AscendPlayerProgress.AutoSummitCategoryConfig> config = progress.getAutoSummitConfig();
-        AscendConstants.SummitCategory[] categories = AscendConstants.SummitCategory.values();
-
-        // Target-based: iterate all categories and summit the first one that can reach its target
-        for (int i = 0; i < categories.length; i++) {
-            if (i >= config.size()) continue;
-
-            AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(i);
-            if (!catConfig.isEnabled()) continue;
-            int targetLevel = catConfig.getTargetLevel();
-            if (targetLevel <= 0) continue;
-
-            AscendConstants.SummitCategory category = categories[i];
-            int currentLevel = playerStore.getSummitLevel(playerId, category);
-
-            // Skip if target already reached
-            if (currentLevel >= targetLevel) continue;
-
-            // Preview the summit
-            SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
-            if (!preview.hasGain()) continue;
-
-            // Only summit if projected level reaches the target
-            if (preview.newLevel() < targetLevel) continue;
-
-            // Perform summit — this calls resetProgressForSummit which sets hasRobot=false,
-            // so refreshRobots() won't re-create them. We despawn NPCs after to accelerate cleanup.
-            // Critical: reset BEFORE despawn — if despawn throws, robots won't be re-created
-            // because hasRobot is already false (prevents infinite despawn-recreate loop).
-            SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
-            if (!result.succeeded()) continue;
-
-            // Now despawn robot NPCs (safe — even if this fails, hasRobot=false prevents re-creation)
-            despawnRobotsForPlayer(playerId);
-
-            // Send chat message
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef != null) {
-                playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                    "[Auto-Summit] " + category.getDisplayName() + " Lv " + result.newLevel())
-                    .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-            }
-
-            lastAutoSummitMs.put(playerId, now);
-
-            // Close the player's ascend page so they see fresh state on reopen
-            AscendCommand.forceCloseActivePage(playerId);
-
-            return; // One summit per tick for smooth visual
         }
     }
 
@@ -1440,57 +678,15 @@ public class RobotManager {
         return Math.max(1L, interval);
     }
 
-    private String robotKey(UUID ownerId, String mapId) {
+    String robotKey(UUID ownerId, String mapId) {
         return ownerId.toString() + ":" + mapId;
-    }
-
-    /**
-     * Hide a newly spawned runner from all players currently running on the same map.
-     * Skips the runner's owner so they can still see their own runner while playing.
-     */
-    private void hideFromActiveRunners(String mapId, UUID runnerUuid) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        AscendRunTracker runTracker = plugin.getRunTracker();
-        if (runTracker == null) {
-            return;
-        }
-        // Find the owner of this runner to skip them
-        UUID runnerOwnerId = null;
-        for (RobotState state : robots.values()) {
-            if (runnerUuid.equals(state.getEntityUuid())) {
-                runnerOwnerId = state.getOwnerId();
-                break;
-            }
-        }
-        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
-        // Iterate over all online players in the Ascend world
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef == null) {
-                continue;
-            }
-            UUID playerId = playerRef.getUuid();
-            if (playerId == null || !isPlayerInAscendWorld(playerId)) {
-                continue;
-            }
-            // Don't hide a runner from its owner - they should see their own runner
-            if (playerId.equals(runnerOwnerId)) {
-                continue;
-            }
-            String activeMapId = runTracker.getActiveMapId(playerId);
-            if (mapId.equals(activeMapId)) {
-                visibilityManager.hideEntity(playerId, runnerUuid);
-            }
-        }
     }
 
     /**
      * Check if a player is currently in the Ascend world.
      * Uses the plugin's PlayerRef cache for O(1) lookup instead of scanning all players.
      */
-    private boolean isPlayerInAscendWorld(UUID playerId) {
+    boolean isPlayerInAscendWorld(UUID playerId) {
         if (playerId == null) {
             return false;
         }
@@ -1522,7 +718,7 @@ public class RobotManager {
      */
     private static final double CHUNK_LOAD_DISTANCE = 128.0; // Chunks typically load within render distance
 
-    private boolean isPlayerNearMapSpawn(UUID playerId, AscendMap map) {
+    boolean isPlayerNearMapSpawn(UUID playerId, AscendMap map) {
         if (playerId == null || map == null) {
             return false;
         }
@@ -1560,19 +756,16 @@ public class RobotManager {
     private record PendingTeleport(RobotState robot, Ref<EntityStore> entityRef,
                                    double x, double y, double z, float yaw) {}
 
-    private record ViewerContext(Set<String> relevantMapIds, Set<String> highFrequencyMapIds) {
-        static ViewerContext empty() {
-            return new ViewerContext(Set.of(), Set.of());
-        }
+    // Package-private getters for extracted classes
 
-        boolean isRelevantMap(String mapId) {
-            return mapId != null && relevantMapIds.contains(mapId);
-        }
-
-        boolean isHighFrequencyMap(String mapId) {
-            return mapId != null && highFrequencyMapIds.contains(mapId);
-        }
-    }
+    AscendMapStore getMapStore() { return mapStore; }
+    AscendPlayerStore getPlayerStore() { return playerStore; }
+    GhostStore getGhostStore() { return ghostStore; }
+    Map<String, RobotState> getRobots() { return robots; }
+    Set<UUID> getOnlinePlayers() { return onlinePlayers; }
+    Set<UUID> getDirtyPlayers() { return dirtyPlayers; }
+    OrphanedEntityCleanup getOrphanCleanup() { return orphanCleanup; }
+    RobotSpawner getSpawner() { return spawner; }
 
     // Runner Cleanup (Server Restart Handling)
 
@@ -1644,25 +837,6 @@ public class RobotManager {
                 visibilityManager.hideEntity(viewerId, entityUuid);
             } else {
                 visibilityManager.showEntity(viewerId, entityUuid);
-            }
-        }
-    }
-
-    /**
-     * After spawning a new runner, hide it from all online viewers who have the "hide other runners" setting ON.
-     * Skips the owner of the runner (they should always see their own).
-     */
-    private void hideFromViewersWithSetting(UUID runnerOwnerId, UUID entityUuid) {
-        if (entityUuid == null) {
-            return;
-        }
-        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
-        for (UUID viewerId : onlinePlayers) {
-            if (viewerId.equals(runnerOwnerId)) {
-                continue; // Owner always sees their own runners
-            }
-            if (playerStore.isHideOtherRunners(viewerId)) {
-                visibilityManager.hideEntity(viewerId, entityUuid);
             }
         }
     }

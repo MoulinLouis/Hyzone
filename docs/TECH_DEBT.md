@@ -83,10 +83,10 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** ~2,000 LOC, 10 concerns mixed: game state machine, player management, block breaking, platform query index, HUD updates, feather rewards, spectator management, configuration, blink system.
 - **Extraction order:** `BlockBreakSystem` first (self-contained), then `PlatformGeometryIndex`, then `FeatherRewardSystem`.
 
-### 3.2 Split RobotManager
+### ~~3.2 Split RobotManager~~ (DONE)
 - **Module:** ascend
 - **Issue:** ~1,700 LOC, 11 concerns: robot lifecycle, tick loop, refresh, viewer context, map/ghost caching, auto-upgrade runners, auto-elevation, auto-summit, teleport warnings, visibility, orphan cleanup.
-- **Extraction order:** `AutoRunnerUpgradeEngine` first (self-contained, ~280 LOC), then `RobotSpawner`, then `RobotRefreshSystem`.
+- **Fix:** Extracted `AutoRunnerUpgradeEngine` (315 LOC — auto-upgrade, auto-elevation, auto-summit), `RobotSpawner` (275 LOC — NPC spawn/despawn, visibility on spawn), and `RobotRefreshSystem` (389 LOC — refresh, caching, viewer context, NPC state sync). RobotManager reduced from 1,670 to 843 LOC. All extracted classes use package-private access via getters on RobotManager. Public API unchanged.
 
 ### 3.3 Split PurgeWaveManager
 - **Module:** purge
