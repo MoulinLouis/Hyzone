@@ -293,9 +293,9 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         Vector3f rot = pRef != null ? pRef.getHeadRotation() : transform.getRotation();
         float yaw = rot.getY();
 
-        // Block position: directly below the NPC (at its feet)
-        int blockX = (int) Math.floor(pos.getX());
-        int blockY = (int) Math.floor(pos.getY()) - 1;
+        // Block position: 1 block in +X direction from NPC (east)
+        int blockX = (int) Math.floor(pos.getX()) + 1;
+        int blockY = (int) Math.floor(pos.getY());
         int blockZ = (int) Math.floor(pos.getZ());
 
         MinerSlot slot = mineConfigStore.getMinerSlot(mine.getId(), selectedSlotIndex);
