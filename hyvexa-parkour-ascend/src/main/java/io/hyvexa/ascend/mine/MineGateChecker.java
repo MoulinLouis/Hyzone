@@ -19,7 +19,6 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
-import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -35,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MineGateChecker {
 
-    private static final double COLLECTION_RADIUS_SQ = 4.0; // 2 blocks squared
     private static final long COOLDOWN_MS = 2000;
     private static final long LOADING_MS = 1500;
     private static final long FADE_OUT_MS = 400;
@@ -92,39 +90,6 @@ public class MineGateChecker {
                 configStore.getExitDestX(), configStore.getExitDestY(), configStore.getExitDestZ(),
                 configStore.getExitDestRotX(), configStore.getExitDestRotY(), configStore.getExitDestRotZ());
             return;
-        }
-
-        // Conveyor collection zone: transfer buffered blocks to inventory
-        checkConveyorCollection(playerId, ref, store, x, y, z);
-    }
-
-    private void checkConveyorCollection(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store,
-                                          double x, double y, double z) {
-        if (minePlayerStore == null) return;
-        MinePlayerProgress progress = minePlayerStore.getPlayer(playerId);
-        if (progress == null || !progress.hasConveyorItems()) return;
-
-        for (Mine mine : configStore.listMinesSorted()) {
-            java.util.List<double[]> mainWps = configStore.getMainLineWaypoints(mine.getId());
-            if (mainWps == null || mainWps.isEmpty()) continue;
-
-            double[] endpoint = mainWps.get(mainWps.size() - 1);
-            double dx = x - endpoint[0];
-            double dy = y - endpoint[1];
-            double dz = z - endpoint[2];
-            double distSq = dx * dx + dy * dy + dz * dz;
-
-            if (distSq <= COLLECTION_RADIUS_SQ) {
-                int transferred = progress.transferBufferToInventory();
-                if (transferred > 0) {
-                    minePlayerStore.markDirty(playerId);
-                    Player player = store.getComponent(ref, Player.getComponentType());
-                    if (player != null) {
-                        player.sendMessage(Message.raw("Collected " + transferred + " blocks from conveyor."));
-                    }
-                }
-                return;
-            }
         }
     }
 

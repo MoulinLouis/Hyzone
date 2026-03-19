@@ -461,11 +461,18 @@ public class MinePlayerProgress {
             getMineStates(),
             getMinerStates(),
             inMine,
-            pickaxeTier
+            pickaxeTier,
+            new LinkedHashMap<>(conveyorBuffer)
         );
     }
 
     // --- Conveyor buffer ---
+
+    public synchronized void loadConveyorBufferItem(String blockTypeId, int amount) {
+        if (blockTypeId == null || amount <= 0) return;
+        conveyorBuffer.put(blockTypeId, amount);
+        conveyorBufferCount += amount;
+    }
 
     /** Add block to conveyor buffer (no capacity limit). */
     public synchronized void addToConveyorBuffer(String blockTypeId, int amount) {
@@ -509,6 +516,33 @@ public class MinePlayerProgress {
         return conveyorBufferCount > 0;
     }
 
+    public synchronized Map<String, Integer> getConveyorBuffer() {
+        return new LinkedHashMap<>(conveyorBuffer);
+    }
+
+    /**
+     * Transfer a single block type from conveyor buffer to inventory, respecting bag capacity.
+     * Returns the number of items transferred.
+     */
+    public synchronized int transferBlockFromBuffer(String blockTypeId) {
+        if (blockTypeId == null) return 0;
+        Integer count = conveyorBuffer.get(blockTypeId);
+        if (count == null || count <= 0) return 0;
+        int space = getBagCapacity() - inventoryCount;
+        if (space <= 0) return 0;
+        int toMove = Math.min(count, space);
+        inventory.merge(blockTypeId, toMove, Integer::sum);
+        inventoryCount += toMove;
+        int remaining = count - toMove;
+        if (remaining <= 0) {
+            conveyorBuffer.remove(blockTypeId);
+        } else {
+            conveyorBuffer.put(blockTypeId, remaining);
+        }
+        conveyorBufferCount -= toMove;
+        return toMove;
+    }
+
     public enum MinerPurchaseResult {
         SUCCESS,
         ALREADY_OWNED,
@@ -540,5 +574,6 @@ public class MinePlayerProgress {
                                      Map<String, MineProgressSnapshot> mineStates,
                                      Map<String, MinerProgressSnapshot> minerStates,
                                      boolean inMine,
-                                     int pickaxeTier) {}
+                                     int pickaxeTier,
+                                     Map<String, Integer> conveyorBuffer) {}
 }

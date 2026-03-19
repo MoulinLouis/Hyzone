@@ -157,6 +157,19 @@ public class MinePlayerStore {
                 }
             }
 
+            // Load conveyor buffer
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT block_type_id, amount FROM mine_player_conveyor_buffer WHERE player_uuid = ?")) {
+                ps.setString(1, playerId.toString());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        progress.loadConveyorBufferItem(
+                            rs.getString("block_type_id"),
+                            rs.getInt("amount"));
+                    }
+                }
+            }
+
             return progress;
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to load mine player %s: %s", playerId, e.getMessage());
@@ -269,6 +282,27 @@ public class MinePlayerStore {
                             MinePlayerProgress.MineProgressSnapshot state = entry.getValue();
                             ps.setBoolean(3, state.unlocked());
                             ps.setBoolean(4, state.completedManually());
+                            ps.addBatch();
+                        }
+                        ps.executeBatch();
+                    }
+                }
+
+                // Save conveyor buffer — delete + re-insert
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "DELETE FROM mine_player_conveyor_buffer WHERE player_uuid = ?")) {
+                    ps.setString(1, playerId.toString());
+                    ps.executeUpdate();
+                }
+
+                Map<String, Integer> conveyorBuffer = snapshot.conveyorBuffer();
+                if (!conveyorBuffer.isEmpty()) {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "INSERT INTO mine_player_conveyor_buffer (player_uuid, block_type_id, amount) VALUES (?, ?, ?)")) {
+                        for (var entry : conveyorBuffer.entrySet()) {
+                            ps.setString(1, playerId.toString());
+                            ps.setString(2, entry.getKey());
+                            ps.setInt(3, entry.getValue());
                             ps.addBatch();
                         }
                         ps.executeBatch();

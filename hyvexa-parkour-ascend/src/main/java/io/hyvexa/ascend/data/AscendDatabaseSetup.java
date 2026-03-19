@@ -402,6 +402,17 @@ public final class AscendDatabaseSetup {
             // Multi-slot migrations (add slot_index to miner slots and player miners)
             ensureMultiSlotMigration(conn);
 
+            // Conveyor buffer persistence (per-player block counts)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_player_conveyor_buffer (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    block_type_id VARCHAR(64) NOT NULL,
+                    amount INT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (player_uuid, block_type_id),
+                    FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 

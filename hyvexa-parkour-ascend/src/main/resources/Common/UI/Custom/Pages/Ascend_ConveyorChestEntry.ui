@@ -1,0 +1,69 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 56, Bottom: 4);
+  LayoutMode: Left;
+  Padding: (Left: 10, Right: 10);
+  Background: #ffffff(0.03);
+  OutlineColor: #ffffff(0.06);
+  OutlineSize: 1;
+
+  // Icon
+  Group #IconWrap {
+    Anchor: (Width: 40, Height: 40, Right: 10);
+    LayoutMode: Full;
+    Background: #ffffff(0.04);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    ItemIcon #BlockIcon {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      ShowItemTooltip: true;
+    }
+  }
+
+  // Name
+  Label #BlockName {
+    Anchor: (Width: 140, Height: 56, Right: 4);
+    Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+    Text: "Block";
+  }
+
+  // Quantity
+  Label #Amount {
+    Anchor: (Width: 60, Height: 56);
+    Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
+    Text: "x0";
+  }
+
+  // Spacer
+  Group {
+    FlexWeight: 1;
+  }
+
+  // Take button
+  Group #TakeWrap {
+    Anchor: (Width: 64, Height: 32);
+    LayoutMode: Full;
+
+    TextButton #TakeButton {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "Take";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #3d6b5a,
+          LabelStyle: (FontSize: 12, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #4d8f7a,
+          LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #2d5a4a,
+          LabelStyle: (FontSize: 12, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+}

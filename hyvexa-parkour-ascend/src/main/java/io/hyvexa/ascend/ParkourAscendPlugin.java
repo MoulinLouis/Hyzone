@@ -38,6 +38,7 @@ import io.hyvexa.ascend.holo.AscendHologramManager;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.interaction.AscendDevInteraction;
+import io.hyvexa.ascend.interaction.ConveyorChestInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.interaction.MineChestInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
@@ -411,9 +412,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         restoreToMine = mineProgress.isInMine();
                     }
 
+                    hudManager.attach(playerRef, player);
                     if (restoreToMine) {
                         mineGateChecker.giveMineItems(player, playerId);
-                        hudManager.removePlayer(playerId);
+                        hudManager.setMineMode(playerId, true);
                         MineHudManager mhm = getMineHudManager();
                         if (mhm != null) {
                             mhm.attachHud(playerRef, player);
@@ -421,7 +423,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         mineGateChecker.applyHasteSpeed(mineProgress, ref, store, playerRef);
                     } else {
                         AscendInventoryUtils.giveMenuItems(player);
-                        hudManager.attach(playerRef, player);
                     }
                     AscendMusicPage.applyStoredMusic(playerRef);
                     DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
@@ -816,11 +817,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         if (mineGateChecker != null) {
                             mineGateChecker.checkPlayer(playerId, ref, store);
                         }
-                        // Always update the Ascend HUD (global, always visible)
+                        // Always update the Ascend HUD (info panel always visible; economy skipped in mine mode)
                         if (fullTick) {
                             hudManager.updateFull(ref, store, playerRef);
                         }
-                        hudManager.updateToasts(playerRef.getUuid());
                         // Mine HUD updates when in mine mode, run tracker when not
                         if (mineHudManager != null && mineHudManager.hasHud(playerId)) {
                             if (fullTick) {
@@ -833,9 +833,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
                             mineHudManager.tickBlockHealth(playerId);
                             mineHudManager.tickCombo(playerId);
                         } else {
-                            runTracker.checkPlayer(ref, store);
+                            if (fullTick) {
+                                runTracker.checkPlayer(ref, store);
+                            }
                             hudManager.updateTimer(playerRef);
                             hudManager.updateRunnerBars(playerRef);
+                            hudManager.updateToasts(playerRef.getUuid());
                         }
                     }
                 } finally {
@@ -977,6 +980,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
         registry.register("Mine_Chest_Interaction",
             MineChestInteraction.class, MineChestInteraction.CODEC);
+        registry.register("Conveyor_Chest_Interaction",
+            ConveyorChestInteraction.class, ConveyorChestInteraction.CODEC);
         // Mine Select -> MineSelectPage
         registry.register("Mine_Select_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
