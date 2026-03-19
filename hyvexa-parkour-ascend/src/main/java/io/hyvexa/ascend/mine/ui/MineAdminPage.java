@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinerSlot;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.ascend.ui.AscendAdminPanelPage;
 
@@ -103,6 +104,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             case MineData.BUTTON_ZONES -> handleZones(ref, store);
             case MineData.BUTTON_GATE -> handleGate(ref, store);
             case MineData.BUTTON_BLOCK_CONFIG -> handleBlockConfig(ref, store);
+            case MineData.BUTTON_SET_MINER_POS -> handleSetMinerPos(ref, store);
             case MineData.BUTTON_BACK -> handleBack(ref, store);
             default -> {
             }
@@ -269,6 +271,38 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             new MineBlockHpPage(pRef, mineConfigStore));
     }
 
+    private void handleSetMinerPos(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) {
+            player.sendMessage(Message.raw("Unable to read position."));
+            return;
+        }
+        Vector3d pos = transform.getPosition();
+        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Vector3f rot = pRef != null ? pRef.getHeadRotation() : transform.getRotation();
+        float yaw = rot.getY();
+
+        // Block position: 1 block in front of player based on yaw
+        double yawRad = Math.toRadians(yaw);
+        int blockX = (int) Math.floor(pos.getX() + Math.sin(yawRad));
+        int blockY = (int) Math.floor(pos.getY());
+        int blockZ = (int) Math.floor(pos.getZ() + Math.cos(yawRad));
+
+        MinerSlot slot = new MinerSlot(mine.getId());
+        slot.setNpcPosition(pos.getX(), pos.getY(), pos.getZ(), yaw);
+        slot.setBlockPosition(blockX, blockY, blockZ);
+        mineConfigStore.saveMinerSlot(slot);
+
+        player.sendMessage(Message.raw("Miner position set for mine: " + mine.getId()));
+        player.sendMessage(Message.raw("  NPC: " + String.format("%.1f, %.1f, %.1f yaw=%.1f",
+                pos.getX(), pos.getY(), pos.getZ(), yaw)));
+        player.sendMessage(Message.raw("  Block: " + blockX + ", " + blockY + ", " + blockZ));
+    }
+
     private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -329,6 +363,8 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_GATE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BlockConfigButton",
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BLOCK_CONFIG), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetMinerPosButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SET_MINER_POS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BACK), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
@@ -423,6 +459,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         static final String BUTTON_ZONES = "Zones";
         static final String BUTTON_GATE = "Gate";
         static final String BUTTON_BLOCK_CONFIG = "BlockConfig";
+        static final String BUTTON_SET_MINER_POS = "SetMinerPos";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 
