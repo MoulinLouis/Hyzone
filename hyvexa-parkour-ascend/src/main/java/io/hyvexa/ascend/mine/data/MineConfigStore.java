@@ -44,6 +44,9 @@ public class MineConfigStore {
     // blockTypeId -> hp (global, not per-zone)
     private final Map<String, Integer> blockHpMap = new ConcurrentHashMap<>();
 
+    // mineId -> MinerSlot (admin-configured miner NPC + block positions)
+    private final Map<String, MinerSlot> minerSlots = new ConcurrentHashMap<>();
+
     private volatile GateConfig entryGate;
     private volatile GateConfig exitGate;
 
@@ -69,6 +72,7 @@ public class MineConfigStore {
                 loadGate(conn);
                 loadBlockPrices(conn);
                 loadBlockHp(conn);
+                loadMinerSlots(conn);
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to load MineConfigStore: " + e.getMessage());
             }
@@ -679,6 +683,67 @@ public class MineConfigStore {
 
     public Map<String, Integer> getBlockHpMap() {
         return Collections.unmodifiableMap(blockHpMap);
+    }
+
+    // --- Miner Slots ---
+
+    private void loadMinerSlots(Connection conn) throws SQLException {
+        minerSlots.clear();
+        String sql = "SELECT mine_id, npc_x, npc_y, npc_z, npc_yaw, block_x, block_y, block_z, interval_seconds FROM mine_miner_slots";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String mineId = rs.getString("mine_id");
+                    MinerSlot slot = new MinerSlot(mineId);
+                    slot.setNpcPosition(rs.getDouble("npc_x"), rs.getDouble("npc_y"), rs.getDouble("npc_z"), rs.getFloat("npc_yaw"));
+                    slot.setBlockPosition(rs.getInt("block_x"), rs.getInt("block_y"), rs.getInt("block_z"));
+                    slot.setIntervalSeconds(rs.getDouble("interval_seconds"));
+                    minerSlots.put(mineId, slot);
+                }
+            }
+        }
+    }
+
+    public MinerSlot getMinerSlot(String mineId) {
+        return minerSlots.get(mineId);
+    }
+
+    public void saveMinerSlot(MinerSlot slot) {
+        if (slot == null || slot.getMineId() == null) return;
+
+        minerSlots.put(slot.getMineId(), slot);
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = """
+            INSERT INTO mine_miner_slots (mine_id, npc_x, npc_y, npc_z, npc_yaw, block_x, block_y, block_z, interval_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                npc_x = VALUES(npc_x), npc_y = VALUES(npc_y), npc_z = VALUES(npc_z), npc_yaw = VALUES(npc_yaw),
+                block_x = VALUES(block_x), block_y = VALUES(block_y), block_z = VALUES(block_z),
+                interval_seconds = VALUES(interval_seconds)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                int i = 1;
+                stmt.setString(i++, slot.getMineId());
+                stmt.setDouble(i++, slot.getNpcX());
+                stmt.setDouble(i++, slot.getNpcY());
+                stmt.setDouble(i++, slot.getNpcZ());
+                stmt.setFloat(i++, slot.getNpcYaw());
+                stmt.setInt(i++, slot.getBlockX());
+                stmt.setInt(i++, slot.getBlockY());
+                stmt.setInt(i++, slot.getBlockZ());
+                stmt.setDouble(i, slot.getIntervalSeconds());
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to save miner slot: " + e.getMessage());
+        }
     }
 
     // --- Layer CRUD ---

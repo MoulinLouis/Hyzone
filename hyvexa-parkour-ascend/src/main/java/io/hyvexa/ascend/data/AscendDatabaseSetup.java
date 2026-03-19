@@ -367,6 +367,22 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Miner NPC + block positions per mine (admin-configured)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_miner_slots (
+                    mine_id VARCHAR(32) PRIMARY KEY,
+                    npc_x DOUBLE NOT NULL DEFAULT 0,
+                    npc_y DOUBLE NOT NULL DEFAULT 0,
+                    npc_z DOUBLE NOT NULL DEFAULT 0,
+                    npc_yaw FLOAT NOT NULL DEFAULT 0,
+                    block_x INT NOT NULL DEFAULT 0,
+                    block_y INT NOT NULL DEFAULT 0,
+                    block_z INT NOT NULL DEFAULT 0,
+                    interval_seconds DOUBLE NOT NULL DEFAULT 5.0,
+                    FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
