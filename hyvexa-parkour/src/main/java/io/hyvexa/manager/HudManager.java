@@ -20,6 +20,7 @@ import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
+import io.hyvexa.parkour.data.PlayerSettingsPersistence;
 import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.core.economy.FeatherStore;
@@ -253,6 +254,24 @@ public class HudManager {
         MultiHudBridge.showIfNeeded(hud);
     }
 
+    /**
+     * Loads HUD hidden state from DB and pre-populates the in-memory map.
+     * Call on PlayerReadyEvent before ensureRunHud.
+     */
+    public void loadHudHiddenFromDb(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
+        if (persistence == null) {
+            return;
+        }
+        PlayerSettingsPersistence.PlayerSettings settings = persistence.loadPlayer(playerId);
+        if (settings.hudHidden) {
+            getState(playerId).hidden = true;
+        }
+    }
+
     private void setRunHudHidden(PlayerRef playerRef, boolean hidden) {
         if (playerRef == null) {
             return;
@@ -263,6 +282,7 @@ public class HudManager {
         }
         PlayerHudState state = getState(playerId);
         state.hidden = hidden;
+        persistHudHidden(playerId, hidden);
         state.readyAt = 0;
         state.wasRunning = false;
         state.isRecords = false;
@@ -665,5 +685,16 @@ public class HudManager {
     private static String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
         return s.charAt(0) + s.substring(1).toLowerCase();
+    }
+
+    private void persistHudHidden(UUID playerId, boolean hidden) {
+        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
+        if (persistence == null) {
+            return;
+        }
+        // Load current DB state to preserve other fields, then overlay hudHidden
+        PlayerSettingsPersistence.PlayerSettings s = persistence.loadPlayer(playerId);
+        s.hudHidden = hidden;
+        persistence.savePlayer(playerId, s);
     }
 }

@@ -502,6 +502,34 @@ Notes:
 - Auto-created by `RunStateStore.ensureTable()` on startup
 - Manager: `RunStateStore` in `hyvexa-parkour` -- no in-memory cache, loaded only on reconnect
 
+## player_settings
+Stores player-chosen settings (toggles, music, HUD, VIP speed) that persist across reconnections.
+
+```sql
+CREATE TABLE IF NOT EXISTS player_settings (
+    player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+    reset_item_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    players_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+    duel_hide_opponent BOOLEAN NOT NULL DEFAULT FALSE,
+    ghost_visible BOOLEAN NOT NULL DEFAULT TRUE,
+    advanced_hud_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    hud_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+    music_label VARCHAR(32) DEFAULT NULL,
+    checkpoint_sfx_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    victory_sfx_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    vip_speed_multiplier FLOAT NOT NULL DEFAULT 1.0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `PlayerSettingsPersistence.ensureTable()` on startup
+- Manager: `PlayerSettingsPersistence` (singleton in `hyvexa-parkour`)
+- Immediate write on every toggle change (settings change rarely)
+- Loaded on `PlayerReadyEvent`, in-memory maps cleared on disconnect (DB rows persist)
+- `music_label` stores the display label (e.g., "Zelda OST", "Celeste OST", "No Music"); NULL = default
+- `vip_speed_multiplier` only applied if player has VIP/Founder status
+
 ---
 
 # Duel Tables
@@ -602,6 +630,8 @@ CREATE TABLE IF NOT EXISTS ascend_players (
   auto_ascend_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   break_ascension_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   hide_other_runners BOOLEAN NOT NULL DEFAULT FALSE,
+  hud_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+  players_hidden BOOLEAN NOT NULL DEFAULT FALSE,
   player_name VARCHAR(32) DEFAULT NULL,
   seen_tutorials INT NOT NULL DEFAULT 0,
   transcendence_count INT NOT NULL DEFAULT 0,

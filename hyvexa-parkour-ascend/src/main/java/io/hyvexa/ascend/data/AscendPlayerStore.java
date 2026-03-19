@@ -1427,6 +1427,28 @@ public class AscendPlayerStore {
         markDirty(playerId);
     }
 
+    public boolean isHudHidden(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isHudHidden();
+    }
+
+    public void setHudHidden(UUID playerId, boolean hidden) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setHudHidden(hidden);
+        markDirty(playerId);
+    }
+
+    public boolean isPlayersHidden(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isPlayersHidden();
+    }
+
+    public void setPlayersHidden(UUID playerId, boolean hidden) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setPlayersHidden(hidden);
+        markDirty(playerId);
+    }
+
     public boolean isBreakAscensionEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.isBreakAscensionEnabled();

@@ -69,6 +69,10 @@ public class AscendPlayerProgress {
     );
     private volatile int autoSummitRotationIndex;
 
+    // Per-player settings (persisted to ascend_players)
+    private volatile boolean hudHidden;
+    private volatile boolean playersHidden;
+
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
 
@@ -410,6 +414,22 @@ public class AscendPlayerProgress {
 
     public void setHideOtherRunners(boolean hideOtherRunners) {
         this.hideOtherRunners = hideOtherRunners;
+    }
+
+    public boolean isHudHidden() {
+        return hudHidden;
+    }
+
+    public void setHudHidden(boolean hudHidden) {
+        this.hudHidden = hudHidden;
+    }
+
+    public boolean isPlayersHidden() {
+        return playersHidden;
+    }
+
+    public void setPlayersHidden(boolean playersHidden) {
+        this.playersHidden = playersHidden;
     }
 
     public boolean isBreakAscensionEnabled() {

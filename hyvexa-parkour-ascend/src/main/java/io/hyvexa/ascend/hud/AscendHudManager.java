@@ -43,6 +43,7 @@ public class AscendHudManager {
     private final java.util.Set<UUID> previewPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, CachedEconomyData> economyCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, RunnerBarCache> runnerBarCache = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> mineModeActive = ConcurrentHashMap.newKeySet();
 
     public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager) {
         this.playerStore = playerStore;
@@ -78,6 +79,16 @@ public class AscendHudManager {
         }
         hud.applyStaticText();
         hud.updatePlayerCount();
+        // In mine mode, only update the info panel — skip economy/elevation/prestige
+        if (mineModeActive.contains(playerId)) {
+            try {
+                CachedEconomyData cached = getOrRefreshEconomyCache(playerId);
+                hud.updateVexa(cached.vexa);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Failed to update Ascend HUD (mine mode) for player " + playerId);
+            }
+            return;
+        }
         if (playerStore == null) {
             LOGGER.atFine().log("Skipping HUD update for %s: playerStore is null", playerId);
             return;
@@ -198,6 +209,19 @@ public class AscendHudManager {
         return playerId != null && Boolean.TRUE.equals(hudHidden.get(playerId));
     }
 
+    /**
+     * Loads HUD hidden state from AscendPlayerStore (DB-backed).
+     * Call on player join before the first updateFull.
+     */
+    public void loadHudHiddenFromStore(UUID playerId) {
+        if (playerId == null || playerStore == null) {
+            return;
+        }
+        if (playerStore.isHudHidden(playerId)) {
+            hudHidden.put(playerId, true);
+        }
+    }
+
     private void attachHiddenHud(PlayerRef playerRef, Player player) {
         if (playerRef == null || player == null) {
             return;
@@ -215,6 +239,38 @@ public class AscendHudManager {
         }
     }
 
+    public void setMineMode(UUID playerId, boolean enabled) {
+        AscendHud hud = ascendHuds.get(playerId);
+        if (hud == null) {
+            return;
+        }
+        if (enabled) {
+            mineModeActive.add(playerId);
+            // Hide economy elements, keep only the info panel (#RunHudRoot)
+            UICommandBuilder cb = new UICommandBuilder();
+            cb.set("#TopBar.Visible", false);
+            cb.set("#TopVoltHud.Visible", false);
+            cb.set("#RunTimerHud.Visible", false);
+            cb.set("#ElevationHud.Visible", false);
+            cb.set("#PrestigeHud.Visible", false);
+            cb.set("#AscensionHud.Visible", false);
+            cb.set("#AscensionQuestHud.Visible", false);
+            cb.set("#ToastContainer.Visible", false);
+            hud.update(false, cb);
+        } else {
+            mineModeActive.remove(playerId);
+            // Show economy elements again and reset cache so next updateFull refreshes all
+            UICommandBuilder cb = new UICommandBuilder();
+            cb.set("#TopBar.Visible", true);
+            cb.set("#TopVoltHud.Visible", true);
+            cb.set("#ToastContainer.Visible", true);
+            // ElevationHud, PrestigeHud, AscensionHud, AscensionQuestHud, RunTimerHud
+            // are conditionally visible — resetCache lets updateFull re-evaluate them
+            hud.update(false, cb);
+            hud.resetCache();
+        }
+    }
+
     public void removePlayer(UUID playerId) {
         ascendHuds.remove(playerId);
         hudAttached.remove(playerId);
@@ -222,6 +278,7 @@ public class AscendHudManager {
         hiddenHuds.remove(playerId);
         hudHidden.remove(playerId);
         previewPlayers.remove(playerId);
+        mineModeActive.remove(playerId);
         economyCache.remove(playerId);
         runnerBarCache.remove(playerId);
     }

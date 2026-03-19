@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.parkour.data.PlayerSettingsPersistence;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -205,6 +206,7 @@ public class PlayerMusicPage extends BaseParkourPage {
             return;
         }
         MUSIC_LABELS.put(playerId, label);
+        persistMusicSettings(playerId);
     }
 
     private static void storeMusicSelection(UUID playerId, MusicSelection selection) {
@@ -300,10 +302,12 @@ public class PlayerMusicPage extends BaseParkourPage {
 
     private static void toggleCheckpointSfx(UUID playerId) {
         toggleBooleanSetting(CHECKPOINT_SFX_ENABLED, playerId);
+        persistMusicSettings(playerId);
     }
 
     private static void toggleVictorySfx(UUID playerId) {
         toggleBooleanSetting(VICTORY_SFX_ENABLED, playerId);
+        persistMusicSettings(playerId);
     }
 
     private static void toggleBooleanSetting(ConcurrentHashMap<UUID, Boolean> map, UUID playerId) {
@@ -327,6 +331,56 @@ public class PlayerMusicPage extends BaseParkourPage {
 
     private static String getVictorySfxLabel(UUID playerId) {
         return (isVictorySfxEnabled(playerId) ? SFX_ENABLED_LABEL : SFX_DISABLED_LABEL) + " Victory SFX";
+    }
+
+    /**
+     * Loads music/SFX settings from DB and populates in-memory maps.
+     * Call on PlayerReadyEvent before applyStoredMusic.
+     */
+    public static void loadFromDb(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
+        if (persistence == null) {
+            return;
+        }
+        PlayerSettingsPersistence.PlayerSettings settings = persistence.loadPlayer(playerId);
+        if (settings.musicLabel != null) {
+            MUSIC_LABELS.put(playerId, settings.musicLabel);
+            MusicSelection selection = MusicSelection.fromLabel(settings.musicLabel);
+            if (selection != null) {
+                MUSIC_SELECTIONS.put(playerId, selection);
+            }
+        }
+        CHECKPOINT_SFX_ENABLED.put(playerId, settings.checkpointSfxEnabled);
+        VICTORY_SFX_ENABLED.put(playerId, settings.victorySfxEnabled);
+    }
+
+    public static void clearPlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        MUSIC_LABELS.remove(playerId);
+        MUSIC_SELECTIONS.remove(playerId);
+        CHECKPOINT_SFX_ENABLED.remove(playerId);
+        VICTORY_SFX_ENABLED.remove(playerId);
+    }
+
+    private static void persistMusicSettings(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
+        if (persistence == null) {
+            return;
+        }
+        // Load current DB state to preserve other fields, then overlay music/SFX
+        PlayerSettingsPersistence.PlayerSettings s = persistence.loadPlayer(playerId);
+        s.musicLabel = MUSIC_LABELS.get(playerId);
+        s.checkpointSfxEnabled = CHECKPOINT_SFX_ENABLED.getOrDefault(playerId, true);
+        s.victorySfxEnabled = VICTORY_SFX_ENABLED.getOrDefault(playerId, true);
+        persistence.savePlayer(playerId, s);
     }
 
     private enum MusicSelectionType {

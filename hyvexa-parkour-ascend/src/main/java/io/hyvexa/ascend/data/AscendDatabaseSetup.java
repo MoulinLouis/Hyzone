@@ -215,6 +215,9 @@ public final class AscendDatabaseSetup {
             // Auto-ascend toggle
             ensureAutoAscendColumn(conn);
 
+            // Player settings columns (hud_hidden, players_hidden)
+            ensurePlayerSettingsColumns(conn);
+
             // Summit XP column: BIGINT -> DOUBLE (uncapped progression)
             migrateSummitXpToDouble(conn);
 
@@ -1278,6 +1281,28 @@ public final class AscendDatabaseSetup {
                 LOGGER.atInfo().log("Added auto_ascend_enabled column to ascend_players");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add auto_ascend_enabled column: " + e.getMessage());
+            }
+        }
+    }
+
+    private static void ensurePlayerSettingsColumns(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (!columnExists(conn, "ascend_players", "hud_hidden")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN hud_hidden BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added hud_hidden column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add hud_hidden column: " + e.getMessage());
+            }
+        }
+        if (!columnExists(conn, "ascend_players", "players_hidden")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN players_hidden BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added players_hidden column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add players_hidden column: " + e.getMessage());
             }
         }
     }

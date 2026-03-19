@@ -14,6 +14,7 @@ import com.hypixel.hytale.protocol.MovementSettings;
 import com.hypixel.hytale.server.core.Message;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.ParkourConstants;
+import io.hyvexa.parkour.data.PlayerSettingsPersistence;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 
@@ -133,8 +134,10 @@ public class PlayerPerksManager {
             settings.strafeRunSpeedMultiplier *= clampedMultiplier;
             settings.forwardSprintSpeedMultiplier *= clampedMultiplier;
             vipSpeedMultiplier.put(playerId, clampedMultiplier);
+            persistVipSpeed(playerId, clampedMultiplier);
         } else {
             vipSpeedMultiplier.remove(playerId);
+            persistVipSpeed(playerId, VIP_SPEED_MIN_MULTIPLIER);
         }
         var packetHandler = playerRef.getPacketHandler();
         if (packetHandler != null) {
@@ -226,6 +229,36 @@ public class PlayerPerksManager {
         cachedNameplateTexts.put(playerId, text);
         Nameplate nameplate = store.ensureAndGetComponent(ref, Nameplate.getComponentType());
         nameplate.setText(text);
+    }
+
+    /**
+     * Loads VIP speed multiplier from DB. Only applies if player is VIP/Founder.
+     * Returns the stored multiplier (or 1.0 if none).
+     */
+    public float loadVipSpeedFromDb(UUID playerId) {
+        if (playerId == null) {
+            return VIP_SPEED_MIN_MULTIPLIER;
+        }
+        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
+        if (persistence == null) {
+            return VIP_SPEED_MIN_MULTIPLIER;
+        }
+        PlayerSettingsPersistence.PlayerSettings settings = persistence.loadPlayer(playerId);
+        if (settings.vipSpeedMultiplier > VIP_SPEED_MIN_MULTIPLIER) {
+            vipSpeedMultiplier.put(playerId, settings.vipSpeedMultiplier);
+        }
+        return settings.vipSpeedMultiplier;
+    }
+
+    private void persistVipSpeed(UUID playerId, float multiplier) {
+        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
+        if (persistence == null) {
+            return;
+        }
+        // Load current DB state to preserve other fields, then overlay vipSpeedMultiplier
+        PlayerSettingsPersistence.PlayerSettings s = persistence.loadPlayer(playerId);
+        s.vipSpeedMultiplier = multiplier;
+        persistence.savePlayer(playerId, s);
     }
 
     public void clearPlayer(UUID playerId) {

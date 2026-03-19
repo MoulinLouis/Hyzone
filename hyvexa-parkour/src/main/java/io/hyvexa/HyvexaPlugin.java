@@ -35,6 +35,7 @@ import io.hyvexa.core.vote.VoteStore;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ParkourDatabaseSetup;
+import io.hyvexa.parkour.data.PlayerSettingsPersistence;
 import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
@@ -106,6 +107,7 @@ import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 import io.hyvexa.parkour.system.RunTrackerTickSystem;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.manager.AnnouncementManager;
 import io.hyvexa.manager.ChatFormatter;
 import io.hyvexa.manager.CollisionManager;
@@ -208,6 +210,7 @@ public class HyvexaPlugin extends JavaPlugin {
             DatabaseManager.getInstance().initialize();
             LOGGER.atInfo().log("Database connection initialized");
             ParkourDatabaseSetup.ensureTables();
+            new PlayerSettingsPersistence().ensureTable();
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
@@ -395,7 +398,6 @@ public class HyvexaPlugin extends JavaPlugin {
                     runTracker.markPlayerReady(event.getPlayerRef());
                 }
                 inventorySyncManager.syncRunInventoryOnReady(event.getPlayerRef());
-                PlayerMusicPage.applyStoredMusic(event.getPlayerRef());
                 // Disable world map generation to save memory (parkour server doesn't need it)
                 worldMapManager.disableWorldMapForPlayer(event.getPlayerRef());
                 Ref<EntityStore> ref = event.getPlayerRef();
@@ -404,7 +406,25 @@ public class HyvexaPlugin extends JavaPlugin {
                     Player player = store.getComponent(ref, Player.getComponentType());
                     PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
                     cacheHudPlayer(playerRef);
+                    // Load persisted player settings from DB before applying them
+                    if (playerRef != null) {
+                        UUID pid = playerRef.getUuid();
+                        PlayerSettingsStore.loadFromDb(pid);
+                        PlayerMusicPage.loadFromDb(pid);
+                    }
+                    PlayerMusicPage.applyStoredMusic(event.getPlayerRef());
                     boolean parkourWorld = playerRef != null && shouldApplyParkourMode(playerRef, store);
+                    // Restore HUD hidden state and VIP speed from DB before first HUD attach
+                    if (parkourWorld && playerRef != null) {
+                        hudManager.loadHudHiddenFromDb(playerRef.getUuid());
+                        if (perksManager != null) {
+                            float storedSpeed = perksManager.loadVipSpeedFromDb(playerRef.getUuid());
+                            if (storedSpeed > 1.0f && progressStore != null
+                                    && (progressStore.isVip(playerRef.getUuid()) || progressStore.isFounder(playerRef.getUuid()))) {
+                                perksManager.applyVipSpeedMultiplier(ref, store, playerRef, storedSpeed, false);
+                            }
+                        }
+                    }
                     // Only modify HUD state on Parkour world to avoid racing MultipleHUD composite rebuild
                     if (parkourWorld && player != null && playerRef != null) {
                         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
@@ -482,6 +502,10 @@ public class HyvexaPlugin extends JavaPlugin {
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             cacheHudPlayer(playerRef);
+            if (playerRef != null) {
+                PlayerSettingsStore.loadFromDb(playerRef.getUuid());
+                PlayerMusicPage.loadFromDb(playerRef.getUuid());
+            }
             Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
             if (ref != null && ref.isValid()) {
                 Store<EntityStore> store = ref.getStore();

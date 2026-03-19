@@ -255,8 +255,8 @@ class AscendPlayerPersistence {
                 break_ascension_enabled,
                 auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
                 auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
-                transcendence_count, auto_ascend_enabled)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                transcendence_count, auto_ascend_enabled, hud_hidden, players_hidden)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 volt_mantissa = VALUES(volt_mantissa), volt_exp10 = VALUES(volt_exp10),
@@ -287,7 +287,9 @@ class AscendPlayerPersistence {
                 auto_summit_config = VALUES(auto_summit_config),
                 auto_summit_rotation_index = VALUES(auto_summit_rotation_index),
                 transcendence_count = VALUES(transcendence_count),
-                auto_ascend_enabled = VALUES(auto_ascend_enabled)
+                auto_ascend_enabled = VALUES(auto_ascend_enabled),
+                hud_hidden = VALUES(hud_hidden),
+                players_hidden = VALUES(players_hidden)
             """;
 
         String mapSql = """
@@ -426,6 +428,8 @@ class AscendPlayerPersistence {
                     playerStmt.setInt(32, progress.getAutoSummitRotationIndex());
                     playerStmt.setInt(33, progress.getTranscendenceCount());
                     playerStmt.setBoolean(34, progress.isAutoAscendEnabled());
+                    playerStmt.setBoolean(35, progress.isHudHidden());
+                    playerStmt.setBoolean(36, progress.isPlayersHidden());
                     playerStmt.addBatch();
 
                     // Save map progress
@@ -602,7 +606,8 @@ class AscendPlayerPersistence {
                    break_ascension_enabled,
                    auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
                    auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
-                   transcendence_count, auto_ascend_enabled
+                   transcendence_count, auto_ascend_enabled,
+                   hud_hidden, players_hidden
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -661,6 +666,8 @@ class AscendPlayerPersistence {
                         progress.setAutoEvolutionEnabled(safeGetBoolean(rs, "auto_evolution_enabled", false));
                         progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
                         progress.setHideOtherRunners(safeGetBoolean(rs, "hide_other_runners", false));
+                        progress.setHudHidden(safeGetBoolean(rs, "hud_hidden", false));
+                        progress.setPlayersHidden(safeGetBoolean(rs, "players_hidden", false));
                         progress.setBreakAscensionEnabled(safeGetBoolean(rs, "break_ascension_enabled", false));
 
                         progress.setAutoElevationEnabled(safeGetBoolean(rs, "auto_elevation_enabled", false));

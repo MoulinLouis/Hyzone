@@ -23,7 +23,6 @@ import io.hyvexa.common.visibility.EntityVisibilityManager;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendSettingsPage extends BaseAscendPage {
 
@@ -34,7 +33,6 @@ public class AscendSettingsPage extends BaseAscendPage {
     private static final String BUTTON_TOGGLE_RUNNERS = "ToggleRunners";
     private static final String BUTTON_HIDE_ALL = "HideAll";
     private static final String BUTTON_SHOW_ALL = "ShowAll";
-    private static final ConcurrentHashMap<UUID, Boolean> PLAYERS_HIDDEN = new ConcurrentHashMap<>();
 
     private final AscendPlayerStore playerStore;
     private final RobotManager robotManager;
@@ -127,6 +125,7 @@ public class AscendSettingsPage extends BaseAscendPage {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin != null && plugin.getHudManager() != null) {
                 plugin.getHudManager().hideHud(playerRef.getUuid());
+                playerStore.setHudHidden(playerRef.getUuid(), true);
                 player.sendMessage(Message.raw("HUD hidden."));
                 player.getPageManager().openCustomPage(ref, store,
                         new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
@@ -138,6 +137,7 @@ public class AscendSettingsPage extends BaseAscendPage {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin != null && plugin.getHudManager() != null) {
                 plugin.getHudManager().showHud(playerRef.getUuid());
+                playerStore.setHudHidden(playerRef.getUuid(), false);
                 player.sendMessage(Message.raw("HUD shown."));
                 player.getPageManager().openCustomPage(ref, store,
                         new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
@@ -152,7 +152,7 @@ public class AscendSettingsPage extends BaseAscendPage {
 
         if (BUTTON_HIDE_ALL.equals(data.getButton())) {
             hideAllPlayers(playerRef);
-            PLAYERS_HIDDEN.put(playerRef.getUuid(), true);
+            playerStore.setPlayersHidden(playerRef.getUuid(), true);
             player.sendMessage(Message.raw("All players hidden."));
             player.getPageManager().openCustomPage(ref, store,
                     new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
@@ -161,7 +161,7 @@ public class AscendSettingsPage extends BaseAscendPage {
 
         if (BUTTON_SHOW_ALL.equals(data.getButton())) {
             showAllPlayers(playerRef);
-            PLAYERS_HIDDEN.remove(playerRef.getUuid());
+            playerStore.setPlayersHidden(playerRef.getUuid(), false);
             player.sendMessage(Message.raw("All players shown."));
             player.getPageManager().openCustomPage(ref, store,
                     new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
@@ -201,13 +201,9 @@ public class AscendSettingsPage extends BaseAscendPage {
         cmd.set("#ShowHudIndicator.Visible", !hudHidden);
 
         // Player visibility indicators
-        boolean playersHidden = isPlayersHidden(playerId);
+        boolean playersHidden = playerId != null && playerStore.isPlayersHidden(playerId);
         cmd.set("#HidePlayersIndicator.Visible", playersHidden);
         cmd.set("#ShowPlayersIndicator.Visible", !playersHidden);
-    }
-
-    private static boolean isPlayersHidden(UUID playerId) {
-        return playerId != null && Boolean.TRUE.equals(PLAYERS_HIDDEN.get(playerId));
     }
 
     private void hideAllPlayers(@Nonnull PlayerRef viewerRef) {
@@ -251,6 +247,6 @@ public class AscendSettingsPage extends BaseAscendPage {
         if (playerId == null) {
             return;
         }
-        PLAYERS_HIDDEN.remove(playerId);
+        // No more static maps to clean — state is in AscendPlayerStore
     }
 }

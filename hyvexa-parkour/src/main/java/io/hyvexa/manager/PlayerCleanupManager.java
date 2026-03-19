@@ -7,6 +7,7 @@ import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.interaction.LeaveInteraction;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.ui.PlayerMusicPage;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import java.util.HashSet;
@@ -55,6 +56,7 @@ public class PlayerCleanupManager {
             playtimeManager.finishPlaytimeSession(playerRef);
         }
         PlayerSettingsStore.clearSession(playerId);
+        PlayerMusicPage.clearPlayer(playerId);
         LeaveInteraction.clearPendingLeave(playerId);
         CheckpointCommand.clearCheckpoint(playerId);
         EntityVisibilityManager.get().clearHidden(playerId);

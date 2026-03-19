@@ -412,7 +412,14 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         restoreToMine = mineProgress.isInMine();
                     }
 
+                    // Restore persisted HUD hidden state before first attach
+                    hudManager.loadHudHiddenFromStore(playerId);
                     hudManager.attach(playerRef, player);
+                    // Restore persisted players_hidden state
+                    if (playerStore != null && playerStore.isPlayersHidden(playerId)) {
+                        Universe.get().getWorlds().forEach((wId, w) ->
+                                w.execute(() -> applyHiddenStateForPlayer(playerRef, w)));
+                    }
                     if (restoreToMine) {
                         mineGateChecker.giveMineItems(player, playerId);
                         hudManager.setMineMode(playerId, true);
@@ -694,6 +701,31 @@ public class ParkourAscendPlugin extends JavaPlugin {
             return null;
         }
         return playerRefCache.get(playerId);
+    }
+
+    private void applyHiddenStateForPlayer(PlayerRef viewerRef, World world) {
+        if (viewerRef == null || viewerRef.getReference() == null || !viewerRef.getReference().isValid()) {
+            return;
+        }
+        for (PlayerRef targetRef : world.getPlayerRefs()) {
+            if (viewerRef.equals(targetRef)) {
+                continue;
+            }
+            Ref<EntityStore> targetEntityRef = targetRef.getReference();
+            if (targetEntityRef == null || !targetEntityRef.isValid()) {
+                continue;
+            }
+            Store<EntityStore> targetStore = targetEntityRef.getStore();
+            if (targetStore == null) {
+                continue;
+            }
+            com.hypixel.hytale.server.core.entity.UUIDComponent uuidComponent =
+                    targetStore.getComponent(targetEntityRef, com.hypixel.hytale.server.core.entity.UUIDComponent.getComponentType());
+            if (uuidComponent != null) {
+                io.hyvexa.common.visibility.EntityVisibilityManager.get().hideEntity(
+                        viewerRef.getUuid(), uuidComponent.getUuid());
+            }
+        }
     }
 
     private void cacheTickPlayer(PlayerRef playerRef) {
@@ -982,15 +1014,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
             MineChestInteraction.class, MineChestInteraction.CODEC);
         registry.register("Conveyor_Chest_Interaction",
             ConveyorChestInteraction.class, ConveyorChestInteraction.CODEC);
-        // Mine Select -> MineSelectPage
-        registry.register("Mine_Select_Interaction",
-            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> {
-                    MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
-                    return new io.hyvexa.ascend.mine.ui.MineSelectPage(playerRef, progress);
-                },
-                (plugin, player) -> plugin.getMinePlayerStore() != null && plugin.getMineConfigStore() != null,
-                true, true)));
         // Mine Sell -> MineSellPage
         registry.register("Mine_Sell_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
