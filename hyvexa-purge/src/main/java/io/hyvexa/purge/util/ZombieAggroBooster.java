@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeVariantConfig;
-import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 
 import java.util.List;
 import java.util.Map;
