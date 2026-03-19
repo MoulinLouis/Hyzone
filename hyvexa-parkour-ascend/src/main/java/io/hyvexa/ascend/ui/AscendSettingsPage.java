@@ -244,9 +244,6 @@ public class AscendSettingsPage extends BaseAscendPage {
     }
 
     public static void clearPlayer(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        // No more static maps to clean — state is in AscendPlayerStore
+        // State is in AscendPlayerStore (DB-backed), no in-memory cleanup needed
     }
 }

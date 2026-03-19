@@ -232,18 +232,13 @@ public class PlayerPerksManager {
     }
 
     /**
-     * Loads VIP speed multiplier from DB. Only applies if player is VIP/Founder.
+     * Restores VIP speed multiplier from a pre-loaded PlayerSettings into the cache.
      * Returns the stored multiplier (or 1.0 if none).
      */
-    public float loadVipSpeedFromDb(UUID playerId) {
-        if (playerId == null) {
+    public float loadVipSpeedFrom(UUID playerId, PlayerSettingsPersistence.PlayerSettings settings) {
+        if (playerId == null || settings == null) {
             return VIP_SPEED_MIN_MULTIPLIER;
         }
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
-            return VIP_SPEED_MIN_MULTIPLIER;
-        }
-        PlayerSettingsPersistence.PlayerSettings settings = persistence.loadPlayer(playerId);
         if (settings.vipSpeedMultiplier > VIP_SPEED_MIN_MULTIPLIER) {
             vipSpeedMultiplier.put(playerId, settings.vipSpeedMultiplier);
         }
@@ -255,10 +250,7 @@ public class PlayerPerksManager {
         if (persistence == null) {
             return;
         }
-        // Load current DB state to preserve other fields, then overlay vipSpeedMultiplier
-        PlayerSettingsPersistence.PlayerSettings s = persistence.loadPlayer(playerId);
-        s.vipSpeedMultiplier = multiplier;
-        persistence.savePlayer(playerId, s);
+        persistence.updateField(playerId, s -> s.vipSpeedMultiplier = multiplier);
     }
 
     public void clearPlayer(UUID playerId) {

@@ -17,18 +17,13 @@ public final class PlayerSettingsStore {
     }
 
     /**
-     * Loads player settings from DB and populates in-memory maps.
-     * Call on PlayerReadyEvent before other setup.
+     * Populates in-memory maps from a pre-loaded PlayerSettings.
+     * Call on PlayerReadyEvent with the result of a single persistence.loadPlayer() call.
      */
-    public static void loadFromDb(UUID playerId) {
-        if (playerId == null) {
+    public static void loadFrom(UUID playerId, PlayerSettingsPersistence.PlayerSettings settings) {
+        if (playerId == null || settings == null) {
             return;
         }
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
-            return;
-        }
-        PlayerSettingsPersistence.PlayerSettings settings = persistence.loadPlayer(playerId);
         RESET_ITEM_ENABLED.put(playerId, settings.resetItemEnabled);
         PLAYERS_HIDDEN.put(playerId, settings.playersHidden);
         DUEL_HIDE_OPPONENT.put(playerId, settings.duelHideOpponent);
@@ -45,7 +40,7 @@ public final class PlayerSettingsStore {
             return;
         }
         RESET_ITEM_ENABLED.put(playerId, enabled);
-        persistAsync(playerId);
+        persistField(playerId, s -> s.resetItemEnabled = enabled);
     }
 
     public static boolean toggleResetItemEnabled(UUID playerId) {
@@ -55,7 +50,7 @@ public final class PlayerSettingsStore {
         boolean enabled = RESET_ITEM_ENABLED.getOrDefault(playerId, true);
         boolean newValue = !enabled;
         RESET_ITEM_ENABLED.put(playerId, newValue);
-        persistAsync(playerId);
+        persistField(playerId, s -> s.resetItemEnabled = newValue);
         return newValue;
     }
 
@@ -68,7 +63,7 @@ public final class PlayerSettingsStore {
             return;
         }
         PLAYERS_HIDDEN.put(playerId, hidden);
-        persistAsync(playerId);
+        persistField(playerId, s -> s.playersHidden = hidden);
     }
 
     public static boolean isDuelOpponentHidden(UUID playerId) {
@@ -80,7 +75,7 @@ public final class PlayerSettingsStore {
             return;
         }
         DUEL_HIDE_OPPONENT.put(playerId, hidden);
-        persistAsync(playerId);
+        persistField(playerId, s -> s.duelHideOpponent = hidden);
     }
 
     public static boolean toggleDuelOpponentHidden(UUID playerId) {
@@ -90,7 +85,7 @@ public final class PlayerSettingsStore {
         boolean hidden = DUEL_HIDE_OPPONENT.getOrDefault(playerId, false);
         boolean newValue = !hidden;
         DUEL_HIDE_OPPONENT.put(playerId, newValue);
-        persistAsync(playerId);
+        persistField(playerId, s -> s.duelHideOpponent = newValue);
         return newValue;
     }
 
@@ -105,7 +100,7 @@ public final class PlayerSettingsStore {
         boolean visible = GHOST_VISIBLE.getOrDefault(playerId, true);
         boolean newValue = !visible;
         GHOST_VISIBLE.put(playerId, newValue);
-        persistAsync(playerId);
+        persistField(playerId, s -> s.ghostVisible = newValue);
         return newValue;
     }
 
@@ -120,7 +115,7 @@ public final class PlayerSettingsStore {
         boolean enabled = ADVANCED_HUD_ENABLED.getOrDefault(playerId, false);
         boolean newValue = !enabled;
         ADVANCED_HUD_ENABLED.put(playerId, newValue);
-        persistAsync(playerId);
+        persistField(playerId, s -> s.advancedHudEnabled = newValue);
         return newValue;
     }
 
@@ -139,49 +134,11 @@ public final class PlayerSettingsStore {
         clearSession(playerId);
     }
 
-    /**
-     * Builds a PlayerSettings snapshot from current in-memory state and persists it.
-     * Includes music/SFX state from PlayerMusicPage to avoid overwriting those fields.
-     */
-    private static void persistAsync(UUID playerId) {
+    private static void persistField(UUID playerId, java.util.function.Consumer<PlayerSettingsPersistence.PlayerSettings> updater) {
         PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
         if (persistence == null) {
             return;
         }
-        PlayerSettingsPersistence.PlayerSettings settings = buildFullSettings(playerId);
-        persistence.savePlayer(playerId, settings);
-    }
-
-    /**
-     * Builds a PlayerSettings POJO from all current in-memory maps.
-     * Only includes the 5 settings managed by this store — caller must fill in remaining fields.
-     */
-    public static PlayerSettingsPersistence.PlayerSettings buildCurrentSettings(UUID playerId) {
-        PlayerSettingsPersistence.PlayerSettings s = new PlayerSettingsPersistence.PlayerSettings();
-        s.resetItemEnabled = RESET_ITEM_ENABLED.getOrDefault(playerId, true);
-        s.playersHidden = PLAYERS_HIDDEN.getOrDefault(playerId, false);
-        s.duelHideOpponent = DUEL_HIDE_OPPONENT.getOrDefault(playerId, false);
-        s.ghostVisible = GHOST_VISIBLE.getOrDefault(playerId, true);
-        s.advancedHudEnabled = ADVANCED_HUD_ENABLED.getOrDefault(playerId, false);
-        return s;
-    }
-
-    /**
-     * Reads current DB row, then overlays in-memory toggle state.
-     * Preserves music/SFX/HUD/VIP fields not managed by this store.
-     */
-    private static PlayerSettingsPersistence.PlayerSettings buildFullSettings(UUID playerId) {
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        // Start from DB state to preserve fields managed by other stores
-        PlayerSettingsPersistence.PlayerSettings s = persistence != null
-                ? persistence.loadPlayer(playerId)
-                : new PlayerSettingsPersistence.PlayerSettings();
-        // Overlay the 5 fields managed by this store
-        s.resetItemEnabled = RESET_ITEM_ENABLED.getOrDefault(playerId, true);
-        s.playersHidden = PLAYERS_HIDDEN.getOrDefault(playerId, false);
-        s.duelHideOpponent = DUEL_HIDE_OPPONENT.getOrDefault(playerId, false);
-        s.ghostVisible = GHOST_VISIBLE.getOrDefault(playerId, true);
-        s.advancedHudEnabled = ADVANCED_HUD_ENABLED.getOrDefault(playerId, false);
-        return s;
+        persistence.updateField(playerId, updater);
     }
 }

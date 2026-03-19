@@ -334,18 +334,13 @@ public class PlayerMusicPage extends BaseParkourPage {
     }
 
     /**
-     * Loads music/SFX settings from DB and populates in-memory maps.
-     * Call on PlayerReadyEvent before applyStoredMusic.
+     * Populates in-memory maps from a pre-loaded PlayerSettings.
+     * Call on PlayerReadyEvent with the result of a single persistence.loadPlayer() call.
      */
-    public static void loadFromDb(UUID playerId) {
-        if (playerId == null) {
+    public static void loadFrom(UUID playerId, PlayerSettingsPersistence.PlayerSettings settings) {
+        if (playerId == null || settings == null) {
             return;
         }
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
-            return;
-        }
-        PlayerSettingsPersistence.PlayerSettings settings = persistence.loadPlayer(playerId);
         if (settings.musicLabel != null) {
             MUSIC_LABELS.put(playerId, settings.musicLabel);
             MusicSelection selection = MusicSelection.fromLabel(settings.musicLabel);
@@ -375,12 +370,11 @@ public class PlayerMusicPage extends BaseParkourPage {
         if (persistence == null) {
             return;
         }
-        // Load current DB state to preserve other fields, then overlay music/SFX
-        PlayerSettingsPersistence.PlayerSettings s = persistence.loadPlayer(playerId);
-        s.musicLabel = MUSIC_LABELS.get(playerId);
-        s.checkpointSfxEnabled = CHECKPOINT_SFX_ENABLED.getOrDefault(playerId, true);
-        s.victorySfxEnabled = VICTORY_SFX_ENABLED.getOrDefault(playerId, true);
-        persistence.savePlayer(playerId, s);
+        persistence.updateField(playerId, s -> {
+            s.musicLabel = MUSIC_LABELS.get(playerId);
+            s.checkpointSfxEnabled = CHECKPOINT_SFX_ENABLED.getOrDefault(playerId, true);
+            s.victorySfxEnabled = VICTORY_SFX_ENABLED.getOrDefault(playerId, true);
+        });
     }
 
     private enum MusicSelectionType {

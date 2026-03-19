@@ -406,19 +406,24 @@ public class HyvexaPlugin extends JavaPlugin {
                     Player player = store.getComponent(ref, Player.getComponentType());
                     PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
                     cacheHudPlayer(playerRef);
-                    // Load persisted player settings from DB before applying them
+                    // Single DB load, distribute to all stores
+                    PlayerSettingsPersistence.PlayerSettings savedSettings = null;
                     if (playerRef != null) {
                         UUID pid = playerRef.getUuid();
-                        PlayerSettingsStore.loadFromDb(pid);
-                        PlayerMusicPage.loadFromDb(pid);
+                        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
+                        savedSettings = persistence != null ? persistence.loadPlayer(pid) : null;
+                        if (savedSettings != null) {
+                            PlayerSettingsStore.loadFrom(pid, savedSettings);
+                            PlayerMusicPage.loadFrom(pid, savedSettings);
+                        }
                     }
                     PlayerMusicPage.applyStoredMusic(event.getPlayerRef());
                     boolean parkourWorld = playerRef != null && shouldApplyParkourMode(playerRef, store);
                     // Restore HUD hidden state and VIP speed from DB before first HUD attach
-                    if (parkourWorld && playerRef != null) {
-                        hudManager.loadHudHiddenFromDb(playerRef.getUuid());
+                    if (parkourWorld && playerRef != null && savedSettings != null) {
+                        hudManager.loadHudHiddenFrom(playerRef.getUuid(), savedSettings);
                         if (perksManager != null) {
-                            float storedSpeed = perksManager.loadVipSpeedFromDb(playerRef.getUuid());
+                            float storedSpeed = perksManager.loadVipSpeedFrom(playerRef.getUuid(), savedSettings);
                             if (storedSpeed > 1.0f && progressStore != null
                                     && (progressStore.isVip(playerRef.getUuid()) || progressStore.isFounder(playerRef.getUuid()))) {
                                 perksManager.applyVipSpeedMultiplier(ref, store, playerRef, storedSpeed, false);
@@ -503,8 +508,13 @@ public class HyvexaPlugin extends JavaPlugin {
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             cacheHudPlayer(playerRef);
             if (playerRef != null) {
-                PlayerSettingsStore.loadFromDb(playerRef.getUuid());
-                PlayerMusicPage.loadFromDb(playerRef.getUuid());
+                PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
+                PlayerSettingsPersistence.PlayerSettings ps = persistence != null
+                        ? persistence.loadPlayer(playerRef.getUuid()) : null;
+                if (ps != null) {
+                    PlayerSettingsStore.loadFrom(playerRef.getUuid(), ps);
+                    PlayerMusicPage.loadFrom(playerRef.getUuid(), ps);
+                }
             }
             Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
             if (ref != null && ref.isValid()) {

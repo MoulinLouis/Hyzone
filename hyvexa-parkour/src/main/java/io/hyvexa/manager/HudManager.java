@@ -255,18 +255,13 @@ public class HudManager {
     }
 
     /**
-     * Loads HUD hidden state from DB and pre-populates the in-memory map.
+     * Pre-populates in-memory HUD hidden state from a pre-loaded PlayerSettings.
      * Call on PlayerReadyEvent before ensureRunHud.
      */
-    public void loadHudHiddenFromDb(UUID playerId) {
-        if (playerId == null) {
+    public void loadHudHiddenFrom(UUID playerId, PlayerSettingsPersistence.PlayerSettings settings) {
+        if (playerId == null || settings == null) {
             return;
         }
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
-            return;
-        }
-        PlayerSettingsPersistence.PlayerSettings settings = persistence.loadPlayer(playerId);
         if (settings.hudHidden) {
             getState(playerId).hidden = true;
         }
@@ -692,9 +687,6 @@ public class HudManager {
         if (persistence == null) {
             return;
         }
-        // Load current DB state to preserve other fields, then overlay hudHidden
-        PlayerSettingsPersistence.PlayerSettings s = persistence.loadPlayer(playerId);
-        s.hudHidden = hidden;
-        persistence.savePlayer(playerId, s);
+        persistence.updateField(playerId, s -> s.hudHidden = hidden);
     }
 }

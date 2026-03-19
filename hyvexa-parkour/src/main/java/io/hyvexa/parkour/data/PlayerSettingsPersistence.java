@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Persists player settings (toggles, music, HUD, speed) to MySQL.
@@ -155,6 +156,17 @@ public class PlayerSettingsPersistence {
         } catch (SQLException e) {
             LOGGER.atWarning().log("Failed to save player settings for " + playerId + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Loads the current DB row, applies the updater, and saves back.
+     * Centralizes the read-modify-write pattern so callers don't need to
+     * load/save manually or worry about overwriting fields from other stores.
+     */
+    public void updateField(@Nonnull UUID playerId, @Nonnull Consumer<PlayerSettings> updater) {
+        PlayerSettings s = loadPlayer(playerId);
+        updater.accept(s);
+        savePlayer(playerId, s);
     }
 
     public static class PlayerSettings {
