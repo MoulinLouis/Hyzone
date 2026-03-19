@@ -6,10 +6,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.common.WorldConstants;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeUpgradeOffer;
@@ -103,7 +101,7 @@ class WaveProgressionController {
 
     private void showUpgradePopup(PurgeSession session) {
         PurgeUpgradeManager um = registry.getUpgradeManager();
-        World world = getPurgeWorld();
+        World world = waveManager.getPurgeWorld();
         if (world == null) {
             session.setState(SessionState.INTERMISSION);
             startIntermission(session);
@@ -194,7 +192,7 @@ class WaveProgressionController {
         registry.getSessionManager().stopSessionById(session.getSessionId(), "victory");
     }
 
-    public void startIntermission(PurgeSession session) {
+    void startIntermission(PurgeSession session) {
         synchronized (session) {
             if (session.getState() == SessionState.ENDED) {
                 return;
@@ -231,11 +229,4 @@ class WaveProgressionController {
         }
     }
 
-    private World getPurgeWorld() {
-        try {
-            return Universe.get().getWorld(WorldConstants.WORLD_PURGE);
-        } catch (Exception e) {
-            return null;
-        }
-    }
 }
