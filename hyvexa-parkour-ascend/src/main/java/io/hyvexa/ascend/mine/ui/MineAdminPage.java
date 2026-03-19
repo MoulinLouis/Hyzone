@@ -38,6 +38,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
     private String mineOrder = "0";
     private String mineCost = "";
     private String selectedMineId = "";
+    private int selectedSlotIndex = 0;
 
     public MineAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MineData.CODEC);
@@ -105,6 +106,12 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             case MineData.BUTTON_GATE -> handleGate(ref, store);
             case MineData.BUTTON_BLOCK_CONFIG -> handleBlockConfig(ref, store);
             case MineData.BUTTON_SET_MINER_POS -> handleSetMinerPos(ref, store);
+            case MineData.BUTTON_SLOT_NEXT -> handleSlotNext(ref, store);
+            case MineData.BUTTON_SLOT_PREV -> handleSlotPrev(ref, store);
+            case MineData.BUTTON_ADD_SLOT_WP -> handleAddSlotWp(ref, store);
+            case MineData.BUTTON_ADD_MAIN_WP -> handleAddMainWp(ref, store);
+            case MineData.BUTTON_CLEAR_SLOT_WP -> handleClearSlotWp(ref, store);
+            case MineData.BUTTON_CLEAR_MAIN_WP -> handleClearMainWp(ref, store);
             case MineData.BUTTON_BACK -> handleBack(ref, store);
             default -> {
             }
@@ -292,15 +299,82 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         int blockY = (int) Math.floor(pos.getY());
         int blockZ = (int) Math.floor(pos.getZ() + Math.cos(yawRad));
 
-        MinerSlot slot = new MinerSlot(mine.getId());
+        MinerSlot slot = mineConfigStore.getMinerSlot(mine.getId(), selectedSlotIndex);
+        if (slot == null) {
+            slot = new MinerSlot(mine.getId(), selectedSlotIndex);
+        }
         slot.setNpcPosition(pos.getX(), pos.getY(), pos.getZ(), yaw);
         slot.setBlockPosition(blockX, blockY, blockZ);
         mineConfigStore.saveMinerSlot(slot);
 
-        player.sendMessage(Message.raw("Miner position set for mine: " + mine.getId()));
+        player.sendMessage(Message.raw("Miner pos set: " + mine.getId() + " slot " + selectedSlotIndex));
         player.sendMessage(Message.raw("  NPC: " + String.format("%.1f, %.1f, %.1f yaw=%.1f",
                 pos.getX(), pos.getY(), pos.getZ(), yaw)));
         player.sendMessage(Message.raw("  Block: " + blockX + ", " + blockY + ", " + blockZ));
+    }
+
+    private void handleSlotNext(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        selectedSlotIndex = (selectedSlotIndex + 1) % 5;
+        if (player != null) {
+            player.sendMessage(Message.raw("Slot -> " + selectedSlotIndex));
+        }
+        sendRefresh(ref, store);
+    }
+
+    private void handleSlotPrev(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        selectedSlotIndex = (selectedSlotIndex + 4) % 5;
+        if (player != null) {
+            player.sendMessage(Message.raw("Slot -> " + selectedSlotIndex));
+        }
+        sendRefresh(ref, store);
+    }
+
+    private void handleAddSlotWp(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) { player.sendMessage(Message.raw("Unable to read position.")); return; }
+        Vector3d pos = transform.getPosition();
+        mineConfigStore.addConveyorWaypoint(mine.getId(), selectedSlotIndex, pos.getX(), pos.getY(), pos.getZ());
+        int count = mineConfigStore.getSlotWaypoints(mine.getId(), selectedSlotIndex).size();
+        player.sendMessage(Message.raw("+Slot WP #" + count + " for slot " + selectedSlotIndex
+            + ": " + String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ())));
+    }
+
+    private void handleAddMainWp(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) { player.sendMessage(Message.raw("Unable to read position.")); return; }
+        Vector3d pos = transform.getPosition();
+        mineConfigStore.addConveyorWaypoint(mine.getId(), -1, pos.getX(), pos.getY(), pos.getZ());
+        int count = mineConfigStore.getMainLineWaypoints(mine.getId()).size();
+        player.sendMessage(Message.raw("+Main WP #" + count
+            + ": " + String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ())));
+    }
+
+    private void handleClearSlotWp(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        mineConfigStore.clearConveyorWaypoints(mine.getId(), selectedSlotIndex);
+        player.sendMessage(Message.raw("Cleared slot " + selectedSlotIndex + " waypoints for " + mine.getId()));
+    }
+
+    private void handleClearMainWp(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        mineConfigStore.clearConveyorWaypoints(mine.getId(), -1);
+        player.sendMessage(Message.raw("Cleared main line waypoints for " + mine.getId()));
     }
 
     private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -365,6 +439,18 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BLOCK_CONFIG), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetMinerPosButton",
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SET_MINER_POS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SlotNextButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SLOT_NEXT), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SlotPrevButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SLOT_PREV), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddSlotWpButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_ADD_SLOT_WP), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddMainWpButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_ADD_MAIN_WP), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearSlotWpButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_CLEAR_SLOT_WP), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearMainWpButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_CLEAR_MAIN_WP), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BACK), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
@@ -403,6 +489,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         }
         commandBuilder.set("#SelectedMineText.Text", selectedText);
         commandBuilder.set("#MineInfoText.Text", mineInfo);
+        commandBuilder.set("#SlotLabel.Text", "Slot: " + selectedSlotIndex);
     }
 
     private void buildMineList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
@@ -460,6 +547,12 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         static final String BUTTON_GATE = "Gate";
         static final String BUTTON_BLOCK_CONFIG = "BlockConfig";
         static final String BUTTON_SET_MINER_POS = "SetMinerPos";
+        static final String BUTTON_SLOT_NEXT = "SlotNext";
+        static final String BUTTON_SLOT_PREV = "SlotPrev";
+        static final String BUTTON_ADD_SLOT_WP = "AddSlotWp";
+        static final String BUTTON_ADD_MAIN_WP = "AddMainWp";
+        static final String BUTTON_CLEAR_SLOT_WP = "ClearSlotWp";
+        static final String BUTTON_CLEAR_MAIN_WP = "ClearMainWp";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 

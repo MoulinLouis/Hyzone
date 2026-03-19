@@ -25,6 +25,10 @@ public class MinePlayerProgress {
     private volatile int comboCount;
     private volatile long lastBreakTimeMs;
 
+    // Conveyor buffer (transient, not persisted)
+    private final Map<String, Integer> conveyorBuffer = new HashMap<>();
+    private int conveyorBufferCount;
+
     public MinePlayerProgress(UUID playerId) {
         this.playerId = playerId;
     }
@@ -330,13 +334,27 @@ public class MinePlayerProgress {
         public void setStars(int s) { stars = s; }
     }
 
-    public MinerProgress getMinerState(String mineId) {
-        return minerStates.computeIfAbsent(mineId, k -> new MinerProgress());
+    private static String minerKey(String mineId, int slotIndex) {
+        return mineId + ":" + slotIndex;
     }
 
-    public synchronized MinerProgressSnapshot getMinerSnapshot(String mineId) {
-        MinerProgress state = getMinerState(mineId);
+    public MinerProgress getMinerState(String mineId, int slotIndex) {
+        return minerStates.computeIfAbsent(minerKey(mineId, slotIndex), k -> new MinerProgress());
+    }
+
+    /** Backward-compat: slot 0. */
+    public MinerProgress getMinerState(String mineId) {
+        return getMinerState(mineId, 0);
+    }
+
+    public synchronized MinerProgressSnapshot getMinerSnapshot(String mineId, int slotIndex) {
+        MinerProgress state = getMinerState(mineId, slotIndex);
         return new MinerProgressSnapshot(state.isHasMiner(), state.getSpeedLevel(), state.getStars());
+    }
+
+    /** Backward-compat: slot 0. */
+    public synchronized MinerProgressSnapshot getMinerSnapshot(String mineId) {
+        return getMinerSnapshot(mineId, 0);
     }
 
     public synchronized Map<String, MinerProgressSnapshot> getMinerStates() {
@@ -352,15 +370,20 @@ public class MinePlayerProgress {
         return copy;
     }
 
-    public synchronized void loadMinerState(String mineId, boolean hasMiner, int speedLevel, int stars) {
-        MinerProgress state = getMinerState(mineId);
+    public synchronized void loadMinerState(String mineId, int slotIndex, boolean hasMiner, int speedLevel, int stars) {
+        MinerProgress state = getMinerState(mineId, slotIndex);
         state.setHasMiner(hasMiner);
         state.setSpeedLevel(speedLevel);
         state.setStars(stars);
     }
 
-    public synchronized MinerPurchaseResult purchaseMiner(String mineId, long cost) {
-        MinerProgress state = getMinerState(mineId);
+    /** Backward-compat: slot 0. */
+    public synchronized void loadMinerState(String mineId, boolean hasMiner, int speedLevel, int stars) {
+        loadMinerState(mineId, 0, hasMiner, speedLevel, stars);
+    }
+
+    public synchronized MinerPurchaseResult purchaseMiner(String mineId, int slotIndex, long cost) {
+        MinerProgress state = getMinerState(mineId, slotIndex);
         if (state.isHasMiner()) {
             return MinerPurchaseResult.ALREADY_OWNED;
         }
@@ -371,8 +394,13 @@ public class MinePlayerProgress {
         return MinerPurchaseResult.SUCCESS;
     }
 
-    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(String mineId, long cost, int maxSpeedLevel) {
-        MinerProgress state = getMinerState(mineId);
+    /** Backward-compat: slot 0. */
+    public synchronized MinerPurchaseResult purchaseMiner(String mineId, long cost) {
+        return purchaseMiner(mineId, 0, cost);
+    }
+
+    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(String mineId, int slotIndex, long cost, int maxSpeedLevel) {
+        MinerProgress state = getMinerState(mineId, slotIndex);
         if (!state.isHasMiner()) {
             return MinerSpeedUpgradeResult.NO_MINER;
         }
@@ -386,8 +414,13 @@ public class MinePlayerProgress {
         return MinerSpeedUpgradeResult.SUCCESS;
     }
 
-    public synchronized MinerEvolutionResult evolveMiner(String mineId, long cost, int maxSpeedLevel, int maxStars) {
-        MinerProgress state = getMinerState(mineId);
+    /** Backward-compat: slot 0. */
+    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(String mineId, long cost, int maxSpeedLevel) {
+        return upgradeMinerSpeed(mineId, 0, cost, maxSpeedLevel);
+    }
+
+    public synchronized MinerEvolutionResult evolveMiner(String mineId, int slotIndex, long cost, int maxSpeedLevel, int maxStars) {
+        MinerProgress state = getMinerState(mineId, slotIndex);
         if (!state.isHasMiner()) {
             return MinerEvolutionResult.NO_MINER;
         }
@@ -403,6 +436,11 @@ public class MinePlayerProgress {
         state.setSpeedLevel(0);
         state.setStars(state.getStars() + 1);
         return MinerEvolutionResult.SUCCESS;
+    }
+
+    /** Backward-compat: slot 0. */
+    public synchronized MinerEvolutionResult evolveMiner(String mineId, long cost, int maxSpeedLevel, int maxStars) {
+        return evolveMiner(mineId, 0, cost, maxSpeedLevel, maxStars);
     }
 
     public synchronized boolean unlockMine(String mineId, BigNumber cost) {
@@ -425,6 +463,50 @@ public class MinePlayerProgress {
             inMine,
             pickaxeTier
         );
+    }
+
+    // --- Conveyor buffer ---
+
+    /** Add block to conveyor buffer (no capacity limit). */
+    public synchronized void addToConveyorBuffer(String blockTypeId, int amount) {
+        if (blockTypeId == null || amount <= 0) return;
+        conveyorBuffer.merge(blockTypeId, amount, Integer::sum);
+        conveyorBufferCount += amount;
+    }
+
+    /**
+     * Transfer conveyor buffer to mine inventory, respecting bag capacity.
+     * Returns total items transferred.
+     */
+    public synchronized int transferBufferToInventory() {
+        if (conveyorBuffer.isEmpty()) return 0;
+        int transferred = 0;
+        var it = conveyorBuffer.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            int space = getBagCapacity() - inventoryCount;
+            if (space <= 0) break;
+            int toMove = Math.min(entry.getValue(), space);
+            inventory.merge(entry.getKey(), toMove, Integer::sum);
+            inventoryCount += toMove;
+            transferred += toMove;
+            int remaining = entry.getValue() - toMove;
+            if (remaining <= 0) {
+                it.remove();
+            } else {
+                entry.setValue(remaining);
+            }
+        }
+        conveyorBufferCount -= transferred;
+        return transferred;
+    }
+
+    public synchronized int getConveyorBufferCount() {
+        return conveyorBufferCount;
+    }
+
+    public synchronized boolean hasConveyorItems() {
+        return conveyorBufferCount > 0;
     }
 
     public enum MinerPurchaseResult {

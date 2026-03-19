@@ -383,6 +383,25 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            ensureConveyorColumns(conn);
+
+            // Conveyor waypoints table (per-slot and main line)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_conveyor_waypoints (
+                    mine_id VARCHAR(32) NOT NULL,
+                    slot_index INT NOT NULL,
+                    waypoint_order INT NOT NULL,
+                    x DOUBLE NOT NULL,
+                    y DOUBLE NOT NULL,
+                    z DOUBLE NOT NULL,
+                    PRIMARY KEY (mine_id, slot_index, waypoint_order),
+                    FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            // Multi-slot migrations (add slot_index to miner slots and player miners)
+            ensureMultiSlotMigration(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
@@ -1279,6 +1298,25 @@ public final class AscendDatabaseSetup {
         }
     }
 
+    private static void ensureConveyorColumns(Connection conn) {
+        if (conn == null) return;
+        String[][] columns = {
+            {"conveyor_end_x", "DOUBLE NOT NULL DEFAULT 0"},
+            {"conveyor_end_y", "DOUBLE NOT NULL DEFAULT 0"},
+            {"conveyor_end_z", "DOUBLE NOT NULL DEFAULT 0"},
+            {"conveyor_speed", "DOUBLE NOT NULL DEFAULT 2.0"},
+        };
+        for (String[] col : columns) {
+            if (!columnExists(conn, "mine_miner_slots", col[0])) {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate("ALTER TABLE mine_miner_slots ADD COLUMN " + col[0] + " " + col[1]);
+                } catch (SQLException e) {
+                    LOGGER.atSevere().log("Failed to add " + col[0] + " column: " + e.getMessage());
+                }
+            }
+        }
+    }
+
     private static void ensureMineInMineColumn(Connection conn) {
         if (conn == null) return;
         if (!columnExists(conn, "mine_players", "in_mine")) {
@@ -1338,6 +1376,36 @@ public final class AscendDatabaseSetup {
             }
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to add block_hp_json columns: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Add slot_index column to mine_miner_slots and mine_player_miners, then migrate PKs.
+     * Existing rows get slot_index=0 via DEFAULT.
+     */
+    private static void ensureMultiSlotMigration(Connection conn) {
+        if (conn == null) return;
+
+        // mine_miner_slots: add slot_index + migrate PK
+        if (!columnExists(conn, "mine_miner_slots", "slot_index")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE mine_miner_slots ADD COLUMN slot_index INT NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE mine_miner_slots DROP PRIMARY KEY, ADD PRIMARY KEY (mine_id, slot_index)");
+                LOGGER.atInfo().log("Added slot_index to mine_miner_slots and migrated PK");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add slot_index to mine_miner_slots: " + e.getMessage());
+            }
+        }
+
+        // mine_player_miners: add slot_index + migrate PK
+        if (!columnExists(conn, "mine_player_miners", "slot_index")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE mine_player_miners ADD COLUMN slot_index INT NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE mine_player_miners DROP PRIMARY KEY, ADD PRIMARY KEY (player_uuid, mine_id, slot_index)");
+                LOGGER.atInfo().log("Added slot_index to mine_player_miners and migrated PK");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add slot_index to mine_player_miners: " + e.getMessage());
+            }
         }
     }
 

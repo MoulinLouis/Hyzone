@@ -44,8 +44,11 @@ public class MineConfigStore {
     // blockTypeId -> hp (global, not per-zone)
     private final Map<String, Integer> blockHpMap = new ConcurrentHashMap<>();
 
-    // mineId -> MinerSlot (admin-configured miner NPC + block positions)
-    private final Map<String, MinerSlot> minerSlots = new ConcurrentHashMap<>();
+    // mineId -> [slot0, slot1, ...] ordered by slotIndex
+    private final Map<String, List<MinerSlot>> minerSlots = new ConcurrentHashMap<>();
+
+    // mineId -> { slotIndex -> [[x,y,z], ...] }  slotIndex=-1 for main line
+    private final Map<String, Map<Integer, List<double[]>>> conveyorWaypoints = new ConcurrentHashMap<>();
 
     private volatile GateConfig entryGate;
     private volatile GateConfig exitGate;
@@ -73,6 +76,7 @@ public class MineConfigStore {
                 loadBlockPrices(conn);
                 loadBlockHp(conn);
                 loadMinerSlots(conn);
+                loadConveyorWaypoints(conn);
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to load MineConfigStore: " + e.getMessage());
             }
@@ -689,40 +693,86 @@ public class MineConfigStore {
 
     private void loadMinerSlots(Connection conn) throws SQLException {
         minerSlots.clear();
-        String sql = "SELECT mine_id, npc_x, npc_y, npc_z, npc_yaw, block_x, block_y, block_z, interval_seconds FROM mine_miner_slots";
+        String sql = "SELECT mine_id, slot_index, npc_x, npc_y, npc_z, npc_yaw, block_x, block_y, block_z, " +
+            "interval_seconds, conveyor_speed FROM mine_miner_slots ORDER BY mine_id, slot_index";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String mineId = rs.getString("mine_id");
-                    MinerSlot slot = new MinerSlot(mineId);
+                    int slotIndex = rs.getInt("slot_index");
+                    MinerSlot slot = new MinerSlot(mineId, slotIndex);
                     slot.setNpcPosition(rs.getDouble("npc_x"), rs.getDouble("npc_y"), rs.getDouble("npc_z"), rs.getFloat("npc_yaw"));
                     slot.setBlockPosition(rs.getInt("block_x"), rs.getInt("block_y"), rs.getInt("block_z"));
                     slot.setIntervalSeconds(rs.getDouble("interval_seconds"));
-                    minerSlots.put(mineId, slot);
+                    slot.setConveyorSpeed(rs.getDouble("conveyor_speed"));
+                    minerSlots.computeIfAbsent(mineId, k -> new ArrayList<>()).add(slot);
                 }
             }
         }
     }
 
+    private void loadConveyorWaypoints(Connection conn) throws SQLException {
+        conveyorWaypoints.clear();
+        String sql = "SELECT mine_id, slot_index, waypoint_order, x, y, z " +
+            "FROM mine_conveyor_waypoints ORDER BY mine_id, slot_index, waypoint_order";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String mineId = rs.getString("mine_id");
+                    int slotIndex = rs.getInt("slot_index");
+                    double x = rs.getDouble("x");
+                    double y = rs.getDouble("y");
+                    double z = rs.getDouble("z");
+                    conveyorWaypoints
+                        .computeIfAbsent(mineId, k -> new ConcurrentHashMap<>())
+                        .computeIfAbsent(slotIndex, k -> new ArrayList<>())
+                        .add(new double[]{x, y, z});
+                }
+            }
+        }
+    }
+
+    /** Get a specific slot for a mine. */
+    public MinerSlot getMinerSlot(String mineId, int slotIndex) {
+        List<MinerSlot> slots = minerSlots.get(mineId);
+        if (slots == null) return null;
+        for (MinerSlot slot : slots) {
+            if (slot.getSlotIndex() == slotIndex) return slot;
+        }
+        return null;
+    }
+
+    /** Backward-compat: returns slot 0. */
     public MinerSlot getMinerSlot(String mineId) {
-        return minerSlots.get(mineId);
+        return getMinerSlot(mineId, 0);
+    }
+
+    /** All configured slots for a mine. */
+    public List<MinerSlot> getMinerSlots(String mineId) {
+        List<MinerSlot> slots = minerSlots.get(mineId);
+        return slots != null ? Collections.unmodifiableList(slots) : Collections.emptyList();
     }
 
     public void saveMinerSlot(MinerSlot slot) {
         if (slot == null || slot.getMineId() == null) return;
 
-        minerSlots.put(slot.getMineId(), slot);
+        List<MinerSlot> slots = minerSlots.computeIfAbsent(slot.getMineId(), k -> new ArrayList<>());
+        slots.removeIf(s -> s.getSlotIndex() == slot.getSlotIndex());
+        slots.add(slot);
+        slots.sort(Comparator.comparingInt(MinerSlot::getSlotIndex));
 
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
         String sql = """
-            INSERT INTO mine_miner_slots (mine_id, npc_x, npc_y, npc_z, npc_yaw, block_x, block_y, block_z, interval_seconds)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO mine_miner_slots (mine_id, slot_index, npc_x, npc_y, npc_z, npc_yaw,
+                block_x, block_y, block_z, interval_seconds, conveyor_speed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 npc_x = VALUES(npc_x), npc_y = VALUES(npc_y), npc_z = VALUES(npc_z), npc_yaw = VALUES(npc_yaw),
                 block_x = VALUES(block_x), block_y = VALUES(block_y), block_z = VALUES(block_z),
-                interval_seconds = VALUES(interval_seconds)
+                interval_seconds = VALUES(interval_seconds), conveyor_speed = VALUES(conveyor_speed)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -731,6 +781,7 @@ public class MineConfigStore {
                 DatabaseManager.applyQueryTimeout(stmt);
                 int i = 1;
                 stmt.setString(i++, slot.getMineId());
+                stmt.setInt(i++, slot.getSlotIndex());
                 stmt.setDouble(i++, slot.getNpcX());
                 stmt.setDouble(i++, slot.getNpcY());
                 stmt.setDouble(i++, slot.getNpcZ());
@@ -738,11 +789,84 @@ public class MineConfigStore {
                 stmt.setInt(i++, slot.getBlockX());
                 stmt.setInt(i++, slot.getBlockY());
                 stmt.setInt(i++, slot.getBlockZ());
-                stmt.setDouble(i, slot.getIntervalSeconds());
+                stmt.setDouble(i++, slot.getIntervalSeconds());
+                stmt.setDouble(i, slot.getConveyorSpeed());
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to save miner slot: " + e.getMessage());
+        }
+    }
+
+    // --- Conveyor Waypoints ---
+
+    public List<double[]> getSlotWaypoints(String mineId, int slotIndex) {
+        Map<Integer, List<double[]>> mineWps = conveyorWaypoints.get(mineId);
+        if (mineWps == null) return Collections.emptyList();
+        List<double[]> wps = mineWps.get(slotIndex);
+        return wps != null ? Collections.unmodifiableList(wps) : Collections.emptyList();
+    }
+
+    public List<double[]> getMainLineWaypoints(String mineId) {
+        return getSlotWaypoints(mineId, -1);
+    }
+
+    public double getConveyorSpeed(String mineId) {
+        MinerSlot slot = getMinerSlot(mineId, 0);
+        return slot != null ? slot.getConveyorSpeed() : 2.0;
+    }
+
+    /** Conveyor is configured if main line has >= 1 waypoint. */
+    public boolean isConveyorConfigured(String mineId) {
+        return !getMainLineWaypoints(mineId).isEmpty();
+    }
+
+    public void addConveyorWaypoint(String mineId, int slotIndex, double x, double y, double z) {
+        List<double[]> wps = conveyorWaypoints
+            .computeIfAbsent(mineId, k -> new ConcurrentHashMap<>())
+            .computeIfAbsent(slotIndex, k -> new ArrayList<>());
+        int order = wps.size();
+        wps.add(new double[]{x, y, z});
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = "INSERT INTO mine_conveyor_waypoints (mine_id, slot_index, waypoint_order, x, y, z) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, mineId);
+                stmt.setInt(2, slotIndex);
+                stmt.setInt(3, order);
+                stmt.setDouble(4, x);
+                stmt.setDouble(5, y);
+                stmt.setDouble(6, z);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to add conveyor waypoint: " + e.getMessage());
+        }
+    }
+
+    public void clearConveyorWaypoints(String mineId, int slotIndex) {
+        Map<Integer, List<double[]>> mineWps = conveyorWaypoints.get(mineId);
+        if (mineWps != null) {
+            mineWps.remove(slotIndex);
+        }
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = "DELETE FROM mine_conveyor_waypoints WHERE mine_id = ? AND slot_index = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, mineId);
+                stmt.setInt(2, slotIndex);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to clear conveyor waypoints: " + e.getMessage());
         }
     }
 

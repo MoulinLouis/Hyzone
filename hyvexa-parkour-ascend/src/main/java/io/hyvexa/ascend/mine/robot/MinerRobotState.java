@@ -11,6 +11,7 @@ public class MinerRobotState {
 
     private final UUID ownerId;
     private final String mineId;
+    private final int slotIndex;
     private Ref<EntityStore> entityRef;
     private UUID entityUuid;
     private String worldName;
@@ -25,8 +26,13 @@ public class MinerRobotState {
     private volatile int stars = 0;
 
     public MinerRobotState(UUID ownerId, String mineId) {
+        this(ownerId, mineId, 0);
+    }
+
+    public MinerRobotState(UUID ownerId, String mineId, int slotIndex) {
         this.ownerId = ownerId;
         this.mineId = mineId;
+        this.slotIndex = slotIndex;
     }
 
     // --- Static cost/rate methods (used by MinePage.java for UI) ---
@@ -59,6 +65,7 @@ public class MinerRobotState {
 
     public UUID getOwnerId() { return ownerId; }
     public String getMineId() { return mineId; }
+    public int getSlotIndex() { return slotIndex; }
     public Ref<EntityStore> getEntityRef() { return entityRef; }
     public void setEntityRef(Ref<EntityStore> entityRef) { this.entityRef = entityRef; }
     public UUID getEntityUuid() { return entityUuid; }

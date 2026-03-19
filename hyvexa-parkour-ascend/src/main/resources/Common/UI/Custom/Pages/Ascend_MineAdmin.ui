@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #MineAdminWindow {
-    Anchor: (Width: 620, Height: 580);
+    Anchor: (Width: 620, Height: 620);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -315,86 +315,86 @@ $C.@PageOverlay {
         }
       }
 
-      // Sub-page buttons
+      // Sub-page buttons (row 1)
       Group #SubPages {
         Anchor: (Left: 0, Right: 0, Top: 6, Height: 34);
         LayoutMode: Left;
 
         TextButton #ZonesButton {
-          Anchor: (Width: 80, Height: 32);
+          Anchor: (Width: 66, Height: 32);
           Text: "Zones";
           Style: TextButtonStyle(
             Default: (
               Background: #ffffff(0.06),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #ffffff(0.1),
-              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #ffffff(0.04),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
         }
 
         TextButton #GateButton {
-          Anchor: (Left: 6, Width: 80, Height: 32);
+          Anchor: (Left: 4, Width: 56, Height: 32);
           Text: "Gate";
           Style: TextButtonStyle(
             Default: (
               Background: #ffffff(0.06),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #ffffff(0.1),
-              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #ffffff(0.04),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
         }
 
         TextButton #BlockConfigButton {
-          Anchor: (Left: 6, Width: 100, Height: 32);
-          Text: "Block Config";
+          Anchor: (Left: 4, Width: 80, Height: 32);
+          Text: "Blocks";
           Style: TextButtonStyle(
             Default: (
               Background: #ffffff(0.06),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #ffffff(0.1),
-              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #ffffff(0.04),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
         }
 
         TextButton #SetMinerPosButton {
-          Anchor: (Left: 6, Width: 90, Height: 32);
+          Anchor: (Left: 4, Width: 80, Height: 32);
           Text: "Miner Pos";
           Style: TextButtonStyle(
             Default: (
               Background: #ffffff(0.06),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #ffffff(0.1),
-              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #ffffff(0.04),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
@@ -403,20 +403,152 @@ $C.@PageOverlay {
         Group { FlexWeight: 1; }
 
         TextButton #BackButton {
-          Anchor: (Width: 72, Height: 32);
+          Anchor: (Width: 60, Height: 32);
           Text: "Back";
           Style: TextButtonStyle(
             Default: (
               Background: #ffffff(0.06),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #ffffff(0.1),
-              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #ffffff(0.04),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // Conveyor waypoint controls (row 2)
+      Group #WaypointRow {
+        Anchor: (Left: 0, Right: 0, Top: 4, Height: 34);
+        LayoutMode: Left;
+
+        TextButton #SlotPrevButton {
+          Anchor: (Width: 40, Height: 32);
+          Text: "S-";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Label #SlotLabel {
+          Anchor: (Left: 4, Width: 52, Height: 32);
+          Style: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "Slot: 0";
+        }
+
+        TextButton #SlotNextButton {
+          Anchor: (Left: 4, Width: 40, Height: 32);
+          Text: "S+";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        TextButton #AddSlotWpButton {
+          Anchor: (Left: 8, Width: 72, Height: 32);
+          Text: "+Slot WP";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #3b82f6(0.4),
+              LabelStyle: (FontSize: 12, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #3b82f6(0.6),
+              LabelStyle: (FontSize: 12, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #3b82f6(0.3),
+              LabelStyle: (FontSize: 12, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        TextButton #AddMainWpButton {
+          Anchor: (Left: 4, Width: 80, Height: 32);
+          Text: "+Main WP";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #f59e0b(0.4),
+              LabelStyle: (FontSize: 12, TextColor: #fcd34d, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #f59e0b(0.6),
+              LabelStyle: (FontSize: 12, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #f59e0b(0.3),
+              LabelStyle: (FontSize: 12, TextColor: #fcd34d, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        TextButton #ClearSlotWpButton {
+          Anchor: (Left: 4, Width: 68, Height: 32);
+          Text: "CLR Slot";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #dc2626(0.3),
+              LabelStyle: (FontSize: 12, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #dc2626(0.5),
+              LabelStyle: (FontSize: 12, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #dc2626(0.2),
+              LabelStyle: (FontSize: 12, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        TextButton #ClearMainWpButton {
+          Anchor: (Left: 4, Width: 72, Height: 32);
+          Text: "CLR Main";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #dc2626(0.3),
+              LabelStyle: (FontSize: 12, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #dc2626(0.5),
+              LabelStyle: (FontSize: 12, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #dc2626(0.2),
+              LabelStyle: (FontSize: 12, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );

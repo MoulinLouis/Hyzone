@@ -140,14 +140,15 @@ public class MinePlayerStore {
                 }
             }
 
-            // Load miner states
+            // Load miner states (with slot_index)
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT mine_id, has_miner, speed_level, stars FROM mine_player_miners WHERE player_uuid = ?")) {
+                    "SELECT mine_id, slot_index, has_miner, speed_level, stars FROM mine_player_miners WHERE player_uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         progress.loadMinerState(
                             rs.getString("mine_id"),
+                            rs.getInt("slot_index"),
                             rs.getBoolean("has_miner"),
                             rs.getInt("speed_level"),
                             rs.getInt("stars")
@@ -274,23 +275,40 @@ public class MinePlayerStore {
                     }
                 }
 
-                // Save miner states
+                // Save miner states (compound key "mineId:slotIndex")
                 Map<String, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.minerStates();
                 if (!minerStates.isEmpty()) {
                     try (PreparedStatement ps = conn.prepareStatement("""
-                            INSERT INTO mine_player_miners (player_uuid, mine_id, has_miner, speed_level, stars)
-                            VALUES (?, ?, ?, ?, ?)
+                            INSERT INTO mine_player_miners (player_uuid, mine_id, slot_index, has_miner, speed_level, stars)
+                            VALUES (?, ?, ?, ?, ?, ?)
                             ON DUPLICATE KEY UPDATE has_miner = VALUES(has_miner),
                                                     speed_level = VALUES(speed_level),
                                                     stars = VALUES(stars)
                             """)) {
                         for (var entry : minerStates.entrySet()) {
+                            String compoundKey = entry.getKey();
+                            int colonIdx = compoundKey.lastIndexOf(':');
+                            String mineId;
+                            int slotIndex;
+                            if (colonIdx > 0) {
+                                mineId = compoundKey.substring(0, colonIdx);
+                                try {
+                                    slotIndex = Integer.parseInt(compoundKey.substring(colonIdx + 1));
+                                } catch (NumberFormatException e) {
+                                    mineId = compoundKey;
+                                    slotIndex = 0;
+                                }
+                            } else {
+                                mineId = compoundKey;
+                                slotIndex = 0;
+                            }
                             ps.setString(1, playerId.toString());
-                            ps.setString(2, entry.getKey());
+                            ps.setString(2, mineId);
+                            ps.setInt(3, slotIndex);
                             MinePlayerProgress.MinerProgressSnapshot state = entry.getValue();
-                            ps.setBoolean(3, state.hasMiner());
-                            ps.setInt(4, state.speedLevel());
-                            ps.setInt(5, state.stars());
+                            ps.setBoolean(4, state.hasMiner());
+                            ps.setInt(5, state.speedLevel());
+                            ps.setInt(6, state.stars());
                             ps.addBatch();
                         }
                         ps.executeBatch();

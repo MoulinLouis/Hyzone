@@ -2,19 +2,27 @@ package io.hyvexa.ascend.mine.data;
 
 public class MinerSlot {
     private final String mineId;
+    private final int slotIndex;
     private double npcX, npcY, npcZ;
     private float npcYaw;
     private int blockX, blockY, blockZ;
     private double intervalSeconds = 5.0;
     private boolean configured;
+    private double conveyorSpeed = 2.0; // blocks per second
 
     public MinerSlot(String mineId) {
+        this(mineId, 0);
+    }
+
+    public MinerSlot(String mineId, int slotIndex) {
         this.mineId = mineId;
+        this.slotIndex = slotIndex;
     }
 
     public boolean isConfigured() { return configured; }
 
     public String getMineId() { return mineId; }
+    public int getSlotIndex() { return slotIndex; }
     public double getNpcX() { return npcX; }
     public double getNpcY() { return npcY; }
     public double getNpcZ() { return npcZ; }
@@ -39,4 +47,7 @@ public class MinerSlot {
     }
 
     public void setIntervalSeconds(double intervalSeconds) { this.intervalSeconds = intervalSeconds; }
+
+    public double getConveyorSpeed() { return conveyorSpeed; }
+    public void setConveyorSpeed(double speed) { this.conveyorSpeed = speed; }
 }

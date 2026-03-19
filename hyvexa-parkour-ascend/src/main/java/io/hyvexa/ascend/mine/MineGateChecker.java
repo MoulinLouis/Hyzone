@@ -23,7 +23,6 @@ import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
-import io.hyvexa.ascend.mine.data.MinerSlot;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.util.InventoryUtils;
@@ -106,12 +105,13 @@ public class MineGateChecker {
         if (progress == null || !progress.hasConveyorItems()) return;
 
         for (Mine mine : configStore.listMinesSorted()) {
-            MinerSlot slot = configStore.getMinerSlot(mine.getId());
-            if (slot == null || !slot.isConveyorConfigured()) continue;
+            java.util.List<double[]> mainWps = configStore.getMainLineWaypoints(mine.getId());
+            if (mainWps == null || mainWps.isEmpty()) continue;
 
-            double dx = x - slot.getConveyorEndX();
-            double dy = y - slot.getConveyorEndY();
-            double dz = z - slot.getConveyorEndZ();
+            double[] endpoint = mainWps.get(mainWps.size() - 1);
+            double dx = x - endpoint[0];
+            double dy = y - endpoint[1];
+            double dz = z - endpoint[2];
             double distSq = dx * dx + dy * dy + dz * dz;
 
             if (distSq <= COLLECTION_RADIUS_SQ) {
@@ -320,7 +320,9 @@ public class MineGateChecker {
         if (plugin == null) {
             return;
         }
-        // Keep the Ascend HUD visible — only add the mine HUD alongside it
+        // Keep the Ascend HUD visible but hide economy elements
+        plugin.getHudManager().setMineMode(playerId, true);
+        // Add the mine HUD alongside it
         MineHudManager mineHud = plugin.getMineHudManager();
         if (mineHud != null && playerRef != null) {
             mineHud.attachHud(playerRef, player);
@@ -335,11 +337,12 @@ public class MineGateChecker {
         if (plugin == null) {
             return;
         }
-        // Ascend HUD was never removed — only detach the mine HUD
+        // Detach the mine HUD and restore full Ascend HUD
         MineHudManager mineHud = plugin.getMineHudManager();
         if (mineHud != null) {
             mineHud.detachHud(playerId, playerRef, player);
         }
+        plugin.getHudManager().setMineMode(playerId, false);
     }
 
     public void applyHasteSpeed(MinePlayerProgress progress, Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
