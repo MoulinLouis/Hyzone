@@ -134,21 +134,6 @@ public class RunStateStore {
         }
     }
 
-    public void cleanupStale(long maxAgeMs) {
-        long threshold = System.currentTimeMillis() - maxAgeMs;
-        String sql = "DELETE FROM saved_run_state WHERE saved_at < ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setLong(1, threshold);
-            int deleted = stmt.executeUpdate();
-            if (deleted > 0) {
-                LOGGER.atInfo().log("Cleaned up " + deleted + " stale saved run state(s)");
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to cleanup stale run states");
-        }
-    }
-
     // --- Encoding/decoding ---
 
     private static String encodeCheckpoints(Set<Integer> checkpoints) {

@@ -274,12 +274,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.runStateStore = new RunStateStore();
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
-        // Clean up abandoned saved runs older than 30 days
-        try {
-            this.runStateStore.cleanupStale(TimeUnit.DAYS.toMillis(30));
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to cleanup stale saved run states");
-        }
+        // Saved runs persist indefinitely — only invalidated when the map changes
+        // or is deleted (FK CASCADE). No time-based cleanup.
         // JVM shutdown hook — fires on kill/Ctrl+C even when plugin shutdown() is skipped
         this.shutdownHook = new Thread(() -> {
             try {
@@ -440,8 +436,7 @@ public class HyvexaPlugin extends JavaPlugin {
                                     + " (" + saved.elapsedMs() + "ms, cp " + saved.lastCheckpointIndex() + ")");
                             io.hyvexa.parkour.data.Map savedMap = mapStore.getMapReadonly(saved.mapId());
                             if (savedMap == null || !savedMap.isActive()
-                                    || savedMap.getUpdatedAt() != saved.mapUpdatedAt()
-                                    || System.currentTimeMillis() - saved.savedAt() > TimeUnit.DAYS.toMillis(30)) {
+                                    || savedMap.getUpdatedAt() != saved.mapUpdatedAt()) {
                                 LOGGER.atInfo().log("Discarding stale saved run for " + pid
                                         + " (map=" + (savedMap != null) + ", active=" + (savedMap != null && savedMap.isActive())
                                         + ", updatedMatch=" + (savedMap != null && savedMap.getUpdatedAt() == saved.mapUpdatedAt())

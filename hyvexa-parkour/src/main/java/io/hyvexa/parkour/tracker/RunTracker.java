@@ -245,15 +245,11 @@ public class RunTracker {
         idleFalls.keySet().removeIf(id -> !onlinePlayers.contains(id));
         readyPlayers.removeIf(id -> !onlinePlayers.contains(id));
         lastSeenAt.keySet().removeIf(id -> onlinePlayers.contains(id));
+        // Only clean up in-memory state — the DB saved_run_state must remain
+        // intact so the player can restore their run on reconnect (even days later).
         activeRuns.entrySet().removeIf(entry -> {
             UUID id = entry.getKey();
-            if (!onlinePlayers.contains(id) && isExpiredOfflineRun(id, now)) {
-                if (runStateStore != null) {
-                    runStateStore.deleteAsync(id);
-                }
-                return true;
-            }
-            return false;
+            return !onlinePlayers.contains(id) && isExpiredOfflineRun(id, now);
         });
     }
 
