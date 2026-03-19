@@ -6,6 +6,12 @@
 
 **Architecture:** Each mine's `MinerSlot` is extended with a conveyor endpoint + speed. When the miner produces a block, an item entity spawns at the block position and is tick-moved along a straight path to the endpoint. On arrival the entity is despawned and the block is added to a transient conveyor buffer in `MinePlayerProgress`. A proximity check in the existing player tick transfers the buffer to the player's mine inventory when they enter the collection zone. If no conveyor is configured, the mine falls back to direct-to-inventory behavior (v2 default).
 
+**Key design decisions (from Codex review):**
+1. **Buffer on arrival, not spawn** — loot is only credited when the item entity reaches the endpoint. If the entity fails to spawn or is cleaned up mid-transit, no phantom loot is awarded. This prevents camping the collection point.
+2. **Conveyor items scoped by player UUID** — not by worldName. All players share the same world; cleanup per-player prevents one player's disconnect from wiping another player's conveyor items.
+3. **No bag-full stop in conveyor mode** — the miner keeps producing to the buffer indefinitely. The bag capacity only limits the transfer from buffer to inventory at the collection point. This lets AFK players accumulate loot.
+4. **Admin commands mutate existing MinerSlot** — `handleSetMinerPos` and `handleSetConveyorEnd` both load the existing slot before saving, preventing one from wiping the other's config.
+
 **Tech Stack:** Hytale server API (`ItemComponent.generateItemDrop`, `TransformComponent.setPosition`, `Velocity.setZero`, `EntityScaleComponent`), MySQL persistence for config, existing MineRobotManager tick loop.
 
 ---
@@ -236,7 +242,23 @@ TextButton #SetConvEndButton {
 }
 ```
 
-**Step 6:** Commit: `feat(ascend): add admin button to set conveyor endpoint`
+**Step 6:** Fix the existing `handleSetMinerPos` method to preserve conveyor config.
+
+Currently `handleSetMinerPos` creates a brand-new `MinerSlot(mine.getId())` on every call, which would wipe conveyor fields. Change it to load-then-mutate:
+
+```java
+// In handleSetMinerPos, replace:
+//   MinerSlot slot = new MinerSlot(mine.getId());
+// With:
+MinerSlot slot = mineConfigStore.getMinerSlot(mine.getId());
+if (slot == null) {
+    slot = new MinerSlot(mine.getId());
+}
+```
+
+This ensures clicking "Miner Pos" after "Conv End" doesn't reset the conveyor config.
+
+**Step 7:** Commit: `feat(ascend): add admin button to set conveyor endpoint`
 
 ---
 
@@ -253,8 +275,13 @@ package io.hyvexa.ascend.mine.robot;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import java.util.UUID;
+
 public class ConveyorItemState {
+    private final UUID ownerId;            // player who owns this loot
+    private final String mineId;           // which mine produced this
     private final String blockType;        // for loot tracking
+    private final String worldName;        // world this entity lives in
     private final long spawnTimeMs;        // when this item was spawned
     private final long travelTimeMs;       // total travel time in ms
     private Ref<EntityStore> entityRef;    // the item entity
@@ -263,9 +290,13 @@ public class ConveyorItemState {
     private final double startX, startY, startZ;
     private final double endX, endY, endZ;
 
-    public ConveyorItemState(String blockType, long travelTimeMs,
+    public ConveyorItemState(UUID ownerId, String mineId, String worldName,
+                              String blockType, long travelTimeMs,
                               double startX, double startY, double startZ,
                               double endX, double endY, double endZ) {
+        this.ownerId = ownerId;
+        this.mineId = mineId;
+        this.worldName = worldName;
         this.blockType = blockType;
         this.spawnTimeMs = System.currentTimeMillis();
         this.travelTimeMs = travelTimeMs;
@@ -292,6 +323,9 @@ public class ConveyorItemState {
     public double getY(long now) { double t = Math.min(1.0, getProgress(now)); return startY + (endY - startY) * t; }
     public double getZ(long now) { double t = Math.min(1.0, getProgress(now)); return startZ + (endZ - startZ) * t; }
 
+    public UUID getOwnerId() { return ownerId; }
+    public String getMineId() { return mineId; }
+    public String getWorldName() { return worldName; }
     public String getBlockType() { return blockType; }
     public Ref<EntityStore> getEntityRef() { return entityRef; }
     public void setEntityRef(Ref<EntityStore> entityRef) { this.entityRef = entityRef; }
@@ -385,8 +419,8 @@ import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 New field alongside the existing `miners` map:
 
 ```java
-// Active conveyor items per world (all items share one list per world for tick efficiency)
-private final Map<String, List<ConveyorItemState>> conveyorItems = new ConcurrentHashMap<>();
+// Active conveyor items per player (scoped by ownerId to prevent cross-player cleanup)
+private final Map<UUID, List<ConveyorItemState>> conveyorItems = new ConcurrentHashMap<>();
 
 // Reflection fields for item pickup/merge delay (set once in start())
 private volatile java.lang.reflect.Field pickupDelayField;
@@ -408,26 +442,49 @@ try {
 }
 ```
 
-### Step 4: Modify `tickMiner` — branch on conveyor config
+### Step 4: Modify `tickMiner` — conveyor-aware bag check + loot branch
 
-Replace lines 608-612 (the direct inventory add) with a conveyor-aware branch:
+**4a. Fix the bag-full stop condition.** The existing check at line 572-584 pauses the miner when inventory is full. In conveyor mode, the miner should keep producing (items go to buffer, not inventory). Replace:
+
+```java
+// --- Full bag: pause mining in DIRECT mode only ---
+MinePlayerProgress progress = playerStore.getPlayer(state.getOwnerId());
+boolean hasConveyor = slot.isConveyorConfigured();
+if (!hasConveyor && (progress == null || progress.isInventoryFull())) {
+    // Direct mode: pause when bag is full (unchanged behavior)
+    if (!state.isStopped()) {
+        state.setStopped(true);
+        if (state.isAnimating()) {
+            stopMineAnimation(state);
+            state.setAnimating(false);
+        }
+    }
+    if (now - state.getLastBreakTime() >= STOPPED_RECHECK_MS) {
+        state.setLastBreakTime(now);
+    }
+    return;
+}
+if (progress == null) return; // safety: no progress at all
+```
+
+**4b. Replace lines 608-612 (the direct inventory add)** with a conveyor-aware branch:
 
 ```java
 // Loot = the block currently displayed
 String lootType = state.getCurrentBlockType();
 if (lootType != null) {
-    MinerSlot convSlot = configStore.getMinerSlot(mineId);
-    if (convSlot != null && convSlot.isConveyorConfigured()) {
-        // Conveyor mode: buffer + spawn visual item
-        progress.addToConveyorBuffer(lootType, 1);
-        spawnConveyorItem(state, convSlot, lootType);
+    if (slot.isConveyorConfigured()) {
+        // Conveyor mode: spawn visual item (buffer on ARRIVAL, not here)
+        spawnConveyorItem(state, slot, lootType);
     } else {
-        // Direct mode (no conveyor): add straight to inventory
+        // Direct mode: add straight to inventory
         progress.addToInventory(lootType, 1);
+        playerStore.markDirty(state.getOwnerId());
     }
-    playerStore.markDirty(state.getOwnerId());
 }
 ```
+
+Note: in conveyor mode, `addToConveyorBuffer` is called in `tickConveyorItems` when the item arrives, NOT here. This prevents camping exploits and phantom loot.
 
 ### Step 5: Add `spawnConveyorItem` method
 
@@ -449,10 +506,13 @@ private void spawnConveyorItem(MinerRobotState minerState, MinerSlot slot, Strin
     long travelTimeMs = (long) (distance / slot.getConveyorSpeed() * 1000);
     if (travelTimeMs < 100) travelTimeMs = 100; // minimum 100ms
 
-    ConveyorItemState itemState = new ConveyorItemState(blockType, travelTimeMs,
-            startX, startY, startZ, endX, endY, endZ);
+    UUID ownerId = minerState.getOwnerId();
+    String mineId = minerState.getMineId();
 
-    conveyorItems.computeIfAbsent(worldName, k -> new ArrayList<>()).add(itemState);
+    ConveyorItemState itemState = new ConveyorItemState(ownerId, mineId, worldName,
+            blockType, travelTimeMs, startX, startY, startZ, endX, endY, endZ);
+
+    conveyorItems.computeIfAbsent(ownerId, k -> new ArrayList<>()).add(itemState);
 
     world.execute(() -> {
         try {
@@ -499,21 +559,39 @@ Implement:
 ```java
 private void tickConveyorItems(long now) {
     for (var entry : conveyorItems.entrySet()) {
-        String worldName = entry.getKey();
+        UUID ownerId = entry.getKey();
         List<ConveyorItemState> items = entry.getValue();
         if (items.isEmpty()) continue;
-
-        World world = Universe.get().getWorld(worldName);
-        if (world == null) continue;
 
         var it = items.iterator();
         while (it.hasNext()) {
             ConveyorItemState item = it.next();
             Ref<EntityStore> ref = item.getEntityRef();
+            String worldName = item.getWorldName();
+            World world = worldName != null ? Universe.get().getWorld(worldName) : null;
 
             if (item.isComplete(now)) {
-                // Arrived at endpoint — despawn entity
-                if (ref != null && ref.isValid()) {
+                // Arrived at endpoint — add loot to buffer NOW (not at spawn)
+                String blockType = item.getBlockType();
+                if (blockType != null) {
+                    MinePlayerProgress progress = playerStore.getPlayer(ownerId);
+                    if (progress != null) {
+                        progress.addToConveyorBuffer(blockType, 1);
+                        playerStore.markDirty(ownerId);
+                    }
+
+                    // Track achievement
+                    ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+                    if (plugin != null) {
+                        MineAchievementTracker tracker = plugin.getMineAchievementTracker();
+                        if (tracker != null) {
+                            tracker.incrementBlocksMined(ownerId, 1);
+                        }
+                    }
+                }
+
+                // Despawn entity
+                if (ref != null && ref.isValid() && world != null) {
                     world.execute(() -> {
                         if (ref.isValid()) {
                             Store<EntityStore> store = ref.getStore();
@@ -526,7 +604,7 @@ private void tickConveyorItems(long now) {
             }
 
             // Move entity along path
-            if (ref != null && ref.isValid()) {
+            if (ref != null && ref.isValid() && world != null) {
                 double x = item.getX(now);
                 double y = item.getY(now);
                 double z = item.getZ(now);
@@ -559,31 +637,30 @@ private void tickConveyorItems(long now) {
 }
 ```
 
+**Note:** Achievement tracking moved here (from `tickMiner`) so it only fires on successful delivery, consistent with "buffer on arrival" design.
+
 ### Step 7: Cleanup conveyor items on player leave / miner despawn
 
 In `onPlayerLeave`, after the existing loop that calls `despawnNpc` and `clearMinerBlock`:
 
 ```java
-// Also cleanup any conveyor items for this player's miners
-for (MinerRobotState state : playerMiners.values()) {
-    cleanupConveyorItems(state.getWorldName());
-}
+// Cleanup this player's conveyor items (scoped by ownerId — doesn't affect other players)
+cleanupConveyorItems(playerId);
 ```
 
 Add helper:
 
 ```java
-private void cleanupConveyorItems(String worldName) {
-    List<ConveyorItemState> items = conveyorItems.get(worldName);
+private void cleanupConveyorItems(UUID ownerId) {
+    List<ConveyorItemState> items = conveyorItems.remove(ownerId);
     if (items == null || items.isEmpty()) return;
 
-    World world = worldName != null ? Universe.get().getWorld(worldName) : null;
-
-    var it = items.iterator();
-    while (it.hasNext()) {
-        ConveyorItemState item = it.next();
+    for (ConveyorItemState item : items) {
         Ref<EntityStore> ref = item.getEntityRef();
-        if (ref != null && ref.isValid() && world != null) {
+        if (ref == null || !ref.isValid()) continue;
+        String worldName = item.getWorldName();
+        World world = worldName != null ? Universe.get().getWorld(worldName) : null;
+        if (world != null) {
             world.execute(() -> {
                 if (ref.isValid()) {
                     Store<EntityStore> store = ref.getStore();
@@ -591,12 +668,19 @@ private void cleanupConveyorItems(String worldName) {
                 }
             });
         }
-        it.remove();
     }
 }
 ```
 
-Also call `cleanupConveyorItems` in `despawnAll()` and `despawnMiner()`.
+Also call `cleanupConveyorItems(ownerId)` in `despawnMiner()` (after the existing block cleanup).
+
+In `despawnAll()`, iterate all player entries and call `cleanupConveyorItems(ownerId)` for each, OR simply clear all:
+```java
+// In despawnAll(), after the NPC despawn loop:
+for (UUID ownerId : new ArrayList<>(conveyorItems.keySet())) {
+    cleanupConveyorItems(ownerId);
+}
+```
 
 ### Step 8: Commit
 
@@ -708,7 +792,7 @@ import io.hyvexa.ascend.mine.data.Mine;
    - [ ] Items appear in mine inventory
    - [ ] Bag capacity is respected (if bag is full, uncollected items stay in buffer)
    - [ ] Walking away and back collects newly arrived items
-6. **No conveyor configured test:** Remove conveyor endpoint from a mine → verify miner adds directly to inventory (fallback behavior)
+6. **No conveyor configured test:** To test fallback, set conveyor_end_x/y/z to 0 in DB (`UPDATE mine_miner_slots SET conveyor_end_x=0, conveyor_end_y=0, conveyor_end_z=0 WHERE mine_id='...'`) then restart or reload config → verify miner adds directly to inventory (a "Clear Conv" admin button is future work)
 7. Disconnect while items are in transit → verify:
    - [ ] All item entities despawn (no floating items)
    - [ ] Reconnect → miner respawns, conveyor works again
