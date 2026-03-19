@@ -73,10 +73,22 @@ public enum MineUpgradeType {
             case BAG_CAPACITY -> "Increases how many blocks your bag can hold.";
             case MOMENTUM -> "Build a combo while mining to deal more damage.";
             case FORTUNE -> "Chance to get bonus drops from mined blocks.";
-            case JACKHAMMER -> "Breaks a column of blocks below the one you mine.";
-            case STOMP -> "Breaks a layer of blocks around your feet on landing.";
-            case BLAST -> "Breaks blocks in a sphere around your target.";
+            case JACKHAMMER -> "Chance to break a column of blocks below.";
+            case STOMP -> "Chance to break a layer of blocks around you.";
+            case BLAST -> "Chance to break blocks in a sphere.";
             case HASTE -> "Increases your mining speed permanently.";
         };
+    }
+
+    /**
+     * Returns the proc chance (0.0 to 1.0) for AoE upgrades (JACKHAMMER, STOMP, BLAST).
+     * Linear interpolation from ~0.33% at level 1 to ~8.33% at max level.
+     * Returns 0 for level 0, and -1 for non-AoE upgrades.
+     */
+    public double getChance(int level) {
+        if (this != JACKHAMMER && this != STOMP && this != BLAST) return -1;
+        if (level <= 0) return 0.0;
+        if (level >= maxLevel) return 0.25 / 3.0;
+        return (1.0 + (level - 1) * (24.0 / (maxLevel - 1))) / 300.0;
     }
 }

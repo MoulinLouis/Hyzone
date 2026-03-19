@@ -132,7 +132,7 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         // AoE upgrades (Jackhammer, Stomp, Blast)
         World aoeWorld = store.getExternalData().getWorld();
         if (aoeWorld != null) {
-            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, aoeWorld, bx, by, bz, mineManager);
+            MineAoEBreaker.triggerAoE(playerId, playerRef, mineProgress, zone, aoeWorld, bx, by, bz, mineManager);
         }
     }
 
