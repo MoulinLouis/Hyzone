@@ -294,10 +294,11 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         float yaw = rot.getY();
 
         // Block position: 1 block in front of player based on yaw
+        // Hytale convention: forward = (sin(yaw), cos(yaw))
         double yawRad = Math.toRadians(yaw);
-        int blockX = (int) Math.floor(pos.getX() + Math.cos(yawRad));
+        int blockX = (int) Math.floor(pos.getX() + Math.sin(yawRad));
         int blockY = (int) Math.floor(pos.getY());
-        int blockZ = (int) Math.floor(pos.getZ() - Math.sin(yawRad));
+        int blockZ = (int) Math.floor(pos.getZ() + Math.cos(yawRad));
 
         MinerSlot slot = mineConfigStore.getMinerSlot(mine.getId(), selectedSlotIndex);
         if (slot == null) {
