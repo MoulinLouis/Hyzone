@@ -57,7 +57,7 @@ Player-facing:
 - `/ascend` -- opens map select page (default)
 - `/ascend stats` / `leaderboard` / `maplb` / `profile` / `settings` / `help` / `achievements` / `automation` / `ascension` / `summit` / `skills` / `transcend` / `challenge` / `challengelb` / `tutorial`
 - `/mine` -- opens mine bag page
-- `/mine sell` / `upgrades` / `select`
+- `/mine sell` / `upgrades` / `achievements`
 - `/elevate` / `/summit` / `/skill` / `/transcend` -- NPC-gated prestige commands
 - `/cat` -- cat companion command
 

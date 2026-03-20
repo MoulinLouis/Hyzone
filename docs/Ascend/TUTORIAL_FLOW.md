@@ -147,7 +147,7 @@ _Idea: Elevation UI showing level and multiplier preview._
 **Title:** Elevation
 
 **Text:**
-> Spend your volt to gain elevation levels. Higher levels give bigger multipliers: level 10 = ×11, level 100 = ×126.
+> Spend your volt to gain elevation levels. Higher levels give bigger multipliers: level 10 = ×10, level 100 = ×100.
 >
 > Open with **`/ascend elevate`**.
 

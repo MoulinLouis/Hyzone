@@ -31,16 +31,20 @@ This document provides a factual overview of the economy balancing in Ascend mod
 - **Not affected by:** Stars, map level
 
 ### Runner Multiplier (Automatic)
-- **Base gain per completion:** +0.1 (0★), +0.2 (1★+)
-- **Evolution bonus:** ×2 multiplier gain when evolved (stars > 0)
-- **Star scaling:**
-  - 0★: +0.1 per completion (base)
-  - 1★+: +0.2 per completion (×2 after evolution)
+- **Base gain per completion:** +0.1
+- **Evolution bonus:** ×Evolution Power per star (EP base = 3.0, + 0.10 per Summit level)
+- **Star scaling (at base EP 3.0):**
+  - 0★: +0.10 per completion (base)
+  - 1★: +0.30 per completion (×3)
+  - 2★: +0.90 per completion (×9)
+  - 3★: +2.70 per completion (×27)
+  - 4★: +8.10 per completion (×81)
+  - 5★: +24.3 per completion (×243)
 - **With Summit Multiplier Gain bonus:** Base increment × bonus
-  - Example at level 10 (×4.16 bonus): 0★ = +0.42/run, 1★+ = +0.83/run
+  - Example at level 10 (×4.00 bonus): 0★ = +0.40/run, 1★ = +1.20/run
 
 ### Multiplier Slots
-- **Total slots:** 6 (one per map; map 6 requires Transcendence Milestone 1)
+- **Total slots:** 5 (one per map; map 6 requires Transcendence Milestone 1, giving 6 total)
 - **Product formula:** Total multiplier = product of all active map multipliers
 
 ### Elevation Multiplier (Linear)
@@ -195,14 +199,16 @@ Elevation uses a level-based prestige system where higher levels give proportion
 ### Cost Formula
 
 ```
-cost = 30,000 × 1.15^(currentLevel^0.72)
+For level <= 300:  cost = 30,000 × 1.15^(level^0.72)
+For level > 300:   cost = 30,000 × 1.15^(300^0.72 + (level-300)^0.58)
 ```
 
 **Base cost:** 30,000 volt
-**Growth rate:** Non-linear — `1.15^(level^0.72)` flattens the curve at high levels
-**Cost curve exponent:** 0.72
+**Growth rate:** Non-linear — flattens the curve at high levels
+**Cost curve exponent:** 0.72 (early game, level <= 300), 0.58 (late game, level > 300)
+**Soft cap:** Level 300 — above this, the late-game exponent (0.58) kicks in for even flatter growth
 
-At low levels this behaves almost identically to `1.15^level`. At high levels the effective exponent grows much slower, so each subsequent level is proportionally cheaper. This keeps elevation attractive throughout the game.
+At low levels this behaves almost identically to `1.15^level`. At high levels the effective exponent grows much slower, so each subsequent level is proportionally cheaper. The two-phase formula ensures identical early game while making late-game elevation much more accessible.
 
 ### Example Costs
 
@@ -542,51 +548,52 @@ Ascension is the ultimate prestige. Requires 1 Decillion (1Dc = 10^33) volt. Res
 |---------------------|---------------|------------------|
 | 0 | x1 | 1 |
 | 4 | x5 | 5 |
-| 7 (all) | x8 | 8 |
+| 8 (all) | x9 | 9 |
 
 ### Challenges
 
-7 challenges, each granting +1 to the AP multiplier when completed. Sequential unlock (must complete 1-N before N+1).
+8 challenges, each granting +1 to the AP multiplier when completed. Sequential unlock (must complete 1-N before N+1).
 
 | Challenge | Malus | Color |
 |-----------|-------|-------|
 | 1 | Map 5 locked | Green |
-| 2 | Runner Speed at 50% | Orange |
-| 3 | Multiplier Gain at 50% | Blue |
-| 4 | Evolution Power at 50% | Red |
-| 5 | Runner Speed + Multiplier Gain at 50% | Violet |
-| 6 | All Summit bonuses at 50% | Pink |
-| 7 | Maps 4 & 5 locked | Orange |
+| 2 | Runner Speed /3 | Orange |
+| 3 | Multiplier Gain /4 | Blue |
+| 4 | Evolution Power /5 | Red |
+| 5 | Runner Speed /2 + Multiplier Gain /2 | Violet |
+| 6 | Runner Speed /4 + Multiplier Gain /4 | Pink |
+| 7 | All Summit bonuses /2 + Maps 4 & 5 locked | Orange |
+| 8 | No Elevation or Summit | Cyan |
 
-**Break Ascension:** Unlocked after completing all 7 challenges. Suppresses auto-ascension at 1Dc.
+**Break Ascension:** Unlocked after completing all 8 challenges. Suppresses auto-ascension at 1Dc.
 
 ### Ascendancy Tree
 
-Permanent skill nodes purchased with AP. Prerequisites use OR logic (any one parent unlocks the child).
+Permanent skill nodes purchased with AP. Prerequisites use OR logic (any one parent unlocks the child). 19 nodes total.
 
-| Tier | Node | Cost | Effect | Prerequisites |
-|------|------|------|--------|---------------|
-| 1 | Runner Speed+ | 1 | x1.25 global runner speed | — |
-| 2L | Runner Speed II | 2 | x1.25 global runner speed | Runner Speed+ |
-| 2R | Evolution Power+ | 2 | +1 base evolution power | Runner Speed+ |
-| 3 | Momentum Speed | 2 | x2 speed during momentum | Runner Speed II OR Evolution Power+ |
-| 4L | Runner Speed III | 3 | x1.25 global runner speed | Momentum Speed |
-| 4R | Momentum Endurance | 3 | Momentum duration 90s | Momentum Speed |
-| 5 | Multiplier Boost | 3 | +0.10 base multiplier gain | Runner Speed III OR Momentum Endurance |
-| 6L | Momentum Surge | 5 | Momentum x2.5 speed | Multiplier Boost |
-| 6R | Evolution Power II | 5 | +1 base evolution power | Multiplier Boost |
-| 7 | Auto-Elevation | 7 | Automatic elevation | Momentum Surge OR Evolution Power II |
-| 8L | Runner Speed III | 7 | x1.25 global runner speed | Auto-Elevation |
-| 8R | Evolution Power II | 7 | +1 base evolution power | Auto-Elevation |
-| 9 | Automation | 10 | Auto-summit, auto-ascension | Runner Speed III OR Evolution Power II |
-| 10L | Runner Speed IV | 15 | x1.5 global runner speed | Runner Speed III OR Evolution Power II |
-| 10R | Evolution Power III | 15 | +2 base evolution power | Runner Speed III OR Evolution Power II |
-| 11 | Momentum Mastery | 25 | Momentum x3.0 + 120s duration | Runner Speed IV OR Evolution Power III |
-| 12L | Multiplier Boost II | 40 | +0.25 base multiplier gain | Momentum Mastery |
-| 12R | Auto Ascend | 40 | Automatically ascend at 1Dc | Momentum Mastery |
-| 13 | Runner Speed V | 75 | x2.0 global runner speed | Multiplier Boost II OR Auto Ascend |
+| Node | Cost | Effect | Prerequisites |
+|------|------|--------|---------------|
+| Auto-Upgrade + Momentum | 1 | Auto-upgrade runners & momentum speed boost on manual runs | — |
+| Auto-Evolution | 1 | Runners auto-evolve at max speed level | Auto-Upgrade + Momentum |
+| Runner Speed Boost | 1 | x1.1 global runner speed | Auto-Evolution |
+| Evolution Power+ | 1 | +1 base evolution power | Auto-Evolution |
+| Runner Speed II | 1 | x1.2 global runner speed | Runner Speed Boost OR Evolution Power+ |
+| Auto-Summit | 1 | Automatic summit with per-category target levels | Runner Speed II |
+| Auto-Elevation | 1 | Automatic elevation with configurable multiplier targets | Runner Speed II |
+| Ascension Challenges | 1 | Unlock Ascension Challenges | Auto-Summit OR Auto-Elevation |
+| Momentum Surge | 10 | Momentum boost x2 -> x2.5 | Ascension Challenges |
+| Momentum Endurance | 10 | Momentum 60s -> 90s | Ascension Challenges |
+| Multiplier Boost | 25 | +0.10 base multiplier gain | Momentum Surge OR Momentum Endurance |
+| Runner Speed III | 50 | x1.3 global runner speed | Multiplier Boost |
+| Evolution Power II | 50 | +1 base evolution power | Multiplier Boost |
+| Runner Speed IV | 100 | x1.5 global runner speed | Runner Speed III OR Evolution Power II |
+| Evolution Power III | 100 | +2 base evolution power | Runner Speed III OR Evolution Power II |
+| Momentum Mastery | 200 | Momentum x3.0 + 120s duration | Runner Speed IV OR Evolution Power III |
+| Multiplier Boost II | 400 | +0.25 base multiplier gain | Momentum Mastery |
+| Auto Ascend | 400 | Automatically ascend at 1Dc | Momentum Mastery |
+| Runner Speed V | 1000 | x2.0 global runner speed | Multiplier Boost II OR Auto Ascend |
 
-**Total AP for all nodes:** 286 AP
+**Total AP for all nodes:** 2,353 AP
 
 ---
 
@@ -717,7 +724,7 @@ Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^10
 - **Minimum volt generation:** Even idle players make progress
 - **Maximum speed:** Runners capped at level 20 per evolution cycle
 - **Cost scaling:** Exponential but continuous - no resets, no surprises
-- **Evolution benefit:** ×2 multiplier gain with no cost penalty
+- **Evolution benefit:** ×Evolution Power multiplier gain per star (EP base 3.0 + 0.10 per Summit level)
   - Costs continue from total levels purchased (stars × 20 + speedLevel)
   - Evolution is always beneficial - strategic choice is which map to prioritize
 
@@ -975,11 +982,17 @@ Block prices are global (not per-mine), configured by admins in the Block Prices
 
 ### Mine Upgrades
 
-Purchased with crystals. Mining Speed and Multi-Break upgrades were removed — only Bag Capacity remains.
+Purchased with crystals. 7 upgrade types:
 
 | Upgrade | Max Level | Cost Formula | Effect per Level | Effect at Max |
 |---------|-----------|-------------|------------------|---------------|
 | **Bag Capacity** | 50 | `25 x 1.2^level` | +10 slots | 550 slots |
+| **Momentum** | 25 | `50 x 1.22^level` | +3 combo count | 80 combo |
+| **Fortune** | 25 | `60 x 1.22^level` | +2% double drop chance | 50% chance |
+| **Jackhammer** | 10 | `150 x 1.28^level` | +1 column depth | 10 depth |
+| **Stomp** | 15 | `200 x 1.30^level` | +1 radius per 5 levels | 4 radius |
+| **Blast** | 15 | `250 x 1.30^level` | +1 radius per 5 levels | 4 radius |
+| **Haste** | 20 | `40 x 1.20^level` | +5% mining speed | +100% speed |
 
 #### Bag Capacity
 
@@ -988,6 +1001,28 @@ Purchased with crystals. Mining Speed and Multi-Break upgrades were removed — 
 - **Level 0:** 50 slots
 - **Level 25:** 300 slots
 - **Level 50:** 550 slots
+
+#### Momentum
+
+- **Formula:** `maxCombo = 5 + level x 3`
+- **Effect:** Build a combo while mining to deal more damage
+
+#### Fortune
+
+- **Formula:** `doubleDropChance = level x 2%`
+- **Effect:** Chance to get bonus drops from mined blocks
+
+#### Jackhammer, Stomp, Blast (AoE)
+
+- **Proc chance:** Linear interpolation from ~0.33% at level 1 to ~8.33% at max level
+- **Jackhammer:** Breaks a column of blocks below the target (depth = level)
+- **Stomp:** Breaks a layer of blocks around feet on landing (radius = 1 + floor(level/5))
+- **Blast:** Breaks blocks in a sphere around target (radius = 1 + floor(level/5))
+
+#### Haste
+
+- **Formula:** `speedBonus = level x 5%`
+- **Effect:** Increases mining speed permanently
 
 ### Mine Unlocking
 
@@ -999,14 +1034,13 @@ Purchased with crystals. Mining Speed and Multi-Break upgrades were removed — 
 
 ### Cross-Progression Bonuses (Provisional)
 
-Mine progression provides permanent bonuses to the core Ascend parkour loop. These values are provisional and subject to playtesting.
+Mine progression provides permanent bonuses to the core Ascend parkour loop. With the single-mine system, multi-mine unlock bonuses are inactive.
 
 | Bonus | Source | Effect |
 |-------|--------|--------|
-| Runner Speed | Mine 2 unlock | +5% |
-| Multiplier Gain | Mine 3 unlock | +10% |
-| Multiplier Gain | All unlocked mines have miners | +20% |
-| Volt Gain | Mine 4 unlock | +15% |
+| Multiplier Gain | All miner slots have miners | +20% |
+
+Runner Speed and Volt Gain bonuses (previously tied to mine 2/3/4 unlock) are always 1.0 in the single-mine system.
 
 **Design intent:** Reward mine investment without making it mandatory. Bonuses are meaningful but not dominant compared to core parkour systems.
 
