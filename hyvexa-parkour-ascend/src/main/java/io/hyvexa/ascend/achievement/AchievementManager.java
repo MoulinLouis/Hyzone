@@ -48,9 +48,7 @@ public class AchievementManager {
             if (isAchievementEarned(playerId, progress, achievement)) {
                 progress.unlockAchievement(achievement);
                 newlyUnlocked.add(achievement);
-                playerStore.markDirty(playerId);
 
-                // Notify player
                 if (player != null) {
                     player.sendMessage(Message.raw("[Achievement] " + achievement.getName() + " unlocked!")
                         .color(SystemMessageUtils.SUCCESS));
@@ -65,54 +63,16 @@ public class AchievementManager {
             }
         }
 
+        if (!newlyUnlocked.isEmpty()) {
+            playerStore.markDirty(playerId);
+        }
+
         return newlyUnlocked;
     }
 
     private boolean isAchievementEarned(UUID playerId, AscendPlayerProgress progress, AchievementType achievement) {
-        return switch (achievement) {
-            // Milestones
-            case FIRST_STEPS -> progress.getTotalManualRuns() >= 1;
-            case WARMING_UP -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_10;
-            case DEDICATED -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_100;
-            case HALFWAY_THERE -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_500;
-            case MARATHON -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_1000;
-            case UNSTOPPABLE -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_5000;
-            case LIVING_LEGEND -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_10000;
-
-            // Runners
-            case FIRST_ROBOT -> hasAnyRobot(progress);
-            case ARMY -> countRobots(progress) >= AscendConstants.ACHIEVEMENT_RUNNER_COUNT;
-            case EVOLVED -> hasEvolvedRobot(progress);
-            case STAR_COLLECTOR -> hasMaxStarRobot(progress);
-
-            // Prestige
-            case FIRST_ELEVATION -> progress.getElevationMultiplier() >= 2;
-            case GOING_UP -> getVisibleElevationMultiplier(progress) >= AscendConstants.ACHIEVEMENT_ELEVATION_100;
-            case SKY_HIGH -> getVisibleElevationMultiplier(progress) >= AscendConstants.ACHIEVEMENT_ELEVATION_5000;
-            case STRATOSPHERE -> getVisibleElevationMultiplier(progress) >= AscendConstants.ACHIEVEMENT_ELEVATION_20000;
-            case SUMMIT_SEEKER -> hasAnySummitLevel(progress);
-            case PEAK_PERFORMER -> hasAnySummitLevelAbove(progress, AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_10);
-            case MOUNTAINEER -> hasAnySummitLevelAbove(progress, AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_100);
-            case SUMMIT_LEGEND -> hasAnySummitLevelAbove(progress, AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_1000);
-            case ASCENDED -> progress.getAscensionCount() >= 1;
-            case VETERAN -> progress.getAscensionCount() >= AscendConstants.ACHIEVEMENT_ASCENSION_5;
-            case TRANSCENDENT -> progress.getAscensionCount() >= AscendConstants.ACHIEVEMENT_ASCENSION_10;
-
-            // Skills
-            case NEW_POWERS -> !progress.getUnlockedSkillNodes().isEmpty();
-
-            // Challenges
-            case CHALLENGER -> !progress.getCompletedChallengeRewards().isEmpty();
-            case CHALLENGE_MASTER -> progress.hasAllChallengeRewards();
-
-            // Easter Eggs
-            case CAT_COLLECTOR -> progress.getFoundCatCount() >= AscendConstants.ACHIEVEMENT_CATS_REQUIRED;
-
-            // Secret
-            case CHAIN_RUNNER -> progress.getConsecutiveManualRuns() >= AscendConstants.ACHIEVEMENT_CONSECUTIVE_RUNS_25;
-            case ALL_STARS -> allMapsMaxStars(progress);
-            case COMPLETIONIST -> allOtherAchievementsUnlocked(progress);
-        };
+        AchievementProgress ap = getProgress(playerId, achievement);
+        return ap.current() >= ap.required();
     }
 
     private long getVisibleElevationMultiplier(AscendPlayerProgress progress) {

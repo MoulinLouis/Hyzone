@@ -13,8 +13,10 @@ public final class AscendOnboardingCopy {
 
     // --- Dynamic values ---
 
+    private static final int NODE_COUNT = AscendConstants.SkillTreeNode.values().length;
+
     public static int nodeCount() {
-        return AscendConstants.SkillTreeNode.values().length;
+        return NODE_COUNT;
     }
 
     public static String ascensionThresholdDisplay() {
@@ -170,48 +172,56 @@ public final class AscendOnboardingCopy {
 
     // --- Welcome page arrays ---
 
+    private static final String[] WELCOME_TITLES = {
+        "Welcome to Ascend",
+        "Your Shortcuts",
+        "Play Your First Map"
+    };
+
+    private static final String[] WELCOME_DESCRIPTIONS = {
+        "Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you - even while you're offline.",
+        "You have 5 items in your inventory that open menus instantly - no need to type commands. Here's what each one does:",
+        "Open the map menu and pick a map. Complete it to earn your first volt and unlock new features along the way!"
+    };
+
+    private static final String[][] WELCOME_FEATURES = {
+        {
+            "Run parkour maps to earn volt",
+            "Buy runners that replay maps for you",
+            "Progress and unlock new content over time"
+        },
+        {
+            "/ascend - Map menu, runners, and upgrades",
+            "/ascend leaderboard - Rankings and stats",
+            "/ascend automation - Runner speed controls"
+        },
+        {
+            "Use the first item in your inventory",
+            "Pick any map and complete the parkour",
+            "Your first completion unlocks runners"
+        }
+    };
+
+    private static final String[][] WELCOME_FEATURE_COLORS = {
+        {"#10b981", "#3b82f6", "#f59e0b"},
+        {"#f59e0b", "#3b82f6", "#10b981"},
+        {"#f59e0b", "#10b981", "#a855f7"}
+    };
+
     public static String[] welcomeTitles() {
-        return new String[]{
-            "Welcome to Ascend",
-            "Your Shortcuts",
-            "Play Your First Map"
-        };
+        return WELCOME_TITLES;
     }
 
     public static String[] welcomeDescriptions() {
-        return new String[]{
-            "Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you - even while you're offline.",
-            "You have 5 items in your inventory that open menus instantly - no need to type commands. Here's what each one does:",
-            "Open the map menu and pick a map. Complete it to earn your first volt and unlock new features along the way!"
-        };
+        return WELCOME_DESCRIPTIONS;
     }
 
     public static String[][] welcomeFeatures() {
-        return new String[][]{
-            {
-                "Run parkour maps to earn volt",
-                "Buy runners that replay maps for you",
-                "Progress and unlock new content over time"
-            },
-            {
-                "/ascend - Map menu, runners, and upgrades",
-                "/ascend leaderboard - Rankings and stats",
-                "/ascend automation - Runner speed controls"
-            },
-            {
-                "Use the first item in your inventory",
-                "Pick any map and complete the parkour",
-                "Your first completion unlocks runners"
-            }
-        };
+        return WELCOME_FEATURES;
     }
 
     public static String[][] welcomeFeatureColors() {
-        return new String[][]{
-            {"#10b981", "#3b82f6", "#f59e0b"},
-            {"#f59e0b", "#3b82f6", "#10b981"},
-            {"#f59e0b", "#10b981", "#a855f7"}
-        };
+        return WELCOME_FEATURE_COLORS;
     }
 
     // Welcome step 2 extra features (4th and 5th)

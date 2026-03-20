@@ -2,8 +2,8 @@ package io.hyvexa.ascend.mine.data;
 
 import io.hyvexa.common.math.BigNumber;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Mine {
     private final String id;
@@ -13,7 +13,7 @@ public class Mine {
     private String world = "";
     private double spawnX, spawnY, spawnZ;
     private float spawnRotX, spawnRotY, spawnRotZ;
-    private final List<MineZone> zones = new CopyOnWriteArrayList<>();
+    private final List<MineZone> zones = new ArrayList<>();
 
     public Mine(String id, String name) {
         this.id = id;

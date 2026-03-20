@@ -1,14 +1,14 @@
 package io.hyvexa.ascend.mine.data;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class MineZoneLayer {
     private final String id;
     private final String zoneId;
     private int minY;
     private int maxY;
-    private final Map<String, Double> blockTable = new ConcurrentHashMap<>();
+    private final Map<String, Double> blockTable = new HashMap<>();
 
     public MineZoneLayer(String id, String zoneId, int minY, int maxY) {
         this.id = id;

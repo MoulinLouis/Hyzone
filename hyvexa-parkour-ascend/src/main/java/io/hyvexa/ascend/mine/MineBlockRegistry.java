@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.mine;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -91,11 +92,11 @@ public final class MineBlockRegistry {
     }
 
     public static List<BlockDef> getAll() {
-        return ALL_BLOCKS;
+        return Collections.unmodifiableList(ALL_BLOCKS);
     }
 
     public static Map<String, List<BlockDef>> getByCategory() {
-        return BY_CATEGORY;
+        return Collections.unmodifiableMap(BY_CATEGORY);
     }
 
     public static String getDisplayName(String blockTypeId) {

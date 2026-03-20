@@ -122,13 +122,14 @@ public class MineHudManager {
         int capacity = progress.getBagCapacity();
         Map<String, Integer> inventory = progress.getInventory();
         List<Map.Entry<String, Integer>> sorted = new ArrayList<>(inventory.entrySet());
-        sorted.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
 
+        // Compute cache key before sorting — skip sort if nothing changed
         String invKey = buildInventoryKey(total, capacity, sorted);
         if (invKey.equals(state.lastInventoryKey)) {
             return;
         }
         state.lastInventoryKey = invKey;
+        sorted.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
 
         UICommandBuilder cb = new UICommandBuilder();
         cb.set("#BagCountLabel.Text", String.valueOf(total));

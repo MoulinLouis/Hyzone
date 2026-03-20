@@ -1,5 +1,7 @@
 package io.hyvexa.ascend.mine.data;
 
+import io.hyvexa.common.math.BigNumber;
+
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -15,16 +17,13 @@ public class MinePlayerProgress {
     private long crystals;
     private volatile boolean inMine;
     private volatile int pickaxeTier;
-    private final Map<MineUpgradeType, Integer> upgradeLevels = new ConcurrentHashMap<>();
-    private final Map<Integer, MinerProgress> minerStates = new ConcurrentHashMap<>();
+    private final Map<MineUpgradeType, Integer> upgradeLevels = new EnumMap<>(MineUpgradeType.class);
+    private final Map<String, MineProgress> mineStates = new ConcurrentHashMap<>();
+    private final Map<String, MinerProgress> minerStates = new ConcurrentHashMap<>();
 
     // Momentum combo state (transient, not persisted)
     private volatile int comboCount;
     private volatile long lastBreakTimeMs;
-
-    // Conveyor buffer (transient, not persisted)
-    private final Map<String, Integer> conveyorBuffer = new HashMap<>();
-    private int conveyorBufferCount;
 
     public MinePlayerProgress(UUID playerId) {
         this.playerId = playerId;
@@ -180,8 +179,8 @@ public class MinePlayerProgress {
 
     public boolean isHoldingExpectedPickaxe(String heldItemId) {
         if (heldItemId == null || heldItemId.isEmpty()) return false;
-        String expectedItemId = getPickaxeTierEnum().getItemId();
-        return expectedItemId != null && expectedItemId.equals(heldItemId);
+        PickaxeTier tier = getPickaxeTierEnum();
+        return tier != null && heldItemId.equals(tier.getItemId());
     }
 
     // --- Upgrades ---
@@ -253,16 +252,6 @@ public class MinePlayerProgress {
     }
 
     /**
-     * Returns the movement speed multiplier from the Haste upgrade.
-     * +5% per level (max level 20 = +100%).
-     */
-    public double getHasteMultiplier() {
-        int level = getUpgradeLevel(MineUpgradeType.HASTE);
-        if (level <= 0) return 1.0;
-        return 1.0 + MineUpgradeType.HASTE.getEffect(level) / 100.0;
-    }
-
-    /**
      * Checks if combo has expired (3 seconds since last break).
      * If expired, resets combo and returns true.
      */
@@ -278,12 +267,49 @@ public class MinePlayerProgress {
         return (int) MineUpgradeType.BAG_CAPACITY.getEffect(getUpgradeLevel(MineUpgradeType.BAG_CAPACITY));
     }
 
-    // --- Per-slot miner state (single mine) ---
+    // --- Per-mine state ---
+
+    public static class MineProgress {
+        volatile boolean unlocked;
+        volatile boolean completedManually;
+
+        public MineProgress() {}
+        public boolean isUnlocked() { return unlocked; }
+        public void setUnlocked(boolean u) { unlocked = u; }
+        public boolean isCompletedManually() { return completedManually; }
+        public void setCompletedManually(boolean c) { completedManually = c; }
+    }
+
+    public MineProgress getMineState(String mineId) {
+        return mineStates.computeIfAbsent(mineId, k -> new MineProgress());
+    }
+
+    public synchronized MineProgressSnapshot getMineSnapshot(String mineId) {
+        MineProgress state = getMineState(mineId);
+        return new MineProgressSnapshot(state.isUnlocked(), state.isCompletedManually());
+    }
+
+    public synchronized Map<String, MineProgressSnapshot> getMineStates() {
+        Map<String, MineProgressSnapshot> copy = new HashMap<>();
+        for (var entry : mineStates.entrySet()) {
+            MineProgress state = entry.getValue();
+            copy.put(entry.getKey(), new MineProgressSnapshot(state.isUnlocked(), state.isCompletedManually()));
+        }
+        return copy;
+    }
+
+    public synchronized void loadMineState(String mineId, boolean unlocked, boolean completedManually) {
+        MineProgress state = getMineState(mineId);
+        state.setUnlocked(unlocked);
+        state.setCompletedManually(completedManually);
+    }
+
+    // --- Per-mine miner state ---
 
     public static class MinerProgress {
-        volatile boolean hasMiner;
-        volatile int speedLevel;
-        volatile int stars;
+        boolean hasMiner;
+        int speedLevel;
+        int stars;
 
         public MinerProgress() {}
         public boolean isHasMiner() { return hasMiner; }
@@ -294,17 +320,17 @@ public class MinePlayerProgress {
         public void setStars(int s) { stars = s; }
     }
 
-    public MinerProgress getMinerState(int slotIndex) {
-        return minerStates.computeIfAbsent(slotIndex, k -> new MinerProgress());
+    public MinerProgress getMinerState(String mineId) {
+        return minerStates.computeIfAbsent(mineId, k -> new MinerProgress());
     }
 
-    public synchronized MinerProgressSnapshot getMinerSnapshot(int slotIndex) {
-        MinerProgress state = getMinerState(slotIndex);
+    public synchronized MinerProgressSnapshot getMinerSnapshot(String mineId) {
+        MinerProgress state = getMinerState(mineId);
         return new MinerProgressSnapshot(state.isHasMiner(), state.getSpeedLevel(), state.getStars());
     }
 
-    public synchronized Map<Integer, MinerProgressSnapshot> getMinerStates() {
-        Map<Integer, MinerProgressSnapshot> copy = new HashMap<>();
+    public synchronized Map<String, MinerProgressSnapshot> getMinerStates() {
+        Map<String, MinerProgressSnapshot> copy = new HashMap<>();
         for (var entry : minerStates.entrySet()) {
             MinerProgress state = entry.getValue();
             copy.put(entry.getKey(), new MinerProgressSnapshot(
@@ -316,15 +342,15 @@ public class MinePlayerProgress {
         return copy;
     }
 
-    public synchronized void loadMinerState(int slotIndex, boolean hasMiner, int speedLevel, int stars) {
-        MinerProgress state = getMinerState(slotIndex);
+    public synchronized void loadMinerState(String mineId, boolean hasMiner, int speedLevel, int stars) {
+        MinerProgress state = getMinerState(mineId);
         state.setHasMiner(hasMiner);
         state.setSpeedLevel(speedLevel);
         state.setStars(stars);
     }
 
-    public synchronized MinerPurchaseResult purchaseMiner(int slotIndex, long cost) {
-        MinerProgress state = getMinerState(slotIndex);
+    public synchronized MinerPurchaseResult purchaseMiner(String mineId, long cost) {
+        MinerProgress state = getMinerState(mineId);
         if (state.isHasMiner()) {
             return MinerPurchaseResult.ALREADY_OWNED;
         }
@@ -335,8 +361,8 @@ public class MinePlayerProgress {
         return MinerPurchaseResult.SUCCESS;
     }
 
-    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(int slotIndex, long cost, int maxSpeedLevel) {
-        MinerProgress state = getMinerState(slotIndex);
+    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(String mineId, long cost, int maxSpeedLevel) {
+        MinerProgress state = getMinerState(mineId);
         if (!state.isHasMiner()) {
             return MinerSpeedUpgradeResult.NO_MINER;
         }
@@ -350,8 +376,8 @@ public class MinePlayerProgress {
         return MinerSpeedUpgradeResult.SUCCESS;
     }
 
-    public synchronized MinerEvolutionResult evolveMiner(int slotIndex, long cost, int maxSpeedLevel, int maxStars) {
-        MinerProgress state = getMinerState(slotIndex);
+    public synchronized MinerEvolutionResult evolveMiner(String mineId, long cost, int maxSpeedLevel, int maxStars) {
+        MinerProgress state = getMinerState(mineId);
         if (!state.isHasMiner()) {
             return MinerEvolutionResult.NO_MINER;
         }
@@ -369,6 +395,14 @@ public class MinePlayerProgress {
         return MinerEvolutionResult.SUCCESS;
     }
 
+    public synchronized boolean unlockMine(String mineId, BigNumber cost) {
+        MineProgress state = getMineState(mineId);
+        if (state.isUnlocked()) return false;
+        if (!trySpendCrystals(cost.toLong())) return false;
+        state.setUnlocked(true);
+        return true;
+    }
+
     public synchronized PlayerSaveSnapshot createSaveSnapshot() {
         Map<MineUpgradeType, Integer> upgradeSnapshot = new EnumMap<>(MineUpgradeType.class);
         upgradeSnapshot.putAll(upgradeLevels);
@@ -376,88 +410,11 @@ public class MinePlayerProgress {
             crystals,
             upgradeSnapshot,
             new LinkedHashMap<>(inventory),
+            getMineStates(),
             getMinerStates(),
             inMine,
-            pickaxeTier,
-            new LinkedHashMap<>(conveyorBuffer)
+            pickaxeTier
         );
-    }
-
-    // --- Conveyor buffer ---
-
-    public synchronized void loadConveyorBufferItem(String blockTypeId, int amount) {
-        if (blockTypeId == null || amount <= 0) return;
-        conveyorBuffer.put(blockTypeId, amount);
-        conveyorBufferCount += amount;
-    }
-
-    /** Add block to conveyor buffer (no capacity limit). */
-    public synchronized void addToConveyorBuffer(String blockTypeId, int amount) {
-        if (blockTypeId == null || amount <= 0) return;
-        conveyorBuffer.merge(blockTypeId, amount, Integer::sum);
-        conveyorBufferCount += amount;
-    }
-
-    /**
-     * Transfer conveyor buffer to mine inventory, respecting bag capacity.
-     * Returns total items transferred.
-     */
-    public synchronized int transferBufferToInventory() {
-        if (conveyorBuffer.isEmpty()) return 0;
-        int transferred = 0;
-        var it = conveyorBuffer.entrySet().iterator();
-        while (it.hasNext()) {
-            var entry = it.next();
-            int space = getBagCapacity() - inventoryCount;
-            if (space <= 0) break;
-            int toMove = Math.min(entry.getValue(), space);
-            inventory.merge(entry.getKey(), toMove, Integer::sum);
-            inventoryCount += toMove;
-            transferred += toMove;
-            int remaining = entry.getValue() - toMove;
-            if (remaining <= 0) {
-                it.remove();
-            } else {
-                entry.setValue(remaining);
-            }
-        }
-        conveyorBufferCount -= transferred;
-        return transferred;
-    }
-
-    public synchronized int getConveyorBufferCount() {
-        return conveyorBufferCount;
-    }
-
-    public synchronized boolean hasConveyorItems() {
-        return conveyorBufferCount > 0;
-    }
-
-    public synchronized Map<String, Integer> getConveyorBuffer() {
-        return new LinkedHashMap<>(conveyorBuffer);
-    }
-
-    /**
-     * Transfer a single block type from conveyor buffer to inventory, respecting bag capacity.
-     * Returns the number of items transferred.
-     */
-    public synchronized int transferBlockFromBuffer(String blockTypeId) {
-        if (blockTypeId == null) return 0;
-        Integer count = conveyorBuffer.get(blockTypeId);
-        if (count == null || count <= 0) return 0;
-        int space = getBagCapacity() - inventoryCount;
-        if (space <= 0) return 0;
-        int toMove = Math.min(count, space);
-        inventory.merge(blockTypeId, toMove, Integer::sum);
-        inventoryCount += toMove;
-        int remaining = count - toMove;
-        if (remaining <= 0) {
-            conveyorBuffer.remove(blockTypeId);
-        } else {
-            conveyorBuffer.put(blockTypeId, remaining);
-        }
-        conveyorBufferCount -= toMove;
-        return toMove;
     }
 
     public enum MinerPurchaseResult {
@@ -481,13 +438,15 @@ public class MinePlayerProgress {
         INSUFFICIENT_CRYSTALS
     }
 
+    public record MineProgressSnapshot(boolean unlocked, boolean completedManually) {}
+
     public record MinerProgressSnapshot(boolean hasMiner, int speedLevel, int stars) {}
 
     public record PlayerSaveSnapshot(long crystals,
                                      Map<MineUpgradeType, Integer> upgradeLevels,
                                      Map<String, Integer> inventory,
-                                     Map<Integer, MinerProgressSnapshot> minerStates,
+                                     Map<String, MineProgressSnapshot> mineStates,
+                                     Map<String, MinerProgressSnapshot> minerStates,
                                      boolean inMine,
-                                     int pickaxeTier,
-                                     Map<String, Integer> conveyorBuffer) {}
+                                     int pickaxeTier) {}
 }

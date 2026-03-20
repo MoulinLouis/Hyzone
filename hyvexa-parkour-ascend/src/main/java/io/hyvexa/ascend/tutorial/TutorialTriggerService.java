@@ -153,27 +153,7 @@ public class TutorialTriggerService {
         }
         playerStore.markTutorialSeen(playerId, bit);
 
-        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            if (entityRef == null || !entityRef.isValid()) {
-                return;
-            }
-            Store<EntityStore> store = entityRef.getStore();
-            World world = store.getExternalData().getWorld();
-            if (world == null) {
-                return;
-            }
-            CompletableFuture.runAsync(() -> {
-                if (!entityRef.isValid()) {
-                    return;
-                }
-                PlayerRef playerRef = store.getComponent(entityRef, PlayerRef.getComponentType());
-                Player player = store.getComponent(entityRef, Player.getComponentType());
-                if (playerRef == null || player == null) {
-                    return;
-                }
-                opener.open(playerRef, entityRef, store, player);
-            }, world);
-        }, TRIGGER_DELAY_MS, TimeUnit.MILLISECONDS);
+        scheduleOpener(playerId, opener);
     }
 
     private void triggerFromUuid(UUID playerId, int bit, TutorialOpener opener) {
@@ -189,6 +169,10 @@ public class TutorialTriggerService {
             return;
         }
 
+        scheduleOpener(playerId, opener);
+    }
+
+    private void scheduleOpener(UUID playerId, TutorialOpener opener) {
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin == null) {

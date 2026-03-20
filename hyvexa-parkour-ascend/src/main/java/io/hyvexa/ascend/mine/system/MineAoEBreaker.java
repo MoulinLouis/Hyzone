@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.World;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.util.MinePositionUtils;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -13,10 +14,6 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
-import com.hypixel.hytale.protocol.SoundCategory;
-import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 
 
 import java.util.ArrayList;
@@ -26,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Static utility for AoE block breaking: Jackhammer (column), Stomp (layer), Blast (sphere).
@@ -36,8 +32,8 @@ public final class MineAoEBreaker {
 
     private MineAoEBreaker() {}
 
-    public static void triggerAoE(UUID playerId, PlayerRef playerRef, MinePlayerProgress progress,
-                                   MineZone zone, World world, int centerX, int centerY, int centerZ,
+    public static void triggerAoE(UUID playerId, MinePlayerProgress progress, MineZone zone,
+                                   World world, int centerX, int centerY, int centerZ,
                                    MineManager mineManager) {
         int fortuneLevel = progress.getUpgradeLevel(MineUpgradeType.FORTUNE);
 
@@ -45,47 +41,37 @@ public final class MineAoEBreaker {
         Set<Long> seen = new HashSet<>();
         List<Vector3i> allPositions = new ArrayList<>();
 
-        ThreadLocalRandom rng = ThreadLocalRandom.current();
-
-        // Jackhammer: column below (probability-based)
+        // Jackhammer: column below
         int jackhammerLevel = progress.getUpgradeLevel(MineUpgradeType.JACKHAMMER);
-        if (jackhammerLevel > 0 && rng.nextDouble() < MineUpgradeType.JACKHAMMER.getChance(jackhammerLevel)) {
+        if (jackhammerLevel > 0) {
             int depth = jackhammerLevel; // depth = level
             for (Vector3i pos : buildJackhammerPositions(centerX, centerY, centerZ, depth)) {
-                long key = packPos(pos.getX(), pos.getY(), pos.getZ());
+                long key = MinePositionUtils.packPosition(pos.getX(), pos.getY(), pos.getZ());
                 if (seen.add(key)) allPositions.add(pos);
             }
         }
 
-        // Stomp: horizontal layer (probability-based)
+        // Stomp: horizontal layer
         int stompLevel = progress.getUpgradeLevel(MineUpgradeType.STOMP);
-        if (stompLevel > 0 && rng.nextDouble() < MineUpgradeType.STOMP.getChance(stompLevel)) {
-            int radius = 1 + stompLevel / 5; // r1 at 1-4, r2 at 5-9, etc.
+        if (stompLevel > 0) {
+            int radius = (int) MineUpgradeType.STOMP.getEffect(stompLevel);
             for (Vector3i pos : buildStompPositions(centerX, centerY, centerZ, radius)) {
-                long key = packPos(pos.getX(), pos.getY(), pos.getZ());
+                long key = MinePositionUtils.packPosition(pos.getX(), pos.getY(), pos.getZ());
                 if (seen.add(key)) allPositions.add(pos);
             }
         }
 
-        // Blast: sphere (probability-based)
+        // Blast: sphere
         int blastLevel = progress.getUpgradeLevel(MineUpgradeType.BLAST);
-        if (blastLevel > 0 && rng.nextDouble() < MineUpgradeType.BLAST.getChance(blastLevel)) {
-            int radius = 1 + blastLevel / 5;
+        if (blastLevel > 0) {
+            int radius = (int) MineUpgradeType.BLAST.getEffect(blastLevel);
             for (Vector3i pos : buildBlastPositions(centerX, centerY, centerZ, radius)) {
-                long key = packPos(pos.getX(), pos.getY(), pos.getZ());
+                long key = MinePositionUtils.packPosition(pos.getX(), pos.getY(), pos.getZ());
                 if (seen.add(key)) allPositions.add(pos);
             }
         }
 
         if (allPositions.isEmpty()) return;
-
-        // Play checkpoint sound when any AoE procs
-        if (playerRef != null) {
-            int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Checkpoint");
-            if (soundIndex > SoundEvent.EMPTY_ID) {
-                SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, SoundCategory.SFX);
-            }
-        }
 
         breakBlocksAt(allPositions, zone, progress, playerId, world, mineManager, fortuneLevel);
     }
@@ -236,7 +222,4 @@ public final class MineAoEBreaker {
         return positions;
     }
 
-    private static long packPos(int x, int y, int z) {
-        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (y & 0xFFF) << 26) | (z & 0x3FFFFFF);
-    }
 }

@@ -49,6 +49,7 @@ public class AscendTutorialPage extends BaseAscendPage {
     }
 
     private final Tutorial tutorial;
+    private final AscendOnboardingCopy.TutorialCopy copy;
     private final int step;
 
     public AscendTutorialPage(@Nonnull PlayerRef playerRef, @Nonnull Tutorial tutorial) {
@@ -58,14 +59,13 @@ public class AscendTutorialPage extends BaseAscendPage {
     public AscendTutorialPage(@Nonnull PlayerRef playerRef, @Nonnull Tutorial tutorial, int step) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.tutorial = tutorial;
-        AscendOnboardingCopy.TutorialCopy copy = tutorial.getCopy();
+        this.copy = tutorial.getCopy();
         this.step = Math.max(0, Math.min(step, copy.stepTitles().length - 1));
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
-        AscendOnboardingCopy.TutorialCopy copy = tutorial.getCopy();
         int totalSteps = copy.stepTitles().length;
 
         cmd.append(tutorial.uiPath);
@@ -120,7 +120,6 @@ public class AscendTutorialPage extends BaseAscendPage {
             return;
         }
 
-        AscendOnboardingCopy.TutorialCopy copy = tutorial.getCopy();
         int totalSteps = copy.stepTitles().length;
 
         if (BUTTON_NEXT.equals(data.getButton())) {

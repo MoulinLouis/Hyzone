@@ -71,12 +71,7 @@ public final class MineRewardHelper {
         int momentumLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MOMENTUM);
         if (momentumLevel > 0) {
             mineProgress.checkComboExpired();
-            int maxCombo = mineProgress.getMaxCombo();
-            if (mineProgress.getComboCount() < maxCombo) {
-                mineProgress.incrementCombo();
-            } else {
-                mineProgress.incrementCombo(); // refresh timer even at max
-            }
+            mineProgress.incrementCombo();
             MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
             if (mineHudManager != null) {
                 mineHudManager.showCombo(playerId, mineProgress.getComboCount(), 1.0f);

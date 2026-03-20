@@ -23,8 +23,12 @@ import java.util.UUID;
 
 public class SkillTreePage extends BaseAscendPage {
 
+    private static final Map<SkillTreeNode, String> PASCAL_NAMES = new EnumMap<>(SkillTreeNode.class);
     private static final Map<SkillTreeNode, String> NODE_COORDINATES = new EnumMap<>(SkillTreeNode.class);
     static {
+        for (SkillTreeNode node : SkillTreeNode.values()) {
+            PASCAL_NAMES.put(node, toPascalCase(node.name()));
+        }
         NODE_COORDINATES.put(SkillTreeNode.AUTO_RUNNERS, "1:1");
         NODE_COORDINATES.put(SkillTreeNode.AUTO_EVOLUTION, "2:1");
         NODE_COORDINATES.put(SkillTreeNode.RUNNER_SPEED, "3:1");
@@ -83,7 +87,7 @@ public class SkillTreePage extends BaseAscendPage {
 
         // Bind all node buttons dynamically
         for (SkillTreeNode node : SkillTreeNode.values()) {
-            String uiId = "#Node" + toPascalCase(node.name());
+            String uiId = "#Node" + PASCAL_NAMES.get(node);
             String buttonData = BUTTON_NODE_PREFIX + node.name();
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, uiId,
                 EventData.of(ButtonEventData.KEY_BUTTON, buttonData), false);
@@ -111,7 +115,7 @@ public class SkillTreePage extends BaseAscendPage {
 
         // Update each node
         for (SkillTreeNode node : SkillTreeNode.values()) {
-            String pascalName = toPascalCase(node.name());
+            String pascalName = PASCAL_NAMES.get(node);
             boolean isUnlocked = unlockedNodes.contains(node);
             boolean prereqsMet = node.hasPrerequisitesSatisfied(unlockedNodes);
             boolean canUnlock = ascensionManager.canUnlockSkillNode(playerId, node);

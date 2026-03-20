@@ -68,6 +68,7 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (playerId == null) return;
 
         MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
+        if (!mineProgress.getMineState(zone.getMineId()).isUnlocked()) return;
         if (!mineProgress.isHoldingExpectedPickaxe(event.getItemInHand() != null ? event.getItemInHand().getItemId() : null)) {
             return;
         }
@@ -81,12 +82,13 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (blockTypeName == null) return;
 
         // Multi-HP: record hit with Momentum damage bonus
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        MineConfigStore configStore = plugin.getMineConfigStore();
         int blockHp = configStore.getBlockHp(blockTypeName);
         double damageMultiplier = mineProgress.getMomentumMultiplier();
         BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, blockHp, damageMultiplier);
 
-        MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
+        MineHudManager mineHudManager = plugin.getMineHudManager();
 
         if (!hitResult.shouldBreak()) {
             // Block still has HP — update the health bar HUD
@@ -129,9 +131,8 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         MineRewardHelper.handleMomentumCombo(playerId, mineProgress);
 
         // AoE upgrades (Jackhammer, Stomp, Blast)
-        World aoeWorld = store.getExternalData().getWorld();
-        if (aoeWorld != null) {
-            MineAoEBreaker.triggerAoE(playerId, playerRef, mineProgress, zone, aoeWorld, bx, by, bz, mineManager);
+        if (world != null) {
+            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager);
         }
     }
 

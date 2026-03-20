@@ -17,10 +17,7 @@ public class AscendHologramManager {
     }
 
     public boolean refreshMapHolosIfPresent(AscendMap map, Store<EntityStore> store) {
-        if (!HylogramsBridge.isAvailable()) {
-            return false;
-        }
-        if (map == null || map.getId() == null || map.getId().isBlank()) {
+        if (!isReady(map)) {
             return false;
         }
         boolean updated = false;
@@ -34,10 +31,7 @@ public class AscendHologramManager {
 
     public boolean createOrUpdateMapInfoHolo(AscendMap map, Store<EntityStore> store,
                                              Vector3d position, String worldName) {
-        if (!HylogramsBridge.isAvailable()) {
-            return false;
-        }
-        if (map == null || map.getId() == null || map.getId().isBlank()) {
+        if (!isReady(map)) {
             return false;
         }
         String name = getMapInfoName(map.getId());
@@ -56,6 +50,10 @@ public class AscendHologramManager {
             return false;
         }
         return HylogramsBridge.delete(infoName, store);
+    }
+
+    private static boolean isReady(AscendMap map) {
+        return HylogramsBridge.isAvailable() && map != null && map.getId() != null && !map.getId().isBlank();
     }
 
     private boolean createOrUpdateHolo(String name, List<String> lines, Store<EntityStore> store,

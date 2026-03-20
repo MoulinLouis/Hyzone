@@ -1,19 +1,19 @@
 package io.hyvexa.ascend.mine.data;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MineZone {
     private final String id;
     private final String mineId;
     private int minX, minY, minZ;
     private int maxX, maxY, maxZ;
-    private final Map<String, Double> blockTable = new ConcurrentHashMap<>();
+    private final Map<String, Double> blockTable = new HashMap<>();
     private double regenThreshold = 0.8;
     private int regenCooldownSeconds = 45;
-    private final List<MineZoneLayer> layers = new CopyOnWriteArrayList<>();
+    private final List<MineZoneLayer> layers = new ArrayList<>();
 
     public MineZone(String id, String mineId, int x1, int y1, int z1, int x2, int y2, int z2) {
         this.id = id;

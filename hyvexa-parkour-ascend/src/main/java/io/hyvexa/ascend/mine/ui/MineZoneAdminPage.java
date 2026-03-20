@@ -202,26 +202,15 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     }
 
     private void handlePos1(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) return;
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null) {
-            player.sendMessage(Message.raw("Unable to read player position."));
-            return;
-        }
-        Vector3d position = transform.getPosition();
-        int x = (int) Math.floor(position.getX());
-        int y = (int) Math.floor(position.getY() - 0.2d);
-        int z = (int) Math.floor(position.getZ());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        UUID uuid = playerRef != null ? playerRef.getUuid() : null;
-        if (uuid == null) return;
-        pos1Selections().put(uuid, new int[]{x, y, z});
-        player.sendMessage(Message.raw("Pos1: (" + x + ", " + y + ", " + z + ")"));
-        sendRefresh(ref, store);
+        handleSetPos(ref, store, pos1Selections(), "Pos1");
     }
 
     private void handlePos2(Ref<EntityStore> ref, Store<EntityStore> store) {
+        handleSetPos(ref, store, pos2Selections(), "Pos2");
+    }
+
+    private void handleSetPos(Ref<EntityStore> ref, Store<EntityStore> store,
+                              Map<UUID, int[]> posMap, String label) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
@@ -236,8 +225,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         UUID uuid = playerRef != null ? playerRef.getUuid() : null;
         if (uuid == null) return;
-        pos2Selections().put(uuid, new int[]{x, y, z});
-        player.sendMessage(Message.raw("Pos2: (" + x + ", " + y + ", " + z + ")"));
+        posMap.put(uuid, new int[]{x, y, z});
+        player.sendMessage(Message.raw(label + ": (" + x + ", " + y + ", " + z + ")"));
         sendRefresh(ref, store);
     }
 
@@ -616,12 +605,12 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         String mineName = mine != null ? mine.getName() : mineId;
         commandBuilder.set("#HeaderTitle.Text", "Zones - " + mineName);
 
-        commandBuilder.set("#ZoneIdField.Value", zoneId != null ? zoneId : "");
-        commandBuilder.set("#BlockProbField.Value", blockProb != null ? blockProb : "");
-        commandBuilder.set("#ThresholdField.Value", threshold != null ? threshold : "");
-        commandBuilder.set("#CooldownField.Value", cooldown != null ? cooldown : "");
-        commandBuilder.set("#LayerMinYField.Value", layerMinY != null ? layerMinY : "");
-        commandBuilder.set("#LayerMaxYField.Value", layerMaxY != null ? layerMaxY : "");
+        commandBuilder.set("#ZoneIdField.Value", zoneId);
+        commandBuilder.set("#BlockProbField.Value", blockProb);
+        commandBuilder.set("#ThresholdField.Value", threshold);
+        commandBuilder.set("#CooldownField.Value", cooldown);
+        commandBuilder.set("#LayerMinYField.Value", layerMinY);
+        commandBuilder.set("#LayerMaxYField.Value", layerMaxY);
 
         // Selected block display
         String selectedBlockDisplay = blockId.isEmpty() ? "(none)" : MineBlockRegistry.getDisplayName(blockId);

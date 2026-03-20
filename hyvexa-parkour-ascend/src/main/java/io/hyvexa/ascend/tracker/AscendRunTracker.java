@@ -246,11 +246,7 @@ public class AscendRunTracker {
             return;
         }
 
-        double dx = pos.getX() - map.getFinishX();
-        double dy = pos.getY() - map.getFinishY();
-        double dz = pos.getZ() - map.getFinishZ();
-
-        if (dx * dx + dz * dz <= FINISH_RADIUS_SQ && Math.abs(dy) <= FINISH_VERTICAL_RANGE) {
+        if (isNearFinish(playerId, pos)) {
             completeRun(playerRef, player, run, map, ref, store);
         }
     }
@@ -446,14 +442,15 @@ public class AscendRunTracker {
             double dz = pos.getZ() - entry.startZ;
 
             if (dx * dx + dz * dz <= START_DETECTION_RADIUS_SQ && Math.abs(dy) <= START_VERTICAL_RANGE) {
+                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+
                 // Check if map is blocked by active challenge
-                ParkourAscendPlugin challengePlugin = ParkourAscendPlugin.getInstance();
-                if (challengePlugin != null && challengePlugin.getChallengeManager() != null
-                        && challengePlugin.getChallengeManager().isMapBlocked(playerId, map.getDisplayOrder())) {
+                if (plugin != null && plugin.getChallengeManager() != null
+                        && plugin.getChallengeManager().isMapBlocked(playerId, map.getDisplayOrder())) {
                     // Teleport player back to spawn
-                    if (challengePlugin.getSettingsStore() != null && challengePlugin.getSettingsStore().hasSpawnPosition()) {
-                        Vector3d spawnPos = challengePlugin.getSettingsStore().getSpawnPosition();
-                        Vector3f spawnRot = challengePlugin.getSettingsStore().getSpawnRotation();
+                    if (plugin.getSettingsStore() != null && plugin.getSettingsStore().hasSpawnPosition()) {
+                        Vector3d spawnPos = plugin.getSettingsStore().getSpawnPosition();
+                        Vector3f spawnRot = plugin.getSettingsStore().getSpawnRotation();
                         store.addComponent(ref, Teleport.getComponentType(),
                             new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
                     }
@@ -467,7 +464,6 @@ public class AscendRunTracker {
                     playerId, map, playerStore, mapStore);
                 if (!unlockResult.unlocked) {
                     // Map not unlocked - teleport player back to spawn
-                    ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
                     if (plugin != null) {
                         AscendSettingsStore settingsStore = plugin.getSettingsStore();
                         if (settingsStore != null && settingsStore.hasSpawnPosition()) {

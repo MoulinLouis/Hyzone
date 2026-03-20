@@ -89,10 +89,6 @@ public class AscendHudManager {
             }
             return;
         }
-        if (playerStore == null) {
-            LOGGER.atFine().log("Skipping HUD update for %s: playerStore is null", playerId);
-            return;
-        }
         try {
             CachedEconomyData cached = getOrRefreshEconomyCache(playerId);
             hud.updateEconomy(cached.volt, cached.product, cached.digits, cached.elevationLevel, cached.potentialElevation, cached.showElevation);

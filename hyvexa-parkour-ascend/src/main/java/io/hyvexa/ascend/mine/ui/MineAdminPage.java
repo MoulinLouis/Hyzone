@@ -459,10 +459,10 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
     }
 
     private void populateFields(UICommandBuilder commandBuilder) {
-        commandBuilder.set("#MineIdField.Value", mineId != null ? mineId : "");
-        commandBuilder.set("#MineNameField.Value", mineName != null ? mineName : "");
-        commandBuilder.set("#MineOrderField.Value", mineOrder != null ? mineOrder : "0");
-        commandBuilder.set("#MineCostField.Value", mineCost != null ? mineCost : "");
+        commandBuilder.set("#MineIdField.Value", mineId);
+        commandBuilder.set("#MineNameField.Value", mineName);
+        commandBuilder.set("#MineOrderField.Value", mineOrder);
+        commandBuilder.set("#MineCostField.Value", mineCost);
 
         boolean hasMines = !mineConfigStore.listMinesSorted().isEmpty();
         boolean hasSelection = selectedMineId != null && !selectedMineId.isBlank();

@@ -108,11 +108,13 @@ public class StatsPage extends BaseAscendPage {
     }
 
     private void updateAllStats(UICommandBuilder commandBuilder, UUID playerId) {
+        // Fetch once for both income and multiplier calculations
+        List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
+
         // 1. Combined Income
-        commandBuilder.set("#IncomeValue.Text", formatCombinedIncome(playerId));
+        commandBuilder.set("#IncomeValue.Text", formatCombinedIncome(playerId, maps));
 
         // 2. Multiplier Breakdown
-        List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
         BigNumber[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
@@ -162,12 +164,10 @@ public class StatsPage extends BaseAscendPage {
         }
     }
 
-    private String formatCombinedIncome(UUID playerId) {
-        if (mapStore == null || ghostStore == null) {
+    private String formatCombinedIncome(UUID playerId, List<AscendMap> maps) {
+        if (maps.isEmpty() || ghostStore == null) {
             return "0 volt/sec";
         }
-
-        List<AscendMap> maps = mapStore.listMapsSorted();
         double totalVoltPerSec = 0.0;
 
         BigNumber digitsProduct = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);

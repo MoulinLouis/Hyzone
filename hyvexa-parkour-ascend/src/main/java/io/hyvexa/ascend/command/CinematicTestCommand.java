@@ -127,6 +127,11 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         return (float) Math.toRadians(degrees);
     }
 
+    private static float parseFloat(String[] args, int index, float defaultValue) {
+        if (index >= args.length) return defaultValue;
+        try { return Float.parseFloat(args[index]); } catch (NumberFormatException ignored) { return defaultValue; }
+    }
+
     private ServerCameraSettings base3p(float distance) {
         ServerCameraSettings s = new ServerCameraSettings();
         s.positionLerpSpeed = 0.15f;
@@ -148,10 +153,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
     // ── Test: Third person ───────────────────────────────────────────────
 
     private void testThirdPerson(Player player, PacketHandler ph, String[] args) {
-        float distance = 8f;
-        if (args.length > 1) {
-            try { distance = Float.parseFloat(args[1]); } catch (NumberFormatException ignored) {}
-        }
+        float distance = parseFloat(args, 1, 8f);
 
         ServerCameraSettings s = base3p(distance);
         ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, false, s));
@@ -174,14 +176,8 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
 
     private void testOrbit(Player player, PacketHandler ph, PlayerRef playerRef,
                            Store<EntityStore> store, Ref<EntityStore> ref, World world, String[] args) {
-        float distance = 10f;
-        float durationSec = 3f;
-        if (args.length > 1) {
-            try { distance = Float.parseFloat(args[1]); } catch (NumberFormatException ignored) {}
-        }
-        if (args.length > 2) {
-            try { durationSec = Float.parseFloat(args[2]); } catch (NumberFormatException ignored) {}
-        }
+        float distance = parseFloat(args, 1, 10f);
+        float durationSec = parseFloat(args, 2, 3f);
 
         float orbitDist = distance;
         long intervalMs = 50;
@@ -215,10 +211,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
     // ── Test: Locked camera (mouse look disabled) ────────────────────────
 
     private void testLocked(Player player, PacketHandler ph, String[] args) {
-        float distance = 6f;
-        if (args.length > 1) {
-            try { distance = Float.parseFloat(args[1]); } catch (NumberFormatException ignored) {}
-        }
+        float distance = parseFloat(args, 1, 6f);
 
         ServerCameraSettings s = base3p(distance);
         // Lock: disable mouse look via zero multiplier, freeze player movement
@@ -235,19 +228,9 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
     // ── Test: Camera at custom angle (degrees) ───────────────────────────
 
     private void testCameraPosition(Player player, PacketHandler ph, String[] args) {
-        float distance = 12f;
-        float pitchDeg = -30f;
-        float yawDeg = 0f;
-
-        if (args.length > 1) {
-            try { distance = Float.parseFloat(args[1]); } catch (NumberFormatException ignored) {}
-        }
-        if (args.length > 2) {
-            try { pitchDeg = Float.parseFloat(args[2]); } catch (NumberFormatException ignored) {}
-        }
-        if (args.length > 3) {
-            try { yawDeg = Float.parseFloat(args[3]); } catch (NumberFormatException ignored) {}
-        }
+        float distance = parseFloat(args, 1, 12f);
+        float pitchDeg = parseFloat(args, 2, -30f);
+        float yawDeg = parseFloat(args, 3, 0f);
 
         ServerCameraSettings s = base3p(distance);
         s.rotationType = RotationType.Custom;
@@ -260,10 +243,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
     // ── Test: Camera shake ───────────────────────────────────────────────
 
     private void testShake(Player player, PacketHandler ph, String[] args) {
-        float intensity = 0.5f;
-        if (args.length > 1) {
-            try { intensity = Float.parseFloat(args[1]); } catch (NumberFormatException ignored) {}
-        }
+        float intensity = parseFloat(args, 1, 0.5f);
 
         ph.writeNoCache(new CameraShakeEffect(0, intensity, AccumulationMode.Set));
         player.sendMessage(Message.raw("[CTest] Shake (intensity=" + intensity + ")."));
@@ -274,10 +254,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
     private void testZoomOut(Player player, PacketHandler ph, PlayerRef playerRef,
                              Store<EntityStore> store, Ref<EntityStore> ref, World world, String[] args) {
         float startDist = 3f;
-        float endDist = 20f;
-        if (args.length > 1) {
-            try { endDist = Float.parseFloat(args[1]); } catch (NumberFormatException ignored) {}
-        }
+        float endDist = parseFloat(args, 1, 20f);
 
         long intervalMs = 50;
         int totalSteps = 40; // 2 seconds
@@ -394,10 +371,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         }
 
         String particleId = args[1];
-        float scale = 1.0f;
-        if (args.length > 2) {
-            try { scale = Float.parseFloat(args[2]); } catch (NumberFormatException ignored) {}
-        }
+        float scale = parseFloat(args, 2, 1.0f);
 
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
@@ -455,14 +429,8 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
             return;
         }
 
-        float volume = 1.0f;
-        float pitch = 1.0f;
-        if (args.length > 2) {
-            try { volume = Float.parseFloat(args[2]); } catch (NumberFormatException ignored) {}
-        }
-        if (args.length > 3) {
-            try { pitch = Float.parseFloat(args[3]); } catch (NumberFormatException ignored) {}
-        }
+        float volume = parseFloat(args, 2, 1.0f);
+        float pitch = parseFloat(args, 3, 1.0f);
 
         // Try as index first, then as string ID
         int soundIndex;
