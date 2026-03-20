@@ -23,9 +23,11 @@ import io.hyvexa.core.state.ModeMessages;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * /skill [coord] - Unlock a skill tree node via chat command (bypass for UI lag).
@@ -34,6 +36,33 @@ import java.util.concurrent.CompletableFuture;
  * Equivalent to clicking Unlock on the /ascend skills page.
  */
 public class SkillCommand extends AbstractAsyncCommand {
+
+    /** Canonical coordinate for each skill tree node (e.g. "1:1", "3:2"). */
+    private static final Map<SkillTreeNode, String> NODE_COORDS = Map.ofEntries(
+        Map.entry(SkillTreeNode.AUTO_RUNNERS, "1:1"),
+        Map.entry(SkillTreeNode.AUTO_EVOLUTION, "2:1"),
+        Map.entry(SkillTreeNode.RUNNER_SPEED, "3:1"),
+        Map.entry(SkillTreeNode.EVOLUTION_POWER, "3:2"),
+        Map.entry(SkillTreeNode.RUNNER_SPEED_2, "4:1"),
+        Map.entry(SkillTreeNode.AUTO_SUMMIT, "5:1"),
+        Map.entry(SkillTreeNode.AUTO_ELEVATION, "5:2"),
+        Map.entry(SkillTreeNode.ASCENSION_CHALLENGES, "6:1"),
+        Map.entry(SkillTreeNode.MOMENTUM_SURGE, "7:1"),
+        Map.entry(SkillTreeNode.MOMENTUM_ENDURANCE, "7:2"),
+        Map.entry(SkillTreeNode.MULTIPLIER_BOOST, "8:1"),
+        Map.entry(SkillTreeNode.RUNNER_SPEED_3, "9:1"),
+        Map.entry(SkillTreeNode.EVOLUTION_POWER_2, "9:2"),
+        Map.entry(SkillTreeNode.RUNNER_SPEED_4, "10:1"),
+        Map.entry(SkillTreeNode.EVOLUTION_POWER_3, "10:2"),
+        Map.entry(SkillTreeNode.MOMENTUM_MASTERY, "11:1"),
+        Map.entry(SkillTreeNode.MULTIPLIER_BOOST_2, "12:1"),
+        Map.entry(SkillTreeNode.AUTO_ASCEND, "12:2"),
+        Map.entry(SkillTreeNode.RUNNER_SPEED_5, "13:1")
+    );
+
+    /** Inverse lookup: normalized coordinate (with _ separator) -> node. */
+    private static final Map<String, SkillTreeNode> COORD_TO_NODE = NODE_COORDS.entrySet().stream()
+        .collect(Collectors.toMap(e -> e.getValue().replace(':', '_'), Map.Entry::getKey));
 
     public SkillCommand() {
         super("skill", "Unlock a skill tree node");
@@ -168,51 +197,10 @@ public class SkillCommand extends AbstractAsyncCommand {
     private static SkillTreeNode parseCoord(String input) {
         // Normalize separators: accept _ : - .
         String normalized = input.replace(':', '_').replace('-', '_').replace('.', '_');
-        return switch (normalized) {
-            case "1_1" -> SkillTreeNode.AUTO_RUNNERS;
-            case "2_1" -> SkillTreeNode.AUTO_EVOLUTION;
-            case "3_1" -> SkillTreeNode.RUNNER_SPEED;
-            case "3_2" -> SkillTreeNode.EVOLUTION_POWER;
-            case "4_1" -> SkillTreeNode.RUNNER_SPEED_2;
-            case "5_1" -> SkillTreeNode.AUTO_SUMMIT;
-            case "5_2" -> SkillTreeNode.AUTO_ELEVATION;
-            case "6_1" -> SkillTreeNode.ASCENSION_CHALLENGES;
-            case "7_1" -> SkillTreeNode.MOMENTUM_SURGE;
-            case "7_2" -> SkillTreeNode.MOMENTUM_ENDURANCE;
-            case "8_1" -> SkillTreeNode.MULTIPLIER_BOOST;
-            case "9_1" -> SkillTreeNode.RUNNER_SPEED_3;
-            case "9_2" -> SkillTreeNode.EVOLUTION_POWER_2;
-            case "10_1" -> SkillTreeNode.RUNNER_SPEED_4;
-            case "10_2" -> SkillTreeNode.EVOLUTION_POWER_3;
-            case "11_1" -> SkillTreeNode.MOMENTUM_MASTERY;
-            case "12_1" -> SkillTreeNode.MULTIPLIER_BOOST_2;
-            case "12_2" -> SkillTreeNode.AUTO_ASCEND;
-            case "13_1" -> SkillTreeNode.RUNNER_SPEED_5;
-            default -> null;
-        };
+        return COORD_TO_NODE.get(normalized);
     }
 
     private static String getCoord(SkillTreeNode node) {
-        return switch (node) {
-            case AUTO_RUNNERS -> "1:1";
-            case AUTO_EVOLUTION -> "2:1";
-            case RUNNER_SPEED -> "3:1";
-            case EVOLUTION_POWER -> "3:2";
-            case RUNNER_SPEED_2 -> "4:1";
-            case AUTO_SUMMIT -> "5:1";
-            case AUTO_ELEVATION -> "5:2";
-            case ASCENSION_CHALLENGES -> "6:1";
-            case MOMENTUM_SURGE -> "7:1";
-            case MOMENTUM_ENDURANCE -> "7:2";
-            case MULTIPLIER_BOOST -> "8:1";
-            case RUNNER_SPEED_3 -> "9:1";
-            case EVOLUTION_POWER_2 -> "9:2";
-            case RUNNER_SPEED_4 -> "10:1";
-            case EVOLUTION_POWER_3 -> "10:2";
-            case MOMENTUM_MASTERY -> "11:1";
-            case MULTIPLIER_BOOST_2 -> "12:1";
-            case AUTO_ASCEND -> "12:2";
-            case RUNNER_SPEED_5 -> "13:1";
-        };
+        return NODE_COORDS.get(node);
     }
 }

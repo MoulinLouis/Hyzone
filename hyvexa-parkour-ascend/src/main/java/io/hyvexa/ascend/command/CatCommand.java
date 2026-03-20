@@ -106,10 +106,10 @@ public class CatCommand extends AbstractAsyncCommand {
             int found = progress.getFoundCatCount();
             AscendHudManager hm = plugin.getHudManager();
             if (hm != null) {
-                hm.showToast(playerId, ToastType.ECONOMY, "Cat found! (" + found + "/5)");
+                hm.showToast(playerId, ToastType.ECONOMY, "You found " + VALID_CATS.get(token) + "! (" + found + "/" + VALID_CATS.size() + ")");
             }
 
-            if (found >= 5 && plugin.getAchievementManager() != null) {
+            if (found >= VALID_CATS.size() && plugin.getAchievementManager() != null) {
                 plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
             }
         }, world);

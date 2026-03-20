@@ -39,6 +39,11 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     public static final Map<UUID, int[]> minePos1 = new ConcurrentHashMap<>();
     public static final Map<UUID, int[]> minePos2 = new ConcurrentHashMap<>();
 
+    public static void clearPlayer(UUID playerId) {
+        minePos1.remove(playerId);
+        minePos2.remove(playerId);
+    }
+
     public AscendAdminCommand() {
         super("as", "Ascend admin tools");
         this.setPermissionGroup(GameMode.Adventure);
@@ -91,6 +96,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         }
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) {
+            player.sendMessage(Message.raw("[Ascend] Plugin not loaded yet."));
             return;
         }
         if ("mine".equals(category)) {
@@ -103,6 +109,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         }
         AscendMapStore mapStore = plugin.getMapStore();
         if (mapStore == null) {
+            player.sendMessage(Message.raw("[Ascend] Plugin not loaded yet."));
             return;
         }
         if ("holo".equals(category)) {

@@ -229,14 +229,28 @@ public class AscendCommand extends AbstractAsyncCommand {
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
+    /**
+     * If the player hasn't seen the given tutorial, show it and return true.
+     * Otherwise return false so the caller can proceed with the real page.
+     */
+    private boolean showTutorialIfNeeded(Player player, PlayerRef playerRef, Ref<EntityStore> ref,
+                                         Store<EntityStore> store, ParkourAscendPlugin plugin,
+                                         String tutorialKey, AscendTutorialPage.Tutorial tutorial) {
+        UUID playerId = playerRef.getUuid();
+        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, tutorialKey)) {
+            plugin.getPlayerStore().markTutorialSeen(playerId, tutorialKey);
+            player.getPageManager().openCustomPage(ref, store,
+                new AscendTutorialPage(playerRef, tutorial));
+            return true;
+        }
+        return false;
+    }
+
     private void openElevationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null) return;
-        UUID playerId = playerRef.getUuid();
-        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, TutorialTriggerService.ELEVATION)) {
-            plugin.getPlayerStore().markTutorialSeen(playerId, TutorialTriggerService.ELEVATION);
-            player.getPageManager().openCustomPage(ref, store,
-                new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ELEVATION));
+        if (showTutorialIfNeeded(player, playerRef, ref, store, plugin,
+                TutorialTriggerService.ELEVATION, AscendTutorialPage.Tutorial.ELEVATION)) {
             return;
         }
         ElevationPage page = new ElevationPage(playerRef, plugin.getPlayerStore());
@@ -248,11 +262,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openSummitPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getSummitManager() == null) return;
-        UUID playerId = playerRef.getUuid();
-        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, TutorialTriggerService.SUMMIT)) {
-            plugin.getPlayerStore().markTutorialSeen(playerId, TutorialTriggerService.SUMMIT);
-            player.getPageManager().openCustomPage(ref, store,
-                new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.SUMMIT));
+        if (showTutorialIfNeeded(player, playerRef, ref, store, plugin,
+                TutorialTriggerService.SUMMIT, AscendTutorialPage.Tutorial.SUMMIT)) {
             return;
         }
         SummitPage page = new SummitPage(playerRef, plugin.getPlayerStore(), plugin.getSummitManager());
@@ -264,11 +275,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openAscensionPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getAscensionManager() == null) return;
-        UUID playerId = playerRef.getUuid();
-        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, TutorialTriggerService.ASCENSION)) {
-            plugin.getPlayerStore().markTutorialSeen(playerId, TutorialTriggerService.ASCENSION);
-            player.getPageManager().openCustomPage(ref, store,
-                new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ASCENSION));
+        if (showTutorialIfNeeded(player, playerRef, ref, store, plugin,
+                TutorialTriggerService.ASCENSION, AscendTutorialPage.Tutorial.ASCENSION)) {
             return;
         }
         AscensionPage page = new AscensionPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
@@ -305,17 +313,14 @@ public class AscendCommand extends AbstractAsyncCommand {
 
     private void openChallengePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getChallengeManager() == null) return;
+        if (plugin == null || plugin.getChallengeManager() == null || plugin.getAscensionManager() == null) return;
         if (!plugin.getAscensionManager().hasAscensionChallenges(playerRef.getUuid())) {
             player.sendMessage(Message.raw("[Ascend] You need the Ascension Challenges skill to access this.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
-        UUID playerId = playerRef.getUuid();
-        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, TutorialTriggerService.CHALLENGES)) {
-            plugin.getPlayerStore().markTutorialSeen(playerId, TutorialTriggerService.CHALLENGES);
-            player.getPageManager().openCustomPage(ref, store,
-                new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.CHALLENGES));
+        if (showTutorialIfNeeded(player, playerRef, ref, store, plugin,
+                TutorialTriggerService.CHALLENGES, AscendTutorialPage.Tutorial.CHALLENGES)) {
             return;
         }
         AscendChallengePage page = new AscendChallengePage(playerRef, plugin.getPlayerStore(), plugin.getChallengeManager());
