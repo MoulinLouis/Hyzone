@@ -6,7 +6,7 @@ import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
-import BigNumber;
+import io.hyvexa.common.math.BigNumber;
 
 import java.util.Set;
 import java.util.UUID;

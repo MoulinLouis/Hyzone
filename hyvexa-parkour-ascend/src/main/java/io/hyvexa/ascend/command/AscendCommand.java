@@ -235,7 +235,7 @@ public class AscendCommand extends AbstractAsyncCommand {
      */
     private boolean showTutorialIfNeeded(Player player, PlayerRef playerRef, Ref<EntityStore> ref,
                                          Store<EntityStore> store, ParkourAscendPlugin plugin,
-                                         String tutorialKey, AscendTutorialPage.Tutorial tutorial) {
+                                         int tutorialKey, AscendTutorialPage.Tutorial tutorial) {
         UUID playerId = playerRef.getUuid();
         if (!plugin.getPlayerStore().hasSeenTutorial(playerId, tutorialKey)) {
             plugin.getPlayerStore().markTutorialSeen(playerId, tutorialKey);

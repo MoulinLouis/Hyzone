@@ -19,14 +19,13 @@ class AscendConstantsTest {
 
     @Test
     void getMapSpeedMultiplierOutOfBounds() {
-        double last = AscendConstants.MAP_SPEED_MULTIPLIERS[AscendConstants.MAP_SPEED_MULTIPLIERS.length - 1];
-        assertEquals(last, AscendConstants.getMapSpeedMultiplier(99), 1e-9);
+        // With single-mine simplification, all display orders return the same constant
+        assertEquals(AscendConstants.MAP_SPEED_MULTIPLIER, AscendConstants.getMapSpeedMultiplier(99), 1e-9);
     }
 
     @Test
     void getMapSpeedMultiplierNegative() {
-        double last = AscendConstants.MAP_SPEED_MULTIPLIERS[AscendConstants.MAP_SPEED_MULTIPLIERS.length - 1];
-        assertEquals(last, AscendConstants.getMapSpeedMultiplier(-1), 1e-9);
+        assertEquals(AscendConstants.MAP_SPEED_MULTIPLIER, AscendConstants.getMapSpeedMultiplier(-1), 1e-9);
     }
 
     // --- Early level boost ---

@@ -54,7 +54,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     private static final String COLOR_OFF = "#6b7280";
     private static final String COLOR_ACCENT = "#f59e0b";
     private static final String COLOR_LOCKED_BORDER = "#4b5563";
-    private static final SummitCategory[] SUMMIT_CATEGORIES = SummitCategory.values();
+    private static final SummitCategory[] SUMMIT_CATEGORY_VALUES = SummitCategory.values();
     private static final long REFRESH_INTERVAL_MS = 1000L;
 
     private final AscendPlayerStore playerStore;
@@ -211,8 +211,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
             // Level display
             int level = 0;
-            if (i < SUMMIT_CATEGORIES.length) {
-                level = playerStore.getSummitLevel(playerId, SUMMIT_CATEGORIES[i]);
+            if (i < SUMMIT_CATEGORY_VALUES.length) {
+                level = playerStore.getSummitLevel(playerId, SUMMIT_CATEGORY_VALUES[i]);
             }
 
             int targetLevel = catConfig.getTargetLevel();

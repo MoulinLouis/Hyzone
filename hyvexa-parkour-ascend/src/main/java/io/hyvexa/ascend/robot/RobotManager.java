@@ -90,6 +90,7 @@ public class RobotManager {
     private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
     private final OrphanedEntityCleanup orphanCleanup;
     private final Map<String, Long> teleportWarningByRobot = new ConcurrentHashMap<>();
+    private final RobotSpawner spawner = new RobotSpawner(this);
     private ScheduledFuture<?> tickTask;
     private volatile long lastRefreshMs;
     private volatile long lastFullRefreshMs;
@@ -592,7 +593,7 @@ public class RobotManager {
         );
     }
 
-    private void clearTeleportWarning(RobotState state) {
+    void clearTeleportWarning(RobotState state) {
         if (state == null) {
             return;
         }
@@ -726,7 +727,7 @@ public class RobotManager {
         }
     }
 
-    private void removeTrackedRobotsForPlayer(UUID playerId) {
+    void removeTrackedRobotsForPlayer(UUID playerId) {
         String prefix = playerId.toString() + ":";
         for (String key : List.copyOf(robots.keySet())) {
             if (key.startsWith(prefix)) {
@@ -735,7 +736,7 @@ public class RobotManager {
         }
     }
 
-    private void removeRobotState(String key) {
+    void removeRobotState(String key) {
         RobotState removed = robots.remove(key);
         if (removed == null) {
             return;
@@ -961,7 +962,7 @@ public class RobotManager {
         return robot.getCachedGhost();
     }
 
-    private void queueOrphanIfDespawnFailed(UUID previousEntityUuid, RobotState state) {
+    void queueOrphanIfDespawnFailed(UUID previousEntityUuid, RobotState state) {
         if (previousEntityUuid == null || state == null) {
             return;
         }
@@ -1460,7 +1461,7 @@ public class RobotManager {
         return Math.max(1L, interval);
     }
 
-    private String robotKey(UUID ownerId, String mapId) {
+    String robotKey(UUID ownerId, String mapId) {
         return ownerId.toString() + ":" + mapId;
     }
 
@@ -1510,7 +1511,7 @@ public class RobotManager {
      * Check if a player is currently in the Ascend world.
      * Uses the plugin's PlayerRef cache for O(1) lookup instead of scanning all players.
      */
-    private boolean isPlayerInAscendWorld(UUID playerId) {
+    boolean isPlayerInAscendWorld(UUID playerId) {
         if (playerId == null) {
             return false;
         }
@@ -1534,7 +1535,7 @@ public class RobotManager {
         return ModeGate.isAscendWorld(world);
     }
 
-    private boolean isPlayerNearMapSpawn(UUID playerId, AscendMap map) {
+    boolean isPlayerNearMapSpawn(UUID playerId, AscendMap map) {
         if (playerId == null || map == null) {
             return false;
         }
@@ -1670,4 +1671,15 @@ public class RobotManager {
             }
         }
     }
+
+    // ── Package-private accessors for extracted subsystems ──
+
+    Set<UUID> getOnlinePlayers() { return onlinePlayers; }
+    Set<UUID> getDirtyPlayers() { return dirtyPlayers; }
+    AscendPlayerStore getPlayerStore() { return playerStore; }
+    AscendMapStore getMapStore() { return mapStore; }
+    GhostStore getGhostStore() { return ghostStore; }
+    Map<String, RobotState> getRobots() { return robots; }
+    OrphanedEntityCleanup getOrphanCleanup() { return orphanCleanup; }
+    RobotSpawner getSpawner() { return spawner; }
 }
