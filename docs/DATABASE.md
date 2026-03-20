@@ -586,6 +586,72 @@ CREATE TABLE IF NOT EXISTS duel_player_stats (
 
 Manager: `DuelStatsStore` (in `hyvexa-parkour`)
 
+## parkour_ghost_recordings
+Stores ghost recordings for parkour mode (personal best movement paths).
+
+```sql
+CREATE TABLE IF NOT EXISTS parkour_ghost_recordings (
+  player_uuid VARCHAR(36) NOT NULL,
+  map_id VARCHAR(32) NOT NULL,
+  recording_blob MEDIUMBLOB NOT NULL,
+  completion_time_ms BIGINT NOT NULL,
+  recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, map_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Same schema as `ascend_ghost_recordings` but for parkour mode
+- Created by `GhostStore("parkour_ghost_recordings", "parkour")` in `HyvexaPlugin`
+- See `ascend_ghost_recordings` notes for blob format details
+
+## saved_run_state
+Persists in-progress run state so players can resume after disconnect or server restart.
+
+```sql
+CREATE TABLE IF NOT EXISTS saved_run_state (
+  player_uuid CHAR(36) NOT NULL PRIMARY KEY,
+  map_id VARCHAR(64) NOT NULL,
+  elapsed_ms BIGINT NOT NULL,
+  last_checkpoint INT NOT NULL DEFAULT -1,
+  touched_checkpoints TEXT NOT NULL,
+  checkpoint_times TEXT NOT NULL,
+  map_updated_at BIGINT NOT NULL,
+  saved_at BIGINT NOT NULL,
+  CONSTRAINT fk_saved_run_map FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- One row per player (replaced on each save via `REPLACE INTO`)
+- `touched_checkpoints` and `checkpoint_times` are comma-separated encoded strings
+- `map_updated_at` used to invalidate saved state if map was edited since save
+- Manager: `RunStateStore` (in `hyvexa-parkour`) -- no in-memory cache, loaded only on reconnect
+
+## player_settings
+Persists player settings (toggles, music, HUD, speed) across reconnections.
+
+```sql
+CREATE TABLE IF NOT EXISTS player_settings (
+  player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  reset_item_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  players_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+  duel_hide_opponent BOOLEAN NOT NULL DEFAULT FALSE,
+  ghost_visible BOOLEAN NOT NULL DEFAULT TRUE,
+  advanced_hud_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  hud_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+  music_label VARCHAR(32) DEFAULT NULL,
+  checkpoint_sfx_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  victory_sfx_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  vip_speed_multiplier FLOAT NOT NULL DEFAULT 1.0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Immediate write on change, lazy load per player (DuelPreferenceStore pattern)
+- Manager: `PlayerSettingsPersistence` (in `hyvexa-parkour`)
+
 ---
 
 # Ascend Tables
@@ -744,7 +810,7 @@ CREATE TABLE IF NOT EXISTS ascend_player_summit (
 ```
 
 Notes:
-- `category` values: `VEXA_FLOW`, `RUNNER_SPEED`, `MANUAL_MASTERY`
+- `category` values: `MULTIPLIER_GAIN`, `RUNNER_SPEED`, `EVOLUTION_POWER`
 - `xp` is the Summit XP in that category (converted to level via formula in code)
 - `xp_scale_v2` is a migration marker (prevents re-running XP scale migration)
 - Summit levels reset on Ascension
@@ -998,7 +1064,14 @@ CREATE TABLE IF NOT EXISTS mine_players (
   bag_capacity_level INT NOT NULL DEFAULT 0,
   multi_break_level INT NOT NULL DEFAULT 0,   -- DEPRECATED: no longer used
   auto_sell_level INT NOT NULL DEFAULT 0,
+  upgrade_momentum INT NOT NULL DEFAULT 0,
+  upgrade_fortune INT NOT NULL DEFAULT 0,
+  upgrade_jackhammer INT NOT NULL DEFAULT 0,
+  upgrade_stomp INT NOT NULL DEFAULT 0,
+  upgrade_blast INT NOT NULL DEFAULT 0,
+  upgrade_haste INT NOT NULL DEFAULT 0,
   in_mine TINYINT(1) NOT NULL DEFAULT 0,
+  pickaxe_tier INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
@@ -1008,6 +1081,9 @@ CREATE TABLE IF NOT EXISTS mine_players (
 Notes:
 - `crystals` is the mine-specific currency (migrated from BigNumber mantissa+exp10 to plain BIGINT)
 - Upgrade level columns added via `ensureMineUpgradeColumns()` migration
+- `upgrade_momentum` through `upgrade_haste` are the 6 active upgrade types (see `MineUpgradeType` enum)
+- `mining_speed_level` and `multi_break_level` are deprecated legacy columns (no longer read by code)
+- `pickaxe_tier` tracks the player's current pickaxe tier
 - `in_mine` tracks whether the player is currently in the mine (persisted for reconnect restoration)
 - Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`) -- dirty-tracking with 5-second batched saves
 

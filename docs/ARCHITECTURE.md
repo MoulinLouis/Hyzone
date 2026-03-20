@@ -80,15 +80,19 @@ Module boundaries:
 | `MineBonusCalculator` | Cross-progression bonuses from mining milestones that apply to parkour systems (runner speed, multiplier gain, volt gain) |
 | `MineBreakSystem` | ECS `EntityEventSystem<BreakBlockEvent>` — intercepts block breaks inside mining zones, adds blocks to inventory, shows toast |
 | `MineDamageSystem` | ECS `EntityEventSystem<DamageBlockEvent>` — scales block damage by mining speed upgrade multiplier |
-| `MineCommand` | `/mine` command with subcommands: `sell`, `upgrades`, `select`, `addcrystals` (admin) |
+| `MineCommand` | `/mine` command with subcommands: `sell`, `upgrades`, `achievements`, `addcrystals` (admin) |
 
 **Upgrades** (`MineUpgradeType` enum):
 
 | Upgrade | Max Level | Effect |
 |---------|-----------|--------|
-| `MINING_SPEED` | 100 | +10% block damage per level |
 | `BAG_CAPACITY` | 50 | +10 bag slots per level (base 50) |
-| `MULTI_BREAK` | 20 | +5% chance to mine 2 blocks per level |
+| `MOMENTUM` | 25 | Build a combo while mining to deal more damage |
+| `FORTUNE` | 25 | Chance to get bonus drops from mined blocks |
+| `JACKHAMMER` | 10 | Breaks a column of blocks below the one you mine |
+| `STOMP` | 15 | Breaks a layer of blocks around your feet on landing |
+| `BLAST` | 15 | Breaks blocks in a sphere around your target |
+| `HASTE` | 20 | +5% mining speed per level |
 
 **Database tables** (owned by Ascend, created via `AscendDatabaseSetup`):
 
@@ -96,6 +100,7 @@ Module boundaries:
 |-------|---------|
 | `mine_definitions` | Mine ID, name, display order, unlock cost, world, spawn position |
 | `mine_zones` | Zone AABB bounds, block table JSON (weighted random), regen threshold/cooldown |
+| `mine_zone_layers` | Per-zone Y-range layers with separate block tables for vertical variety |
 | `mine_gate` | Entry/exit gate AABB bounds + teleport destinations (id=1 entry, id=2 exit) |
 | `mine_players` | Per-player crystals + upgrade levels |
 | `mine_player_inventory` | Per-player block inventory (block type ID + amount) |
@@ -426,6 +431,9 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `map_checkpoints` | Checkpoint positions per map |
 | `player_completions` | Completed maps with best times per player |
 | `player_checkpoint_times` | Best checkpoint split times per player per map |
+| `parkour_ghost_recordings` | Ghost replay recordings per player per map (parkour mode) |
+| `saved_run_state` | In-progress run state for reconnect restoration |
+| `player_settings` | Per-player settings persistence (toggles, music, HUD, speed) |
 | `settings` | Global server settings (single row) |
 | `global_messages` | Broadcast messages |
 | `global_message_settings` | Message interval (single row) |
@@ -444,6 +452,7 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `ascend_ghost_recordings` | Ghost replay recordings per player per map |
 | `mine_definitions` | Mine ID, name, display order, unlock cost, world, spawn |
 | `mine_zones` | Zone AABB bounds, block table JSON, regen config |
+| `mine_zone_layers` | Per-zone Y-range layers with separate block tables |
 | `mine_gate` | Entry/exit gate bounds + teleport destinations |
 | `mine_players` | Per-player crystals + upgrade levels |
 | `mine_player_inventory` | Per-player block inventory (type + amount) |
@@ -675,10 +684,10 @@ Hardcoded values that may need tuning:
 |----------|-------|---------|
 | `TOUCH_RADIUS` | 1.5 | Distance for trigger detection |
 | `DEFAULT_FALL_RESPAWN_SECONDS` | 3.0 | Fallback fall timeout |
-| `MAP_XP_EASY` | 100 | XP for Easy map completion |
-| `MAP_XP_MEDIUM` | 200 | XP for Medium map completion |
-| `MAP_XP_HARD` | 400 | XP for Hard map completion |
-| `MAP_XP_INSANE` | 800 | XP for Insane map completion |
+| `MAP_XP_EASY` | 15 | XP for Easy map completion |
+| `MAP_XP_MEDIUM` | 30 | XP for Medium map completion |
+| `MAP_XP_HARD` | 60 | XP for Hard map completion |
+| `MAP_XP_INSANE` | 100 | XP for Insane map completion |
 
 ### AscendConstants.java
 
@@ -692,7 +701,8 @@ Economy, progression, and system constants for Ascend mode. Key values:
 | `RUNNER_TICK_INTERVAL_MS` | 16ms | Ghost replay tick (~60fps) |
 | `MAX_ROBOT_STARS` | 5 | Max evolution level |
 | `MAX_SPEED_LEVEL` | 20 | Max runner speed level |
-| `ELEVATION_MULTIPLIER_EXPONENT` | 1.05 | Elevation level curve |
+| `ELEVATION_COST_GROWTH` | 1.15 | Elevation cost growth rate |
+| `ELEVATION_COST_CURVE` | 0.72 | Elevation cost exponent (early game) |
 | `ELEVATION_BASE_COST` | 30,000 | Starting elevation cost |
 | `ASCENSION_VOLT_THRESHOLD` | 10^33 | Volt needed to Ascend |
 | `PASSIVE_OFFLINE_RATE_PERCENT` | 10% | Offline earning rate |
