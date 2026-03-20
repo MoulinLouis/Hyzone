@@ -41,6 +41,9 @@ public class WelcomeTutorialScreen2Page extends BaseParkourPage {
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull ButtonEventData data) {
         super.handleDataEvent(ref, store, data);
+        if (data.getButton() == null) {
+            return;
+        }
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
 

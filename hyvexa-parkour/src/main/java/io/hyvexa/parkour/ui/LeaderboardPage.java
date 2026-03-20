@@ -15,25 +15,23 @@ import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
-import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 
 public class LeaderboardPage extends AbstractSearchablePaginatedPage {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
-    private final RunTracker runTracker;
     private static final String BUTTON_BACK = "Back";
 
     public LeaderboardPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                  ProgressStore progressStore, RunTracker runTracker) {
+                                  ProgressStore progressStore) {
         super(playerRef, 50);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
-        this.runTracker = runTracker;
     }
 
     @Override
@@ -59,7 +57,7 @@ public class LeaderboardPage extends AbstractSearchablePaginatedPage {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new LeaderboardMenuPage(playerRef, mapStore, progressStore, runTracker));
+                        new LeaderboardMenuPage(playerRef, mapStore, progressStore));
             }
         }
     }
@@ -75,7 +73,7 @@ public class LeaderboardPage extends AbstractSearchablePaginatedPage {
             return;
         }
         String filter = getSearchText().trim().toLowerCase();
-        List<LeaderboardRow> filtered = new java.util.ArrayList<>();
+        List<LeaderboardRow> filtered = new ArrayList<>();
         for (int i = 0; i < snapshot.size(); i++) {
             MedalStore.MedalScoreEntry entry = snapshot.get(i);
             String name = ParkourUtils.resolveName(entry.getPlayerId(), progressStore);

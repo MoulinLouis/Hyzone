@@ -214,53 +214,21 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
-        try {
-            VexaStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore");
-        }
-        try {
-            DiscordLinkStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore");
-        }
-        try {
-            FeatherStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize FeatherStore");
-        }
-        try {
-            VoteStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize VoteStore");
-        }
-        try {
-            MedalRewardStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize MedalRewardStore");
-        }
-        try {
-            MedalStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize MedalStore");
-        }
-        try {
-            CosmeticStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize CosmeticStore");
-        }
-        try {
+        initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
+        initSafe("DiscordLinkStore", () -> DiscordLinkStore.getInstance().initialize());
+        initSafe("FeatherStore", () -> FeatherStore.getInstance().initialize());
+        initSafe("VoteStore", () -> VoteStore.getInstance().initialize());
+        initSafe("MedalRewardStore", () -> MedalRewardStore.getInstance().initialize());
+        initSafe("MedalStore", () -> MedalStore.getInstance().initialize());
+        initSafe("CosmeticStore", () -> CosmeticStore.getInstance().initialize());
+        initSafe("AnalyticsStore", () -> {
             AnalyticsStore.getInstance().initialize();
             AnalyticsStore.getInstance().purgeOldEvents(90);
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore");
-        }
-        try {
+        });
+        initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
             VoteManager.getInstance().initialize(voteConfig);
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize VoteManager");
-        }
+        });
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
         this.mapStore.syncLoad();
@@ -320,7 +288,6 @@ public class HyvexaPlugin extends JavaPlugin {
         this.inventorySyncManager = new InventorySyncManager(mapStore, progressStore, runTracker,
                 this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
         this.worldMapManager = new WorldMapManager(true);
-        this.playtimeManager.setOnlineCount(Universe.get().getPlayers().size());
         registerRunTrackerTickSystem();
         hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates,
                 ParkourTimingConstants.HUD_UPDATE_INTERVAL_MS, ParkourTimingConstants.HUD_UPDATE_INTERVAL_MS,
@@ -592,9 +559,6 @@ public class HyvexaPlugin extends JavaPlugin {
                     LOGGER.atWarning().withCause(e).log("Disconnect cleanup: Analytics");
                 }
             }
-
-            try { playtimeManager.decrementOnlineCount(); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: playtimeManager"); }
         });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             inventorySyncManager.syncRunInventoryOnConnect(playerRef);
@@ -1005,7 +969,7 @@ public class HyvexaPlugin extends JavaPlugin {
                                 syncHudPlayerWorld(playerRef, playerId);
                                 continue;
                             }
-                            if (!shouldApplyParkourMode(playerId, world)) {
+                            if (!shouldApplyParkourMode(world)) {
                                 continue;
                             }
                             if (hudManager != null) {
@@ -1053,11 +1017,6 @@ public class HyvexaPlugin extends JavaPlugin {
             collisionManager.disablePlayerCollision(playerRef);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Exception in PlayerConnectEvent (collision)");
-        }
-        try {
-            playtimeManager.incrementOnlineCount();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Exception in PlayerConnectEvent (count)");
         }
         try {
             if (playerRef != null) {
@@ -1178,10 +1137,7 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
-    public boolean shouldApplyParkourMode(UUID playerId, World world) {
-        if (playerId == null) {
-            return false;
-        }
+    public boolean shouldApplyParkourMode(World world) {
         return isParkourWorld(world);
     }
 
@@ -1199,6 +1155,16 @@ public class HyvexaPlugin extends JavaPlugin {
 
     public boolean isParkourWorld(World world) {
         return ModeGate.isParkourWorld(world);
+    }
+
+    private void initSafe(String name, Runnable init) {
+        try { init.run(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize " + name); }
+    }
+
+    private void shutdownSafe(String name, Runnable action) {
+        try { action.run(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to shut down " + name); }
     }
 
     private void cancelScheduled(ScheduledFuture<?> handle) {
@@ -1269,7 +1235,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private void registerRunTrackerTickSystem() {
         var registry = EntityStore.REGISTRY;
         if (!registry.hasSystemClass(RunTrackerTickSystem.class)) {
-            registry.registerSystem(new RunTrackerTickSystem(this, runTracker, perksManager, duelTracker));
+            registry.registerSystem(new RunTrackerTickSystem(this, runTracker, perksManager));
         }
     }
 
@@ -1335,55 +1301,30 @@ public class HyvexaPlugin extends JavaPlugin {
     @Override
     protected void shutdown() {
         LOGGER.atInfo().log("Shutdown: starting plugin shutdown");
-        try { cancelScheduled(hudUpdateTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: hudUpdateTask"); }
-        try { cancelScheduled(playtimeTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playtimeTask"); }
-        try { cancelScheduled(collisionTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: collisionTask"); }
-        try { cancelScheduled(playerCountTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerCountTask"); }
-        try { cancelScheduled(stalePlayerSweepTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: stalePlayerSweepTask"); }
-        try { cancelScheduled(runStateAutosaveTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: runStateAutosaveTask"); }
-        try { cancelScheduled(teleportDebugTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: teleportDebugTask"); }
-        try { cancelScheduled(duelTickTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: duelTickTask"); }
-        try { cancelScheduled(votePollingTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: votePollingTask"); }
-
-        try { VoteManager.getInstance().shutdown(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: VoteManager"); }
-
-        try { if (ghostRecorder != null) { ghostRecorder.stop(); } }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: ghostRecorder"); }
-
-        try { if (ghostNpcManager != null) { ghostNpcManager.stop(); } }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: ghostNpcManager"); }
-
-        try { if (petManager != null) { petManager.stop(); } }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: petManager"); }
-
-        try { if (announcementManager != null) { announcementManager.shutdown(); } }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: announcementManager"); }
-
+        shutdownSafe("hudUpdateTask", () -> cancelScheduled(hudUpdateTask));
+        shutdownSafe("playtimeTask", () -> cancelScheduled(playtimeTask));
+        shutdownSafe("collisionTask", () -> cancelScheduled(collisionTask));
+        shutdownSafe("playerCountTask", () -> cancelScheduled(playerCountTask));
+        shutdownSafe("stalePlayerSweepTask", () -> cancelScheduled(stalePlayerSweepTask));
+        shutdownSafe("runStateAutosaveTask", () -> cancelScheduled(runStateAutosaveTask));
+        shutdownSafe("teleportDebugTask", () -> cancelScheduled(teleportDebugTask));
+        shutdownSafe("duelTickTask", () -> cancelScheduled(duelTickTask));
+        shutdownSafe("votePollingTask", () -> cancelScheduled(votePollingTask));
+        shutdownSafe("VoteManager", () -> VoteManager.getInstance().shutdown());
+        shutdownSafe("ghostRecorder", () -> { if (ghostRecorder != null) ghostRecorder.stop(); });
+        shutdownSafe("ghostNpcManager", () -> { if (ghostNpcManager != null) ghostNpcManager.stop(); });
+        shutdownSafe("petManager", () -> { if (petManager != null) petManager.stop(); });
+        shutdownSafe("announcementManager", () -> { if (announcementManager != null) announcementManager.shutdown(); });
         // Remove JVM hook to avoid double-save (plugin shutdown is handling it)
         try { if (shutdownHook != null) { Runtime.getRuntime().removeShutdownHook(shutdownHook); } }
         catch (Exception ignored) { }
-
-        try { if (runTracker != null && runStateStore != null) { runTracker.saveAllActiveRuns(runStateStore); } }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: saveAllActiveRuns"); }
-
-        try { playerRefCache.clear(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerRefCache"); }
-
-        try { hudPlayersByWorld.clear(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: hudPlayersByWorld"); }
-
-        try { playerHudWorlds.clear(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerHudWorlds"); }
-
-        try { if (progressStore != null) { progressStore.flushPendingSave(); } }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: progressStore flush"); }
-
-        try { AnalyticsStore.getInstance().computeDailyAggregates(java.time.LocalDate.now()); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: analytics aggregation"); }
-
-        try { DatabaseManager.getInstance().shutdown(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: DatabaseManager"); }
+        shutdownSafe("saveAllActiveRuns", () -> { if (runTracker != null && runStateStore != null) runTracker.saveAllActiveRuns(runStateStore); });
+        shutdownSafe("playerRefCache", () -> playerRefCache.clear());
+        shutdownSafe("hudPlayersByWorld", () -> hudPlayersByWorld.clear());
+        shutdownSafe("playerHudWorlds", () -> playerHudWorlds.clear());
+        shutdownSafe("progressStore flush", () -> { if (progressStore != null) progressStore.flushPendingSave(); });
+        shutdownSafe("analytics aggregation", () -> AnalyticsStore.getInstance().computeDailyAggregates(java.time.LocalDate.now()));
+        shutdownSafe("DatabaseManager", () -> DatabaseManager.getInstance().shutdown());
 
         super.shutdown();
     }

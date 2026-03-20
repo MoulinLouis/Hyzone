@@ -107,6 +107,12 @@ public class SpectatorCommand extends AbstractAsyncCommand {
         }
 
         Store<EntityStore> targetStore = targetEntityRef.getStore();
+        World targetWorld = targetStore.getExternalData().getWorld();
+        World spectatorWorld = store.getExternalData().getWorld();
+        if (targetWorld == null || spectatorWorld == null || !targetWorld.getName().equals(spectatorWorld.getName())) {
+            player.sendMessage(Message.raw("Target player is in a different world."));
+            return;
+        }
         Player targetPlayer = targetStore.getComponent(targetEntityRef, Player.getComponentType());
         if (targetPlayer == null) {
             player.sendMessage(Message.raw("Target player entity not available."));

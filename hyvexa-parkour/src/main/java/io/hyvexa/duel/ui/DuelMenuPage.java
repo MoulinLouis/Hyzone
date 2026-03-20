@@ -106,44 +106,22 @@ public class DuelMenuPage extends BaseParkourPage {
             refreshQueueState(ref, store);
             return;
         }
-        if (duelTracker.isInMatch(playerId)) {
-            player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_MATCH));
-            return;
+        DuelTracker.JoinOutcome outcome = duelTracker.tryJoinQueue(playerId, runTracker);
+        switch (outcome.result()) {
+            case IN_MATCH -> player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_MATCH));
+            case ALREADY_QUEUED -> player.sendMessage(SystemMessageUtils.duelWarn(
+                    String.format(DuelConstants.MSG_QUEUE_ALREADY, outcome.queuePosition())));
+            case IN_PARKOUR -> player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_PARKOUR));
+            case UNLOCK_REQUIRED -> {
+                int remaining = outcome.unlockRequired() - outcome.unlockCompleted();
+                player.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
+                        outcome.unlockRequired(), remaining, outcome.unlockCompleted(), outcome.unlockRequired())));
+            }
+            case NO_MAPS -> player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_NO_MAPS));
+            case JOINED -> player.sendMessage(SystemMessageUtils.duelSuccess(
+                    String.format(DuelConstants.MSG_QUEUE_JOINED, outcome.categoryLabel(), outcome.queuePosition())));
         }
-        if (runTracker != null && runTracker.getActiveMapId(playerId) != null) {
-            player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_PARKOUR));
-            return;
-        }
-        if (!meetsUnlockRequirement(plugin, playerId, player)) {
-            return;
-        }
-        if (!duelTracker.hasAvailableMaps(playerId)) {
-            player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_NO_MAPS));
-            return;
-        }
-        boolean joined = duelTracker.enqueue(playerId);
-        if (!joined) {
-            int pos = duelTracker.getQueuePosition(playerId);
-            player.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
-            return;
-        }
-        int pos = duelTracker.getQueuePosition(playerId);
-        DuelPreferenceStore prefs = plugin.getDuelPreferenceStore();
-        String categories = prefs != null ? prefs.formatEnabledLabel(playerId) : "Easy/Medium/Hard/Insane";
-        player.sendMessage(SystemMessageUtils.duelSuccess(String.format(DuelConstants.MSG_QUEUE_JOINED, categories, pos)));
-        duelTracker.tryMatch();
         refreshQueueState(ref, store);
-    }
-
-    private boolean meetsUnlockRequirement(HyvexaPlugin plugin, UUID playerId, Player player) {
-        DuelUnlockProgress progress = getUnlockProgress(plugin, playerId);
-        if (progress.unlocked()) {
-            return true;
-        }
-        int remaining = progress.required() - progress.completed();
-        player.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
-                progress.required(), remaining, progress.completed(), progress.required())));
-        return false;
     }
 
     private void refreshQueueState(Ref<EntityStore> ref, Store<EntityStore> store) {

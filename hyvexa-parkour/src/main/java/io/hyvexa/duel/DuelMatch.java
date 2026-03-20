@@ -9,7 +9,7 @@ public class DuelMatch {
     private final UUID player1;
     private final UUID player2;
     private final String mapId;
-    private volatile DuelState state;
+    private final AtomicReference<DuelState> state;
     private volatile long countdownStartMs;
     private volatile long raceStartMs;
     private volatile long player1FinishMs;
@@ -23,7 +23,7 @@ public class DuelMatch {
         this.player1 = player1;
         this.player2 = player2;
         this.mapId = mapId;
-        this.state = DuelState.STARTING;
+        this.state = new AtomicReference<>(DuelState.STARTING);
         this.countdownStartMs = System.currentTimeMillis();
     }
 
@@ -44,11 +44,15 @@ public class DuelMatch {
     }
 
     public DuelState getState() {
-        return state;
+        return state.get();
     }
 
     public void setState(DuelState state) {
-        this.state = state;
+        this.state.set(state);
+    }
+
+    public boolean trySetState(DuelState expected, DuelState newState) {
+        return state.compareAndSet(expected, newState);
     }
 
     public long getCountdownStartMs() {

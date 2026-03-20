@@ -27,7 +27,6 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
-import io.hyvexa.parkour.tracker.CheckpointDetector;
 import io.hyvexa.parkour.util.InventoryUtils;
 
 import java.util.ArrayList;
@@ -40,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 class RunValidator {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
+    private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS_SQ;
     private static final String CHECKPOINT_HUD_BG_FAST = "#1E4A7A";
     private static final String CHECKPOINT_HUD_BG_SLOW = "#6A1E1E";
     private static final String CHECKPOINT_HUD_BG_TIE = "#000000";
@@ -482,10 +481,6 @@ class RunValidator {
         }
         LOGGER.atFine().log("segmentSphereIntersectionT: NaN (roots outside [0,1], t1=%.4f, t2=%.4f)", t1, t2);
         return Double.NaN;
-    }
-
-    private static double distanceSqWithVerticalBonus(Vector3d position, TransformData target) {
-        return TrackerUtils.distanceSqWithVerticalBonus(position, target, ParkourConstants.TOUCH_VERTICAL_BONUS);
     }
 
     private long getRunElapsedMs(RunTracker.ActiveRun run) {

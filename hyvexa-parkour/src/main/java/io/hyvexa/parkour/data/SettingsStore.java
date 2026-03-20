@@ -158,6 +158,27 @@ public class SettingsStore {
             return;
         }
 
+        double localFallRespawn;
+        double localVoidY;
+        boolean localDisableWeapon;
+        boolean localDebug;
+        TransformData localSpawn;
+        boolean localIdleFall;
+        String localCategoryJson;
+
+        fileLock.readLock().lock();
+        try {
+            localFallRespawn = fallRespawnSeconds;
+            localVoidY = fallFailsafeVoidY;
+            localDisableWeapon = disableWeaponDamage;
+            localDebug = teleportDebugEnabled;
+            localSpawn = spawnPosition;
+            localIdleFall = idleFallRespawnForOp;
+            localCategoryJson = GSON.toJson(categoryOrder);
+        } finally {
+            fileLock.readLock().unlock();
+        }
+
         String sql = """
             UPDATE settings SET
                 fall_respawn_seconds = ?,
@@ -182,18 +203,18 @@ public class SettingsStore {
             }
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setDouble(1, fallRespawnSeconds);
-                stmt.setDouble(2, fallFailsafeVoidY);
-                stmt.setBoolean(3, disableWeaponDamage);
-                stmt.setBoolean(4, teleportDebugEnabled);
+                stmt.setDouble(1, localFallRespawn);
+                stmt.setDouble(2, localVoidY);
+                stmt.setBoolean(3, localDisableWeapon);
+                stmt.setBoolean(4, localDebug);
 
-                if (spawnPosition != null) {
-                    stmt.setDouble(5, spawnPosition.getX());
-                    stmt.setDouble(6, spawnPosition.getY());
-                    stmt.setDouble(7, spawnPosition.getZ());
-                    stmt.setFloat(8, spawnPosition.getRotX());
-                    stmt.setFloat(9, spawnPosition.getRotY());
-                    stmt.setFloat(10, spawnPosition.getRotZ());
+                if (localSpawn != null) {
+                    stmt.setDouble(5, localSpawn.getX());
+                    stmt.setDouble(6, localSpawn.getY());
+                    stmt.setDouble(7, localSpawn.getZ());
+                    stmt.setFloat(8, localSpawn.getRotX());
+                    stmt.setFloat(9, localSpawn.getRotY());
+                    stmt.setFloat(10, localSpawn.getRotZ());
                 } else {
                     stmt.setNull(5, java.sql.Types.DOUBLE);
                     stmt.setNull(6, java.sql.Types.DOUBLE);
@@ -202,8 +223,8 @@ public class SettingsStore {
                     stmt.setNull(9, java.sql.Types.FLOAT);
                     stmt.setNull(10, java.sql.Types.FLOAT);
                 }
-                stmt.setBoolean(11, idleFallRespawnForOp);
-                stmt.setString(12, GSON.toJson(categoryOrder));
+                stmt.setBoolean(11, localIdleFall);
+                stmt.setString(12, localCategoryJson);
 
                 stmt.executeUpdate();
             }

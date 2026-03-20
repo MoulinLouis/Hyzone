@@ -27,6 +27,7 @@ import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -117,9 +118,6 @@ public class GhostNpcManager {
         // Despawn existing ghost for this player first
         despawnGhost(playerId);
 
-        GhostNpcState state = new GhostNpcState(playerId, mapId);
-        activeGhosts.put(playerId, state);
-
         String worldName = map.getWorld();
         if (worldName == null || worldName.isEmpty()) {
             return;
@@ -129,6 +127,9 @@ public class GhostNpcManager {
         if (world == null) {
             return;
         }
+
+        GhostNpcState state = new GhostNpcState(playerId, mapId, recording, worldName);
+        activeGhosts.put(playerId, state);
 
         state.spawning = true;
         world.execute(() -> spawnNpcOnWorldThread(state, map, world));
@@ -190,33 +191,15 @@ public class GhostNpcManager {
                 if (entityRef != null) {
                     state.entityRef = entityRef;
 
-                    // Extract entity UUID for visibility
-                    try {
-                        UUIDComponent uuidComponent = store.getComponent(entityRef, UUIDComponent.getComponentType());
-                        if (uuidComponent != null) {
-                            UUID entityUuid = uuidComponent.getUuid();
-                            state.entityUuid = entityUuid;
-
-                            // Hide from ALL players except the owner
-                            hideFromAllExceptOwner(state.ownerId, entityUuid);
-                        }
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to get ghost NPC UUID: " + e.getMessage());
+                    UUIDComponent uuidComponent = store.getComponent(entityRef, UUIDComponent.getComponentType());
+                    if (uuidComponent != null) {
+                        UUID entityUuid = uuidComponent.getUuid();
+                        state.entityUuid = entityUuid;
+                        hideFromAllExceptOwner(state.ownerId, entityUuid);
                     }
 
-                    // Make NPC invulnerable
-                    try {
-                        store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to make ghost NPC invulnerable: " + e.getMessage());
-                    }
-
-                    // Freeze NPC to disable AI movement
-                    try {
-                        store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to freeze ghost NPC: " + e.getMessage());
-                    }
+                    store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
+                    store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
                 }
             }
         } catch (Exception e) {
@@ -288,57 +271,53 @@ public class GhostNpcManager {
         try {
             orphanCleanup.processPendingRemovals();
             long now = System.currentTimeMillis();
+            List<UUID> toDespawn = null;
             for (GhostNpcState state : activeGhosts.values()) {
-                tickGhost(state, now);
+                if (tickGhost(state, now)) {
+                    if (toDespawn == null) toDespawn = new ArrayList<>();
+                    toDespawn.add(state.ownerId);
+                }
+            }
+            if (toDespawn != null) {
+                for (UUID id : toDespawn) {
+                    despawnGhost(id);
+                }
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("Error in ghost tick: " + e.getMessage());
         }
     }
 
-    private void tickGhost(GhostNpcState state, long now) {
+    /** @return true if the ghost should be despawned */
+    private boolean tickGhost(GhostNpcState state, long now) {
         // Not started playback yet
         if (state.playbackStartMs <= 0) {
-            return;
+            return false;
         }
 
         Ref<EntityStore> entityRef = state.entityRef;
         if (entityRef == null || !entityRef.isValid()) {
-            return;
+            return false;
         }
 
-        GhostRecording recording = ghostStore.getRecording(state.ownerId, state.mapId);
-        if (recording == null) {
-            return;
-        }
-
-        Map map = mapStore.getMapReadonly(state.mapId);
-        if (map == null) {
-            return;
-        }
-
-        String worldName = map.getWorld();
-        if (worldName == null || worldName.isEmpty()) {
-            return;
-        }
+        GhostRecording recording = state.recording;
+        String worldName = state.worldName;
 
         World world = Universe.get().getWorld(worldName);
         if (world == null) {
-            return;
+            return true;
         }
 
         long elapsed = now - state.playbackStartMs;
         long completionTimeMs = recording.getCompletionTimeMs();
         if (completionTimeMs <= 0) {
-            return;
+            return false;
         }
 
         double progress = (double) elapsed / (double) completionTimeMs;
 
         if (progress >= 1.0) {
-            // Ghost finished the run, despawn it
-            despawnGhost(state.ownerId);
-            return;
+            return true;
         }
 
         GhostSample sample = recording.interpolateAt(progress);
@@ -346,6 +325,7 @@ public class GhostNpcManager {
         float yaw = sample.yaw();
 
         world.execute(() -> teleportNpc(entityRef, world, targetPos, yaw));
+        return false;
     }
 
     private void teleportNpc(Ref<EntityStore> entityRef, World world,
@@ -370,14 +350,18 @@ public class GhostNpcManager {
     private static class GhostNpcState {
         final UUID ownerId;
         final String mapId;
+        final GhostRecording recording;
+        final String worldName;
         volatile Ref<EntityStore> entityRef;
         volatile UUID entityUuid;
         volatile long playbackStartMs;
         volatile boolean spawning;
 
-        GhostNpcState(UUID ownerId, String mapId) {
+        GhostNpcState(UUID ownerId, String mapId, GhostRecording recording, String worldName) {
             this.ownerId = ownerId;
             this.mapId = mapId;
+            this.recording = recording;
+            this.worldName = worldName;
         }
     }
 
@@ -424,11 +408,4 @@ public class GhostNpcManager {
         return false;
     }
 
-    public void markOrphanCleaned(UUID entityUuid) {
-        orphanCleanup.markCleaned(entityUuid);
-    }
-
-    public boolean isCleanupPending() {
-        return orphanCleanup.isCleanupPending();
-    }
 }

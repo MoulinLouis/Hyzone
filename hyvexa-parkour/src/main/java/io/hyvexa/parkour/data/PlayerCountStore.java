@@ -8,7 +8,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -179,7 +178,6 @@ public class PlayerCountStore {
         } finally {
             fileLock.readLock().unlock();
         }
-        result.sort(Comparator.comparingLong(Sample::getTimestampMs));
         return result;
     }
 

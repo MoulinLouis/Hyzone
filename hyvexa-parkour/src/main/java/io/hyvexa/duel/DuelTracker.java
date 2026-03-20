@@ -159,6 +159,68 @@ public class DuelTracker {
         return duelQueue.leave(playerId);
     }
 
+    public enum JoinResult {
+        IN_MATCH,
+        ALREADY_QUEUED,
+        IN_PARKOUR,
+        UNLOCK_REQUIRED,
+        NO_MAPS,
+        JOINED
+    }
+
+    public record JoinOutcome(JoinResult result, int queuePosition, int unlockRequired, int unlockCompleted,
+                              String categoryLabel) {
+        public static JoinOutcome of(JoinResult result) {
+            return new JoinOutcome(result, -1, 0, 0, null);
+        }
+
+        public static JoinOutcome alreadyQueued(int position) {
+            return new JoinOutcome(JoinResult.ALREADY_QUEUED, position, 0, 0, null);
+        }
+
+        public static JoinOutcome unlockRequired(int required, int completed) {
+            return new JoinOutcome(JoinResult.UNLOCK_REQUIRED, -1, required, completed, null);
+        }
+
+        public static JoinOutcome joined(int position, String categoryLabel) {
+            return new JoinOutcome(JoinResult.JOINED, position, 0, 0, categoryLabel);
+        }
+    }
+
+    @Nonnull
+    public JoinOutcome tryJoinQueue(@Nonnull UUID playerId, @Nullable RunTracker runTracker) {
+        if (isInMatch(playerId)) {
+            return JoinOutcome.of(JoinResult.IN_MATCH);
+        }
+        if (isQueued(playerId)) {
+            return JoinOutcome.alreadyQueued(getQueuePosition(playerId));
+        }
+        if (runTracker != null && runTracker.getActiveMapId(playerId) != null) {
+            return JoinOutcome.of(JoinResult.IN_PARKOUR);
+        }
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        if (plugin != null && plugin.getProgressStore() != null) {
+            int required = DuelConstants.DUEL_UNLOCK_MIN_COMPLETED_MAPS;
+            int completed = plugin.getProgressStore().getCompletedMapCount(playerId);
+            if (completed < required) {
+                return JoinOutcome.unlockRequired(required, completed);
+            }
+        }
+        if (!hasAvailableMaps(playerId)) {
+            return JoinOutcome.of(JoinResult.NO_MAPS);
+        }
+        boolean joined = enqueue(playerId);
+        if (!joined) {
+            return JoinOutcome.alreadyQueued(getQueuePosition(playerId));
+        }
+        int pos = getQueuePosition(playerId);
+        String categories = preferenceStore != null
+                ? preferenceStore.formatEnabledLabel(playerId)
+                : "Easy/Medium/Hard/Insane";
+        tryMatch();
+        return JoinOutcome.joined(pos, categories);
+    }
+
     public void tryMatch() {
         List<UUID> queued = duelQueue.getWaitingPlayers();
         if (queued.size() < 2) {
@@ -571,11 +633,30 @@ public class DuelTracker {
         EnumSet<DuelCategory> enabled = preferenceStore != null
                 ? preferenceStore.getEnabled(playerId)
                 : EnumSet.allOf(DuelCategory.class);
-        return pickRandomDuelMap(enabled) != null;
+        return anyDuelMapMatches(enabled);
     }
 
     public boolean hasAvailableMaps(@Nonnull UUID player1, @Nonnull UUID player2) {
-        return selectRandomMapForPlayers(player1, player2) != null;
+        EnumSet<DuelCategory> common = preferenceStore != null
+                ? preferenceStore.getCommonEnabled(player1, player2)
+                : EnumSet.allOf(DuelCategory.class);
+        return !common.isEmpty() && anyDuelMapMatches(common);
+    }
+
+    private boolean anyDuelMapMatches(@Nonnull EnumSet<DuelCategory> allowedCategories) {
+        if (mapStore == null) {
+            return false;
+        }
+        List<Map> maps = mapStore.listDuelEnabledMaps();
+        for (Map map : maps) {
+            if (map == null || map.getStart() == null || map.getFinish() == null) {
+                continue;
+            }
+            if (categoryMatches(map, allowedCategories)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Nullable
@@ -660,10 +741,10 @@ public class DuelTracker {
     }
 
     private void endMatch(DuelMatch match, FinishReason reason, UUID winnerId, UUID loserId) {
-        if (match.getState() == DuelState.FINISHED) {
+        DuelState current = match.getState();
+        if (current == DuelState.FINISHED || !match.trySetState(current, DuelState.FINISHED)) {
             return;
         }
-        match.setState(DuelState.FINISHED);
         match.setFinishReason(reason);
         if (winnerId != null) {
             match.trySetWinner(winnerId);
@@ -739,10 +820,13 @@ public class DuelTracker {
     }
 
     private void cancelMatch(DuelMatch match) {
-        if (match == null || match.getState() == DuelState.FINISHED) {
+        if (match == null) {
             return;
         }
-        match.setState(DuelState.FINISHED);
+        DuelState current = match.getState();
+        if (current == DuelState.FINISHED || !match.trySetState(current, DuelState.FINISHED)) {
+            return;
+        }
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> cleanupMatch(match),
                 DuelConstants.POST_MATCH_DELAY_MS, TimeUnit.MILLISECONDS);
     }
@@ -840,7 +924,6 @@ public class DuelTracker {
     private void saveHiddenState(@Nonnull UUID viewerId, @Nonnull EntityVisibilityManager visibility) {
         Set<UUID> currentHidden = visibility.getHiddenTargets(viewerId);
         if (currentHidden.isEmpty()) {
-            hiddenBeforeDuel.put(viewerId, Set.of());
             return;
         }
         hiddenBeforeDuel.put(viewerId, new HashSet<>(currentHidden));

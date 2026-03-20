@@ -15,10 +15,10 @@ import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
-import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -28,18 +28,16 @@ public class MapLeaderboardPage extends AbstractSearchablePaginatedPage {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
-    private final RunTracker runTracker;
     private final String mapId;
     private final String category;
     private static final String BUTTON_BACK = "Back";
 
     public MapLeaderboardPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                     ProgressStore progressStore, RunTracker runTracker,
+                                     ProgressStore progressStore,
                                      String mapId, String category) {
         super(playerRef, 50);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
-        this.runTracker = runTracker;
         this.mapId = mapId;
         this.category = category;
     }
@@ -67,7 +65,7 @@ public class MapLeaderboardPage extends AbstractSearchablePaginatedPage {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new LeaderboardMapSelectPage(playerRef, mapStore, progressStore, runTracker, category));
+                        new LeaderboardMapSelectPage(playerRef, mapStore, progressStore, category));
             }
         }
     }
@@ -90,7 +88,7 @@ public class MapLeaderboardPage extends AbstractSearchablePaginatedPage {
         List<Map.Entry<UUID, Long>> sorted = times.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.naturalOrder()))
                 .toList();
-        List<LeaderboardRow> filtered = new java.util.ArrayList<>();
+        List<LeaderboardRow> filtered = new ArrayList<>();
         long lastTime = Long.MIN_VALUE;
         int rank = 0;
         for (int i = 0; i < sorted.size(); i++) {

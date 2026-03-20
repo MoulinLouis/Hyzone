@@ -20,6 +20,7 @@ import io.hyvexa.common.visibility.EntityVisibilityManager;
 import io.hyvexa.manager.HudManager;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
+import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import javax.annotation.Nonnull;
@@ -129,8 +130,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
             player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             return;
         }
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         if (BUTTON_HIDE_HUD.equals(data.getButton())) {
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null) {
                 plugin.hideRunHud(playerRef);
                 player.sendMessage(Message.raw("Server HUD hidden."));
@@ -139,7 +140,6 @@ public class PlayerSettingsPage extends BaseParkourPage {
             return;
         }
         if (BUTTON_SHOW_HUD.equals(data.getButton())) {
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null) {
                 plugin.showRunHud(playerRef);
                 player.sendMessage(Message.raw("Server HUD shown."));
@@ -153,7 +153,6 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_TOGGLE_RESET_ITEM.equals(data.getButton())) {
             boolean enabled = PlayerSettingsStore.toggleResetItemEnabled(playerRef.getUuid());
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null && plugin.getRunTracker() != null) {
                 String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
                 if (mapId != null && plugin.getMapStore() != null) {
@@ -168,22 +167,16 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_TOGGLE_GHOST.equals(data.getButton())) {
             boolean visible = PlayerSettingsStore.toggleGhostVisible(playerRef.getUuid());
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null && plugin.getRunTracker() != null) {
                 String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
-                if (!visible && mapId != null) {
-                    // Ghost turned off while in a run — despawn it
-                    io.hyvexa.parkour.ghost.GhostNpcManager ghostNpcManager =
-                            plugin.getGhostNpcManager();
+                if (mapId != null) {
+                    GhostNpcManager ghostNpcManager = plugin.getGhostNpcManager();
                     if (ghostNpcManager != null) {
-                        ghostNpcManager.despawnGhost(playerRef.getUuid());
-                    }
-                } else if (visible && mapId != null) {
-                    // Ghost turned on while in a run — spawn it
-                    io.hyvexa.parkour.ghost.GhostNpcManager ghostNpcManager =
-                            plugin.getGhostNpcManager();
-                    if (ghostNpcManager != null) {
-                        ghostNpcManager.spawnGhost(playerRef.getUuid(), mapId);
+                        if (!visible) {
+                            ghostNpcManager.despawnGhost(playerRef.getUuid());
+                        } else {
+                            ghostNpcManager.spawnGhost(playerRef.getUuid(), mapId);
+                        }
                     }
                 }
             }
@@ -193,7 +186,6 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_TOGGLE_ADVANCED_HUD.equals(data.getButton())) {
             boolean enabled = PlayerSettingsStore.toggleAdvancedHud(playerRef.getUuid());
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null && plugin.getHudManager() != null) {
                 plugin.getHudManager().setAdvancedHudVisible(playerRef, enabled);
             }
@@ -204,7 +196,6 @@ public class PlayerSettingsPage extends BaseParkourPage {
         if (BUTTON_SPEED_X1.equals(data.getButton())
                 || BUTTON_SPEED_X2.equals(data.getButton())
                 || BUTTON_SPEED_X4.equals(data.getButton())) {
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin == null || plugin.getProgressStore() == null) {
                 player.sendMessage(Message.raw("Speed boost unavailable right now."));
                 return;
@@ -248,14 +239,14 @@ public class PlayerSettingsPage extends BaseParkourPage {
 
     private void hideAllPlayers(@Nonnull PlayerRef viewerRef) {
         Universe.get().getWorlds().forEach((worldId, world) ->
-                world.execute(() -> applyHiddenState(viewerRef, world, true)));
+                world.execute(() -> applyHiddenState(viewerRef, world)));
     }
 
     private void showAllPlayers(@Nonnull PlayerRef viewerRef) {
         EntityVisibilityManager.get().clearHidden(viewerRef.getUuid());
     }
 
-    private void applyHiddenState(@Nonnull PlayerRef viewerRef, @Nonnull World world, boolean hide) {
+    private void applyHiddenState(@Nonnull PlayerRef viewerRef, @Nonnull World world) {
         if (viewerRef.getReference() == null || !viewerRef.getReference().isValid()) {
             return;
         }
@@ -272,11 +263,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
             if (uuidComponent == null) {
                 continue;
             }
-            if (hide) {
-                EntityVisibilityManager.get().hideEntity(viewerRef.getUuid(), uuidComponent.getUuid());
-            } else {
-                EntityVisibilityManager.get().showEntity(viewerRef.getUuid(), uuidComponent.getUuid());
-            }
+            EntityVisibilityManager.get().hideEntity(viewerRef.getUuid(), uuidComponent.getUuid());
         }
     }
 

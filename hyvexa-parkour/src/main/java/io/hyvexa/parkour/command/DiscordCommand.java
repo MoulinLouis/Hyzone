@@ -11,10 +11,9 @@ import java.util.concurrent.CompletableFuture;
 public class DiscordCommand extends AbstractAsyncCommand {
 
     private static final String DISCORD_TEXT = "discord.gg/2PAygkyFnK";
-    private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final Message MESSAGE_DISCORD = Message.join(
             Message.raw("Discord: "),
-            Message.raw(DISCORD_TEXT).color(ChatColors.LINK_COLOR).link(DISCORD_URL)
+            Message.raw(DISCORD_TEXT).color(ChatColors.LINK_COLOR).link(ChatColors.DISCORD_URL)
     );
 
     public DiscordCommand() {

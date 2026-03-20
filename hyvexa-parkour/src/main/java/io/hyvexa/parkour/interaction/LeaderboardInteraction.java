@@ -42,6 +42,6 @@ public class LeaderboardInteraction extends SimpleInteraction {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new LeaderboardMenuPage(playerRef, plugin.getMapStore(), plugin.getProgressStore(), plugin.getRunTracker()));
+                new LeaderboardMenuPage(playerRef, plugin.getMapStore(), plugin.getProgressStore()));
     }
 }

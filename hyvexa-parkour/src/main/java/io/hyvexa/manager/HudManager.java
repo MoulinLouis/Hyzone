@@ -25,7 +25,6 @@ import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.parkour.data.Medal;
-import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.ParkourTimingConstants;
 
 import java.util.List;
@@ -139,14 +138,10 @@ public class HudManager {
         if (!running && wasRunning) {
             RunHud baseHud = getOrCreateHud(playerRef, false);
             attachHud(playerRef, player, baseHud, false);
-            state.recordsMapId = null;
-            state.recordsLeaderboardVersion = -1L;
             hud = baseHud;
         } else if (running && !state.isRecords) {
             RunHud recordsHud = getOrCreateHud(playerRef, true);
             attachHud(playerRef, player, recordsHud, true);
-            state.recordsMapId = null;
-            state.recordsLeaderboardVersion = -1L;
             hud = recordsHud;
         }
         int completedMaps = progressStore.getCompletedMapCount(playerRef.getUuid());
@@ -167,7 +162,7 @@ public class HudManager {
             hud.updateCheckpointSplit("", null, false);
             if (hud instanceof RunRecordsHud recordsHud) {
                 recordsHud.updateTopTimes(List.of());
-                recordsHud.updateMedals(null, null);
+                recordsHud.updateMedals(null);
             }
             state.checkpointSplit = null;
             updateMedalNotifHud(hud, playerId);
@@ -191,7 +186,7 @@ public class HudManager {
         if (hud instanceof RunRecordsHud recordsHud) {
             recordsHud.updateText(timeText);
             updateRecordRowsIfNeeded(recordsHud, state, mapId, playerRef.getUuid());
-            recordsHud.updateMedals(map, MedalStore.getInstance().getEarnedMedals(playerId, mapId));
+            recordsHud.updateMedals(map);
         } else {
             hud.updateText(timeText);
         }
@@ -357,7 +352,9 @@ public class HudManager {
             lines.add(new RunRecordsHud.RecordLine(row.getRank(), row.getName(), row.getTime()));
         }
         ProgressStore.LeaderboardHudRow selfRow = snapshot.getSelfRow();
-        lines.add(new RunRecordsHud.RecordLine(selfRow.getRank(), selfRow.getName(), selfRow.getTime()));
+        if (selfRow != null) {
+            lines.add(new RunRecordsHud.RecordLine(selfRow.getRank(), selfRow.getName(), selfRow.getTime()));
+        }
         return lines;
     }
 
@@ -586,7 +583,7 @@ public class HudManager {
         MedalVisibility vis = calculateMedalVisibility(elapsed, notif);
 
         String cacheKey = notif.medal.name() + "|" + vis.iconVisible + "|" + vis.titleVisible + "|"
-                + vis.titleColor + "|" + vis.featherVisible + "|" + vis.barVisible + "|" + elapsed;
+                + vis.titleColor + "|" + vis.featherVisible + "|" + vis.barVisible + "|" + vis.barValue;
 
         UICommandBuilder cmd = new UICommandBuilder();
         cmd.set("#MedalNotif.Visible", true);

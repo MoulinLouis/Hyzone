@@ -24,8 +24,6 @@ class RunSessionTracker {
     }
 
     void recordFailure(UUID playerId, String mapId) {
-        SessionStats stats = sessionStats.computeIfAbsent(playerId, k -> new SessionStats());
-        stats.recordFailure(mapId);
     }
 
     void recordAttempt(UUID playerId, String mapId) {
@@ -58,25 +56,13 @@ class RunSessionTracker {
             return mapStats.computeIfAbsent(mapId, k -> new MapSessionData());
         }
 
-        void recordFailure(String mapId) {
-            MapSessionData data = getStats(mapId);
-            data.failureCount++;
-            if (data.firstFailureTimestamp == 0) {
-                data.firstFailureTimestamp = System.currentTimeMillis();
-            }
-        }
-
         void recordAttempt(String mapId) {
             MapSessionData data = getStats(mapId);
             data.attemptCount++;
         }
 
         static class MapSessionData {
-            int failureCount = 0;
             int attemptCount = 0;
-            long firstFailureTimestamp = 0;
-            boolean recommendationShown = false;
-            boolean practiceHintShown = false;
         }
     }
 }

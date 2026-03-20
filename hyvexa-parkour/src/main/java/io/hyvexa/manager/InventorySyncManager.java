@@ -77,9 +77,9 @@ public class InventorySyncManager {
             if (!shouldApplyParkourMode(playerRef, store)) {
                 return;
             }
-            syncRunInventoryOnConnect(ref, store, playerRef);
+            syncInventoryDirect(ref, store, playerRef);
             showWelcomeIfFirstJoin(ref, store, playerRef);
-            sendLanguageNotice(playerRef);
+            sendLanguageNotice(ref, store, playerRef);
         }, world);
     }
 
@@ -89,21 +89,29 @@ public class InventorySyncManager {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                return;
-            }
             if (!shouldApplyParkourMode(playerRef, store)) {
                 return;
             }
-            String activeMap = runTracker.getActiveMapId(playerRef.getUuid());
-            if (activeMap == null) {
-                InventoryUtils.giveMenuItems(player);
-                return;
-            }
-            boolean practiceEnabled = runTracker.isPracticeEnabled(playerRef.getUuid());
-            InventoryUtils.giveRunItems(player, mapStore != null ? mapStore.getMap(activeMap) : null, practiceEnabled);
+            syncInventoryDirect(ref, store, playerRef);
         }, world);
+    }
+
+    /** Syncs inventory assuming world-thread context. */
+    void syncInventoryDirect(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        if (!shouldApplyParkourMode(playerRef, store)) {
+            return;
+        }
+        String activeMap = runTracker.getActiveMapId(playerRef.getUuid());
+        if (activeMap == null) {
+            InventoryUtils.giveMenuItems(player);
+            return;
+        }
+        boolean practiceEnabled = runTracker.isPracticeEnabled(playerRef.getUuid());
+        InventoryUtils.giveRunItems(player, mapStore != null ? mapStore.getMap(activeMap) : null, practiceEnabled);
     }
 
     public void showWelcomeIfFirstJoin(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
@@ -133,6 +141,13 @@ public class InventorySyncManager {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        sendLanguageNotice(ref, store, playerRef);
+    }
+
+    private void sendLanguageNotice(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (ref == null || store == null || playerRef == null) {
+            return;
+        }
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

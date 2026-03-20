@@ -11,13 +11,11 @@ import io.hyvexa.parkour.util.ParkourUtils;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /** Tracks player session time and online player counts. */
 public class PlaytimeManager {
 
     private final ConcurrentHashMap<UUID, Long> playtimeSessionStart = new ConcurrentHashMap<>();
-    private final AtomicInteger onlinePlayerCount = new AtomicInteger(0);
 
     private final ProgressStore progressStore;
     private final PlayerCountStore playerCountStore;
@@ -25,18 +23,6 @@ public class PlaytimeManager {
     public PlaytimeManager(ProgressStore progressStore, PlayerCountStore playerCountStore) {
         this.progressStore = progressStore;
         this.playerCountStore = playerCountStore;
-    }
-
-    public void setOnlineCount(int count) {
-        onlinePlayerCount.set(Math.max(0, count));
-    }
-
-    public void incrementOnlineCount() {
-        onlinePlayerCount.incrementAndGet();
-    }
-
-    public void decrementOnlineCount() {
-        onlinePlayerCount.updateAndGet(current -> Math.max(0, current - 1));
     }
 
     public void tickPlaytime() {
@@ -54,19 +40,12 @@ public class PlaytimeManager {
                 playtimeSessionStart.remove(playerId);
                 continue;
             }
-            long[] deltaMs = new long[1];
-            playtimeSessionStart.compute(playerId, (key, start) -> {
-                if (start == null) {
-                    return now;
-                }
+            Long start = playtimeSessionStart.put(playerId, now);
+            if (start != null) {
                 long delta = Math.max(0L, now - start);
                 if (delta > 0L) {
-                    deltaMs[0] = delta;
+                    progressStore.addPlaytime(playerId, playerRef.getUsername(), delta);
                 }
-                return now;
-            });
-            if (deltaMs[0] > 0L) {
-                progressStore.addPlaytime(playerId, playerRef.getUsername(), deltaMs[0]);
             }
         }
     }
@@ -99,7 +78,6 @@ public class PlaytimeManager {
             return;
         }
         int actualCount = Universe.get().getPlayers().size();
-        onlinePlayerCount.set(Math.max(0, actualCount));
         playerCountStore.recordSample(System.currentTimeMillis(), actualCount);
     }
 

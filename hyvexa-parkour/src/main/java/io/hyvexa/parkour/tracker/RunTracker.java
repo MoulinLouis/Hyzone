@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
 public class RunTracker {
 
     private static final com.hypixel.hytale.logger.HytaleLogger LOGGER = com.hypixel.hytale.logger.HytaleLogger.forEnclosingClass();
-    private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
+    private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS_SQ;
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
     private static final long OFFLINE_RUN_EXPIRY_MS = TimeUnit.MINUTES.toMillis(30L);
 
@@ -387,39 +387,21 @@ public class RunTracker {
         if (movementManager == null) {
             return;
         }
-        if (enabled) {
-            MovementSettings settings = movementManager.getSettings();
-            if (settings == null) {
-                return;
-            }
-            settings.canFly = true;
-            MovementStatesComponent movementStates = store.getComponent(entityRef,
-                    MovementStatesComponent.getComponentType());
-            if (movementStates != null && movementStates.getMovementStates() != null) {
-                movementStates.getMovementStates().flying = true;
-            }
-            var packetHandler = playerRef.getPacketHandler();
-            if (packetHandler != null) {
-                movementManager.update(packetHandler);
-                packetHandler.writeNoCache(
-                        new SetMovementStates(new SavedMovementStates(true)));
-            }
-        } else {
-            MovementSettings settings = movementManager.getSettings();
-            if (settings != null) {
-                settings.canFly = false;
-            }
-            MovementStatesComponent movementStates = store.getComponent(entityRef,
-                    MovementStatesComponent.getComponentType());
-            if (movementStates != null && movementStates.getMovementStates() != null) {
-                movementStates.getMovementStates().flying = false;
-            }
-            var packetHandler = playerRef.getPacketHandler();
-            if (packetHandler != null) {
-                movementManager.update(packetHandler);
-                packetHandler.writeNoCache(
-                        new SetMovementStates(new SavedMovementStates(false)));
-            }
+        MovementSettings settings = movementManager.getSettings();
+        if (settings == null) {
+            return;
+        }
+        settings.canFly = enabled;
+        MovementStatesComponent movementStates = store.getComponent(entityRef,
+                MovementStatesComponent.getComponentType());
+        if (movementStates != null && movementStates.getMovementStates() != null) {
+            movementStates.getMovementStates().flying = enabled;
+        }
+        var packetHandler = playerRef.getPacketHandler();
+        if (packetHandler != null) {
+            movementManager.update(packetHandler);
+            packetHandler.writeNoCache(
+                    new SetMovementStates(new SavedMovementStates(enabled)));
         }
     }
 
@@ -488,7 +470,10 @@ public class RunTracker {
             return;
         }
         jumpTracker.trackJump(playerRef, movementStates);
-        lastSeenAt.put(playerRef.getUuid(), System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        if (now - lastSeenAt.getOrDefault(playerRef.getUuid(), 0L) > 10_000) {
+            lastSeenAt.put(playerRef.getUuid(), now);
+        }
         HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         if (plugin != null && plugin.getDuelTracker() != null
                 && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {

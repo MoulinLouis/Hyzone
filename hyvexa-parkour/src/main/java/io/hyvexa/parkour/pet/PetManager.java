@@ -45,9 +45,6 @@ public class PetManager {
     private static final double MAX_VERTICAL_STEP = 0.45;
     private static final double TELEPORT_MOVE_EPSILON = 0.02;
     private static final float IDLE_ROTATION_EPSILON_DEGREES = 0.2f;
-    private static final long ROTATION_LOG_INTERVAL_MS = 800L;
-    private static final float ROTATION_SPIKE_DELTA_DEGREES = 120.0f;
-    private static final boolean ROTATION_DEBUG_LOGS = false;
     private static final long IDLE_MOVEMENT_STOP_REFRESH_MS = 200L;
 
     private static PetManager instance;
@@ -144,10 +141,6 @@ public class PetManager {
                 LOGGER.atWarning().log("Failed to set pet scale: " + e.getMessage());
             }
         });
-    }
-
-    public void respawn(UUID playerId, Ref<EntityStore> playerRef, String npcType, float scale) {
-        spawnPet(playerId, playerRef, npcType, scale);
     }
 
     // --- Internal ---
@@ -308,13 +301,11 @@ public class PetManager {
                     if (!rotatedInPlace) {
                         return;
                     }
-                    maybeLogRotation(state, previousYaw, targetYawWrapped, yawDelta, horizontalDistance);
                     store.addComponent(entityRef, Teleport.getComponentType(),
                         new Teleport(world, petPos, new Vector3f(0, state.currentYaw, 0)));
                     return;
                 }
                 clearIdleMovementStop(state, entityRef, store);
-                maybeLogRotation(state, previousYaw, targetYawWrapped, yawDelta, horizontalDistance);
 
                 store.addComponent(entityRef, Teleport.getComponentType(),
                     new Teleport(world, targetPos, new Vector3f(0, state.currentYaw, 0)));
@@ -344,7 +335,10 @@ public class PetManager {
                     } catch (Exception e) {
                         LOGGER.atWarning().log("Failed to despawn pet: " + e.getMessage());
                     }
+                    state.entityRef = null;
+                    state.entityUuid = null;
                 });
+                return;
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("Failed to despawn pet: " + e.getMessage());
@@ -402,48 +396,18 @@ public class PetManager {
         }
     }
 
-    private void maybeLogRotation(PetState state, float previousYaw, float targetYaw, float yawDelta,
-                                  double horizontalDistance) {
-        if (!ROTATION_DEBUG_LOGS) {
-            return;
-        }
-        long now = System.currentTimeMillis();
-        boolean spike = Math.abs(yawDelta) >= ROTATION_SPIKE_DELTA_DEGREES;
-        if (!spike && now - state.lastRotationLogMs < ROTATION_LOG_INTERVAL_MS) {
-            return;
-        }
-        state.lastRotationLogMs = now;
-        LOGGER.atInfo().log(String.format(
-            "PetRot owner=%s yawPrev=%.1f yawNow=%.1f yawTarget=%.1f delta=%.1f dist=%.2f%s",
-            shortOwner(state.ownerId),
-            previousYaw,
-            state.currentYaw,
-            targetYaw,
-            yawDelta,
-            horizontalDistance,
-            spike ? " spike=true" : ""
-        ));
-    }
-
-    private static String shortOwner(UUID ownerId) {
-        if (ownerId == null) return "null";
-        String value = ownerId.toString();
-        return value.length() <= 8 ? value : value.substring(0, 8);
-    }
-
     // --- State ---
 
     public static class PetState {
         public final UUID ownerId;
-        public final String worldName;
-        public volatile Ref<EntityStore> entityRef;
-        public volatile UUID entityUuid;
-        public volatile String npcType;
+        final String worldName;
+        volatile Ref<EntityStore> entityRef;
+        volatile UUID entityUuid;
+        volatile String npcType;
         public volatile float scale;
-        public volatile float currentYaw;
-        public volatile long lastRotationLogMs;
-        public volatile long lastIdleMovementStopApplyMs;
-        public volatile boolean idleMovementStopForced;
+        volatile float currentYaw;
+        volatile long lastIdleMovementStopApplyMs;
+        volatile boolean idleMovementStopForced;
 
         PetState(UUID ownerId, String worldName, String npcType, float scale) {
             this.ownerId = ownerId;

@@ -3,7 +3,6 @@ package io.hyvexa.parkour.data;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.parkour.ParkourConstants;
-import io.hyvexa.parkour.util.ParkourUtils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -218,6 +217,15 @@ public class MapStore {
         }
     }
 
+    public List<Map> listMapsReadonly() {
+        fileLock.readLock().lock();
+        try {
+            return List.copyOf(this.maps.values());
+        } finally {
+            fileLock.readLock().unlock();
+        }
+    }
+
     public List<Map> listDuelEnabledMaps() {
         fileLock.readLock().lock();
         try {
@@ -315,19 +323,7 @@ public class MapStore {
     }
 
     public void updateMap(Map map) {
-        validateMap(map);
-        Map stored = copyMap(map);
-
-        fileLock.writeLock().lock();
-        try {
-            this.maps.put(stored.getId(), stored);
-            rebuildRuntimeIndexesLocked();
-        } finally {
-            fileLock.writeLock().unlock();
-        }
-
-        saveMapToDatabase(stored);
-        notifyChange();
+        addMap(map);
     }
 
     public boolean removeMap(String id) {
@@ -590,11 +586,11 @@ public class MapStore {
         copy.setName(source.getName());
         copy.setCategory(source.getCategory());
         copy.setWorld(source.getWorld());
-        copy.setStart(ParkourUtils.copyTransformData(source.getStart()));
-        copy.setFinish(ParkourUtils.copyTransformData(source.getFinish()));
-        copy.setStartTrigger(ParkourUtils.copyTransformData(source.getStartTrigger()));
-        copy.setLeaveTrigger(ParkourUtils.copyTransformData(source.getLeaveTrigger()));
-        copy.setLeaveTeleport(ParkourUtils.copyTransformData(source.getLeaveTeleport()));
+        copy.setStart(source.getStart() != null ? source.getStart().copy() : null);
+        copy.setFinish(source.getFinish() != null ? source.getFinish().copy() : null);
+        copy.setStartTrigger(source.getStartTrigger() != null ? source.getStartTrigger().copy() : null);
+        copy.setLeaveTrigger(source.getLeaveTrigger() != null ? source.getLeaveTrigger().copy() : null);
+        copy.setLeaveTeleport(source.getLeaveTeleport() != null ? source.getLeaveTeleport().copy() : null);
         copy.setFirstCompletionXp(source.getFirstCompletionXp());
         copy.setDifficulty(source.getDifficulty());
         copy.setOrder(source.getOrder());
@@ -616,10 +612,8 @@ public class MapStore {
         copy.setEmeraldTimeMs(source.getEmeraldTimeMs());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setUpdatedAt(source.getUpdatedAt());
-        if (source.getCheckpoints() != null) {
-            for (TransformData checkpoint : source.getCheckpoints()) {
-                copy.getCheckpoints().add(ParkourUtils.copyTransformData(checkpoint));
-            }
+        for (TransformData checkpoint : source.getCheckpoints()) {
+            copy.getCheckpoints().add(checkpoint != null ? checkpoint.copy() : null);
         }
         return copy;
     }

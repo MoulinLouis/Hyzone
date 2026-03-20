@@ -18,7 +18,6 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.duel.DuelConstants;
 import io.hyvexa.duel.DuelMatch;
 import io.hyvexa.duel.DuelTracker;
-import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.duel.data.DuelStats;
 import io.hyvexa.duel.data.DuelStatsStore;
 import io.hyvexa.parkour.data.Map;
@@ -86,58 +85,21 @@ public class DuelCommand extends AbstractAsyncCommand {
 
     private void handleJoin(CommandContext ctx, PlayerRef playerRef) {
         UUID playerId = playerRef.getUuid();
-        if (duelTracker.isInMatch(playerId)) {
-            ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_MATCH));
-            return;
+        DuelTracker.JoinOutcome outcome = duelTracker.tryJoinQueue(playerId, runTracker);
+        switch (outcome.result()) {
+            case IN_MATCH -> ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_MATCH));
+            case ALREADY_QUEUED -> ctx.sendMessage(SystemMessageUtils.duelWarn(
+                    String.format(DuelConstants.MSG_QUEUE_ALREADY, outcome.queuePosition())));
+            case IN_PARKOUR -> ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_PARKOUR));
+            case UNLOCK_REQUIRED -> {
+                int remaining = outcome.unlockRequired() - outcome.unlockCompleted();
+                ctx.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
+                        outcome.unlockRequired(), remaining, outcome.unlockCompleted(), outcome.unlockRequired())));
+            }
+            case NO_MAPS -> ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_NO_MAPS));
+            case JOINED -> ctx.sendMessage(SystemMessageUtils.duelSuccess(
+                    String.format(DuelConstants.MSG_QUEUE_JOINED, outcome.categoryLabel(), outcome.queuePosition())));
         }
-        if (duelTracker.isQueued(playerId)) {
-            int pos = duelTracker.getQueuePosition(playerId);
-            ctx.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
-            return;
-        }
-        if (runTracker != null && runTracker.getActiveMapId(playerId) != null) {
-            ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_PARKOUR));
-            return;
-        }
-        if (!meetsUnlockRequirement(ctx, playerId)) {
-            return;
-        }
-        if (!duelTracker.hasAvailableMaps(playerId)) {
-            ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_NO_MAPS));
-            return;
-        }
-        boolean joined = duelTracker.enqueue(playerId);
-        if (!joined) {
-            int pos = duelTracker.getQueuePosition(playerId);
-            ctx.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
-            return;
-        }
-        int pos = duelTracker.getQueuePosition(playerId);
-        String categories = resolveCategoryLabel(playerId);
-        ctx.sendMessage(SystemMessageUtils.duelSuccess(String.format(DuelConstants.MSG_QUEUE_JOINED, categories, pos)));
-        duelTracker.tryMatch();
-    }
-
-    private boolean meetsUnlockRequirement(CommandContext ctx, UUID playerId) {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null || plugin.getProgressStore() == null) {
-            return true;
-        }
-        int required = DuelConstants.DUEL_UNLOCK_MIN_COMPLETED_MAPS;
-        int completed = plugin.getProgressStore().getCompletedMapCount(playerId);
-        if (completed >= required) {
-            return true;
-        }
-        int remaining = required - completed;
-        ctx.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
-                required, remaining, completed, required)));
-        return false;
-    }
-
-    private String resolveCategoryLabel(UUID playerId) {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        DuelPreferenceStore prefs = plugin != null ? plugin.getDuelPreferenceStore() : null;
-        return prefs != null ? prefs.formatEnabledLabel(playerId) : "Easy/Medium/Hard/Insane";
     }
 
     private void handleLeave(CommandContext ctx, PlayerRef playerRef) {
@@ -273,10 +235,6 @@ public class DuelCommand extends AbstractAsyncCommand {
     private void handleAdminForce(CommandContext ctx, PlayerRef adminRef, String[] tokens) {
         if (tokens.length < 3) {
             ctx.sendMessage(SystemMessageUtils.duelWarn("Usage: /duel admin force <player>"));
-            return;
-        }
-        if (adminRef == null) {
-            ctx.sendMessage(SystemMessageUtils.duelError("Admin player not available."));
             return;
         }
         String targetName = tokens[2];

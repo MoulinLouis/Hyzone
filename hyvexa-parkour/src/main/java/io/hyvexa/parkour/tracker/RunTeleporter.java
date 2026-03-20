@@ -169,9 +169,6 @@ class RunTeleporter {
 
     void addTeleport(Ref<EntityStore> ref, Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
                      Teleport teleport) {
-        if (ref == null || teleport == null) {
-            return;
-        }
         if (buffer != null) {
             buffer.addComponent(ref, Teleport.getComponentType(), teleport);
         } else if (store != null) {
@@ -180,9 +177,6 @@ class RunTeleporter {
     }
 
     void recordTeleport(UUID playerId, TeleportCause cause) {
-        if (playerId == null || cause == null) {
-            return;
-        }
         teleportStats.computeIfAbsent(playerId, ignored -> new TeleportStats()).increment(cause);
     }
 

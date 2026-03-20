@@ -69,9 +69,6 @@ class PingTracker {
     }
 
     private Long readPingMs(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return null;
-        }
         PacketHandler handler = playerRef.getPacketHandler();
         if (handler == null) {
             return null;
@@ -93,9 +90,6 @@ class PingTracker {
     }
 
     private static double convertPingToMs(double value, TimeUnit unit) {
-        if (unit == null) {
-            return value;
-        }
         double unitToMs = unit.toNanos(1L) / 1_000_000.0;
         return value * unitToMs;
     }

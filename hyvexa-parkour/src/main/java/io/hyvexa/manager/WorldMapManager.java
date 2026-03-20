@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class WorldMapManager {
@@ -37,7 +38,6 @@ public class WorldMapManager {
                 return;
             }
             Player player = store.getComponent(ref, Player.getComponentType());
-            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player == null) {
                 return;
             }
@@ -45,8 +45,9 @@ public class WorldMapManager {
             if (tracker != null) {
                 tracker.setViewRadiusOverride(0);
                 tracker.clear();
-                String name = playerRef != null ? playerRef.getUsername() : "unknown";
-                LOGGER.atInfo().log("Disabled world map for player: " + name);
+                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                UUID playerId = playerRef != null ? playerRef.getUuid() : null;
+                LOGGER.atFine().log("Disabled world map for player: " + playerId);
             }
         }, world);
     }

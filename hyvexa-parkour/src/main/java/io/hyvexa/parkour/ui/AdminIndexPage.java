@@ -129,12 +129,12 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
         }
         if (BUTTON_BROADCAST.equals(data.button)) {
             if (announcementInput.isBlank()) {
-                player.sendMessage(com.hypixel.hytale.server.core.Message.raw("Enter a message to broadcast."));
+                player.sendMessage(Message.raw("Enter a message to broadcast."));
                 return;
             }
             HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin == null) {
-                player.sendMessage(com.hypixel.hytale.server.core.Message.raw("Broadcast unavailable."));
+                player.sendMessage(Message.raw("Broadcast unavailable."));
                 return;
             }
             plugin.broadcastAnnouncement(announcementInput, playerRef);
