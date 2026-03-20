@@ -59,6 +59,7 @@ public final class ParkourConstants {
     public static final double FALL_FAILSAFE_VOID_Y = -10.0;
     public static final Vector3d DEFAULT_SPAWN_POSITION = new Vector3d(-484.70, 306.00, 627.48);
     public static final double TOUCH_RADIUS = 1.5;
+    public static final double TOUCH_RADIUS_SQ = TOUCH_RADIUS * TOUCH_RADIUS;
     public static final double TOUCH_VERTICAL_BONUS = 1.0;
 
     /** Number of failures before showing map recommendation. */

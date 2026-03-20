@@ -56,18 +56,13 @@ public class CheckpointCommand extends AbstractPlayerCommand {
         if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_PARKOUR, ModeMessages.MESSAGE_ENTER_PARKOUR)) {
             return;
         }
-        String action = null;
-        if (this.actionArg.provided(ctx)) {
-            action = this.actionArg.get(ctx);
-        } else {
+        String action = this.actionArg.provided(ctx) ? this.actionArg.get(ctx) : null;
+        if (action == null) {
             String[] tokens = CommandUtils.tokenize(ctx);
             action = tokens.length > 0 ? tokens[0] : null;
         }
         if (action != null) {
-            action = action.trim();
-            if (!action.isEmpty()) {
-                action = action.toLowerCase(Locale.ROOT);
-            }
+            action = action.trim().toLowerCase(Locale.ROOT);
         }
 
         if (action == null || action.isEmpty()) {

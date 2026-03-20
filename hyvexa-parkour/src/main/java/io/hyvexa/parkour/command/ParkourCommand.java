@@ -33,7 +33,6 @@ import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.core.state.ModeMessages;
 import javax.annotation.Nonnull;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -162,7 +161,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new LeaderboardMenuPage(playerRef, mapStore, progressStore, runTracker));
+                new LeaderboardMenuPage(playerRef, mapStore, progressStore));
     }
 
     private void showStats(Player player, Store<EntityStore> store, Ref<EntityStore> ref) {
@@ -189,7 +188,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
     private record ResolvedPlayer(UUID playerId, String name) {}
 
     private ResolvedPlayer resolvePlayer(CommandContext ctx, String target) {
-        PlayerRef onlineMatch = findOnlineByName(target);
+        PlayerRef onlineMatch = CommandUtils.findPlayerByName(target);
         UUID playerId = onlineMatch != null ? onlineMatch.getUuid() : parseUuid(target);
         if (playerId == null && progressStore != null) {
             playerId = progressStore.getPlayerIdByName(target);
@@ -272,10 +271,6 @@ public class ParkourCommand extends AbstractAsyncCommand {
             ctx.sendMessage(Message.raw("Usage: /pk admin rank broadcast <player|uuid> <vip|founder>"));
             return;
         }
-        if (progressStore == null) {
-            ctx.sendMessage(Message.raw("Progress store not available.").color("#ff4444"));
-            return;
-        }
         String rankInput = tokens[4].toLowerCase(Locale.ROOT);
         boolean isFounder = "founder".equals(rankInput);
         if (!"vip".equals(rankInput) && !isFounder) {
@@ -348,20 +343,6 @@ public class ParkourCommand extends AbstractAsyncCommand {
         }));
     }
 
-    private static PlayerRef findOnlineByName(String name) {
-        if (name == null || name.isBlank()) {
-            return null;
-        }
-        String target = name.trim().toLowerCase(Locale.ROOT);
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            String username = playerRef.getUsername();
-            if (username != null && username.toLowerCase(Locale.ROOT).equals(target)) {
-                return playerRef;
-            }
-        }
-        return null;
-    }
-
     private static UUID parseUuid(String input) {
         if (input == null || input.isBlank()) {
             return null;
@@ -424,10 +405,6 @@ public class ParkourCommand extends AbstractAsyncCommand {
         }
         if (!HylogramsBridge.isAvailable()) {
             ctx.sendMessage(SystemMessageUtils.serverError("Hylograms plugin is not available."));
-            return;
-        }
-        if (store == null) {
-            ctx.sendMessage(SystemMessageUtils.serverError("Player store not available."));
             return;
         }
         plugin.refreshLeaderboardHologram(store);

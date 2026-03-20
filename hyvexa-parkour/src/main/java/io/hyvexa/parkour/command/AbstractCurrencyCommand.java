@@ -16,6 +16,7 @@ import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.PermissionUtils;
 
 import javax.annotation.Nonnull;
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -108,7 +109,7 @@ public abstract class AbstractCurrencyCommand extends AbstractAsyncCommand {
                 onCurrencyAdded(targetRef, amount, newTotal);
                 // Optional broadcast message: everything after the amount is joined as the message
                 if (args.length > 3) {
-                    String broadcastText = String.join(" ", java.util.Arrays.copyOfRange(args, 3, args.length));
+                    String broadcastText = String.join(" ", Arrays.copyOfRange(args, 3, args.length));
                     Message broadcastMsg = Message.raw(broadcastText);
                     for (PlayerRef p : Universe.get().getPlayers()) {
                         if (p != null) p.sendMessage(broadcastMsg);

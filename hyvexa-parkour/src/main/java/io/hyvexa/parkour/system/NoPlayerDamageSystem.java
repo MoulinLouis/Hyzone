@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
@@ -29,12 +28,7 @@ public class NoPlayerDamageSystem extends DamageEventSystem {
         if (playerRef != null && DamageBypassRegistry.isBypassed(playerRef.getUuid())) {
             return;
         }
-        if (event.hasMetaObject(Damage.KNOCKBACK_COMPONENT)) {
-            event.removeMetaObject(Damage.KNOCKBACK_COMPONENT);
-        }
-        event.setCancelled(true);
-        event.setAmount(0f);
-        buffer.tryRemoveComponent(chunk.getReferenceTo(entityId), KnockbackComponent.getComponentType());
+        DamageUtils.cancelDamage(entityId, chunk, buffer, event);
     }
 
     @Override

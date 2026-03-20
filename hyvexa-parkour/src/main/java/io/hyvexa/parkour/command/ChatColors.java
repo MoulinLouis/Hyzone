@@ -6,6 +6,7 @@ public final class ChatColors {
     public static final String HIGHLIGHT_COLOR = "#fbbf24";
     public static final String MUTED_COLOR = "#94a3b8";
     public static final String ACCENT_COLOR = "#f0c674";
+    public static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
 
     private ChatColors() {}
 }

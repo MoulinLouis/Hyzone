@@ -81,13 +81,9 @@ public final class TrackerUtils {
             return lastCheckpointIndex;
         }
         int best = -1;
-        for (Integer touched : touchedCheckpoints) {
-            if (touched == null) {
-                continue;
-            }
-            int candidate = touched;
-            if (candidate >= 0 && candidate < checkpoints.size()) {
-                best = Math.max(best, candidate);
+        for (int touched : touchedCheckpoints) {
+            if (touched >= 0 && touched < checkpoints.size()) {
+                best = Math.max(best, touched);
             }
         }
         return best;

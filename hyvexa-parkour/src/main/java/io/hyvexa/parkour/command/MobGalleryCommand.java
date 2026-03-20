@@ -312,7 +312,7 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
             if (world == null) {
                 continue;
             }
-            List<SpawnedMobRecord> worldRecords = List.copyOf(entry.getValue());
+            List<SpawnedMobRecord> worldRecords = entry.getValue();
             world.execute(() -> clearGalleryOnWorldThread(world, worldRecords));
         }
 
@@ -617,13 +617,5 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
         return List.copyOf(unique);
     }
 
-    private static final class SpawnedMobRecord {
-        private final String worldName;
-        private final UUID entityUuid;
-
-        private SpawnedMobRecord(String worldName, UUID entityUuid) {
-            this.worldName = worldName;
-            this.entityUuid = entityUuid;
-        }
-    }
+    private record SpawnedMobRecord(String worldName, UUID entityUuid) {}
 }

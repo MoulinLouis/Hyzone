@@ -19,8 +19,6 @@ import java.util.concurrent.CompletableFuture;
 
 public class LinkCommand extends AbstractAsyncCommand {
 
-    private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
-
     public LinkCommand() {
         super("link", "Link your Discord account");
         this.setPermissionGroup(GameMode.Adventure);
@@ -41,15 +39,13 @@ public class LinkCommand extends AbstractAsyncCommand {
         }
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
-        return CompletableFuture.runAsync(() -> handleLink(player), world);
+        return CompletableFuture.runAsync(() -> handleLink(player, ref, store), world);
     }
 
-    private void handleLink(Player player) {
-        Ref<EntityStore> ref = player.getReference();
-        if (ref == null || !ref.isValid()) {
+    private void handleLink(Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (!ref.isValid()) {
             return;
         }
-        Store<EntityStore> store = ref.getStore();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
@@ -87,7 +83,7 @@ public class LinkCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw("Code expires in 5 minutes.").color(ChatColors.MUTED_COLOR));
         player.sendMessage(Message.join(
                 Message.raw("Discord: ").color(ChatColors.MUTED_COLOR),
-                Message.raw("discord.gg/2PAygkyFnK").color(ChatColors.LINK_COLOR).link(DISCORD_URL)
+                Message.raw("discord.gg/2PAygkyFnK").color(ChatColors.LINK_COLOR).link(ChatColors.DISCORD_URL)
         ));
         player.sendMessage(Message.raw(""));
     }

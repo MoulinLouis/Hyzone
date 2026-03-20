@@ -3,10 +3,8 @@ package io.hyvexa.parkour.tracker;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.common.util.FormatUtils;
-import io.hyvexa.parkour.data.Medal;
 
 import java.util.List;
-import java.util.Set;
 
 public class RunRecordsHud extends RunHud {
 
@@ -31,7 +29,7 @@ public class RunRecordsHud extends RunHud {
 
     public void updateTopTimes(List<RecordLine> lines) {
         List<RecordLine> safeLines = lines != null ? lines : List.of();
-        RecordLine[] resolved = new RecordLine[6];
+        RecordLine[] resolved = new RecordLine[5];
         StringBuilder keyBuilder = new StringBuilder();
         for (int i = 0; i < 5; i++) {
             RecordLine line = i < safeLines.size() ? safeLines.get(i) : RecordLine.empty(i + 1);
@@ -39,7 +37,6 @@ public class RunRecordsHud extends RunHud {
             appendLineKey(keyBuilder, line);
         }
         RecordLine self = safeLines.size() > 5 ? safeLines.get(5) : RecordLine.empty(0);
-        resolved[5] = self;
         appendLineKey(keyBuilder, self);
         String key = keyBuilder.toString();
         if (key.equals(lastRecordsKey)) {
@@ -64,7 +61,7 @@ public class RunRecordsHud extends RunHud {
         builder.append(line.rank).append('|').append(line.name).append('|').append(line.time).append('\n');
     }
 
-    public void updateMedals(io.hyvexa.parkour.data.Map map, Set<Medal> earned) {
+    public void updateMedals(io.hyvexa.parkour.data.Map map) {
         Long bronzeMs = map != null ? map.getBronzeTimeMs() : null;
         Long silverMs = map != null ? map.getSilverTimeMs() : null;
         Long goldMs = map != null ? map.getGoldTimeMs() : null;

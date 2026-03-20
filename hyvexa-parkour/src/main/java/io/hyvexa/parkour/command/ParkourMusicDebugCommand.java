@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import CompletableFuture;
 
 import static com.hypixel.hytale.server.core.command.commands.player.inventory.InventorySeeCommand.MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD;
 
@@ -38,26 +39,26 @@ public class ParkourMusicDebugCommand extends AbstractAsyncCommand {
 
     @Override
     @Nonnull
-    protected java.util.concurrent.CompletableFuture<Void> executeAsync(CommandContext commandContext) {
+    protected CompletableFuture<Void> executeAsync(CommandContext commandContext) {
         CommandSender sender = commandContext.sender();
         if (!(sender instanceof Player player)) {
-            return java.util.concurrent.CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(null);
         }
         if (!PermissionUtils.isOp(player)) {
             commandContext.sendMessage(MESSAGE_OP_REQUIRED);
-            return java.util.concurrent.CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(null);
         }
         Ref<EntityStore> ref = player.getReference();
         if (ref == null || !ref.isValid()) {
             commandContext.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
-            return java.util.concurrent.CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(null);
         }
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
         if (ModeGate.denyIfNot(commandContext, world, WorldConstants.WORLD_PARKOUR, ModeMessages.MESSAGE_ENTER_PARKOUR)) {
-            return java.util.concurrent.CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(null);
         }
-        return java.util.concurrent.CompletableFuture.runAsync(() -> {
+        return CompletableFuture.runAsync(() -> {
             handleCommand(commandContext, player);
         }, world);
     }

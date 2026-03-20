@@ -61,7 +61,7 @@ public class RunHud extends CustomUIHud {
         String safeColor = splitColor != null ? splitColor : "#000000";
         if (safeText.equals(lastCheckpointSplitText)
                 && safeColor.equals(lastCheckpointSplitColor)
-                && Boolean.valueOf(visible).equals(lastCheckpointSplitVisible)) {
+                && lastCheckpointSplitVisible != null && lastCheckpointSplitVisible == visible) {
             return;
         }
         lastCheckpointSplitText = safeText;
@@ -143,7 +143,7 @@ public class RunHud extends CustomUIHud {
 
     public void updateAdvancedHud(boolean visible, String orientation, String velocity,
                                   String speed, String position) {
-        if (!Boolean.valueOf(visible).equals(lastAdvancedHudVisible)) {
+        if (lastAdvancedHudVisible == null || lastAdvancedHudVisible != visible) {
             lastAdvancedHudVisible = visible;
             UICommandBuilder commandBuilder = new UICommandBuilder();
             commandBuilder.set("#AdvancedHudRoot.Visible", visible);

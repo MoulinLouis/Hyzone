@@ -24,9 +24,6 @@ class JumpTracker {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
-        }
         boolean currentOnGround = movementStates != null && movementStates.onGround;
         Boolean wasOnGround = previousOnGround.put(playerId, currentOnGround);
         if (wasOnGround != null && wasOnGround && !currentOnGround) {
@@ -42,9 +39,6 @@ class JumpTracker {
         for (java.util.Map.Entry<UUID, Integer> entry : new ArrayList<>(pendingJumps.entrySet())) {
             UUID playerId = entry.getKey();
             Integer count = entry.getValue();
-            if (playerId == null || count == null) {
-                continue;
-            }
             if (!pendingJumps.remove(playerId, count)) {
                 continue;
             }
