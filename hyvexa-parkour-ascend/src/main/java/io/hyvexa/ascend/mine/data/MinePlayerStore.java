@@ -177,12 +177,11 @@ public class MinePlayerStore {
     private boolean savePlayerSync(UUID playerId) {
         MinePlayerProgress progress = players.get(playerId);
         if (progress == null) return true;
-        DatabaseManager dbManager = DatabaseManager.getInstance();
-        if (dbManager == null || !dbManager.isInitialized()) return true;
+        if (!DatabaseManager.getInstance().isInitialized()) return true;
 
         MinePlayerProgress.PlayerSaveSnapshot snapshot = progress.createSaveSnapshot();
 
-        try (Connection conn = dbManager.getConnection()) {
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             if (conn == null) return false;
 
             conn.setAutoCommit(false);

@@ -67,12 +67,6 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             return;
         }
 
-        // Check mine unlock state
-        MinePlayerProgress unlockCheck = minePlayerStore.getOrCreatePlayer(playerId);
-        if (!unlockCheck.getMineState(zone.getMineId()).isUnlocked()) {
-            return;
-        }
-
         // Check if zone is regenerating
         if (mineManager.isZoneInCooldown(zone.getId())) {
             MineRewardHelper.sendRegenMessageIfNeeded(playerId, player, mineManager, zone.getId(), lastRegenMessage);

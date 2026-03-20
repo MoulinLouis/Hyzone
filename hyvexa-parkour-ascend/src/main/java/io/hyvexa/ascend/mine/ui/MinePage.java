@@ -692,7 +692,7 @@ public class MinePage extends BaseAscendPage {
     private String buildUpgradeTooltip(MineUpgradeType type, int level, int maxLevel) {
         boolean maxed = level >= maxLevel;
         String name = type.getDisplayName();
-        String desc = type.getDescription();
+        String desc = getUpgradeDescription(type);
 
         StringBuilder sb = new StringBuilder();
         sb.append(name).append("\n");
@@ -709,6 +709,10 @@ public class MinePage extends BaseAscendPage {
             sb.append("Left Click to purchase one level");
         }
         return sb.toString();
+    }
+
+    private static String getUpgradeDescription(MineUpgradeType type) {
+        return type.getDescription();
     }
 
     private String getEffectDescription(MineUpgradeType type, int level) {
