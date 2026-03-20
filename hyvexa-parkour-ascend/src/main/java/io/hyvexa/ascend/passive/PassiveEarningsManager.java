@@ -105,15 +105,12 @@ public class PassiveEarningsManager {
             // Get Summit bonuses (Multiplier Gain + Evolution Power)
             SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
 
-            // Offline rate: always base 10%
-            long effectiveOfflineRate = AscendConstants.PASSIVE_OFFLINE_RATE_PERCENT;
-
             // Multiplier gain per run (with Summit bonuses) - at offline rate
             BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
 
             BigNumber mapMultiplierGain = multiplierIncrement
                 .multiply(BigNumber.fromDouble(theoreticalRuns))
-                .multiply(BigNumber.fromDouble(effectiveOfflineRate / 100.0));
+                .multiply(BigNumber.fromDouble(AscendConstants.PASSIVE_OFFLINE_RATE_PERCENT / 100.0));
 
             // Volt per run (same logic as RobotManager)
             BigNumber payoutPerRun = playerStore.getCompletionPayout(
@@ -123,7 +120,7 @@ public class PassiveEarningsManager {
             // Calculate total volt for this runner
             BigNumber mapVolt = payoutPerRun
                 .multiply(BigNumber.fromDouble(theoreticalRuns))
-                .multiply(BigNumber.fromDouble(effectiveOfflineRate / 100.0));
+                .multiply(BigNumber.fromDouble(AscendConstants.PASSIVE_OFFLINE_RATE_PERCENT / 100.0));
 
             // Store runner earnings
             runnerEarnings.put(mapId, new PassiveRunnerEarnings(

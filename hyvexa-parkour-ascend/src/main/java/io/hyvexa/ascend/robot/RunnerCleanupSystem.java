@@ -14,6 +14,8 @@ import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import com.hypixel.hytale.logger.HytaleLogger;
+
 import java.util.UUID;
 
 /**
@@ -31,8 +33,11 @@ import java.util.UUID;
  */
 public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+
     private final RobotManager robotManager;
     private volatile Query<EntityStore> query;
+    private volatile boolean queryFailed;
 
     public RunnerCleanupSystem(RobotManager robotManager) {
         this.robotManager = robotManager;
@@ -41,6 +46,9 @@ public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
     @Override
     public void tick(float delta, int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
                      CommandBuffer<EntityStore> buffer) {
+        if (queryFailed) {
+            return;
+        }
         boolean runnerPending = robotManager != null && robotManager.isCleanupPending();
         if (!runnerPending) {
             return;
@@ -95,6 +103,8 @@ public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
         var invulnerableType = Invulnerable.getComponentType();
         var uuidType = UUIDComponent.getComponentType();
         if (frozenType == null || invulnerableType == null || uuidType == null) {
+            LOGGER.atWarning().log("RunnerCleanupSystem: component types not yet registered, disabling system");
+            queryFailed = true;
             return Query.any();
         }
         current = Archetype.of(frozenType, invulnerableType, uuidType);

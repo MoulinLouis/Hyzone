@@ -80,15 +80,10 @@ public final class MapUnlockHelper {
     }
 
     public static boolean isFirstMap(AscendMap map, AscendMapStore mapStore) {
-        if (map == null || mapStore == null) {
+        if (map == null) {
             return false;
         }
-        for (AscendMap other : mapStore.listMaps()) {
-            if (other.getDisplayOrder() < map.getDisplayOrder()) {
-                return false;
-            }
-        }
-        return true;
+        return map.getDisplayOrder() == 0;
     }
 
     /**

@@ -59,8 +59,6 @@ public class AscendFinishDetectionSystem extends EntityTickingSystem<EntityStore
             // Defer store-modifying work to world thread outside system processing.
             // Guard with in-flight set so we only queue one completion check per player.
             Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
-            String playerIdText = playerId != null ? playerId.toString() : "unknown";
-            String worldName = world != null && world.getName() != null ? world.getName() : "unknown";
             boolean queued = AsyncExecutionHelper.runBestEffort(world, () -> {
                 try {
                     if (ref != null && ref.isValid()) {
@@ -70,7 +68,7 @@ public class AscendFinishDetectionSystem extends EntityTickingSystem<EntityStore
                     finishChecksInFlight.remove(playerId);
                 }
             }, "ascend.finish.check", "ascend finish detection check",
-                    "player=" + playerIdText + ", world=" + worldName);
+                    "player=" + playerId + ", world=" + (world != null ? world.getName() : "unknown"));
             if (!queued) {
                 finishChecksInFlight.remove(playerId);
             }
