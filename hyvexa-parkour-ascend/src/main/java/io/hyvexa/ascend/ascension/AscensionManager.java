@@ -6,6 +6,7 @@ import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import BigNumber;
 
 import java.util.Set;
 import java.util.UUID;
@@ -30,7 +31,7 @@ public class AscensionManager {
      * Checks if a player can perform an Ascension.
      */
     public boolean canAscend(UUID playerId) {
-        io.hyvexa.common.math.BigNumber volt = playerStore.getVolt(playerId);
+        BigNumber volt = playerStore.getVolt(playerId);
         return volt.gte(AscendConstants.ASCENSION_VOLT_THRESHOLD);
     }
 
@@ -40,7 +41,7 @@ public class AscensionManager {
      * @return the new Ascension count, or -1 if insufficient volt
      */
     public int performAscension(UUID playerId) {
-        io.hyvexa.common.math.BigNumber volt = playerStore.getVolt(playerId);
+        BigNumber volt = playerStore.getVolt(playerId);
         if (volt.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
             return -1;
         }
@@ -69,11 +70,11 @@ public class AscensionManager {
         runTracker.cancelRun(playerId);
 
         // Reset progress
-        progress.setVolt(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setVolt(BigNumber.ZERO);
         progress.setElevationMultiplier(1);
         progress.setAutoElevationTargetIndex(0);
-        progress.setSummitAccumulatedVolt(io.hyvexa.common.math.BigNumber.ZERO);
-        progress.setElevationAccumulatedVolt(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
 
         progress.clearSummitXp();
 
@@ -115,16 +116,13 @@ public class AscensionManager {
         progress.unlockSkillNode(node);
 
         // Auto-enable automation toggles when their skills are unlocked
-        if (node == SkillTreeNode.AUTO_RUNNERS) {
-            playerStore.setAutoUpgradeEnabled(playerId, true);
-        } else if (node == SkillTreeNode.AUTO_EVOLUTION) {
-            playerStore.setAutoEvolutionEnabled(playerId, true);
-        } else if (node == SkillTreeNode.AUTO_ELEVATION) {
-            playerStore.setAutoElevationEnabled(playerId, true);
-        } else if (node == SkillTreeNode.AUTO_SUMMIT) {
-            playerStore.setAutoSummitEnabled(playerId, true);
-        } else if (node == SkillTreeNode.AUTO_ASCEND) {
-            playerStore.setAutoAscendEnabled(playerId, true);
+        switch (node) {
+            case AUTO_RUNNERS -> playerStore.setAutoUpgradeEnabled(playerId, true);
+            case AUTO_EVOLUTION -> playerStore.setAutoEvolutionEnabled(playerId, true);
+            case AUTO_ELEVATION -> playerStore.setAutoElevationEnabled(playerId, true);
+            case AUTO_SUMMIT -> playerStore.setAutoSummitEnabled(playerId, true);
+            case AUTO_ASCEND -> playerStore.setAutoAscendEnabled(playerId, true);
+            default -> {}
         }
 
         playerStore.markDirty(playerId);
@@ -191,8 +189,6 @@ public class AscensionManager {
     public boolean hasMomentumSurge(UUID playerId) {
         return hasSkillNode(playerId, SkillTreeNode.MOMENTUM_SURGE);
     }
-
-    // Elevation Remnant was removed — its functionality is no longer available
 
     public boolean hasMultiplierBoost(UUID playerId) {
         return hasSkillNode(playerId, SkillTreeNode.MULTIPLIER_BOOST);

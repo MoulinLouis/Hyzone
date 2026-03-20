@@ -9,6 +9,7 @@ public class ToastManager {
     private static final long CONSOLIDATION_WINDOW_MS = 1000;
 
     private final ToastEntry[] slots = new ToastEntry[MAX_SLOTS];
+    private final ToastType[] lastShownTypes = new ToastType[MAX_SLOTS];
 
     public void showToast(ToastType type, String message) {
         // Consolidation: if newest toast has same type and is recent, update its text
@@ -17,7 +18,6 @@ public class ToastManager {
                 && (System.currentTimeMillis() - newest.createdAt) < CONSOLIDATION_WINDOW_MS) {
             newest.message = message;
             newest.createdAt = System.currentTimeMillis();
-            newest.dirty = true;
             return;
         }
 
@@ -48,16 +48,14 @@ public class ToastManager {
 
             long elapsed = now - entry.createdAt;
             if (elapsed >= TOAST_DURATION_MS) {
-                // Toast expired — hide it
                 hideSlot(cmd, i);
                 slots[i] = null;
+                lastShownTypes[i] = null;
                 continue;
             }
 
-            // Show and update this slot
             float progress = 1.0f - (float) elapsed / TOAST_DURATION_MS;
             showSlot(cmd, i, entry, progress);
-            entry.dirty = false;
         }
     }
 
@@ -73,6 +71,7 @@ public class ToastManager {
     public void clear() {
         for (int i = 0; i < MAX_SLOTS; i++) {
             slots[i] = null;
+            lastShownTypes[i] = null;
         }
     }
 
@@ -81,15 +80,17 @@ public class ToastManager {
         cmd.set(prefix + ".Visible", true);
         cmd.set(prefix + "Text.Text", entry.message);
 
-        // Toggle accent bar overlays — show only the matching type
-        for (ToastType t : ToastType.values()) {
-            boolean match = t == entry.type;
-            cmd.set(prefix + "Accent" + t.getSuffix() + ".Visible", match);
-            cmd.set(prefix + "Bar" + t.getSuffix() + ".Visible", match);
-            if (match) {
-                cmd.set(prefix + "Bar" + t.getSuffix() + ".Value", progress);
+        boolean typeChanged = lastShownTypes[slot] != entry.type;
+        if (typeChanged) {
+            lastShownTypes[slot] = entry.type;
+            for (ToastType t : ToastType.values()) {
+                boolean match = t == entry.type;
+                cmd.set(prefix + "Accent" + t.getSuffix() + ".Visible", match);
+                cmd.set(prefix + "Bar" + t.getSuffix() + ".Visible", match);
             }
         }
+
+        cmd.set(prefix + "Bar" + entry.type.getSuffix() + ".Value", progress);
     }
 
     private void hideSlot(UICommandBuilder cmd, int slot) {
@@ -123,13 +124,11 @@ public class ToastManager {
         ToastType type;
         String message;
         long createdAt;
-        boolean dirty;
 
         ToastEntry(ToastType type, String message, long createdAt) {
             this.type = type;
             this.message = message;
             this.createdAt = createdAt;
-            this.dirty = true;
         }
     }
 }

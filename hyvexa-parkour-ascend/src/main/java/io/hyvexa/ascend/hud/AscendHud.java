@@ -11,6 +11,7 @@ import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class AscendHud extends CustomUIHud {
 
@@ -35,9 +36,12 @@ public class AscendHud extends CustomUIHud {
     private int lastPlayerCount = -1;
     private long lastVexa = -1;
 
-    // Track previous values for effect triggering (converted to double for comparison)
     private double[] lastDigits;
     private BigNumber lastVolt;
+
+    // Track filled segments to avoid resending unchanged visibility commands
+    private int lastFilledBarSegments = -1;
+    private int lastFilledAccentSegments = -1;
 
     // Ascension quest bar constants
     private static final double ASCENSION_COST = 1e33; // 1 Decillion (1Dc)
@@ -103,7 +107,7 @@ public class AscendHud extends CustomUIHud {
             || !digitsKey.equals(lastDigitsKey)
             || !elevationValueText.equals(lastElevationValueText)
             || !elevationText.equals(lastElevationText)
-            || !Boolean.valueOf(showElevation).equals(lastElevationVisible);
+            || !Objects.equals(showElevation, lastElevationVisible);
 
         boolean hasActiveEffects = effectManager.hasActiveEffects();
 
@@ -167,7 +171,7 @@ public class AscendHud extends CustomUIHud {
     public void updateTimer(Long elapsedMs, boolean visible) {
         String timerText = elapsedMs != null ? formatTimer(elapsedMs) : "0.000";
 
-        if (timerText.equals(lastTimerText) && Boolean.valueOf(visible).equals(lastTimerVisible)) {
+        if (timerText.equals(lastTimerText) && Objects.equals(visible, lastTimerVisible)) {
             return;
         }
 
@@ -244,6 +248,8 @@ public class AscendHud extends CustomUIHud {
         lastVexa = -1;
         lastDigits = null;
         lastVolt = null;
+        lastFilledBarSegments = -1;
+        lastFilledAccentSegments = -1;
         effectManager.clearEffects();
         toastManager.clear();
     }
@@ -253,7 +259,7 @@ public class AscendHud extends CustomUIHud {
         boolean showPrestige = hasSummitLevels(summitLevels) || hasAnyPreviewGain(multPreview, speedPreview, evoPreview);
         String prestigeKey = buildPrestigeKey(summitLevels, ascensionCount, skillPoints, multPreview, speedPreview, evoPreview);
 
-        if (prestigeKey.equals(lastPrestigeKey) && Boolean.valueOf(showPrestige).equals(lastPrestigeVisible)) {
+        if (prestigeKey.equals(lastPrestigeKey) && Objects.equals(showPrestige, lastPrestigeVisible)) {
             return;
         }
 
@@ -286,7 +292,7 @@ public class AscendHud extends CustomUIHud {
         boolean show = ascensionCount > 0;
         String key = ascensionCount + "|" + availableAP;
 
-        if (key.equals(lastAscensionKey) && Boolean.valueOf(show).equals(lastAscensionVisible)) {
+        if (key.equals(lastAscensionKey) && Objects.equals(show, lastAscensionVisible)) {
             return;
         }
 
@@ -305,20 +311,15 @@ public class AscendHud extends CustomUIHud {
     }
 
     public void updateAscensionQuest(BigNumber volt) {
-        // Calculate logarithmic progress (0 to 1)
-        // Using log10 scale: log10(volt + 1) / log10(1Dc + 1) ≈ log10(volt + 1) / 33
         double progress = 0.0;
         if (volt.gt(BigNumber.ZERO)) {
-            // Convert BigNumber to double for logarithmic calculation
             double voltDouble = volt.toDouble();
             progress = Math.log10(voltDouble + 1) / Math.log10(ASCENSION_COST + 1);
-            progress = Math.min(1.0, Math.max(0.0, progress)); // Clamp between 0 and 1
+            progress = Math.min(1.0, Math.max(0.0, progress));
         }
 
-        // Calculate filled segments (visual bar updates every 1%)
         int filledBarSegments = (int) (progress * QUEST_BAR_SEGMENTS);
         int filledAccentSegments = (int) (progress * QUEST_ACCENT_SEGMENTS);
-        // Precise percentage with 2 decimals for display
         double percentPrecise = progress * 100;
         String percentText = String.format(java.util.Locale.US, "%.2f%%", percentPrecise);
 
@@ -330,18 +331,34 @@ public class AscendHud extends CustomUIHud {
         lastAscensionProgressKey = progressKey;
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
-
-        // Update percentage text (precise to 2 decimals)
         commandBuilder.set("#AscensionQuestPercent.Text", percentText);
 
-        // Update main progress bar segments
-        for (int i = 1; i <= QUEST_BAR_SEGMENTS; i++) {
-            commandBuilder.set("#AscensionQuestBarContainer #Seg" + i + ".Visible", i <= filledBarSegments);
-        }
+        // Only send visibility commands for segments that changed
+        int prevBar = lastFilledBarSegments;
+        int prevAccent = lastFilledAccentSegments;
+        lastFilledBarSegments = filledBarSegments;
+        lastFilledAccentSegments = filledAccentSegments;
 
-        // Update right accent bar segments
-        for (int i = 1; i <= QUEST_ACCENT_SEGMENTS; i++) {
-            commandBuilder.set("#AscensionAccentRight #AccentSeg" + i + ".Visible", i <= filledAccentSegments);
+        if (prevBar < 0) {
+            // First update — send all segments
+            for (int i = 1; i <= QUEST_BAR_SEGMENTS; i++) {
+                commandBuilder.set("#AscensionQuestBarContainer #Seg" + i + ".Visible", i <= filledBarSegments);
+            }
+            for (int i = 1; i <= QUEST_ACCENT_SEGMENTS; i++) {
+                commandBuilder.set("#AscensionAccentRight #AccentSeg" + i + ".Visible", i <= filledAccentSegments);
+            }
+        } else {
+            // Incremental: only send segments that flipped
+            int barMin = Math.min(prevBar, filledBarSegments) + 1;
+            int barMax = Math.max(prevBar, filledBarSegments);
+            for (int i = barMin; i <= barMax; i++) {
+                commandBuilder.set("#AscensionQuestBarContainer #Seg" + i + ".Visible", i <= filledBarSegments);
+            }
+            int accentMin = Math.min(prevAccent, filledAccentSegments) + 1;
+            int accentMax = Math.max(prevAccent, filledAccentSegments);
+            for (int i = accentMin; i <= accentMax; i++) {
+                commandBuilder.set("#AscensionAccentRight #AccentSeg" + i + ".Visible", i <= filledAccentSegments);
+            }
         }
 
         update(false, commandBuilder);

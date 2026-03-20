@@ -92,9 +92,6 @@ public class AscensionCinematic {
                     return;
                 }
                 ServerCameraSettings settings = base3p(3f);
-                settings.applyLookType = ApplyLookType.Rotation;
-                settings.lookMultiplier = new Vector2f(0f, 0f);
-                settings.skipCharacterPhysics = true;
                 ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, settings));
                 playSound2D(ph, playerRef, "phase1-lock", "SFX_Portal_Neutral_Open", 1.5f, 0.8f);
                 spawnParticleAtPlayer(store, ref, ph, "Magic_Sparks_GS", 1.5f);
@@ -120,9 +117,6 @@ public class AscensionCinematic {
                     ServerCameraSettings settings = base3p(dist);
                     settings.positionLerpSpeed = 0.25f;
                     settings.rotationLerpSpeed = 0.25f;
-                    settings.applyLookType = ApplyLookType.Rotation;
-                    settings.lookMultiplier = new Vector2f(0f, 0f);
-                    settings.skipCharacterPhysics = true;
                     settings.rotationType = RotationType.Custom;
                     settings.rotation = new Direction(angle, deg(pitchDeg), 0f);
                     ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, settings));
@@ -153,11 +147,6 @@ public class AscensionCinematic {
                     return;
                 }
                 ServerCameraSettings settings = base3p(14f);
-                settings.positionLerpSpeed = 0.15f;
-                settings.rotationLerpSpeed = 0.15f;
-                settings.applyLookType = ApplyLookType.Rotation;
-                settings.lookMultiplier = new Vector2f(0f, 0f);
-                settings.skipCharacterPhysics = true;
                 settings.rotationType = RotationType.Custom;
                 settings.rotation = new Direction(frontYaw, deg(-20), 0f);
                 ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, settings));
@@ -183,9 +172,6 @@ public class AscensionCinematic {
                     ServerCameraSettings settings = base3p(dist);
                     settings.positionLerpSpeed = 0.6f;
                     settings.rotationLerpSpeed = 0.6f;
-                    settings.applyLookType = ApplyLookType.Rotation;
-                    settings.lookMultiplier = new Vector2f(0f, 0f);
-                    settings.skipCharacterPhysics = true;
                     settings.rotationType = RotationType.Custom;
                     settings.rotation = new Direction(frontYaw, deg(-10), 0f);
                     ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, settings));
@@ -308,6 +294,9 @@ public class AscensionCinematic {
     }
 
     private static void logPhaseWarning(PlayerRef playerRef, String phaseId, Exception error) {
+        if (LAST_WARNING_BY_PHASE.size() > 500) {
+            LAST_WARNING_BY_PHASE.clear();
+        }
         String playerId = "unknown";
         if (playerRef != null && playerRef.getUuid() != null) {
             playerId = playerRef.getUuid().toString();
@@ -337,6 +326,9 @@ public class AscensionCinematic {
         settings.isFirstPerson = false;
         settings.eyeOffset = true;
         settings.positionDistanceOffsetType = PositionDistanceOffsetType.DistanceOffsetRaycast;
+        settings.applyLookType = ApplyLookType.Rotation;
+        settings.lookMultiplier = new Vector2f(0f, 0f);
+        settings.skipCharacterPhysics = true;
         return settings;
     }
 

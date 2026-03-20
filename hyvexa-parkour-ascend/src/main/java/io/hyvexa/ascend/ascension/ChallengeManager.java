@@ -18,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,7 +44,7 @@ public class ChallengeManager {
     public ChallengeManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
-        this.runTracker = runTracker;
+        this.runTracker = Objects.requireNonNull(runTracker, "runTracker");
     }
 
     /**
@@ -67,10 +68,7 @@ public class ChallengeManager {
             return null;
         }
 
-        // Cancel any active run
-        if (runTracker != null) {
-            runTracker.cancelRun(playerId);
-        }
+        runTracker.cancelRun(playerId);
 
         // Snapshot current progress
         ChallengeSnapshot snapshot = ChallengeSnapshot.capture(progress);
@@ -120,10 +118,7 @@ public class ChallengeManager {
 
         long elapsedMs = System.currentTimeMillis() - active.startedAtMs();
 
-        // Cancel any active run
-        if (runTracker != null) {
-            runTracker.cancelRun(playerId);
-        }
+        runTracker.cancelRun(playerId);
 
         // Record completion
         recordChallengeCompletion(playerId, active.challengeType(), elapsedMs);
@@ -165,10 +160,7 @@ public class ChallengeManager {
             return;
         }
 
-        // Cancel any active run
-        if (runTracker != null) {
-            runTracker.cancelRun(playerId);
-        }
+        runTracker.cancelRun(playerId);
 
         // Restore snapshot (no reward)
         active.snapshot().restore(progress);

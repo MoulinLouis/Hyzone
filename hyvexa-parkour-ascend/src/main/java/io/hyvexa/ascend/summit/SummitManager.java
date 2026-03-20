@@ -83,8 +83,8 @@ public class SummitManager {
      * @return SummitResult containing the new level, list of maps with runners (for despawn), and XP gained
      */
     public SummitResult performSummit(UUID playerId, SummitCategory category) {
-        // Block summiting in categories locked by an active challenge
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        // Block summiting in categories locked by an active challenge
         if (plugin != null && plugin.getChallengeManager() != null
                 && plugin.getChallengeManager().isSummitBlocked(playerId, category)) {
             return new SummitResult(-1, List.of(), 0.0);
@@ -151,7 +151,6 @@ public class SummitManager {
     public double getRunnerSpeedBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.RUNNER_SPEED);
 
-        // Challenge malus: divide full value by speed divisor
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getChallengeManager() != null) {
             double divisor = plugin.getChallengeManager().getSpeedDivisor(playerId);
@@ -176,7 +175,6 @@ public class SummitManager {
     public double getMultiplierGainBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
 
-        // Challenge malus: divide full value by multiplier gain divisor
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getChallengeManager() != null) {
             double divisor = plugin.getChallengeManager().getMultiplierGainDivisor(playerId);
@@ -199,11 +197,12 @@ public class SummitManager {
     public double getBaseMultiplierBonus(UUID playerId) {
         double bonus = 0.0;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getAscensionManager() != null) {
-            if (plugin.getAscensionManager().hasMultiplierBoost(playerId)) {
+        var am = plugin != null ? plugin.getAscensionManager() : null;
+        if (am != null) {
+            if (am.hasMultiplierBoost(playerId)) {
                 bonus += 0.10;
             }
-            if (plugin.getAscensionManager().hasMultiplierBoost2(playerId)) {
+            if (am.hasMultiplierBoost2(playerId)) {
                 bonus += 0.25;
             }
         }

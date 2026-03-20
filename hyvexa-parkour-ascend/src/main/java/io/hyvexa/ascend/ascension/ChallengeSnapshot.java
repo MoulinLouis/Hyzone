@@ -1,5 +1,6 @@
 package io.hyvexa.ascend.ascension;
 
+import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.common.math.BigNumber;
@@ -12,6 +13,8 @@ import java.util.Map;
  * Designed for Gson serialization to persist in the database (crash recovery).
  */
 public class ChallengeSnapshot {
+
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     // Volt (BigNumber as mantissa + exp10)
     private double voltMantissa;
@@ -94,6 +97,16 @@ public class ChallengeSnapshot {
     }
 
     public void restore(AscendPlayerProgress progress) {
+        // Validate deserialized fields — Gson may leave invalid defaults
+        if (elevationMultiplier < 1) {
+            LOGGER.atWarning().log("[ChallengeSnapshot] Clamped elevationMultiplier from " + elevationMultiplier + " to 1");
+            elevationMultiplier = 1;
+        }
+        if (voltMantissa < 0) {
+            LOGGER.atWarning().log("[ChallengeSnapshot] Clamped voltMantissa from " + voltMantissa + " to 0");
+            voltMantissa = 0;
+        }
+
         // Keep lifetime counters monotonic across challenge restore.
         // Challenge runs can increment totalManualRuns and totalVoltEarned; restoring the
         // pre-challenge snapshot must not roll these global stats backward.
