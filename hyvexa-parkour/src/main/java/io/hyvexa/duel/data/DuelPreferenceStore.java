@@ -9,10 +9,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -187,7 +185,6 @@ public class DuelPreferenceStore {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        Map<DuelCategory, Boolean> flags = toFlags(enabled);
         String sql = """
             INSERT INTO duel_category_prefs (player_uuid, easy_enabled, medium_enabled, hard_enabled, insane_enabled, updated_at)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -206,24 +203,15 @@ public class DuelPreferenceStore {
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setString(1, playerId.toString());
-                stmt.setBoolean(2, flags.get(DuelCategory.EASY));
-                stmt.setBoolean(3, flags.get(DuelCategory.MEDIUM));
-                stmt.setBoolean(4, flags.get(DuelCategory.HARD));
-                stmt.setBoolean(5, flags.get(DuelCategory.INSANE));
+                stmt.setBoolean(2, enabled.contains(DuelCategory.EASY));
+                stmt.setBoolean(3, enabled.contains(DuelCategory.MEDIUM));
+                stmt.setBoolean(4, enabled.contains(DuelCategory.HARD));
+                stmt.setBoolean(5, enabled.contains(DuelCategory.INSANE));
                 stmt.setTimestamp(6, new Timestamp(System.currentTimeMillis()));
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to save duel preferences: " + e.getMessage());
         }
-    }
-
-    @Nonnull
-    private Map<DuelCategory, Boolean> toFlags(@Nonnull Set<DuelCategory> enabled) {
-        EnumMap<DuelCategory, Boolean> flags = new EnumMap<>(DuelCategory.class);
-        for (DuelCategory category : DuelCategory.values()) {
-            flags.put(category, enabled.contains(category));
-        }
-        return flags;
     }
 }

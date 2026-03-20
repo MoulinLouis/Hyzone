@@ -67,9 +67,12 @@ public class DuelQueue {
 
     public boolean removePair(@Nonnull UUID player1, @Nonnull UUID player2) {
         synchronized (lock) {
-            boolean removed1 = waitingPlayers.remove(player1);
-            boolean removed2 = waitingPlayers.remove(player2);
-            return removed1 && removed2;
+            if (!waitingPlayers.contains(player1) || !waitingPlayers.contains(player2)) {
+                return false;
+            }
+            waitingPlayers.remove(player1);
+            waitingPlayers.remove(player2);
+            return true;
         }
     }
 
