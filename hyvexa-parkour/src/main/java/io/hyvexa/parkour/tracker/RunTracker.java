@@ -532,7 +532,6 @@ public class RunTracker {
         }
         if (run.practiceEnabled && run.flyActive && map.hasFlyZone()) {
             if (!isInsideFlyZone(position, map)) {
-                long now = System.currentTimeMillis();
                 if (now - run.lastFlyZoneRollbackMs >= ParkourConstants.FLY_ZONE_ROLLBACK_THROTTLE_MS) {
                     run.lastFlyZoneRollbackMs = now;
                     player.sendMessage(SystemMessageUtils.parkourWarn("You don't have the right to go there."));
