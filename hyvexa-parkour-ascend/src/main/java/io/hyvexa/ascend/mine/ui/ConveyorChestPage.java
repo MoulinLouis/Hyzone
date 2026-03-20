@@ -1,6 +1,9 @@
 package io.hyvexa.ascend.mine.ui;
 
 import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nonnull;
 
@@ -8,6 +11,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
@@ -20,17 +24,27 @@ import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.ui.BaseAscendPage;
+import io.hyvexa.ascend.ui.PageRefreshScheduler;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.PermissionUtils;
 
 public class ConveyorChestPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_COLLECT_ALL = "CollectAll";
+    private static final String BUTTON_EMPTY_OP = "EmptyOp";
     private static final String TAKE_PREFIX = "Take:";
+    private static final long REFRESH_INTERVAL_MS = 1000L;
 
     private final MinePlayerProgress progress;
     private final PlayerRef playerRef;
     private final MinePlayerStore minePlayerStore;
+
+    private volatile ScheduledFuture<?> refreshTask;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
+    private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
+    private volatile boolean dismissed = false;
+    private volatile int lastKnownBufferCount;
 
     public ConveyorChestPage(@Nonnull PlayerRef playerRef, MinePlayerProgress progress,
                               MinePlayerStore minePlayerStore) {
@@ -50,7 +64,15 @@ public class ConveyorChestPage extends BaseAscendPage {
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CollectAllButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_COLLECT_ALL), false);
 
+        if (PermissionUtils.isOp(playerRef.getUuid())) {
+            commandBuilder.set("#EmptyOpWrap.Visible", true);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EmptyOpButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EMPTY_OP), false);
+        }
+
         populateContent(commandBuilder, eventBuilder);
+        lastKnownBufferCount = progress.getConveyorBufferCount();
+        startAutoRefresh(ref, store);
     }
 
     private void populateContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
@@ -98,6 +120,8 @@ public class ConveyorChestPage extends BaseAscendPage {
             this.close();
         } else if (BUTTON_COLLECT_ALL.equals(button)) {
             handleCollectAll(ref, store);
+        } else if (BUTTON_EMPTY_OP.equals(button)) {
+            handleEmptyOp(ref, store);
         } else if (button.startsWith(TAKE_PREFIX)) {
             handleTakeBlock(ref, store, button.substring(TAKE_PREFIX.length()));
         }
@@ -148,7 +172,55 @@ public class ConveyorChestPage extends BaseAscendPage {
         }
     }
 
+    private void handleEmptyOp(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null || !PermissionUtils.isOp(player)) return;
+
+        int count = progress.getConveyorBufferCount();
+        progress.clearConveyorBuffer();
+        minePlayerStore.markDirty(playerRef.getUuid());
+        player.sendMessage(Message.raw("Emptied conveyor (" + count + " blocks discarded)."));
+        this.close();
+    }
+
+    // ── Auto-refresh ────────────────────────────────────────────────────
+
+    private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (refreshTask != null) return;
+        var world = store.getExternalData().getWorld();
+        if (world == null) return;
+        refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
+            if (dismissed) { stopAutoRefresh(); return; }
+            if (ref == null || !ref.isValid()) { stopAutoRefresh(); return; }
+            int current = progress.getConveyorBufferCount();
+            if (current == lastKnownBufferCount) return;
+            lastKnownBufferCount = current;
+            PageRefreshScheduler.requestRefresh(
+                world, refreshInFlight, refreshRequested,
+                () -> sendRefresh(ref, store),
+                this::stopAutoRefresh,
+                "ConveyorChestPage"
+            );
+        }, REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS, TimeUnit.MILLISECONDS);
+    }
+
+    private void stopAutoRefresh() {
+        if (refreshTask != null) {
+            refreshTask.cancel(false);
+            refreshTask = null;
+        }
+        refreshRequested.set(false);
+    }
+
+    @Override
+    protected void stopBackgroundTasks() {
+        dismissed = true;
+        stopAutoRefresh();
+    }
+
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (dismissed) return;
+        lastKnownBufferCount = progress.getConveyorBufferCount();
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
         populateContent(commandBuilder, eventBuilder);

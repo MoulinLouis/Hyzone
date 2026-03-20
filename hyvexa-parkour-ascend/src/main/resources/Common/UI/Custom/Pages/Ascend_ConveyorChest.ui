@@ -130,6 +130,37 @@ $C.@PageOverlay {
         }
       }
 
+      // Empty (OP only)
+      Group #EmptyOpWrap {
+        Anchor: (Left: 0, Right: 0, Top: 6, Height: 34);
+        LayoutMode: Left;
+        Visible: false;
+
+        Group { FlexWeight: 1; }
+
+        TextButton #EmptyOpButton {
+          Anchor: (Width: 140, Height: 32);
+          Text: "EMPTY (OP)";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #7f1d1d,
+              LabelStyle: (FontSize: 13, TextColor: #fca5a5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #991b1b,
+              LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #450a0a,
+              LabelStyle: (FontSize: 13, TextColor: #fca5a5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { FlexWeight: 1; }
+      }
+
       // Collect All button
       Group #CollectAllWrap {
         Anchor: (Left: 0, Right: 0, Top: 10, Height: 40);

@@ -14,7 +14,7 @@ public class MinePlayerProgress {
     private final UUID playerId;
     private final Map<String, Integer> inventory = new HashMap<>(); // blockTypeId -> count
     private int inventoryCount;
-    private long crystals;
+    private double crystals;
     private volatile boolean inMine;
     private volatile int pickaxeTier;
     private volatile int pickaxeEnhancement;
@@ -28,6 +28,9 @@ public class MinePlayerProgress {
     // Momentum combo state (transient, not persisted)
     private volatile int comboCount;
     private volatile long lastBreakTimeMs;
+
+    // Chest slot tracking (transient, not persisted)
+    private final Map<Short, String> chestSlotMap = new ConcurrentHashMap<>();
 
     // Conveyor buffer (transient, not persisted)
     private final Map<String, Integer> conveyorBuffer = new HashMap<>();
@@ -154,15 +157,15 @@ public class MinePlayerProgress {
         inventoryCount += amount;
     }
 
-    public synchronized long getCrystals() {
+    public synchronized double getCrystals() {
         return crystals;
     }
 
-    public synchronized void setCrystals(long value) {
+    public synchronized void setCrystals(double value) {
         crystals = value;
     }
 
-    public synchronized long addCrystals(long amount) {
+    public synchronized double addCrystals(double amount) {
         crystals += amount;
         return crystals;
     }
@@ -370,6 +373,20 @@ public class MinePlayerProgress {
         eggInventory.put(layerId, count);
     }
 
+    // --- Chest slot tracking ---
+
+    public void assignChestSlot(short slot, String layerId) { chestSlotMap.put(slot, layerId); }
+    public String removeChestSlot(short slot) { return chestSlotMap.remove(slot); }
+    public String getChestLayerId(short slot) { return chestSlotMap.get(slot); }
+    public void clearChestSlots() { chestSlotMap.clear(); }
+
+    public Short findSlotForLayer(String layerId) {
+        for (var e : chestSlotMap.entrySet()) {
+            if (e.getValue().equals(layerId)) return e.getKey();
+        }
+        return null;
+    }
+
     // --- Miner collection ---
 
     public synchronized void addMiner(CollectedMiner miner) {
@@ -512,6 +529,11 @@ public class MinePlayerProgress {
         return new LinkedHashMap<>(conveyorBuffer);
     }
 
+    public synchronized void clearConveyorBuffer() {
+        conveyorBuffer.clear();
+        conveyorBufferCount = 0;
+    }
+
     /**
      * Transfer a single block type from conveyor buffer to inventory, respecting bag capacity.
      * Returns the number of items transferred.
@@ -541,7 +563,7 @@ public class MinePlayerProgress {
         INSUFFICIENT_CRYSTALS
     }
 
-    public record PlayerSaveSnapshot(long crystals,
+    public record PlayerSaveSnapshot(double crystals,
                                      Map<MineUpgradeType, Integer> upgradeLevels,
                                      Map<String, Integer> inventory,
                                      Map<String, Integer> eggInventory,
