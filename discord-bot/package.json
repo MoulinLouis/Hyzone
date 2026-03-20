@@ -1,7 +1,7 @@
 {
   "name": "hyvexa-discord-bot",
   "version": "1.0.0",
-  "description": "Discord bot for Hyvexa account linking and vexa rewards",
+  "description": "Discord bot for Hyvexa account linking, vexa rewards, and rank role sync",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js"

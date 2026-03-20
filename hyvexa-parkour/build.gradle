@@ -24,7 +24,7 @@ if (!serverRunDir.exists()) {
 }
 
 // Updates the manifest.json file with the latest properties defined in the
-// build.properties file. Currently we update the version and if packs are
+// gradle.properties file. Currently we update the version and if packs are
 // included with the plugin.
 tasks.register('updatePluginManifest') {
     def manifestFile = file('src/main/resources/manifest.json')

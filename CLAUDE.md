@@ -25,17 +25,17 @@ Quick reference for AI agents working on this Hytale plugin project.
 | `hyvexa-runorfall` | Platforming minigame mode | `io.hyvexa.runorfall.HyvexaRunOrFallPlugin` |
 | `hyvexa-wardrobe` | Cosmetics shop module | `io.hyvexa.wardrobe.WardrobePlugin` |
 | `hyvexa-votifier` | Vote notification receiver (Votifier protocol) | `org.hyvote.plugins.votifier.HytaleVotifierPlugin` |
-| `hyvexa-launch` | IntelliJ launch classpath module | `com.hypixel.hytale.Main` |
+| `hyvexa-launch` | IntelliJ launch classpath module | N/A (classpath anchor) |
 | `discord-bot` | Discord bot (Node.js) for account linking | `src/index.js` |
 
 ## Key Directories
 
 | Path | Content |
 |------|---------|
-| `hyvexa-*/src/main/java/io/hyvexa/` | Java sources |
-| `hyvexa-*/src/main/resources/Common/UI/Custom/Pages/` | UI definitions (parkour, ascend, hub, purge, runorfall, wardrobe) |
-| `hyvexa-*/src/main/resources/Common/UI/Custom/Textures/` | UI texture assets |
-| `hyvexa-*/src/main/resources/Server/Item/` | Item definitions and interactions |
+| `hyvexa-*/src/main/java/io/hyvexa/` | Java sources (gameplay modules only, not launch/votifier) |
+| `hyvexa-*/src/main/resources/Common/UI/Custom/Pages/` | UI definitions (gameplay modules with UI) |
+| `hyvexa-*/src/main/resources/Common/UI/Custom/Textures/` | UI texture assets (gameplay modules with UI) |
+| `hyvexa-*/src/main/resources/Server/Item/` | Item definitions and interactions (gameplay modules only) |
 | `hyvexa-parkour/src/main/resources/Common/Music/` | Music files |
 | `hyvexa-parkour/src/main/resources/Common/Sounds/` | Sound effects |
 | `run/mods/Parkour/` | Runtime config (database.json) |
@@ -47,7 +47,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 1. **Update CHANGELOG.md** for significant changes only (new features, balance changes, bug fixes) - keep entries brief (1-2 lines), no implementation details
 2. **Update docs/Ascend/ECONOMY_BALANCE.md** when modifying game economy (costs, rewards, multipliers, formulas)
 3. **Follow existing patterns** - check similar files before implementing
-4. **Reuse existing Managers** - Many Manager classes (45+) exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
+4. **Reuse existing Managers** - Many Manager classes (~50) exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
 5. **No build runs** - owner handles `./gradlew build`
 6. **Run tests selectively** - only run tests when explicitly asked OR after large/significant changes (new features, multi-file refactors). Do NOT run tests after every small task. Only pure-logic classes with zero Hytale imports are testable — classes importing Hytale types (e.g. `Message`, `HytaleLogger`, `EntityRef`) cannot be tested without `HytaleServer.jar` on the test classpath (not yet configured).
 7. **UI paths** - Code uses `"Pages/X.ui"`, files go in `Common/UI/Custom/Pages/`
@@ -97,7 +97,6 @@ Node.js bot for Discord-Minecraft account linking. Shares the same MySQL databas
 | System architecture | `docs/ARCHITECTURE.md` |
 | Database schema | `docs/DATABASE.md` |
 | grepai reference | `docs/GREPAI.md` |
-| Tech debt & refactoring | `docs/TECH_DEBT.md` |
 | Game balancing | `docs/Ascend/ECONOMY_BALANCE.md` |
 | Help & tutorial system | `docs/Ascend/TUTORIAL_FLOW.md` |
 | Feature history | `CHANGELOG.md` |

@@ -7,37 +7,18 @@
 - Mine zones now support depth layers -- each Y-range can have its own block distribution
 - Mine name now shows on the HUD when inside a mine zone
 - Admins can configure layers per zone via the zone admin editor
-
-### Fixed
-- **Ascend: Orphaned mine Kweebecs after restart** - Automated miners now clean up directly from the mine world before respawning, preventing frozen duplicate Kweebecs from accumulating across server restarts.
-- **Ascend: Mine blocks now require the equipped mine pickaxe** - Hand hits and unrelated items no longer trigger instant mine breaking or fall back to creative block breaking inside mine zones.
-- **Ascend: Mine zones now load and track correctly in negative world coordinates** - Mine block handling no longer silently falls back to vanilla OP/adventure behavior when the configured mine area uses negative coordinates.
-- **Ascend: Mine access and progression hardening** - `/mine` now enforces the ascension gate server-side, `/mine addcrystals` is OP-only, mine-mode entry is shared across gate/UI teleport paths, miner upgrades sync to live NPC/runtime state immediately, and mining persistence/cooldown/reward flows no longer drop state as easily under concurrency.
-- **Ascend: Runners not working** - Runners now fall back to map base run time when ghost recording is missing, preventing silent zero-earnings. Auto-buy runner gate relaxed to accept best time as proof of completion. Tick scheduler hardened against silent death (catches Throwable). Auto-elevation/summit/upgrade exceptions now isolated so they don't block runner ticking. Challenge reconnect recovery hardened: snapshot deserialization failure no longer deletes the challenge row (preserves for retry), unknown challenge types force-restore the snapshot before cleanup, and DB failures are logged at SEVERE with recovery guidance. Auto-summit/elevation: fixed despawn-before-reset ordering that caused infinite despawn-recreate loop if the operation threw — robots are now reset first (hasRobot=false) before NPC despawn, and each player is isolated with per-player try-catch.
-- **Ascend: Runner tick load reduced under concurrency** - Runner state now refreshes from dirty player updates instead of a constant full snapshot scan, caches map/world/ghost data per robot, batches teleports per world tick, and only keeps NPCs spawned near active viewers while preserving runner payouts.
-- **Core: Trail fan-out load reduced under concurrency** - World particle and model particle trails now share one 50 ms scheduler/viewer snapshot, batch each world's emissions into one world-thread closure, cull distant viewers, reuse constant payloads, and stop the scheduler when no active trails remain.
-- **Purge: Scrap rewards no longer persist on the zombie-death hot path** - Kill rewards now accumulate in memory, flush on a short background interval and session boundaries, and reconcile safely with transactional class/weapon purchases.
-- **Purge: Melee zombie hits no longer fall through to 0 damage** - Purge now resolves attached melee damage refs back to the owning player and tracked zombie before applying custom weapon damage.
-- **Purge: Custom swords now inject direct zombie hits on primary melee use** - Purge melee weapons now trigger root-zombie damage from the item interaction path instead of depending on the broken vanilla sword hit target.
-- **Core: HUD currency reads no longer cause periodic DB refresh storms** - HUDs now use cache-only balance reads for active players, refresh TTL is much longer, and any remaining balance refreshes run on dedicated threads instead of the shared scheduler.
-- **Core: Vote polling no longer blocks the shared scheduler** - Vote checks now use bounded async HTTP workers, separate reward persistence threads, and temporary poll backoff after repeated backend failures.
+- Configurable block HP system with admin UI
+- Pickaxe upgrade system (per-pickaxe stats, DB persistence, upgrade UI)
+- Haste speed system and Momentum combo HUD
+- Fortune, Momentum, and AoE break system hooks
+- Upgrade tab redesigned as 3x2 card grid with tooltips
 
 ### Added
+- **Parkour: Persist in-progress runs across disconnects and restarts** - Active parkour runs survive player disconnects and server restarts
+- **Core: Persist player settings across reconnections** - Player settings now survive reconnects
 - **Core: Centralized vote tracking** - All votes (hytale.game polling + Votifier) are now recorded in MySQL (`player_votes` + `player_vote_counts`) for leaderboards, milestones, and analytics
 - **Purge: Class system** - 4 unlockable classes (Scavenger, Tank, Assault, Medic) purchased with scrap. Each provides passive stat boosts and a unique perk. Scavenger earns +30% scrap with kill streak bonuses; Tank gets +40 HP with 20% damage reduction; Assault deals +20% damage with streak ramp; Medic has passive regen and heal-on-kill. Managed via `/purge class` commands.
 
-### Changed
-- **Purge: Melee swords now use Purge-owned item assets** - Wood Sword, Katana, and Scarab Sword now use plugin item IDs with local models/textures/icons, so later melee visual or behavior changes no longer depend on vanilla item IDs.
-- **Purge: Daily kill/combo missions rebalanced** - Kill missions now require 150/300/500 zombies for 100/200/300 scrap, and combo missions now require 5x/10x/15x combos for 100/200/300 scrap.
-- **Purge: Melee weapons added to loadouts and lootboxes** - Purge sessions now grant a secondary melee slot, lootboxes can roll melee or gun swaps, and melee mastery/damage/admin config use the same upgrade pipeline as ranged weapons.
-- **Purge: Session player HP normalized to 100** - Purge now forces session base player health to `100` before wave combat, preventing stray `102/102` max HP reads while still letting run HP upgrades add on top.
-- **Purge: Zombie melee now respects variant damage config** - Purge session players now correctly bypass the global god-mode filter, so zombie hits apply the `Variants` admin `damage` value again.
-- **Parkour: Ghost orphan cleanup hardening** - Parkour PB ghosts now persist failed despawns for deferred cleanup and next-start removal, preventing frozen Kweebec ghosts from lingering in the world.
-- **Parkour: Global leaderboard ranked by medal score** - Global leaderboard now ranks players by medal points (Bronze=1, Silver=2, Gold=3, Author=4) instead of map completions. Each row shows individual medal counts and total score.
-- **Wardrobe: Centralized cosmetics hub** - Moved all 3 shop tabs (Cosmetics, Weapon Skins, Wardrobe) into wardrobe module so `/shop` shows them all. CosmeticManager and PurgeSkin data classes moved to core for cross-module access.
-- **Trails: movement-gated emission** - Active trails now emit particles only while the player is moving, so equipped trails stay visually off when idle.
-
-### Added
 - **Wardrobe: Glow trail cosmetics in shop** - Added trail entries in Glow tab (`Gold`, `Firework Mix`, `Firework Mix 3/4`, `Rings`) with 5s preview, 100 vexa purchase price, and single-active cosmetic behavior across glows/trails.
 - **Parkour: Medal times and feather currency** - Maps can now have bronze/silver/gold medal time thresholds (set in `/pk admin` Maps). Beating a threshold earns the medal and feather currency (configurable per category via `/pk admin` -> Medal Rewards). Medals shown on map selection cards; feather balance displayed on parkour HUD next to vexa.
 - **Purge: Custom zombie variants admin system** - Replaced hardcoded Slow/Normal/Fast enum with DB-backed variant configs. Admins can create, delete, and customize zombie variants (health, damage, speed) via `/purge admin` -> Variants. Wave config now supports any number of variant types with dynamic +/- count rows.
@@ -58,7 +39,59 @@
 - **Ascend: 6 new skill tree nodes** - Runner Speed IV/V, Evolution Power III, Momentum Mastery (x3.0 + 120s), Multiplier Boost II (+0.25), Auto Ascend. Costs 15-75 AP for late-game replay incentive.
 - **Ascend: 4 new challenges** - Challenge 5 (50% Runner Speed + Multiplier Gain), Challenge 6 (all Summit bonuses at 50%), Challenge 7 (maps 4 & 5 locked), Challenge 8 (no Elevation or Summit, reward: +25% to both). Total: 8 challenges.
 
+- **Global: Analytics system** - Event-based analytics tracking gameplay events (joins, completions, duels, mode switches, purchases, Ascend progression). Daily aggregates computed into `analytics_daily` table. OP-only `/analytics` command shows DAU, retention, session length, and mode split. 90-day event retention with auto-purge.
+- **Global: Cosmetic Shop** - `/shop` command opens a UI to buy, equip, preview, and unequip 6 glow cosmetics (100 vexa each). Equipped cosmetics persist across reconnects.
+- **Global: Discord rank role sync** - Linked players' parkour ranks (Unranked -> VexaGod) are automatically synced as Discord roles. Plugin writes rank on rank-up and login; bot polls every 30s and swaps roles.
+- **Global: Discord account linking** - Players use `/link` in-game to get a code, enter it on Discord via `/link <code>`, and receive a one-time 100 vexa reward on next login. Includes a Discord bot (`discord-bot/`) and shared MySQL tables for cross-system communication.
+
+- **Global: Vexa currency** - Cross-mode currency stored in `hyvexa-core`, displayed on all HUDs with green vexa icon. Admin command `/vexa` for set/add/remove/check. Groundwork for future cosmetics and vote rewards.
+- **Ascend: Auto-Elevation skill tree node** - New AUTO_ELEVATION node (7 AP) unlocks configurable automatic elevation with multiplier target sequences and optional timer delay. Managed via the Automation page.
+- **Parkour: : Advanced HUD toggle** - New "Advanced HUD" ON/OFF toggle in Player Settings that displays a compact panel above the right-side HUD showing real-time orientation (pitch, yaw, roll + cardinal direction), velocity (x, y, z), and speed
+- **Ascend: My Profile hub page** - Silk item now opens a "My Profile" page with links to Stats, Achievements, and Settings. Also accessible via `/ascend profile`.
+- **Ascend: Expanded achievement system (9 -> 30 achievements)** - 6 categories (Milestones, Runners, Prestige, Skills, Challenges, Secret) with category headers, hidden/secret achievements showing "???" until unlocked, and a Completionist meta-achievement. Fixed First Elevation threshold (was >=1, now >=2).
+- **Ascend: Ascension Challenge system** - Players who unlock the Ascension Challenges skill tree node can start timed challenges that snapshot progress, reset state, and apply malus effects (e.g., blocking Evolution Power). Completing an ascension during a challenge records best time and grants bonus summit XP. Progress is fully restored on completion or quit. Crash recovery via DB-persisted snapshots.
+- **Ascend: Toast notification system** - HUD-based toast notifications at bottom-left for upgrades, evolutions, purchases, and economy events. 4 stacked slots with category-colored accent bars and countdown progress bars. Consolidates rapid-fire actions. Displays alongside existing chat messages.
+- **Ascend: Per-map leaderboard** - "Stats" button in map select replaced with "Leaderboard" showing best times per map with map tabs, search, and pagination. Also accessible via `/ascend maplb`.
+- **Ascend: Expanded skill tree (1 → 8 nodes)** - Tree now has Auto Runners, Auto-Evolution, Momentum, Runner Speed, Offline Boost, Summit Memory, Evolution Power+, and Ascension Challenges (teaser). Branch/converge structure with OR-logic prerequisites.
+- **Parkour: Fly zone per map** - Admins can define an AABB fly zone per map; players in practice mode are rolled back to their last valid position if they fly outside the zone
+- **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Volt, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
+
+- **Ascend: Walk-on-start feature** - Players can now start a map by walking onto its start position (if unlocked)
+- **Ascend: Passive Earnings System**
+  - Runners continue to generate coins (at 25% rate) when player is not on Ascend world
+  - Accumulates up to 24 hours of offline time (minimum 1 minute away)
+  - All multipliers (elevation, summit, map) apply to passive earnings
+  - Timestamp tracking in database (`last_active_timestamp`, `has_unclaimed_passive`)
+  - Welcome back popup UI showing detailed breakdown per runner
+  - Coins and multipliers automatically applied on return
+  - Tracks when players leave Ascend world (to hub, other world, or disconnect)
+  - Shows runner-by-runner breakdown: runs completed, coins earned, multiplier gained
+  - Visual feedback with color-coded accent bars and star indicators per runner
+- **Ascend: Access whitelist system**
+  - Added whitelist system to control access to Ascend mode via the Hub menu
+  - Admin commands remain OP-only; whitelist only affects Hub menu access
+  - Whitelist stored in `run/mods/Parkour/ascend_whitelist.json` (JSON format with enabled flag)
+  - Admin UI accessible via `/as admin` > "Whitelist" button
+  - Full UI with text field to add players and list of whitelisted players with remove buttons
+  - **Toggle button to enable/disable whitelist:**
+    - **ENABLED**: Whitelisted players + OPs can access Ascend mode
+    - **DISABLED** (default): Only OPs can access (secure default behavior)
+  - Button displays current status: "ENABLED" or "DISABLED"
+  - Command-line interface: `/as admin whitelist <add|remove|list|enable|disable|status> [username]`
+  - Case-insensitive username comparison for consistent behavior
+  - Whitelist status persisted in JSON file (`enabled: true/false`, defaults to `false`)
+
 ### Changed
+- **Purge: Melee swords now use Purge-owned item assets** - Wood Sword, Katana, and Scarab Sword now use plugin item IDs with local models/textures/icons, so later melee visual or behavior changes no longer depend on vanilla item IDs.
+- **Purge: Daily kill/combo missions rebalanced** - Kill missions now require 150/300/500 zombies for 100/200/300 scrap, and combo missions now require 5x/10x/15x combos for 100/200/300 scrap.
+- **Purge: Melee weapons added to loadouts and lootboxes** - Purge sessions now grant a secondary melee slot, lootboxes can roll melee or gun swaps, and melee mastery/damage/admin config use the same upgrade pipeline as ranged weapons.
+- **Purge: Session player HP normalized to 100** - Purge now forces session base player health to `100` before wave combat, preventing stray `102/102` max HP reads while still letting run HP upgrades add on top.
+- **Purge: Zombie melee now respects variant damage config** - Purge session players now correctly bypass the global god-mode filter, so zombie hits apply the `Variants` admin `damage` value again.
+- **Parkour: Ghost orphan cleanup hardening** - Parkour PB ghosts now persist failed despawns for deferred cleanup and next-start removal, preventing frozen Kweebec ghosts from lingering in the world.
+- **Parkour: Global leaderboard ranked by medal score** - Global leaderboard now ranks players by medal points (Bronze=1, Silver=2, Gold=3, Author=4) instead of map completions. Each row shows individual medal counts and total score.
+- **Wardrobe: Centralized cosmetics hub** - Moved all 3 shop tabs (Cosmetics, Weapon Skins, Wardrobe) into wardrobe module so `/shop` shows them all. CosmeticManager and PurgeSkin data classes moved to core for cross-module access.
+- **Trails: movement-gated emission** - Active trails now emit particles only while the player is moving, so equipped trails stay visually off when idle.
+
 - **Dev tooling: Dedicated launch module** - Added `hyvexa-launch` as the IntelliJ classpath anchor for `com.hypixel.hytale.Main`, removing the need to launch the server from `hyvexa-hub` classpath.
 - **Wardrobe: Violet pack integrated in module resources** - Violet cosmetics/assets are now integrated directly in `hyvexa-wardrobe` resources with permission locks, so they appear in `/wardrobe` as locked without being added to `/shop`.
 - **Wardrobe: Mobstar capes integrated in module resources** - Mobstar cape cosmetics/assets are now integrated directly in `hyvexa-wardrobe` resources with permission locks for `/wardrobe` (no `/shop` exposure).
@@ -78,8 +111,7 @@
 - **RunOrFall: Contextual hotbars by state** - Hotbar now switches per player state: default (`Join`, `Leaderboards`, `My Stats`, `Game Selector`), lobby (`Leave`, `Leaderboards`, `My Stats`), and active round (no RunOrFall items).
 - **RunOrFall: In-round leave item on slot 9** - Active rounds now keep `Leave Lobby` in hotbar slot 9 (with Blink), and leaving mid-round is treated as an elimination for that player.
 - **RunOrFall: Auto map selection by lobby size** - Each map now has its own minimum player setting; round start picks the eligible map with the highest minimum <= lobby size, with random choice when multiple maps share that same minimum.
-- **RunOrFall: Coins currency + round rewards** - Added persistent RunOrFall coins shown in HUD, with gains of `+1` every 30s alive, `+5` per eliminated player, and `+25` for round winner (chat message on each gain).
-- **RunOrFall: Coins feature removed + round outcome chat updates** - Removed RunOrFall coins backend/HUD rewards, added explicit chat announcements for in-round eliminations and winner.
+- **RunOrFall: Round outcome chat announcements** - Explicit chat announcements for in-round eliminations and round winner.
 - **RunOrFall: Multi-category leaderboard** - RunOrFall leaderboard now has 3 clickable categories (`Total wins`, `Best win streak`, `Longest time survived`) with per-category ranking and display.
 - **RunOrFall: Broken-block HUD counter** - Added a per-player `Blocks broken` counter in the RunOrFall HUD, displayed at the bottom-left and updated in real time during rounds.
 - **RunOrFall: Stats now track blocks broken + blinks used** - `/rof stats` now shows lifetime totals for broken platform blocks and successful blinks, with SQL persistence and automatic DB column migration.
@@ -102,43 +134,6 @@
 - **Ascend: AP Multiplier system** - Each completed challenge grants +1 to AP multiplier (base x1, max x8). Replaces old per-challenge permanent bonuses. Displayed in the Challenges tab.
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same volt reaches fewer levels (old 5000 -> ~3591).
 
-### Fixed
-- **Purge: Login inventory sync race** - Purge idle hotbar setup now waits until the player is attached to a world, preventing repeated null-world `ItemContainerChangeEvent` errors during login.
-- **Wardrobe: Shop review cleanup pass** - Centralized wardrobe/effects purchase result handling, analytics, and asset-path normalization; cleaned disconnect eviction and shop message consistency across tabs.
-- **Core: Tick-path performance hardening** - Reduced avoidable HUD/login/trail/update overhead across Parkour, Ascend, and RunOrFall to cut lag spikes under load.
-- **Hub/Wardrobe: Classpath asset-pack conflict** - Server launch is now decoupled to `hyvexa-launch`, and `hyvexa-hub` is packaged again as a normal plugin asset-pack (`IncludesAssetPack` from `includes_pack`), so Hub UI/items ship in `HyvexaHub-*.jar` without separate `HubAssets` staging.
-- **Purge/Hub/RunOrFall: Intermittent HUD selector crashes on login/transfer** - Reworked HUD lifecycle guards (ready delay refresh + stale/world validation + disconnect HUD cache eviction + deferred first updates) to prevent random `Selected element in CustomUI command was not found` disconnects.
-- **Purge: Variant HP now respects configured absolute value across NPC types** - Zombie variant health no longer over-scales for non-vanilla NPC types (e.g. `Zombie_Aberrant`); configured HP is applied correctly before wave scaling.
-- **RunOrFall: Spectator/Disconnect round flow** - Players joining during an active round now get teleported to lobby as spectators, and disconnects are counted as eliminations.
-- **RunOrFall: Leave lobby now returns to spawn** - Voluntary leave (`/rof leave` and leave hotbar flow) now teleports the player to the world spawn.
-- **RunOrFall: Countdown moved from chat to HUD** - `Starting in ...` is now displayed in the RunOrFall HUD instead of chat countdown spam.
-- **RunOrFall: Winner return to lobby** - Round winner is now teleported back to lobby when the game ends.
-- **RunOrFall: Blink item conflict with Parkour restart fixed** - `Ingredient_Lightning_Essence` now resolves to Blink behavior/name in RunOrFall, while Parkour restart uses its dedicated checkpoint item id.
-- **RunOrFall: Blink vertical direction/clamp fixed** - Blink now follows look pitch correctly (up goes up), and never teleports below the player's current Y.
-- **RunOrFall: Blink east/west direction fixed** - Horizontal X direction is now aligned with player look direction (east/west no longer inverted).
-- **RunOrFall: Blink now preserves full look orientation** - Teleport now keeps both vertical and horizontal head orientation after blink.
-- **RunOrFall: Blink wall-clip protection** - Blink now checks collisions along its path and stops at the last free point before a block, preventing phase-through.
-- **RunOrFall: Blink collision sweep hardened** - Path collision now sweeps a full player-like footprint/height to prevent diagonal edge clipping through walls.
-- **RunOrFall: Blink can pass through configured platform blocks** - Blink collision now treats blocks matching the active map platform definitions as pass-through, while keeping wall collision against other solids.
-- **Parkour: Restart checkpoint orb skin restored** - Parkour restart now uses a dedicated orb item id again, so Blink changes no longer alter its appearance.
-- **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
-- **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.
-- **RunOrFall: Break-delay trail reliability** - Fast movement no longer skips walked blocks; each touched step starts its own delay while still targeting the closest footprint block first.
-- **RunOrFall: My Stats item routing** - `Food_Candy_Cane` now opens RunOrFall Stats when used in the RunOrFall world (instead of Parkour Stats).
-- **RunOrFall: /rof status permission** - `/rof status` is now restricted to OP/admin users.
-- **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
-- **Parkour: Pet follow rotation + idle/walk behavior** - `/pet spawn` companions now always orient toward their owner player position, and refresh a Movement-slot stop override while idle so walk no longer sticks when stationary.
-- **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
-- **Purge: Session and wave edge-case hardening** - Wave clear now requires successful spawns (except explicit zero-zombie waves), wipe/clear transitions run after world-thread death processing, `/purge start` now enforces party leader-only launch, and instance release waits for player + zombie cleanup futures with timeout fallback logging.
-- **Purge: Idle hotbar slot correctness on world entry** - Purge idle loadout now validates expected item IDs per slot and replaces mismatches, so slot `0` consistently restores the blue start orb after hub transfer.
-
-### Added
-- **Global: Analytics system** - Event-based analytics tracking gameplay events (joins, completions, duels, mode switches, purchases, Ascend progression). Daily aggregates computed into `analytics_daily` table. OP-only `/analytics` command shows DAU, retention, session length, and mode split. 90-day event retention with auto-purge.
-- **Global: Cosmetic Shop** - `/shop` command opens a UI to buy, equip, preview, and unequip 6 glow cosmetics (100 vexa each). Equipped cosmetics persist across reconnects.
-- **Global: Discord rank role sync** - Linked players' parkour ranks (Unranked -> VexaGod) are automatically synced as Discord roles. Plugin writes rank on rank-up and login; bot polls every 30s and swaps roles.
-- **Global: Discord account linking** - Players use `/link` in-game to get a code, enter it on Discord via `/link <code>`, and receive a one-time 100 vexa reward on next login. Includes a Discord bot (`discord-bot/`) and shared MySQL tables for cross-system communication.
-
-### Changed
 - **AscendOnboarding alignment overhaul** - Centralized all tutorial/welcome text into AscendOnboardingCopy.java. Fixed Ascension tutorial claiming "8 nodes" (actual: 11) and naming non-existent nodes. Fixed Welcome page saying "4 items" (actual: 5). Replaced placeholder text in all 6 tutorial .ui files. Added pre-reset explainer modal before auto-ascension cinematic. Added fallback tutorial triggers when opening elevation/summit/ascension pages. Standardized terminology to "Ascendancy Tree" + "AP" everywhere.
 - **Ascend: Summit hard cap at level 1000 with deep cap nerf** - Each summit category now has a maximum level of 1000. Added a "deep cap" at level 500 where growth transitions from √ to ⁴√ (heavy diminishing returns). XP is capped, UI shows "MAX" state, and summiting is blocked once reached.
 - **Ascend: Elevation multiplier buff** - Elevation multiplier changed from level (1:1) to level^1.05 (slightly super-linear). Higher elevation levels now give progressively better multipliers, rewarding deeper elevation pushes.
@@ -146,55 +141,6 @@
 - **Parkour/Ascend: Tick-path performance cleanup** - Optimized ghost playback sampling/interpolation and reduced per-tick map scanning overhead in run tracking
 - **Parkour/Ascend: Ghost stack moved to shared core wrappers** - Recorder/store/interpolation logic now lives in `hyvexa-core` with mode-specific table/resolver adapters and parity tests
 
-### Added
-- **Global: Vexa currency** - Cross-mode currency stored in `hyvexa-core`, displayed on all HUDs with green vexa icon. Admin command `/vexa` for set/add/remove/check. Groundwork for future cosmetics and vote rewards.
-- **Ascend: Auto-Elevation skill tree node** - New AUTO_ELEVATION node (7 AP) unlocks configurable automatic elevation with multiplier target sequences and optional timer delay. Managed via the Automation page.
-- **Parkour: : Advanced HUD toggle** - New "Advanced HUD" ON/OFF toggle in Player Settings that displays a compact panel above the right-side HUD showing real-time orientation (pitch, yaw, roll + cardinal direction), velocity (x, y, z), and speed
-- **Ascend: My Profile hub page** - Silk item now opens a "My Profile" page with links to Stats, Achievements, and Settings. Also accessible via `/ascend profile`.
-- **Ascend: Expanded achievement system (9 -> 30 achievements)** - 6 categories (Milestones, Runners, Prestige, Skills, Challenges, Secret) with category headers, hidden/secret achievements showing "???" until unlocked, and a Completionist meta-achievement. Fixed First Elevation threshold (was >=1, now >=2).
-- **Ascend: Ascension Challenge system** - Players who unlock the Ascension Challenges skill tree node can start timed challenges that snapshot progress, reset state, and apply malus effects (e.g., blocking Evolution Power). Completing an ascension during a challenge records best time and grants bonus summit XP. Progress is fully restored on completion or quit. Crash recovery via DB-persisted snapshots.
-- **Ascend: Toast notification system** - HUD-based toast notifications at bottom-left for upgrades, evolutions, purchases, and economy events. 4 stacked slots with category-colored accent bars and countdown progress bars. Consolidates rapid-fire actions. Displays alongside existing chat messages.
-- **Ascend: Per-map leaderboard** - "Stats" button in map select replaced with "Leaderboard" showing best times per map with map tabs, search, and pagination. Also accessible via `/ascend maplb`.
-- **Ascend: Expanded skill tree (1 → 8 nodes)** - Tree now has Auto Runners, Auto-Evolution, Momentum, Runner Speed, Offline Boost, Summit Memory, Evolution Power+, and Ascension Challenges (teaser). Branch/converge structure with OR-logic prerequisites.
-- **Parkour: Fly zone per map** - Admins can define an AABB fly zone per map; players in practice mode are rolled back to their last valid position if they fly outside the zone
-- **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Volt, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
-
-### Fixed
-- **Parkour: Practice restart-to-checkpoint no longer resets run timer** - In practice mode, using "Restart to checkpoint" no longer falls back to full run reset when no checkpoint is available.
-- **Parkour: Practice fall respawn no longer resets run timer** - Falling during practice now respawns without rearming run start/timer reset.
-- **Parkour: Practice weapon slot priority** - In practice mode, map weapon items (Sword, Daggers, Glider) are now placed first in the hotbar and other practice items are shifted accordingly.
-- **Parkour: Fall respawn restored** - Fall respawn behavior is working again during parkour runs.
-- **Ascend: Challenge restore no longer rolls back manual run totals** - Exiting/completing a challenge now preserves any `totalManualRuns` gained during the challenge instead of restoring an older snapshot value.
-- **Ascend: Disconnect/reconnect save race no longer replays stale stats** - Per-player disconnect saves now persist the captured snapshot directly, and reconnect lazy-load reuses pending detached dirty state instead of reloading older DB rows.
-- **Ascend: PB detection now uses authoritative best-time fallback** - Manual finish PB checks now fallback to DB when in-memory best time is missing, and map best-time upserts are monotonic (can only improve), preventing slower runs from overwriting PB/leaderboard.
-- **Ascend/Hub: Low-priority review cleanup** - Clarified Ascend map balance source-of-truth and migration staging (legacy read/write drift), and updated Hub Ascend denial copy to match whitelist-restricted access behavior
-- **Parkour/Ascend: Completed medium-priority stability/maintainability pass** - Correct XP award deltas on completion, null-safe admin transform reads, shared throttled async error logging, and snapshot-based Ascend map-select refresh with dispatch/lifecycle refactors
-- **Ascend: Closed crafted map-selection unlock bypass** - Map select now validates payload map IDs against displayed entries and enforces unlock requirements instead of force-unlocking.
-- **Ascend/Parkour UI: Replaced fragile runtime tab/card background state writes** - Selected/active visuals now use dedicated overlay visibility toggles for more reliable rendering.
-- **Ascend: Disconnect persistence no longer triggers full-store flush** - Disconnect path now queues targeted per-player async saves while preserving shutdown full flush behavior.
-- **Parkour: Hardened debug/admin command access** - `/pkadminitem` and `/pkmusic` now require OP and clearly label staff-only usage
-- **Ascend: Cinematic/runner failures are now observable and recoverable** - Silent catches were replaced with throttled phase/context warning logs, and the cinematic now always schedules a movement/camera restore finalizer
-- **Parkour/Ascend: Closed two completion/stat races** - Jump flush now uses remove-drain semantics and near-finish checks now enforce one in-flight completion check per player
-- **Ascend: Added async backpressure guards for tick and page refresh loops** - Per-world tick jobs and auto-refresh UI updates now coalesce overlapping work instead of queueing unbounded async tasks
-- **Ascend: Passive earnings leave tracking now uses true world-edge transitions** - Leave timestamps are only recorded on real Ascend -> non-Ascend transitions and Ascend-state disconnects
-- **Ascend: Test commands are now production-gated** - `/ctest` and `/hudpreview` register only when `ascend.enableTestCommands=true` and now require OP
-- **Parkour: Completion writes no longer block world ticks** - Map completion DB writes/retries now run asynchronously with post-save warning signaling for failures
-- **Parkour: Debounced progress saves no longer drop dirty updates** - Save cycles now snapshot dirty IDs, clear only successful writes, and immediately requeue when dirty state remains
-- **Ascend: Same-player dirty updates are preserved across save windows** - Dirty tracking now uses per-player versions so in-flight saves cannot erase newer updates
-- **Ascend: Fixed Hub -> Ascend inventory sync race** - Menu-item hotbar sync now waits for player world attachment before writing inventory, preventing null-world `ItemContainerChangeEvent` spam during world transfer
-- **Core reliability: fixed high-priority race/leak issues** - Ascend counter/spend paths now use atomic CAS patterns, disconnect handlers clear lingering per-player caches, and hub/respawn null-race edge cases were closed
-- **Ascend: Evolution Power now applies to runner evolution** - Each star multiplies the multiplier gain by the Evolution Power value (e.g., ×2 base: 0★=0.10, 1★=0.20, 2★=0.40, 3★=0.80). Higher Summit Evolution Power makes each star exponentially stronger.
-- **Ascend: Added error handling for atomic database operations** - Passive earnings now logs failures when atomic coin/multiplier updates fail
-- **Ascend: Added transaction support for multi-table saves** - Player save operations now use database transactions with rollback on failure
-- **Ascend: Standardized file path construction** - Unified path handling for config files using Path.of() approach
-- **Parkour: Leaderboard map hologram placeholder** - "No completions yet." now appears correctly when a map has no times
-
-### Removed
-- **Ascend: Removed unused MAP_RUNNER_PRICES constant** - Dead code cleanup (runners are free after map unlock)
-- **Ascend: Multiplier gain display now shows 2 decimal places** - Values like +0.15x now display correctly instead of rounding to +0.2x
-- **Parkour/Core: Removed unused legacy classes** - Deleted unused command classes, old HUD/teleport helpers, and the parkour-only visibility wrapper
-
-### Changed
 - **Ascend: BigNumber migration** - Replaced BigDecimal with lightweight `BigNumber(mantissa, exponent)` for all coin/multiplier values. Removes 10^63 DB ceiling, simplifies arithmetic. One-time DB migration converts DECIMAL columns to mantissa+exp10 pairs. Atomic SQL operations replaced with in-memory CAS + debounced save.
 - **Ascend: Elevation now uses accumulated coins** - Elevation levels are based on total coins earned since last reset, not current balance. Spending on upgrades no longer reduces elevation potential. Resets on elevation, summit, or ascension.
 - **Ascend: Elevation costs reduced at mid/high levels** - Cost curve exponent 0.77 → 0.72 (early), 0.63 → 0.58 (late). Level 1 unchanged, level 100 is 63% cheaper, level 200 is 85% cheaper
@@ -249,41 +195,6 @@
     - Rewards investing in harder maps with faster runner completion times
   - **Net result**: ~50% faster progression with much bigger numbers (thousands by 5-10 min, millions by 15-20 min)
 
-### Added
-- **Ascend: Walk-on-start feature** - Players can now start a map by walking onto its start position (if unlocked)
-- **Ascend: Passive Earnings System**
-  - Runners continue to generate coins (at 25% rate) when player is not on Ascend world
-  - Accumulates up to 24 hours of offline time (minimum 1 minute away)
-  - All multipliers (elevation, summit, map) apply to passive earnings
-  - Timestamp tracking in database (`last_active_timestamp`, `has_unclaimed_passive`)
-  - Welcome back popup UI showing detailed breakdown per runner
-  - Coins and multipliers automatically applied on return
-  - Tracks when players leave Ascend world (to hub, other world, or disconnect)
-  - Shows runner-by-runner breakdown: runs completed, coins earned, multiplier gained
-  - Visual feedback with color-coded accent bars and star indicators per runner
-- **Ascend: Access whitelist system**
-  - Added whitelist system to control access to Ascend mode via the Hub menu
-  - Admin commands remain OP-only; whitelist only affects Hub menu access
-  - Whitelist stored in `run/mods/Parkour/ascend_whitelist.json` (JSON format with enabled flag)
-  - Admin UI accessible via `/as admin` > "Whitelist" button
-  - Full UI with text field to add players and list of whitelisted players with remove buttons
-  - **Toggle button to enable/disable whitelist:**
-    - **ENABLED**: Whitelisted players + OPs can access Ascend mode
-    - **DISABLED** (default): Only OPs can access (secure default behavior)
-  - Button displays current status: "ENABLED" or "DISABLED"
-  - Command-line interface: `/as admin whitelist <add|remove|list|enable|disable|status> [username]`
-  - Case-insensitive username comparison for consistent behavior
-  - Whitelist status persisted in JSON file (`enabled: true/false`, defaults to `false`)
-
-### Fixed
-- **Ascend: Fixed UI crash when interacting with external NPCs after opening menus**
-  - Fixed "Selected element in CustomUI command was not found" crash when opening `/ascend` or `/ascend elevate` menus then interacting with NPCDialog NPCs
-  - Implemented proper `onDismiss()` lifecycle callback in `BaseAscendPage` to detect when UI is replaced by external systems
-  - Background UI refresh tasks now stop immediately when page is dismissed or replaced
-  - Added defensive try-catch blocks around all `sendUpdate()` calls as fallback protection
-  - Affected pages: ElevationPage, AscendMapSelectPage, StatsPage
-
-### Changed
 - **Ascend: Simplify elevation menu to show multiplier progression**
   - Removed redundant coin balance display from `/ascend elevate` menu (already visible on main HUD)
   - Display now shows dynamic progression toward next multiplier (e.g., "Progress to x2: 3,200 / 5,000 coins")
@@ -1154,3 +1065,87 @@
   - **Tree structure**: T1-T5 tiers per path, HYBRID nodes bridge paths, ULTIMATE at the apex.
   - **Points display**: Header shows available and total skill points.
   - `/ascend skills` now opens the graphical skill tree UI instead of text output.
+
+### Fixed
+- **Ascend: Orphaned mine Kweebecs after restart** - Automated miners now clean up directly from the mine world before respawning, preventing frozen duplicate Kweebecs from accumulating across server restarts.
+- **Ascend: Mine blocks now require the equipped mine pickaxe** - Hand hits and unrelated items no longer trigger instant mine breaking or fall back to creative block breaking inside mine zones.
+- **Ascend: Mine zones now load and track correctly in negative world coordinates** - Mine block handling no longer silently falls back to vanilla OP/adventure behavior when the configured mine area uses negative coordinates.
+- **Ascend: Mine access and progression hardening** - `/mine` now enforces the ascension gate server-side, `/mine addcrystals` is OP-only, mine-mode entry is shared across gate/UI teleport paths, miner upgrades sync to live NPC/runtime state immediately, and mining persistence/cooldown/reward flows no longer drop state as easily under concurrency.
+- **Ascend: Runners not working** - Runners now fall back to map base run time when ghost recording is missing, preventing silent zero-earnings. Auto-buy runner gate relaxed to accept best time as proof of completion. Tick scheduler hardened against silent death (catches Throwable). Auto-elevation/summit/upgrade exceptions now isolated so they don't block runner ticking. Challenge reconnect recovery hardened: snapshot deserialization failure no longer deletes the challenge row (preserves for retry), unknown challenge types force-restore the snapshot before cleanup, and DB failures are logged at SEVERE with recovery guidance. Auto-summit/elevation: fixed despawn-before-reset ordering that caused infinite despawn-recreate loop if the operation threw — robots are now reset first (hasRobot=false) before NPC despawn, and each player is isolated with per-player try-catch.
+- **Ascend: Runner tick load reduced under concurrency** - Runner state now refreshes from dirty player updates instead of a constant full snapshot scan, caches map/world/ghost data per robot, batches teleports per world tick, and only keeps NPCs spawned near active viewers while preserving runner payouts.
+- **Core: Trail fan-out load reduced under concurrency** - World particle and model particle trails now share one 50 ms scheduler/viewer snapshot, batch each world's emissions into one world-thread closure, cull distant viewers, reuse constant payloads, and stop the scheduler when no active trails remain.
+- **Purge: Scrap rewards no longer persist on the zombie-death hot path** - Kill rewards now accumulate in memory, flush on a short background interval and session boundaries, and reconcile safely with transactional class/weapon purchases.
+- **Purge: Melee zombie hits no longer fall through to 0 damage** - Purge now resolves attached melee damage refs back to the owning player and tracked zombie before applying custom weapon damage.
+- **Purge: Custom swords now inject direct zombie hits on primary melee use** - Purge melee weapons now trigger root-zombie damage from the item interaction path instead of depending on the broken vanilla sword hit target.
+- **Core: HUD currency reads no longer cause periodic DB refresh storms** - HUDs now use cache-only balance reads for active players, refresh TTL is much longer, and any remaining balance refreshes run on dedicated threads instead of the shared scheduler.
+- **Core: Vote polling no longer blocks the shared scheduler** - Vote checks now use bounded async HTTP workers, separate reward persistence threads, and temporary poll backoff after repeated backend failures.
+
+- **Purge: Login inventory sync race** - Purge idle hotbar setup now waits until the player is attached to a world, preventing repeated null-world `ItemContainerChangeEvent` errors during login.
+- **Wardrobe: Shop review cleanup pass** - Centralized wardrobe/effects purchase result handling, analytics, and asset-path normalization; cleaned disconnect eviction and shop message consistency across tabs.
+- **Core: Tick-path performance hardening** - Reduced avoidable HUD/login/trail/update overhead across Parkour, Ascend, and RunOrFall to cut lag spikes under load.
+- **Hub/Wardrobe: Classpath asset-pack conflict** - Server launch is now decoupled to `hyvexa-launch`, and `hyvexa-hub` is packaged again as a normal plugin asset-pack (`IncludesAssetPack` from `includes_pack`), so Hub UI/items ship in `HyvexaHub-*.jar` without separate `HubAssets` staging.
+- **Purge/Hub/RunOrFall: Intermittent HUD selector crashes on login/transfer** - Reworked HUD lifecycle guards (ready delay refresh + stale/world validation + disconnect HUD cache eviction + deferred first updates) to prevent random `Selected element in CustomUI command was not found` disconnects.
+- **Purge: Variant HP now respects configured absolute value across NPC types** - Zombie variant health no longer over-scales for non-vanilla NPC types (e.g. `Zombie_Aberrant`); configured HP is applied correctly before wave scaling.
+- **RunOrFall: Spectator/Disconnect round flow** - Players joining during an active round now get teleported to lobby as spectators, and disconnects are counted as eliminations.
+- **RunOrFall: Leave lobby now returns to spawn** - Voluntary leave (`/rof leave` and leave hotbar flow) now teleports the player to the world spawn.
+- **RunOrFall: Countdown moved from chat to HUD** - `Starting in ...` is now displayed in the RunOrFall HUD instead of chat countdown spam.
+- **RunOrFall: Winner return to lobby** - Round winner is now teleported back to lobby when the game ends.
+- **RunOrFall: Blink item conflict with Parkour restart fixed** - `Ingredient_Lightning_Essence` now resolves to Blink behavior/name in RunOrFall, while Parkour restart uses its dedicated checkpoint item id.
+- **RunOrFall: Blink vertical direction/clamp fixed** - Blink now follows look pitch correctly (up goes up), and never teleports below the player's current Y.
+- **RunOrFall: Blink east/west direction fixed** - Horizontal X direction is now aligned with player look direction (east/west no longer inverted).
+- **RunOrFall: Blink now preserves full look orientation** - Teleport now keeps both vertical and horizontal head orientation after blink.
+- **RunOrFall: Blink wall-clip protection** - Blink now checks collisions along its path and stops at the last free point before a block, preventing phase-through.
+- **RunOrFall: Blink collision sweep hardened** - Path collision now sweeps a full player-like footprint/height to prevent diagonal edge clipping through walls.
+- **RunOrFall: Blink can pass through configured platform blocks** - Blink collision now treats blocks matching the active map platform definitions as pass-through, while keeping wall collision against other solids.
+- **Parkour: Restart checkpoint orb skin restored** - Parkour restart now uses a dedicated orb item id again, so Blink changes no longer alter its appearance.
+- **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
+- **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.
+- **RunOrFall: Break-delay trail reliability** - Fast movement no longer skips walked blocks; each touched step starts its own delay while still targeting the closest footprint block first.
+- **RunOrFall: My Stats item routing** - `Food_Candy_Cane` now opens RunOrFall Stats when used in the RunOrFall world (instead of Parkour Stats).
+- **RunOrFall: /rof status permission** - `/rof status` is now restricted to OP/admin users.
+- **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
+- **Parkour: Pet follow rotation + idle/walk behavior** - `/pet spawn` companions now always orient toward their owner player position, and refresh a Movement-slot stop override while idle so walk no longer sticks when stationary.
+- **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
+- **Purge: Session and wave edge-case hardening** - Wave clear now requires successful spawns (except explicit zero-zombie waves), wipe/clear transitions run after world-thread death processing, `/purge start` now enforces party leader-only launch, and instance release waits for player + zombie cleanup futures with timeout fallback logging.
+- **Purge: Idle hotbar slot correctness on world entry** - Purge idle loadout now validates expected item IDs per slot and replaces mismatches, so slot `0` consistently restores the blue start orb after hub transfer.
+
+- **Parkour: Practice restart-to-checkpoint no longer resets run timer** - In practice mode, using "Restart to checkpoint" no longer falls back to full run reset when no checkpoint is available.
+- **Parkour: Practice fall respawn no longer resets run timer** - Falling during practice now respawns without rearming run start/timer reset.
+- **Parkour: Practice weapon slot priority** - In practice mode, map weapon items (Sword, Daggers, Glider) are now placed first in the hotbar and other practice items are shifted accordingly.
+- **Parkour: Fall respawn restored** - Fall respawn behavior is working again during parkour runs.
+- **Ascend: Challenge restore no longer rolls back manual run totals** - Exiting/completing a challenge now preserves any `totalManualRuns` gained during the challenge instead of restoring an older snapshot value.
+- **Ascend: Disconnect/reconnect save race no longer replays stale stats** - Per-player disconnect saves now persist the captured snapshot directly, and reconnect lazy-load reuses pending detached dirty state instead of reloading older DB rows.
+- **Ascend: PB detection now uses authoritative best-time fallback** - Manual finish PB checks now fallback to DB when in-memory best time is missing, and map best-time upserts are monotonic (can only improve), preventing slower runs from overwriting PB/leaderboard.
+- **Ascend/Hub: Low-priority review cleanup** - Clarified Ascend map balance source-of-truth and migration staging (legacy read/write drift), and updated Hub Ascend denial copy to match whitelist-restricted access behavior
+- **Parkour/Ascend: Completed medium-priority stability/maintainability pass** - Correct XP award deltas on completion, null-safe admin transform reads, shared throttled async error logging, and snapshot-based Ascend map-select refresh with dispatch/lifecycle refactors
+- **Ascend: Closed crafted map-selection unlock bypass** - Map select now validates payload map IDs against displayed entries and enforces unlock requirements instead of force-unlocking.
+- **Ascend/Parkour UI: Replaced fragile runtime tab/card background state writes** - Selected/active visuals now use dedicated overlay visibility toggles for more reliable rendering.
+- **Ascend: Disconnect persistence no longer triggers full-store flush** - Disconnect path now queues targeted per-player async saves while preserving shutdown full flush behavior.
+- **Parkour: Hardened debug/admin command access** - `/pkadminitem` and `/pkmusic` now require OP and clearly label staff-only usage
+- **Ascend: Cinematic/runner failures are now observable and recoverable** - Silent catches were replaced with throttled phase/context warning logs, and the cinematic now always schedules a movement/camera restore finalizer
+- **Parkour/Ascend: Closed two completion/stat races** - Jump flush now uses remove-drain semantics and near-finish checks now enforce one in-flight completion check per player
+- **Ascend: Added async backpressure guards for tick and page refresh loops** - Per-world tick jobs and auto-refresh UI updates now coalesce overlapping work instead of queueing unbounded async tasks
+- **Ascend: Passive earnings leave tracking now uses true world-edge transitions** - Leave timestamps are only recorded on real Ascend -> non-Ascend transitions and Ascend-state disconnects
+- **Ascend: Test commands are now production-gated** - `/ctest` and `/hudpreview` register only when `ascend.enableTestCommands=true` and now require OP
+- **Parkour: Completion writes no longer block world ticks** - Map completion DB writes/retries now run asynchronously with post-save warning signaling for failures
+- **Parkour: Debounced progress saves no longer drop dirty updates** - Save cycles now snapshot dirty IDs, clear only successful writes, and immediately requeue when dirty state remains
+- **Ascend: Same-player dirty updates are preserved across save windows** - Dirty tracking now uses per-player versions so in-flight saves cannot erase newer updates
+- **Ascend: Fixed Hub -> Ascend inventory sync race** - Menu-item hotbar sync now waits for player world attachment before writing inventory, preventing null-world `ItemContainerChangeEvent` spam during world transfer
+- **Core reliability: fixed high-priority race/leak issues** - Ascend counter/spend paths now use atomic CAS patterns, disconnect handlers clear lingering per-player caches, and hub/respawn null-race edge cases were closed
+- **Ascend: Evolution Power now applies to runner evolution** - Each star multiplies the multiplier gain by the Evolution Power value (e.g., ×2 base: 0★=0.10, 1★=0.20, 2★=0.40, 3★=0.80). Higher Summit Evolution Power makes each star exponentially stronger.
+- **Ascend: Added error handling for atomic database operations** - Passive earnings now logs failures when atomic coin/multiplier updates fail
+- **Ascend: Added transaction support for multi-table saves** - Player save operations now use database transactions with rollback on failure
+- **Ascend: Standardized file path construction** - Unified path handling for config files using Path.of() approach
+- **Parkour: Leaderboard map hologram placeholder** - "No completions yet." now appears correctly when a map has no times
+
+- **Ascend: Fixed UI crash when interacting with external NPCs after opening menus**
+  - Fixed "Selected element in CustomUI command was not found" crash when opening `/ascend` or `/ascend elevate` menus then interacting with NPCDialog NPCs
+  - Implemented proper `onDismiss()` lifecycle callback in `BaseAscendPage` to detect when UI is replaced by external systems
+  - Background UI refresh tasks now stop immediately when page is dismissed or replaced
+  - Added defensive try-catch blocks around all `sendUpdate()` calls as fallback protection
+  - Affected pages: ElevationPage, AscendMapSelectPage, StatsPage
+
+### Removed
+- **Ascend: Removed unused MAP_RUNNER_PRICES constant** - Dead code cleanup (runners are free after map unlock)
+- **Ascend: Multiplier gain display now shows 2 decimal places** - Values like +0.15x now display correctly instead of rounding to +0.2x
+- **Parkour/Core: Removed unused legacy classes** - Deleted unused command classes, old HUD/teleport helpers, and the parkour-only visibility wrapper
