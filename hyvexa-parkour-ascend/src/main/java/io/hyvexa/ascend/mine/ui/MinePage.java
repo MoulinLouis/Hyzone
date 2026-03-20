@@ -11,7 +11,9 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.ParkourAscendPlugin;
@@ -25,6 +27,7 @@ import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.data.MinerRarity;
 import io.hyvexa.ascend.mine.egg.EggOpenService;
+import io.hyvexa.ascend.mine.egg.EggRouletteAnimation;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.ui.BaseAscendPage;
@@ -539,8 +542,17 @@ public class MinePage extends BaseAscendPage {
             return;
         }
 
-        player.sendMessage(Message.raw("Hatched a " + miner.getRarity().getDisplayName() + " miner!"));
-        sendRefresh(ref, store);
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        PacketHandler ph = playerRef.getPacketHandler();
+        if (world == null || ph == null) {
+            // Fallback: no cinematic
+            player.sendMessage(Message.raw("Hatched a " + miner.getRarity().getDisplayName() + " miner!"));
+            sendRefresh(ref, store);
+            return;
+        }
+        this.forceClose();
+        EggRouletteAnimation.play(player, ph, playerRef, store, ref, world, miner.getRarity(),
+                () -> sendRefresh(ref, store));
     }
 
     private void handlePickMiner(Ref<EntityStore> ref, Store<EntityStore> store, long minerId) {
