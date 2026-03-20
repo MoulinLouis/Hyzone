@@ -65,8 +65,18 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         this.selectedZoneId = zoneId != null ? zoneId : "";
     }
 
+    public void setSelectedLayerId(String layerId) {
+        this.selectedLayerId = layerId != null ? layerId : "";
+        if (!this.selectedLayerId.isEmpty()) {
+            this.activeTab = TAB_BLOCKS;
+        }
+    }
+
     public void setSelectedBlockId(String blockId) {
         this.blockId = blockId != null ? blockId : "";
+        if (!this.blockId.isEmpty()) {
+            this.activeTab = TAB_BLOCKS;
+        }
     }
 
     @Override
@@ -173,7 +183,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 MineBlockPickerPage picker = new MineBlockPickerPage(
-                    playerRef, mineConfigStore, selectedZoneId, blockId
+                    playerRef, mineConfigStore, selectedZoneId, selectedLayerId, blockId
                 );
                 player.getPageManager().openCustomPage(ref, store, picker);
             }
@@ -406,6 +416,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             return;
         }
 
+        mineManager.invalidateZoneCache(zone.getId());
         world.execute(() -> {
             mineManager.generateZone(world, zone);
         });
