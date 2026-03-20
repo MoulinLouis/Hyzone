@@ -145,6 +145,7 @@ public final class MineAoEBreaker {
                 MineAchievementTracker tracker = plugin.getMineAchievementTracker();
                 if (tracker != null) {
                     tracker.incrementBlocksMined(playerId, totalBroken);
+                    tracker.incrementManualBlocksMined(playerId, totalBroken);
                 }
             }
 

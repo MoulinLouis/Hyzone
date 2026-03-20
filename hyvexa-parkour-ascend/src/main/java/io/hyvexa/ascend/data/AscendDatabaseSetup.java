@@ -490,6 +490,8 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            ensureManualBlocksMinedColumn(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
@@ -1511,6 +1513,17 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN pickaxe_tier INT NOT NULL DEFAULT 0");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add pickaxe_tier column to mine_players: %s", e.getMessage());
+            }
+        }
+    }
+
+    private static void ensureManualBlocksMinedColumn(Connection conn) {
+        if (conn == null) return;
+        if (!columnExists(conn, "mine_player_stats", "manual_blocks_mined")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE mine_player_stats ADD COLUMN manual_blocks_mined BIGINT NOT NULL DEFAULT 0");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add manual_blocks_mined column to mine_player_stats: %s", e.getMessage());
             }
         }
     }

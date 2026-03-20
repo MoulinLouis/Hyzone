@@ -41,6 +41,7 @@ public final class AscendConstants {
     // Items - Mine
     public static final String ITEM_MINE_PICKAXE = "Tool_Pickaxe_Wood";
     public static final String ITEM_MINE_CHEST = "Mine_Chest";
+    public static final String ITEM_MINE_LEADERBOARD = "Mine_Leaderboard";
 
     // Economy
     public static final double RUNNER_MULTIPLIER_INCREMENT = 0.1; // +0.1 per runner completion (base, scaled by stars+summit)

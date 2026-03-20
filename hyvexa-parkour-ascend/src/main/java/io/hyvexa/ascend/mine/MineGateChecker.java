@@ -359,6 +359,7 @@ public class MineGateChecker {
 
         hotbar.setItemStackForSlot((short) 0, new ItemStack(pickaxeItemId, 1), false);
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_MINE_CHEST, 1), false);
+        hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_MINE_LEADERBOARD, 1), false);
         InventoryUtils.giveGlobalItems(hotbar);
     }
 

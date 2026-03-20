@@ -14,6 +14,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -30,9 +33,17 @@ public class MineAchievementTracker {
 
     private static final FluentLogger LOGGER = FluentLogger.forEnclosingClass();
 
+    private static final long LEADERBOARD_CACHE_TTL_MS = 30_000;
+
     private final Map<UUID, PlayerAchievementState> states = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyStats = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean saveScheduled = new AtomicBoolean(false);
+
+    private volatile List<MineLeaderboardEntry> leaderboardCache = List.of();
+    private volatile long leaderboardCacheTimestamp;
+
+    public record MineLeaderboardEntry(UUID playerId, String playerName,
+                                       long totalCrystalsEarned, long manualBlocksMined) {}
 
     // ── State class ──────────────────────────────────────────────────────
 
@@ -40,6 +51,7 @@ public class MineAchievementTracker {
         final Set<String> completed = ConcurrentHashMap.newKeySet();
         final AtomicLong totalBlocksMined = new AtomicLong();
         final AtomicLong totalCrystalsEarned = new AtomicLong();
+        final AtomicLong manualBlocksMined = new AtomicLong();
     }
 
     // ── Public API ───────────────────────────────────────────────────────
@@ -69,6 +81,16 @@ public class MineAchievementTracker {
     }
 
     /**
+     * Increment manual blocks mined (excludes robot miners).
+     */
+    public void incrementManualBlocksMined(UUID playerId, int count) {
+        PlayerAchievementState state = getOrLoadState(playerId);
+        state.manualBlocksMined.addAndGet(count);
+        dirtyStats.add(playerId);
+        queueSave();
+    }
+
+    /**
      * Check and grant a specific event-based achievement (miner purchase, evolution, etc.).
      */
     public void checkAchievement(UUID playerId, MineAchievement achievement) {
@@ -94,6 +116,10 @@ public class MineAchievementTracker {
             case TOTAL_BLOCKS_MINED -> state.totalBlocksMined.get();
             case TOTAL_CRYSTALS_EARNED -> state.totalCrystalsEarned.get();
         };
+    }
+
+    public long getManualBlocksMined(UUID playerId) {
+        return getOrLoadState(playerId).manualBlocksMined.get();
     }
 
     /**
@@ -179,6 +205,72 @@ public class MineAchievementTracker {
             + " - +" + achievement.getCrystalReward() + " crystals!"));
     }
 
+    // ── Leaderboard ────────────────────────────────────────────────────────
+
+    public List<MineLeaderboardEntry> getMineLeaderboardEntries() {
+        long now = System.currentTimeMillis();
+        if (now - leaderboardCacheTimestamp > LEADERBOARD_CACHE_TTL_MS) {
+            List<MineLeaderboardEntry> dbEntries = fetchLeaderboardFromDatabase();
+            if (dbEntries != null) {
+                leaderboardCache = dbEntries;
+                leaderboardCacheTimestamp = now;
+            }
+        }
+
+        // Merge online players' fresh data on top of the DB snapshot
+        Map<UUID, MineLeaderboardEntry> merged = new LinkedHashMap<>();
+        for (MineLeaderboardEntry entry : leaderboardCache) {
+            merged.put(entry.playerId(), entry);
+        }
+        for (Map.Entry<UUID, PlayerAchievementState> e : states.entrySet()) {
+            UUID id = e.getKey();
+            PlayerAchievementState state = e.getValue();
+            String name = resolvePlayerName(id);
+            merged.put(id, new MineLeaderboardEntry(id, name,
+                state.totalCrystalsEarned.get(), state.manualBlocksMined.get()));
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    private String resolvePlayerName(UUID playerId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return null;
+        String name = plugin.getPlayerStore().getPlayerName(playerId);
+        if (name != null) return name;
+        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        if (playerRef != null) return playerRef.getUsername();
+        return null;
+    }
+
+    private List<MineLeaderboardEntry> fetchLeaderboardFromDatabase() {
+        if (!DatabaseManager.getInstance().isInitialized()) return List.of();
+        String sql = """
+            SELECT s.player_uuid, p.player_name, s.total_crystals_earned, s.manual_blocks_mined
+            FROM mine_player_stats s
+            LEFT JOIN ascend_players p ON s.player_uuid = p.uuid
+            WHERE s.total_crystals_earned > 0 OR s.manual_blocks_mined > 0
+            """;
+        List<MineLeaderboardEntry> entries = new ArrayList<>();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return null;
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        UUID playerId = UUID.fromString(rs.getString("player_uuid"));
+                        String name = rs.getString("player_name");
+                        long crystals = rs.getLong("total_crystals_earned");
+                        long blocks = rs.getLong("manual_blocks_mined");
+                        entries.add(new MineLeaderboardEntry(playerId, name, crystals, blocks));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to fetch mine leaderboard: %s", e.getMessage());
+            return null;
+        }
+        return entries;
+    }
+
     // ── Loading / Saving ─────────────────────────────────────────────────
 
     private PlayerAchievementState getOrLoadState(UUID playerId) {
@@ -202,12 +294,13 @@ public class MineAchievementTracker {
 
             // Load stats
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT total_blocks_mined, total_crystals_earned FROM mine_player_stats WHERE player_uuid = ?")) {
+                    "SELECT total_blocks_mined, total_crystals_earned, manual_blocks_mined FROM mine_player_stats WHERE player_uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         state.totalBlocksMined.set(rs.getLong("total_blocks_mined"));
                         state.totalCrystalsEarned.set(rs.getLong("total_crystals_earned"));
+                        state.manualBlocksMined.set(rs.getLong("manual_blocks_mined"));
                     }
                 }
             }
@@ -270,14 +363,16 @@ public class MineAchievementTracker {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             if (conn == null) return;
             try (PreparedStatement ps = conn.prepareStatement("""
-                    INSERT INTO mine_player_stats (player_uuid, total_blocks_mined, total_crystals_earned)
-                    VALUES (?, ?, ?)
+                    INSERT INTO mine_player_stats (player_uuid, total_blocks_mined, total_crystals_earned, manual_blocks_mined)
+                    VALUES (?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE total_blocks_mined = VALUES(total_blocks_mined),
-                                            total_crystals_earned = VALUES(total_crystals_earned)
+                                            total_crystals_earned = VALUES(total_crystals_earned),
+                                            manual_blocks_mined = VALUES(manual_blocks_mined)
                     """)) {
                 ps.setString(1, playerId.toString());
                 ps.setLong(2, state.totalBlocksMined.get());
                 ps.setLong(3, state.totalCrystalsEarned.get());
+                ps.setLong(4, state.manualBlocksMined.get());
                 ps.executeUpdate();
             }
         } catch (SQLException e) {
