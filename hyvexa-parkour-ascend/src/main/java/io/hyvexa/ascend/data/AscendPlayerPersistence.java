@@ -14,8 +14,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -337,13 +340,7 @@ class AscendPlayerPersistence {
                  PreparedStatement summitStmt = conn.prepareStatement(summitSql);
                  PreparedStatement skillStmt = conn.prepareStatement(skillSql);
                  PreparedStatement achievementStmt = conn.prepareStatement(achievementSql);
-                 PreparedStatement delMaps = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_maps"));
-                 PreparedStatement delSummit = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_summit"));
-                 PreparedStatement delSkills = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_skills"));
-                 PreparedStatement delAchievements = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_achievements"));
-                 PreparedStatement delChallengeRecords = conn.prepareStatement(String.format(deleteChildSql, "ascend_challenge_records"));
-                 PreparedStatement catStmt = conn.prepareStatement(catSql);
-                 PreparedStatement delCats = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_cats"))) {
+                 PreparedStatement catStmt = conn.prepareStatement(catSql)) {
                 DatabaseManager.applyQueryTimeout(playerStmt);
                 DatabaseManager.applyQueryTimeout(mapStmt);
                 DatabaseManager.applyQueryTimeout(summitStmt);
@@ -351,9 +348,19 @@ class AscendPlayerPersistence {
                 DatabaseManager.applyQueryTimeout(achievementStmt);
                 DatabaseManager.applyQueryTimeout(catStmt);
 
+                // Delete statements are only needed for reset-pending players;
+                // created lazily to avoid unnecessary PreparedStatement allocation.
+                PreparedStatement delMaps = null;
+                PreparedStatement delSummit = null;
+                PreparedStatement delSkills = null;
+                PreparedStatement delAchievements = null;
+                PreparedStatement delCats = null;
+                PreparedStatement delChallengeRecords = null;
+
                 Map<UUID, Long> persistedVersions = new HashMap<>();
                 List<UUID> committedResets = new ArrayList<>();
                 List<UUID> committedChallengeResets = new ArrayList<>();
+                try {
                 for (Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
                     UUID playerId = dirtyEntry.getKey();
                     AscendPlayerProgress progress = resolveProgressForSave(playerId, progressOverrides);
@@ -366,6 +373,13 @@ class AscendPlayerPersistence {
                     // to prevent stale upserts from re-inserting deleted data.
                     // Only remove flags after successful commit to avoid losing reset intent on rollback.
                     if (resetPendingPlayers.contains(playerId)) {
+                        if (delMaps == null) {
+                            delMaps = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_maps"));
+                            delSummit = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_summit"));
+                            delSkills = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_skills"));
+                            delAchievements = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_achievements"));
+                            delCats = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_cats"));
+                        }
                         String pid = playerId.toString();
                         for (PreparedStatement delStmt : new PreparedStatement[]{delMaps, delSummit, delSkills, delAchievements, delCats}) {
                             delStmt.setString(1, pid);
@@ -376,6 +390,9 @@ class AscendPlayerPersistence {
 
                     // Transcendence reset: additionally delete challenge records
                     if (transcendenceResetPending.contains(playerId)) {
+                        if (delChallengeRecords == null) {
+                            delChallengeRecords = conn.prepareStatement(String.format(deleteChildSql, "ascend_challenge_records"));
+                        }
                         delChallengeRecords.setString(1, playerId.toString());
                         delChallengeRecords.executeUpdate();
                         committedChallengeResets.add(playerId);
@@ -494,6 +511,15 @@ class AscendPlayerPersistence {
                 catStmt.executeBatch();
 
                 return new SaveResult(persistedVersions, committedResets, committedChallengeResets);
+                } finally {
+                    // Close lazily-created delete statements
+                    closeQuietly(delMaps);
+                    closeQuietly(delSummit);
+                    closeQuietly(delSkills);
+                    closeQuietly(delAchievements);
+                    closeQuietly(delCats);
+                    closeQuietly(delChallengeRecords);
+                }
             }
         }, null);
 
@@ -520,6 +546,15 @@ class AscendPlayerPersistence {
                 }
                 return currentVersion;
             });
+        }
+    }
+
+    private static void closeQuietly(PreparedStatement stmt) {
+        if (stmt != null) {
+            try {
+                stmt.close();
+            } catch (SQLException ignored) {
+            }
         }
     }
 
@@ -882,7 +917,7 @@ class AscendPlayerPersistence {
         }
 
         // Merge online players' fresh data on top of the DB snapshot
-        Map<UUID, AscendPlayerStore.LeaderboardEntry> merged = new java.util.LinkedHashMap<>();
+        Map<UUID, AscendPlayerStore.LeaderboardEntry> merged = new LinkedHashMap<>();
         for (AscendPlayerStore.LeaderboardEntry entry : leaderboardCache) {
             // Enrich null names from in-memory cache (survives disconnect)
             if (entry.playerName() == null || entry.playerName().isEmpty()) {
@@ -905,7 +940,7 @@ class AscendPlayerPersistence {
                 p.getAscensionCount(), p.getTotalManualRuns(), p.getFastestAscensionMs()
             ));
         }
-        return new java.util.ArrayList<>(merged.values());
+        return new ArrayList<>(merged.values());
     }
 
     private List<AscendPlayerStore.LeaderboardEntry> fetchLeaderboardFromDatabase() {
@@ -922,7 +957,7 @@ class AscendPlayerPersistence {
             ORDER BY total_volt_earned_exp10 DESC, total_volt_earned_mantissa DESC
             """;
 
-        List<AscendPlayerStore.LeaderboardEntry> entries = new java.util.ArrayList<>();
+        List<AscendPlayerStore.LeaderboardEntry> entries = new ArrayList<>();
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
@@ -988,11 +1023,11 @@ class AscendPlayerPersistence {
         }
 
         // Merge online players' best times on top of the DB snapshot
-        java.util.Map<String, AscendPlayerStore.MapLeaderboardEntry> merged = new java.util.LinkedHashMap<>();
+        Map<String, AscendPlayerStore.MapLeaderboardEntry> merged = new LinkedHashMap<>();
         for (AscendPlayerStore.MapLeaderboardEntry entry : cached) {
             merged.put(buildMapLeaderboardMergeKey(entry.playerId(), entry.playerName()), entry);
         }
-        for (java.util.Map.Entry<UUID, AscendPlayerProgress> e : players.entrySet()) {
+        for (Map.Entry<UUID, AscendPlayerProgress> e : players.entrySet()) {
             UUID id = e.getKey();
             AscendPlayerProgress p = e.getValue();
             AscendPlayerProgress.MapProgress mapProgress = p.getMapProgress().get(mapId);
@@ -1010,7 +1045,7 @@ class AscendPlayerPersistence {
             }
         }
 
-        List<AscendPlayerStore.MapLeaderboardEntry> result = new java.util.ArrayList<>(merged.values());
+        List<AscendPlayerStore.MapLeaderboardEntry> result = new ArrayList<>(merged.values());
         result.sort((a, b) -> Long.compare(a.bestTimeMs(), b.bestTimeMs()));
         return result;
     }
@@ -1028,7 +1063,7 @@ class AscendPlayerPersistence {
             ORDER BY m.best_time_ms ASC
             """;
 
-        List<AscendPlayerStore.MapLeaderboardEntry> entries = new java.util.ArrayList<>();
+        List<AscendPlayerStore.MapLeaderboardEntry> entries = new ArrayList<>();
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
@@ -1074,7 +1109,7 @@ class AscendPlayerPersistence {
         if (playerName == null) {
             return "";
         }
-        return playerName.toLowerCase(java.util.Locale.ROOT);
+        return playerName.toLowerCase(Locale.ROOT);
     }
 
     // ========================================
@@ -1129,7 +1164,7 @@ class AscendPlayerPersistence {
         }
     }
 
-    private static String serializeTargets(java.util.List<Long> targets) {
+    private static String serializeTargets(List<Long> targets) {
         if (targets == null || targets.isEmpty()) {
             return "[]";
         }
@@ -1142,17 +1177,17 @@ class AscendPlayerPersistence {
         return sb.toString();
     }
 
-    private static java.util.List<Long> parseTargets(String json) {
+    private static List<Long> parseTargets(String json) {
         if (json == null || json.isBlank() || json.equals("[]")) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         String trimmed = json.trim();
         if (trimmed.startsWith("[")) trimmed = trimmed.substring(1);
         if (trimmed.endsWith("]")) trimmed = trimmed.substring(0, trimmed.length() - 1);
         if (trimmed.isBlank()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
-        java.util.List<Long> result = new java.util.ArrayList<>();
+        List<Long> result = new ArrayList<>();
         for (String part : trimmed.split(",")) {
             try {
                 result.add(Long.parseLong(part.trim()));
@@ -1167,7 +1202,7 @@ class AscendPlayerPersistence {
      * Serialize auto-summit config to JSON.
      * Format: [{"enabled":true,"target":10},{"enabled":false,"target":5},...]
      */
-    static String serializeAutoSummitConfig(java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> config) {
+    static String serializeAutoSummitConfig(List<AscendPlayerProgress.AutoSummitCategoryConfig> config) {
         if (config == null || config.isEmpty()) {
             return "[]";
         }
@@ -1187,8 +1222,8 @@ class AscendPlayerPersistence {
      * Parse auto-summit config from JSON.
      * Expects: [{"enabled":true,"target":10},...] (also accepts legacy "increment" key)
      */
-    static java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> parseAutoSummitConfig(String json) {
-        java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> result = new java.util.ArrayList<>();
+    static List<AscendPlayerProgress.AutoSummitCategoryConfig> parseAutoSummitConfig(String json) {
+        List<AscendPlayerProgress.AutoSummitCategoryConfig> result = new ArrayList<>();
         if (json == null || json.isBlank() || json.equals("[]")) {
             // Return defaults for 3 categories
             for (int i = 0; i < 3; i++) {
@@ -1234,7 +1269,7 @@ class AscendPlayerPersistence {
             result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
         }
         if (result.size() > 3) {
-            result = new java.util.ArrayList<>(result.subList(0, 3));
+            result = new ArrayList<>(result.subList(0, 3));
         }
 
         return result;

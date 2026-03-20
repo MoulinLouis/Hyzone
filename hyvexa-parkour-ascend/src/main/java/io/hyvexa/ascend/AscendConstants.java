@@ -9,7 +9,20 @@ public final class AscendConstants {
     private AscendConstants() {
     }
 
+    private static long clampedLookup(int index, long[] array) {
+        if (index < 0 || index >= array.length) return array[array.length - 1];
+        return array[index];
+    }
 
+    private static int clampedLookup(int index, int[] array) {
+        if (index < 0 || index >= array.length) return array[array.length - 1];
+        return array[index];
+    }
+
+    private static double clampedLookup(int index, double[] array) {
+        if (index < 0 || index >= array.length) return array[array.length - 1];
+        return array[index];
+    }
 
     // Database
     public static final String TABLE_PREFIX = "ascend_";
@@ -39,22 +52,11 @@ public final class AscendConstants {
     public static final long PASSIVE_MAX_TIME_MS = 24 * 60 * 60 * 1000L; // 24 hours
     public static final long PASSIVE_MIN_TIME_MS = 60 * 1000L; // 1 minute
 
-    // Speed upgrade multipliers by map (indexed by displayOrder 0-5)
-    // Uniform speed gain: all maps use +10% per level
-    public static final double[] MAP_SPEED_MULTIPLIERS = {
-        0.10,  // Map 0 (Rouge)  - +10% per level
-        0.10,  // Map 1 (Orange) - +10% per level
-        0.10,  // Map 2 (Jaune)  - +10% per level
-        0.10,  // Map 3 (Vert)   - +10% per level
-        0.10,  // Map 4 (Bleu)   - +10% per level
-        0.10   // Map 5 (Gold)   - +10% per level (Transcendence)
-    };
+    // Speed upgrade multiplier: uniform +10% per level for all maps
+    public static final double MAP_SPEED_MULTIPLIER = 0.10;
 
     public static double getMapSpeedMultiplier(int displayOrder) {
-        if (displayOrder < 0 || displayOrder >= MAP_SPEED_MULTIPLIERS.length) {
-            return MAP_SPEED_MULTIPLIERS[MAP_SPEED_MULTIPLIERS.length - 1];
-        }
-        return MAP_SPEED_MULTIPLIERS[displayOrder];
+        return MAP_SPEED_MULTIPLIER;
     }
 
     // Map Level Defaults (indexed by displayOrder 0-5)
@@ -123,10 +125,7 @@ public final class AscendConstants {
     };
 
     public static double getMapEarlyLevelBoost(int displayOrder) {
-        if (displayOrder < 0 || displayOrder >= MAP_EARLY_LEVEL_BOOST.length) {
-            return MAP_EARLY_LEVEL_BOOST[MAP_EARLY_LEVEL_BOOST.length - 1];
-        }
-        return MAP_EARLY_LEVEL_BOOST[displayOrder];
+        return clampedLookup(displayOrder, MAP_EARLY_LEVEL_BOOST);
     }
 
     /**
@@ -149,38 +148,23 @@ public final class AscendConstants {
     }
 
     public static int getMapUpgradeOffset(int displayOrder) {
-        if (displayOrder < 0 || displayOrder >= MAP_UPGRADE_OFFSET.length) {
-            return MAP_UPGRADE_OFFSET[MAP_UPGRADE_OFFSET.length - 1];
-        }
-        return MAP_UPGRADE_OFFSET[displayOrder];
+        return clampedLookup(displayOrder, MAP_UPGRADE_OFFSET);
     }
 
     public static double getMapUpgradeMultiplier(int displayOrder) {
-        if (displayOrder < 0 || displayOrder >= MAP_UPGRADE_MULTIPLIER.length) {
-            return MAP_UPGRADE_MULTIPLIER[MAP_UPGRADE_MULTIPLIER.length - 1];
-        }
-        return MAP_UPGRADE_MULTIPLIER[displayOrder];
+        return clampedLookup(displayOrder, MAP_UPGRADE_MULTIPLIER);
     }
 
     public static long getMapBaseRunTimeMs(int displayOrder) {
-        if (displayOrder < 0 || displayOrder >= MAP_BASE_RUN_TIMES_MS.length) {
-            return MAP_BASE_RUN_TIMES_MS[MAP_BASE_RUN_TIMES_MS.length - 1];
-        }
-        return MAP_BASE_RUN_TIMES_MS[displayOrder];
+        return clampedLookup(displayOrder, MAP_BASE_RUN_TIMES_MS);
     }
 
     public static long getMapUnlockPrice(int displayOrder) {
-        if (displayOrder < 0 || displayOrder >= MAP_UNLOCK_PRICES.length) {
-            return MAP_UNLOCK_PRICES[MAP_UNLOCK_PRICES.length - 1];
-        }
-        return MAP_UNLOCK_PRICES[displayOrder];
+        return clampedLookup(displayOrder, MAP_UNLOCK_PRICES);
     }
 
     public static long getMapBaseReward(int displayOrder) {
-        if (displayOrder < 0 || displayOrder >= MAP_BASE_REWARDS.length) {
-            return MAP_BASE_REWARDS[MAP_BASE_REWARDS.length - 1];
-        }
-        return MAP_BASE_REWARDS[displayOrder];
+        return clampedLookup(displayOrder, MAP_BASE_REWARDS);
     }
 
     // Momentum System (temporary speed boost from manual runs)

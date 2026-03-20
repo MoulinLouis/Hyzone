@@ -43,8 +43,9 @@ public class AscendMap {
         return AscendConstants.getMapUnlockPrice(displayOrder);
     }
 
+    /** Always returns 0 -- runners are free. Retained for admin display and legacy DB compat writes. */
     public long getEffectiveRobotPrice() {
-        return 0L; // Runners are free
+        return 0L;
     }
 
     public long getEffectiveBaseRunTimeMs() {

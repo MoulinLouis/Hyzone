@@ -29,7 +29,7 @@ public class AscendPlayerProgress {
 
     // Ascension System
     private final AtomicInteger ascensionCount = new AtomicInteger(0);
-    private volatile int skillTreePoints;
+    private final AtomicInteger skillTreePoints = new AtomicInteger(0);
     private final Set<AscendConstants.SkillTreeNode> unlockedSkillNodes = ConcurrentHashMap.newKeySet();
 
     // Achievement System
@@ -74,7 +74,7 @@ public class AscendPlayerProgress {
     private volatile boolean playersHidden;
 
     // Tutorial tracking (bitmask)
-    private volatile int seenTutorials;
+    private final AtomicInteger seenTutorials = new AtomicInteger(0);
 
     // Challenge system (in-memory only, persisted via ChallengeManager)
     private volatile AscendConstants.ChallengeType activeChallenge;
@@ -245,16 +245,15 @@ public class AscendPlayerProgress {
     }
 
     public int getSkillTreePoints() {
-        return skillTreePoints;
+        return skillTreePoints.get();
     }
 
     public void setSkillTreePoints(int skillTreePoints) {
-        this.skillTreePoints = Math.max(0, skillTreePoints);
+        this.skillTreePoints.set(Math.max(0, skillTreePoints));
     }
 
     public int addSkillTreePoints(int amount) {
-        skillTreePoints = Math.max(0, skillTreePoints + amount);
-        return skillTreePoints;
+        return skillTreePoints.updateAndGet(v -> Math.max(0, v + amount));
     }
 
     public boolean hasSkillNode(AscendConstants.SkillTreeNode node) {
@@ -287,7 +286,7 @@ public class AscendPlayerProgress {
     }
 
     public int getAvailableSkillPoints() {
-        return Math.max(0, skillTreePoints - getSpentSkillPoints());
+        return Math.max(0, skillTreePoints.get() - getSpentSkillPoints());
     }
 
     // ========================================
@@ -533,19 +532,19 @@ public class AscendPlayerProgress {
     // ========================================
 
     public int getSeenTutorials() {
-        return seenTutorials;
+        return seenTutorials.get();
     }
 
     public void setSeenTutorials(int seenTutorials) {
-        this.seenTutorials = seenTutorials;
+        this.seenTutorials.set(seenTutorials);
     }
 
     public boolean hasSeenTutorial(int bit) {
-        return (seenTutorials & bit) != 0;
+        return (seenTutorials.get() & bit) != 0;
     }
 
     public void markTutorialSeen(int bit) {
-        seenTutorials |= bit;
+        seenTutorials.getAndUpdate(v -> v | bit);
     }
 
     // ========================================

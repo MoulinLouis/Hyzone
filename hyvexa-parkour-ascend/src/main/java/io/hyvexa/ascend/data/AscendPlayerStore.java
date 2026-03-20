@@ -326,6 +326,7 @@ public class AscendPlayerStore {
         BigNumber newBalance = progress.getVolt();
         markDirty(playerId);
         checkVoltTutorialThresholds(playerId, oldBalance, newBalance);
+        // Always succeeds; return value is vestigial
         return true;
     }
 
@@ -348,9 +349,10 @@ public class AscendPlayerStore {
             triggerService.checkVoltThresholds(playerId, oldBalance, newBalance);
         }
 
+        AscendPlayerProgress progress = getPlayer(playerId);
+
         // Trigger ascension every time the threshold is crossed
         if (crossedAscension) {
-            AscendPlayerProgress progress = getPlayer(playerId);
             if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
                 // Check for transcendence eligibility notification
                 checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
@@ -366,7 +368,6 @@ public class AscendPlayerStore {
         }
 
         // Also check transcendence threshold when break ascension is active
-        AscendPlayerProgress progress = getPlayer(playerId);
         if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
             checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
         }

@@ -20,6 +20,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class AscendMapStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    // Legacy constants: kept solely for DB compatibility writes to ascend_maps columns
+    // that existing schemas/tools may still read. Not used by runtime game logic.
     private static final long LEGACY_ROBOT_TIME_REDUCTION_MS = 0L;
     private static final int LEGACY_STORAGE_CAPACITY = 100;
 
