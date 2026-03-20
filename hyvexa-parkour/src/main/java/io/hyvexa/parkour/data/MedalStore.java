@@ -27,6 +27,7 @@ public class MedalStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final MedalStore INSTANCE = new MedalStore();
+    private static final int MEDAL_COUNT = Medal.values().length;
 
     // player -> mapId -> set of earned medal names
     private final ConcurrentHashMap<UUID, java.util.Map<String, Set<Medal>>> cache = new ConcurrentHashMap<>();
@@ -180,7 +181,7 @@ public class MedalStore {
                     int cnt = rs.getInt("cnt");
                     try {
                         Medal medal = Medal.valueOf(medalStr);
-                        int[] counts = aggregated.computeIfAbsent(playerId, k -> new int[Medal.values().length]);
+                        int[] counts = aggregated.computeIfAbsent(playerId, k -> new int[MEDAL_COUNT]);
                         counts[medal.ordinal()] = cnt;
                     } catch (IllegalArgumentException ignored) {
                     }
@@ -193,8 +194,7 @@ public class MedalStore {
         List<MedalScoreEntry> entries = new ArrayList<>(aggregated.size());
         for (java.util.Map.Entry<UUID, int[]> e : aggregated.entrySet()) {
             int[] c = e.getValue();
-            entries.add(new MedalScoreEntry(e.getKey(), c[0], c[1], c[2], c[3],
-                    c.length > 4 ? c[4] : 0));
+            entries.add(new MedalScoreEntry(e.getKey(), c[0], c[1], c[2], c[3], c[4]));
         }
         entries.sort(Comparator.comparingInt(MedalScoreEntry::getTotalScore).reversed());
         leaderboardSnapshot.set(List.copyOf(entries));
@@ -203,7 +203,7 @@ public class MedalStore {
 
     private void refreshLeaderboardEntry(UUID playerId) {
         java.util.Map<String, Set<Medal>> playerMedals = cache.get(playerId);
-        int[] counts = new int[Medal.values().length];
+        int[] counts = new int[MEDAL_COUNT];
         if (playerMedals != null) {
             for (Set<Medal> medals : playerMedals.values()) {
                 for (Medal m : medals) {
@@ -211,8 +211,7 @@ public class MedalStore {
                 }
             }
         }
-        MedalScoreEntry updated = new MedalScoreEntry(playerId, counts[0], counts[1], counts[2], counts[3],
-                counts.length > 4 ? counts[4] : 0);
+        MedalScoreEntry updated = new MedalScoreEntry(playerId, counts[0], counts[1], counts[2], counts[3], counts[4]);
         List<MedalScoreEntry> current = new ArrayList<>(leaderboardSnapshot.get());
         current.removeIf(e -> e.getPlayerId().equals(playerId));
         if (updated.getTotalScore() > 0) {

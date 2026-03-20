@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -83,13 +84,17 @@ public class MedalRewardStore {
             return;
         }
         String key = normalizeCategory(category);
-        rewards.put(key, new MedalRewards(Math.max(0, bronze), Math.max(0, silver),
-                Math.max(0, gold), Math.max(0, emerald), Math.max(0, insane)));
-        persistToDatabase(key, bronze, silver, gold, emerald, insane);
+        int clampedBronze = Math.max(0, bronze);
+        int clampedSilver = Math.max(0, silver);
+        int clampedGold = Math.max(0, gold);
+        int clampedEmerald = Math.max(0, emerald);
+        int clampedInsane = Math.max(0, insane);
+        rewards.put(key, new MedalRewards(clampedBronze, clampedSilver, clampedGold, clampedEmerald, clampedInsane));
+        persistToDatabase(key, clampedBronze, clampedSilver, clampedGold, clampedEmerald, clampedInsane);
     }
 
-    public ConcurrentHashMap<String, MedalRewards> getAllRewards() {
-        return rewards;
+    public java.util.Map<String, MedalRewards> getAllRewards() {
+        return Collections.unmodifiableMap(rewards);
     }
 
     public MedalRewards getRewards(String category) {

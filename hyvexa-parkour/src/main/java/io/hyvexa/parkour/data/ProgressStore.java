@@ -508,6 +508,10 @@ public class ProgressStore {
         return ParkourConstants.COMPLETION_RANK_NAMES[index];
     }
 
+    private static final double[] RANK_THRESHOLDS = {
+        0.01, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0
+    };
+
     public int getCompletionRank(UUID playerId, MapStore mapStore) {
         if (mapStore == null) {
             return 1;
@@ -527,15 +531,11 @@ public class ProgressStore {
         if (percent < 0.01) {
             return 1;
         }
-        if (percent >= 90.0) return 11;
-        if (percent >= 80.0) return 10;
-        if (percent >= 70.0) return 9;
-        if (percent >= 60.0) return 8;
-        if (percent >= 50.0) return 7;
-        if (percent >= 40.0) return 6;
-        if (percent >= 30.0) return 5;
-        if (percent >= 20.0) return 4;
-        if (percent >= 10.0) return 3;
+        for (int i = RANK_THRESHOLDS.length - 1; i >= 0; i--) {
+            if (percent >= RANK_THRESHOLDS[i]) {
+                return i + 2;
+            }
+        }
         return 2;
     }
 
@@ -546,21 +546,8 @@ public class ProgressStore {
         long playerXp = getPlayerCompletionXp(playerId, mapStore);
         if (playerXp >= totalXp) return 0L;
         int rank = getCompletionRank(playerId, mapStore);
-        double nextPercent = switch (rank) {
-            case 1 -> 0.01;
-            case 2 -> 10.0;
-            case 3 -> 20.0;
-            case 4 -> 30.0;
-            case 5 -> 40.0;
-            case 6 -> 50.0;
-            case 7 -> 60.0;
-            case 8 -> 70.0;
-            case 9 -> 80.0;
-            case 10 -> 90.0;
-            case 11 -> 100.0;
-            default -> 0.0;
-        };
-        if (nextPercent <= 0.0) return 0L;
+        if (rank < 1 || rank > RANK_THRESHOLDS.length) return 0L;
+        double nextPercent = RANK_THRESHOLDS[rank - 1];
         long requiredXp = (long) Math.ceil((totalXp * nextPercent) / 100.0);
         return Math.max(0L, requiredXp - playerXp);
     }
@@ -826,7 +813,7 @@ public class ProgressStore {
     public static long getTotalPossibleXp(MapStore mapStore) {
         if (mapStore == null) return 0L;
         long total = 0L;
-        for (Map map : mapStore.listMaps()) {
+        for (Map map : mapStore.listMapsReadonly()) {
             total += getMapCompletionXp(map);
         }
         return total;
@@ -861,7 +848,7 @@ public class ProgressStore {
         if (playerProgress == null || mapStore == null) return 0L;
         long total = 0L;
         for (String mapId : playerProgress.completedMaps) {
-            Map map = mapStore.getMap(mapId);
+            Map map = mapStore.getMapReadonly(mapId);
             total += getMapCompletionXp(map);
         }
         return total;
@@ -1083,9 +1070,9 @@ public class ProgressStore {
     }
 
     private static class PlayerProgress {
-        final Set<String> completedMaps = ConcurrentHashMap.newKeySet();
-        final java.util.Map<String, Long> bestMapTimes = new ConcurrentHashMap<>();
-        final java.util.Map<String, List<Long>> checkpointTimes = new ConcurrentHashMap<>();
+        final Set<String> completedMaps = new java.util.HashSet<>();
+        final java.util.Map<String, Long> bestMapTimes = new HashMap<>();
+        final java.util.Map<String, List<Long>> checkpointTimes = new HashMap<>();
         long xp;
         int level = 1;
         boolean welcomeShown;
