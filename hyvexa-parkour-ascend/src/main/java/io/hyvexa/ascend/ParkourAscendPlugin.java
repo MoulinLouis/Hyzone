@@ -127,6 +127,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private MineDamageSystem mineDamageSystem;
     private MineHudManager mineHudManager;
     private MineAchievementTracker mineAchievementTracker;
+    private io.hyvexa.ascend.mine.egg.EggOpenService eggOpenService;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
@@ -231,6 +232,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Mine robot manager (automated miners)
         if (mineConfigStore != null && minePlayerStore != null) {
+            eggOpenService = new io.hyvexa.ascend.mine.egg.EggOpenService(minePlayerStore);
             try {
                 mineRobotManager = new MineRobotManager(mineConfigStore, minePlayerStore, mineManager);
                 mineRobotManager.start();
@@ -686,6 +688,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public MineAchievementTracker getMineAchievementTracker() {
         return mineAchievementTracker;
+    }
+
+    public io.hyvexa.ascend.mine.egg.EggOpenService getEggOpenService() {
+        return eggOpenService;
     }
 
     public AscendRuntimeConfig getRuntimeConfig() {

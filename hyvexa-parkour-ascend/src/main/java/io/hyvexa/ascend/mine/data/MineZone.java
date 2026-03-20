@@ -50,6 +50,18 @@ public class MineZone {
     public int getRegenCooldownSeconds() { return regenCooldownSeconds; }
 
     /**
+     * Returns the layer that covers the given Y coordinate, or null if none.
+     */
+    public MineZoneLayer getLayerForY(int y) {
+        for (MineZoneLayer layer : layers) {
+            if (layer.containsY(y)) {
+                return layer;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns the block table for the given Y coordinate.
      * If a layer covers this Y, returns its table. Otherwise returns the zone-level fallback.
      */

@@ -153,8 +153,7 @@ public class MineRobotManager {
 
         List<MinerSlot> slots = configStore.getMinerSlots();
         for (MinerSlot slot : slots) {
-            MinePlayerProgress.MinerProgressSnapshot minerProg = progress.getMinerSnapshot(slot.getSlotIndex());
-            if (minerProg.hasMiner()) {
+            if (progress.isSlotAssigned(slot.getSlotIndex())) {
                 spawnMiner(playerId, slot.getSlotIndex(), world);
             }
         }
@@ -190,14 +189,13 @@ public class MineRobotManager {
         if (npcPlugin == null) return;
 
         MinePlayerProgress progress = playerStore.getOrCreatePlayer(ownerId);
-        MinePlayerProgress.MinerProgressSnapshot minerProg = progress != null
-                ? progress.getMinerSnapshot(slotIndex) : null;
+        if (progress == null) return;
+        io.hyvexa.ascend.mine.data.CollectedMiner assignedMiner = progress.getAssignedMiner(slotIndex);
+        if (assignedMiner == null) return;
 
-        MinerRobotState state = new MinerRobotState(ownerId, mineId, slotIndex);
-        if (minerProg != null) {
-            state.setSpeedLevel(minerProg.speedLevel());
-            state.setStars(minerProg.stars());
-        }
+        MinerRobotState state = new MinerRobotState(ownerId, mineId, slotIndex,
+            assignedMiner.getId(), assignedMiner.getLayerId(), assignedMiner.getRarity());
+        state.setSpeedLevel(assignedMiner.getSpeedLevel());
         state.setWorldName(world.getName());
         state.setLastBreakTime(System.currentTimeMillis());
 
@@ -290,47 +288,20 @@ public class MineRobotManager {
         cleanupConveyorItems(ownerId);
     }
 
-    public void syncPurchasedMiner(UUID ownerId, int slotIndex, World world) {
+    public void syncAssignedMiner(UUID ownerId, int slotIndex, World world) {
         if (getMinerState(ownerId, slotIndex) == null) {
             spawnMiner(ownerId, slotIndex, world);
         }
+    }
+
+    public void syncUnassignedMiner(UUID ownerId, int slotIndex) {
+        despawnMiner(ownerId, slotIndex);
     }
 
     public void syncMinerSpeed(UUID ownerId, int slotIndex, int speedLevel) {
         MinerRobotState state = getMinerState(ownerId, slotIndex);
         if (state == null) return;
         state.setSpeedLevel(speedLevel);
-    }
-
-    public void syncMinerEvolution(UUID ownerId, int slotIndex, int speedLevel, int stars, World world) {
-        MinerRobotState state = getMinerState(ownerId, slotIndex);
-        if (state == null) {
-            spawnMiner(ownerId, slotIndex, world);
-            return;
-        }
-
-        int previousStars = state.getStars();
-        state.setSpeedLevel(speedLevel);
-        state.setStars(stars);
-        if (previousStars == stars || world == null) {
-            return;
-        }
-
-        UUID entityUuid = state.getEntityUuid();
-        despawnNpc(state);
-        if (entityUuid != null && state.getEntityUuid() != null) {
-            orphanCleanup.addOrphan(entityUuid);
-        }
-
-        MinerSlot slot = configStore.getMinerSlot(slotIndex);
-        if (slot == null || !slot.isConfigured()) return;
-
-        state.setWorldName(world.getName());
-        state.setLastBreakTime(System.currentTimeMillis());
-        world.execute(() -> {
-            cleanupOrphanedMinersOnWorldThread(world);
-            spawnNpcOnWorldThread(state, world, slot);
-        });
     }
 
     private void despawnNpc(MinerRobotState state) {
@@ -658,7 +629,7 @@ public class MineRobotManager {
         if (mine == null || mine.getZones().isEmpty()) return;
         MineZone zone = mine.getZones().get(0);
 
-        Map<String, Double> blockTable = zone.getBlockTableForY(slot.getBlockY());
+        Map<String, Double> blockTable = resolveBlockTable(state, zone, slot);
         String nextBlockType = pickRandomBlock(blockTable);
         state.setCurrentBlockType(nextBlockType);
 
@@ -667,6 +638,14 @@ public class MineRobotManager {
         if (world != null) {
             breakAndReplaceBlock(world, slot, nextBlockType, state.getOwnerId(), slotIndex);
         }
+    }
+
+    private Map<String, Double> resolveBlockTable(MinerRobotState state, MineZone zone, MinerSlot slot) {
+        io.hyvexa.ascend.mine.data.MineZoneLayer originLayer = configStore.getLayerById(state.getOriginLayerId());
+        if (originLayer != null) {
+            return originLayer.getBlockTableForRarity(state.getRarity());
+        }
+        return zone.getBlockTableForY(slot.getBlockY());
     }
 
     // ── Conveyor ───────────────────────────────────────────────────────
@@ -852,7 +831,7 @@ public class MineRobotManager {
         Mine mine = configStore.getMine(slot.getMineId());
         if (mine == null || mine.getZones().isEmpty()) return;
         MineZone zone = mine.getZones().get(0);
-        Map<String, Double> blockTable = zone.getBlockTableForY(slot.getBlockY());
+        Map<String, Double> blockTable = resolveBlockTable(state, zone, slot);
         String blockType = pickRandomBlock(blockTable);
         if (blockType == null) return;
 

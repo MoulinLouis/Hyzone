@@ -59,13 +59,12 @@ $C.@PageOverlay {
       LayoutMode: Top;
       Padding: (Left: 16, Right: 16, Top: 6, Bottom: 12);
 
-      // --- Tabs Row ---
+      // --- Tabs Row (4 tabs) ---
       Group #TabsRow {
         Anchor: (Left: 0, Right: 0, Height: 40);
         LayoutMode: Left;
 
         // Tab 1: Upgrade (active by default)
-        // Uses overlay pattern from Ascend_Leaderboard.ui — no dynamic Background changes
         Group #TabUpgradeWrap {
           Anchor: (Height: 36);
           FlexWeight: 1;
@@ -102,7 +101,7 @@ $C.@PageOverlay {
 
           Label #TabUpgradeLabel {
             Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
-            Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, Alignment: Center, VerticalAlignment: Center);
+            Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, Alignment: Center, VerticalAlignment: Center);
             Text: "Upgrade";
           }
 
@@ -118,50 +117,160 @@ $C.@PageOverlay {
           }
         }
 
-        Group { Anchor: (Width: 6); }
+        Group { Anchor: (Width: 4); }
 
-        // Tab 2: Miner (inactive by default)
-        Group #TabMinerWrap {
+        // Tab 2: Slots
+        Group #TabSlotsWrap {
           Anchor: (Height: 36);
           FlexWeight: 1;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
-          Group #TabMinerInactiveBg {
+          Group #TabSlotsInactiveBg {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Background: #142029;
             Visible: true;
           }
 
-          Group #TabMinerActiveBg {
+          Group #TabSlotsActiveBg {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Background: #2d3f50;
             Visible: false;
           }
 
-          Group #TabMinerAccent {
+          Group #TabSlotsAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
 
-            Group #TabMinerAccentInactive {
+            Group #TabSlotsAccentInactive {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
               Background: #142029;
               Visible: true;
             }
 
-            Group #TabMinerAccentActive {
+            Group #TabSlotsAccentActive {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
               Background: #f59e0b;
               Visible: false;
             }
           }
 
-          Label #TabMinerLabel {
+          Label #TabSlotsLabel {
             Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
-            Style: (FontSize: 14, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
-            Text: "Miner";
+            Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
+            Text: "Slots";
           }
 
-          TextButton #TabMiner {
+          TextButton #TabSlots {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 4); }
+
+        // Tab 3: Eggs
+        Group #TabEggsWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #TabEggsInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: true;
+          }
+
+          Group #TabEggsActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: false;
+          }
+
+          Group #TabEggsAccent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+
+            Group #TabEggsAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: true;
+            }
+
+            Group #TabEggsAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #f59e0b;
+              Visible: false;
+            }
+          }
+
+          Label #TabEggsLabel {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
+            Text: "Eggs";
+          }
+
+          TextButton #TabEggs {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 4); }
+
+        // Tab 4: Collection
+        Group #TabCollectionWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #TabCollectionInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: true;
+          }
+
+          Group #TabCollectionActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: false;
+          }
+
+          Group #TabCollectionAccent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+
+            Group #TabCollectionAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: true;
+            }
+
+            Group #TabCollectionAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #f59e0b;
+              Visible: false;
+            }
+          }
+
+          Label #TabCollectionLabel {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
+            Text: "Collection";
+          }
+
+          TextButton #TabCollection {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Text: "";
             Style: TextButtonStyle(
@@ -220,16 +329,72 @@ $C.@PageOverlay {
         }
       }
 
-      // === MINER TAB CONTENT (hidden by default) ===
-      Group #MinerContent {
+      // === SLOTS TAB CONTENT (hidden by default) ===
+      Group #SlotsContent {
         Anchor: (Left: 0, Right: 0, Top: 8);
         FlexWeight: 1;
         LayoutMode: TopScrolling;
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
         Visible: false;
 
-        Group #MinerEntries {
+        Group #SlotEntries {
           LayoutMode: Top;
+        }
+
+        // Picker overlay (shown when assigning a miner to a slot)
+        Group #PickerOverlay {
+          Anchor: (Left: 0, Right: 0, Top: 8);
+          LayoutMode: Top;
+          Visible: false;
+
+          Label #PickerTitle {
+            Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
+            Text: "Select a miner:";
+          }
+
+          Group { Anchor: (Height: 6); }
+
+          Group #PickerEntries {
+            LayoutMode: Top;
+          }
+        }
+      }
+
+      // === EGGS TAB CONTENT (hidden by default) ===
+      Group #EggsContent {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Visible: false;
+
+        Group #EggEntries {
+          LayoutMode: Top;
+        }
+
+        Label #NoEggsLabel {
+          Anchor: (Top: 20);
+          Style: (FontSize: 14, TextColor: #9fb0ba, Alignment: Center);
+          Text: "No eggs yet. Break blocks to find eggs!";
+        }
+      }
+
+      // === COLLECTION TAB CONTENT (hidden by default) ===
+      Group #CollectionContent {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Visible: false;
+
+        Group #CollectionEntries {
+          LayoutMode: Top;
+        }
+
+        Label #NoMinersLabel {
+          Anchor: (Top: 20);
+          Style: (FontSize: 14, TextColor: #9fb0ba, Alignment: Center);
+          Text: "No miners yet. Open eggs to collect miners!";
         }
       }
 

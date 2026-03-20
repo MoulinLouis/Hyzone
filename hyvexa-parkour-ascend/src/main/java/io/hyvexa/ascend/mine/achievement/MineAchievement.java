@@ -19,8 +19,8 @@ public enum MineAchievement {
     CRYSTALS_1M("crystals_1m", "Crystal Tycoon", "Earn 1,000,000 total crystals", 50_000),
 
     // Upgrade milestones
-    FIRST_MINER("first_miner", "Automation Begins", "Buy your first miner", 500),
-    EVOLVE_STAR1("evolve_star1", "Star Power", "Evolve a miner to Star 1", 2_500),
+    FIRST_EGG("first_egg", "Egg Hunter", "Find your first egg", 500),
+    FIRST_LEGENDARY("first_legendary", "Golden Discovery", "Obtain a Legendary miner", 2_500),
     MAX_UPGRADES("max_upgrades", "Completionist", "Max all upgrades", 50_000),
 
     // Exploration

@@ -1,0 +1,116 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 70);
+  Background: #1a2530(0.95);
+
+  Group #AccentBar {
+    Anchor: (Width: 8, Top: 0, Bottom: 0);
+
+    Group #AccentEmpty {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #4a5568;
+      Visible: true;
+    }
+
+    Group #AccentFilled {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #10b981;
+      Visible: false;
+    }
+  }
+
+  Group #ContentZone {
+    FlexWeight: 1;
+    Anchor: (Top: 0, Bottom: 0);
+    Padding: (Left: 12, Top: 8, Bottom: 8);
+    LayoutMode: Top;
+
+    Label #SlotTitle {
+      Style: (FontSize: 15, RenderBold: true, TextColor: #f0f4f8);
+      Text: "Slot #1";
+    }
+
+    Label #MinerInfo {
+      Anchor: (Top: 4);
+      Style: (FontSize: 13, TextColor: #9fb0ba);
+      Text: "Empty";
+    }
+
+    Label #ProductionInfo {
+      Anchor: (Top: 2);
+      Style: (FontSize: 12, TextColor: #9fb0ba);
+      Text: "";
+    }
+  }
+
+  Group #ButtonZone {
+    Anchor: (Width: 110, Top: 0, Bottom: 0);
+    LayoutMode: Top;
+    Padding: (Top: 4, Bottom: 4, Left: 4, Right: 4);
+
+    Group #AssignBtnWrap {
+      Anchor: (Left: 0, Right: 0, Height: 28);
+
+      Group #AssignBtnBg {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #3b82f6(0.85);
+      }
+
+      Button #AssignButton {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #00000000;
+        Style: ButtonStyle(
+          Default: (Background: #00000000),
+          Hovered: (Background: #ffffff(0.15)),
+          Pressed: (Background: #000000(0.15)),
+          Sounds: $C.@ButtonSounds,
+        );
+        LayoutMode: Top;
+
+        Label #AssignText {
+          Anchor: (Left: 0, Right: 0, Top: 4);
+          Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center);
+          Text: "Assign";
+        }
+      }
+    }
+
+    Group { Anchor: (Height: 4); }
+
+    Group #SpeedBtnWrap {
+      Anchor: (Left: 0, Right: 0, Height: 28);
+      Visible: false;
+
+      Group #SpeedBtnBg {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #10b981(0.85);
+      }
+
+      Group #SpeedDisabledOverlay {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #000000(0.7);
+        Visible: false;
+      }
+
+      Button #SpeedButton {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #00000000;
+        Style: ButtonStyle(
+          Default: (Background: #00000000),
+          Hovered: (Background: #ffffff(0.15)),
+          Pressed: (Background: #000000(0.15)),
+          Sounds: $C.@ButtonSounds,
+        );
+        LayoutMode: Top;
+
+        Label #SpeedText {
+          Anchor: (Left: 0, Right: 0, Top: 4);
+          Style: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center);
+          Text: "Speed 50c";
+        }
+      }
+    }
+  }
+}

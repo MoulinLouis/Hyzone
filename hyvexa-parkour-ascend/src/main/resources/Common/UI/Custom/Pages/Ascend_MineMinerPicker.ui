@@ -1,0 +1,67 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 44);
+  Background: #1a2530(0.95);
+
+  Group #RarityBar {
+    Anchor: (Width: 6, Top: 0, Bottom: 0);
+    Background: #aaaaaa;
+  }
+
+  Group #ContentZone {
+    FlexWeight: 1;
+    Anchor: (Top: 0, Bottom: 0);
+    Padding: (Left: 10, Top: 6, Bottom: 6);
+    LayoutMode: Top;
+
+    Group #TopRow {
+      Anchor: (Left: 0, Right: 0, Height: 16);
+      LayoutMode: Left;
+
+      Label #RarityLabel {
+        Style: (FontSize: 13, RenderBold: true, TextColor: #aaaaaa);
+        Text: "Common";
+      }
+
+      Label #LayerLabel {
+        Anchor: (Left: 6);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "";
+      }
+    }
+
+    Label #SpeedLabel {
+      Style: (FontSize: 11, TextColor: #9fb0ba);
+      Text: "Lv.0 | 6.0 b/m";
+    }
+  }
+
+  Group #SelectBtnWrap {
+    Anchor: (Width: 70, Top: 0, Bottom: 0);
+
+    Group #SelectBtnBg {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #3b82f6(0.85);
+    }
+
+    Button #SelectButton {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #00000000;
+      Style: ButtonStyle(
+        Default: (Background: #00000000),
+        Hovered: (Background: #ffffff(0.15)),
+        Pressed: (Background: #000000(0.15)),
+        Sounds: $C.@ButtonSounds,
+      );
+      LayoutMode: Top;
+
+      Label #SelectText {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center);
+        Text: "Select";
+      }
+    }
+  }
+}

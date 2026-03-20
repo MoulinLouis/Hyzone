@@ -60,7 +60,7 @@ public class MineBonusCalculator {
         if (slots.isEmpty()) return false;
 
         for (var slot : slots) {
-            if (!progress.getMinerSnapshot(slot.getSlotIndex()).hasMiner()) {
+            if (!progress.isSlotAssigned(slot.getSlotIndex())) {
                 return false;
             }
         }

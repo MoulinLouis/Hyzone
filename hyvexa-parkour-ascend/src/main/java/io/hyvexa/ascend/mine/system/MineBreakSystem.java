@@ -118,6 +118,9 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         // Momentum combo
         MineRewardHelper.handleMomentumCombo(playerId, mineProgress);
 
+        // Egg drop chance
+        EggDropHelper.tryDropEgg(playerId, zone, by, mineProgress, minePlayerStore);
+
         // AoE upgrades (Jackhammer, Stomp, Blast)
         if (world != null) {
             MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager);
