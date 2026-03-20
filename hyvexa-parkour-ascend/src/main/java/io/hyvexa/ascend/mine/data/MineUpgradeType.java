@@ -7,7 +7,8 @@ public enum MineUpgradeType {
     JACKHAMMER(10),
     STOMP(15),
     BLAST(15),
-    HASTE(20);
+    HASTE(20),
+    CONVEYOR_CAPACITY(25);
 
     private final int maxLevel;
 
@@ -26,6 +27,7 @@ public enum MineUpgradeType {
             case STOMP -> Math.round(200 * Math.pow(1.30, currentLevel));
             case BLAST -> Math.round(250 * Math.pow(1.30, currentLevel));
             case HASTE -> Math.round(40 * Math.pow(1.20, currentLevel));
+            case CONVEYOR_CAPACITY -> Math.round(30 * Math.pow(1.18, currentLevel));
         };
     }
 
@@ -38,6 +40,7 @@ public enum MineUpgradeType {
             case STOMP -> 1 + Math.floor(level / 5.0); // radius
             case BLAST -> 1 + Math.floor(level / 5.0); // radius
             case HASTE -> level * 5.0;                // speed bonus %
+            case CONVEYOR_CAPACITY -> 1000 + level * 200.0; // max buffer blocks
         };
     }
 
@@ -53,6 +56,7 @@ public enum MineUpgradeType {
             case STOMP -> "upgrade_stomp";
             case BLAST -> "upgrade_blast";
             case HASTE -> "upgrade_haste";
+            case CONVEYOR_CAPACITY -> "upgrade_conveyor_capacity";
         };
     }
 
@@ -65,6 +69,7 @@ public enum MineUpgradeType {
             case STOMP -> "Stomp";
             case BLAST -> "Blast";
             case HASTE -> "Haste";
+            case CONVEYOR_CAPACITY -> "Conveyor Capacity";
         };
     }
 
@@ -77,6 +82,7 @@ public enum MineUpgradeType {
             case STOMP -> "Chance to break a layer of blocks around you.";
             case BLAST -> "Chance to break blocks in a sphere.";
             case HASTE -> "Increases your mining speed permanently.";
+            case CONVEYOR_CAPACITY -> "Increases how many blocks your conveyor chest can hold.";
         };
     }
 

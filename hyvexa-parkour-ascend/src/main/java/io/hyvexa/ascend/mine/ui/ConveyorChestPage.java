@@ -59,7 +59,7 @@ public class ConveyorChestPage extends BaseAscendPage {
         int bagSpace = Math.max(0, progress.getBagCapacity() - progress.getInventoryTotal());
 
         commandBuilder.set("#CapacityValue.Text", bagSpace + " / " + progress.getBagCapacity() + " free");
-        commandBuilder.set("#BufferValue.Text", totalItems + " blocks");
+        commandBuilder.set("#BufferValue.Text", totalItems + " / " + progress.getConveyorCapacity() + " blocks");
 
         commandBuilder.clear("#BlockEntries");
 

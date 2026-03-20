@@ -1463,7 +1463,8 @@ public final class AscendDatabaseSetup {
             {"upgrade_jackhammer", "INT NOT NULL DEFAULT 0"},
             {"upgrade_stomp", "INT NOT NULL DEFAULT 0"},
             {"upgrade_blast", "INT NOT NULL DEFAULT 0"},
-            {"upgrade_haste", "INT NOT NULL DEFAULT 0"}
+            {"upgrade_haste", "INT NOT NULL DEFAULT 0"},
+            {"upgrade_conveyor_capacity", "INT NOT NULL DEFAULT 0"}
         };
         for (String[] col : columns) {
             if (!columnExists(conn, "mine_players", col[0])) {

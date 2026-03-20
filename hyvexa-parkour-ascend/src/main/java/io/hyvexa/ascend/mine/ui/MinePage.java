@@ -67,10 +67,10 @@ public class MinePage extends BaseAscendPage {
     private static final String BUTTON_PICK_MINER_PREFIX = "PickMiner_";
 
     private static final String[] UPGRADE_ACCENT_COLORS = {
-        "Green", "Blue", "Gold", "Red", "Orange", "Violet", "Blue"
+        "Green", "Blue", "Gold", "Red", "Orange", "Violet", "Blue", "Gold"
     };
     private static final String[] UPGRADE_ACCENT_HEX = {
-        "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#f97316", "#7c3aed", "#3b82f6"
+        "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#f97316", "#7c3aed", "#3b82f6", "#f59e0b"
     };
     private static final int UPGRADE_SEGMENT_COUNT = 20;
     private static final MineUpgradeType[] GRID_UPGRADE_ORDER = {
@@ -314,6 +314,7 @@ public class MinePage extends BaseAscendPage {
             populateUpgradeCard(cmd, evt, sel, type);
         }
         populateBagCapacityEntry(cmd, evt);
+        populateConveyorCapacityEntry(cmd, evt);
     }
 
     private void populateUpgradeCard(UICommandBuilder cmd, UIEventBuilder evt, String sel, MineUpgradeType type) {
@@ -365,6 +366,52 @@ public class MinePage extends BaseAscendPage {
         }
 
         cmd.set(sel + " #UpgradeName.Text", "Bag Capacity");
+        cmd.set(sel + " #EffectText.Text", getEffectDescription(type, level));
+        evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #UpgradeBuyButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, maxed ? "Noop" : BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
+
+        if (maxed) {
+            cmd.set(sel + " #LevelText.Text", "MAX");
+            cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
+            cmd.set(sel + " #ActionText.Text", "Maxed!");
+            cmd.set(sel + " #ActionPrice.Text", "");
+        } else {
+            cmd.set(sel + " #LevelText.Text", "Lv." + level);
+            cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
+            long cost = type.getCost(level);
+            cmd.set(sel + " #ActionText.Text", "Cost:");
+            cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
+            boolean canAfford = mineProgress.getCrystals() >= cost;
+            cmd.set(sel + " #ButtonDisabledOverlay.Visible", !canAfford);
+            if (!canAfford) {
+                cmd.set(sel + " #UpgradeStatus.Style.TextColor", "#9fb0ba");
+                cmd.set(sel + " #ActionText.Style.TextColor", "#9fb0ba");
+                cmd.set(sel + " #ActionPrice.Style.TextColor", "#9fb0ba");
+            }
+        }
+    }
+
+    private void populateConveyorCapacityEntry(UICommandBuilder cmd, UIEventBuilder evt) {
+        MineUpgradeType type = MineUpgradeType.CONVEYOR_CAPACITY;
+        int level = mineProgress.getUpgradeLevel(type);
+        int maxLevel = type.getMaxLevel();
+        boolean maxed = level >= maxLevel;
+
+        cmd.append("#SlotConveyor", "Pages/Ascend_MinePageUpgradeEntry.ui");
+        String sel = "#SlotConveyor[0]";
+
+        cmd.set(sel + " #AccentViolet.Visible", false);
+        cmd.set(sel + " #AccentGold.Visible", true);
+        cmd.set(sel + " #ButtonBgGold.Visible", true);
+
+        String colorHex = "#f59e0b";
+        int filledSegments = maxLevel > 0 ? Math.min(UPGRADE_SEGMENT_COUNT, level * UPGRADE_SEGMENT_COUNT / maxLevel) : 0;
+        for (int seg = 1; seg <= UPGRADE_SEGMENT_COUNT; seg++) {
+            cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
+            if (seg <= filledSegments) cmd.set(sel + " #Seg" + seg + ".Visible", true);
+        }
+
+        cmd.set(sel + " #UpgradeName.Text", "Conveyor Capacity");
         cmd.set(sel + " #EffectText.Text", getEffectDescription(type, level));
         evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #UpgradeBuyButton",
             EventData.of(ButtonEventData.KEY_BUTTON, maxed ? "Noop" : BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
@@ -743,6 +790,7 @@ public class MinePage extends BaseAscendPage {
         cmd.clear("#PickaxeRow");
         for (int slot = 0; slot < GRID_UPGRADE_ORDER.length; slot++) cmd.clear("#Slot" + slot);
         cmd.clear("#SlotBag");
+        cmd.clear("#SlotConveyor");
         cmd.clear("#SlotEntries");
         cmd.clear("#EggEntries");
         cmd.clear("#CollectionEntries");
@@ -785,6 +833,7 @@ public class MinePage extends BaseAscendPage {
             case STOMP -> level == 0 ? "No layer break" : String.format("%.0f%%", type.getChance(level) * 100) + " | Radius: " + (int) effect;
             case BLAST -> level == 0 ? "No sphere break" : String.format("%.0f%%", type.getChance(level) * 100) + " | Radius: " + (int) effect;
             case HASTE -> level == 0 ? "No speed bonus" : "+" + (int) effect + "% speed";
+            case CONVEYOR_CAPACITY -> "Capacity: " + (int) effect + " blocks";
         };
     }
 

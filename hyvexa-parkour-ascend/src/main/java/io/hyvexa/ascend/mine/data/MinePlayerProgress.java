@@ -336,6 +336,10 @@ public class MinePlayerProgress {
         return (int) MineUpgradeType.BAG_CAPACITY.getEffect(getUpgradeLevel(MineUpgradeType.BAG_CAPACITY));
     }
 
+    public synchronized int getConveyorCapacity() {
+        return (int) MineUpgradeType.CONVEYOR_CAPACITY.getEffect(getUpgradeLevel(MineUpgradeType.CONVEYOR_CAPACITY));
+    }
+
     // --- Egg inventory ---
 
     public synchronized void addEgg(String layerId) {
@@ -454,11 +458,19 @@ public class MinePlayerProgress {
         conveyorBufferCount += amount;
     }
 
-    /** Add block to conveyor buffer (no capacity limit). */
-    public synchronized void addToConveyorBuffer(String blockTypeId, int amount) {
-        if (blockTypeId == null || amount <= 0) return;
-        conveyorBuffer.merge(blockTypeId, amount, Integer::sum);
-        conveyorBufferCount += amount;
+    /**
+     * Add block to conveyor buffer, respecting capacity limit.
+     * Returns true if any items were added, false if buffer is full.
+     */
+    public synchronized boolean addToConveyorBuffer(String blockTypeId, int amount) {
+        if (blockTypeId == null || amount <= 0) return false;
+        int capacity = getConveyorCapacity();
+        int remaining = capacity - conveyorBufferCount;
+        if (remaining <= 0) return false;
+        int toAdd = Math.min(amount, remaining);
+        conveyorBuffer.merge(blockTypeId, toAdd, Integer::sum);
+        conveyorBufferCount += toAdd;
+        return true;
     }
 
     /**

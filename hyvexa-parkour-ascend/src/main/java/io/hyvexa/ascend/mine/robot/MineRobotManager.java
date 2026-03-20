@@ -565,11 +565,13 @@ public class MineRobotManager {
         MinerSlot slot = configStore.getMinerSlot(mineId, slotIndex);
         if (slot == null) return;
 
-        // --- Full bag: pause mining, stop animation, recheck periodically ---
-        // Conveyor miners bypass bag-full check (items go to conveyor buffer)
+        // --- Full bag/conveyor: pause mining, stop animation, recheck periodically ---
         MinePlayerProgress progress = playerStore.getPlayer(state.getOwnerId());
         boolean hasConveyor = configStore.isConveyorConfigured(mineId);
-        if (!hasConveyor && (progress == null || progress.isInventoryFull())) {
+        boolean isFull = hasConveyor
+                ? (progress != null && isConveyorFull(state.getOwnerId(), progress))
+                : (progress == null || progress.isInventoryFull());
+        if (isFull) {
             if (!state.isStopped()) {
                 state.setStopped(true);
                 if (state.isAnimating()) {
@@ -650,7 +652,20 @@ public class MineRobotManager {
 
     // ── Conveyor ───────────────────────────────────────────────────────
 
+    private int getInFlightCount(UUID ownerId) {
+        List<ConveyorItemState> items = conveyorItems.get(ownerId);
+        return items != null ? items.size() : 0;
+    }
+
+    private boolean isConveyorFull(UUID ownerId, MinePlayerProgress progress) {
+        return progress.getConveyorBufferCount() + getInFlightCount(ownerId) >= progress.getConveyorCapacity();
+    }
+
     private void spawnConveyorItem(MinerRobotState minerState, MinerSlot slot, String blockType) {
+        UUID ownerId = minerState.getOwnerId();
+        MinePlayerProgress progress = playerStore.getPlayer(ownerId);
+        if (progress != null && isConveyorFull(ownerId, progress)) return;
+
         String worldName = minerState.getWorldName();
         World world = worldName != null ? Universe.get().getWorld(worldName) : null;
         if (world == null) return;
@@ -668,8 +683,6 @@ public class MineRobotManager {
 
         double[][] waypoints = path.toArray(new double[0][]);
         double speed = configStore.getConveyorSpeed(mineId);
-
-        UUID ownerId = minerState.getOwnerId();
 
         ConveyorItemState itemState = new ConveyorItemState(ownerId, mineId, worldName, blockType, speed, waypoints);
 
@@ -729,16 +742,15 @@ public class MineRobotManager {
                     String blockTypeItem = item.getBlockType();
                     if (blockTypeItem != null) {
                         MinePlayerProgress progress = playerStore.getPlayer(ownerId);
-                        if (progress != null) {
-                            progress.addToConveyorBuffer(blockTypeItem, 1);
+                        if (progress != null && progress.addToConveyorBuffer(blockTypeItem, 1)) {
                             playerStore.markDirty(ownerId);
-                        }
 
-                        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                        if (plugin != null) {
-                            MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-                            if (tracker != null) {
-                                tracker.incrementBlocksMined(ownerId, 1);
+                            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+                            if (plugin != null) {
+                                MineAchievementTracker tracker = plugin.getMineAchievementTracker();
+                                if (tracker != null) {
+                                    tracker.incrementBlocksMined(ownerId, 1);
+                                }
                             }
                         }
                     }

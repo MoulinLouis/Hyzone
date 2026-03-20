@@ -9,8 +9,8 @@ Cross-referenced all documentation against the actual codebase. Findings organiz
 ### [HIGH] MineUpgradeType enum completely wrong
 - **Section:** "Upgrades (MineUpgradeType enum)"
 - **Doc claims:** 3 upgrades: `MINING_SPEED` (max 100), `BAG_CAPACITY` (max 50), `MULTI_BREAK` (max 20)
-- **Code shows:** 7 upgrades: `BAG_CAPACITY(50)`, `MOMENTUM(25)`, `FORTUNE(25)`, `JACKHAMMER(10)`, `STOMP(15)`, `BLAST(15)`, `HASTE(20)`. `MINING_SPEED` and `MULTI_BREAK` no longer exist.
-- **Fix:** Replace the 3-row upgrade table with the actual 7 upgrades and their correct max levels.
+- **Code shows:** 8 upgrades: `BAG_CAPACITY(50)`, `MOMENTUM(25)`, `FORTUNE(25)`, `JACKHAMMER(10)`, `STOMP(15)`, `BLAST(15)`, `HASTE(20)`, `CONVEYOR_CAPACITY(25)`. `MINING_SPEED` and `MULTI_BREAK` no longer exist.
+- **Fix:** Replace the 3-row upgrade table with the actual 8 upgrades and their correct max levels.
 
 ### [HIGH] ParkourConstants XP values wrong
 - **Section:** "ParkourConstants.java"
@@ -119,12 +119,12 @@ Cross-referenced all documentation against the actual codebase. Findings organiz
 ## docs/Ascend/MINE_STATUS.md
 
 ### [HIGH] Entirely outdated - based on multi-mine system
-- Lists 3 upgrade types (`Mining Speed`, `Bag Capacity`, `Multi-Break`) -- code now has 7
+- Lists 3 upgrade types (`Mining Speed`, `Bag Capacity`, `Multi-Break`) -- code now has 8
 - References `MineSelectPage` -- removed in single-mine refactor
 - References `/mine select` subcommand -- removed
 - Lists `MineBonusCalculator` cross-progression bonuses (Runner Speed +5%/+10%, etc.) -- code now returns 1.0 for all
 - Table count may be wrong (mine_zone_layers added)
-- **Fix:** Complete rewrite needed to reflect single-mine system and 7 upgrade types.
+- **Fix:** Complete rewrite needed to reflect single-mine system and 8 upgrade types.
 
 ---
 

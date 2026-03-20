@@ -982,7 +982,7 @@ Block prices are global (not per-mine), configured by admins in the Block Prices
 
 ### Mine Upgrades
 
-Purchased with crystals. 7 upgrade types:
+Purchased with crystals. 8 upgrade types:
 
 | Upgrade | Max Level | Cost Formula | Effect per Level | Effect at Max |
 |---------|-----------|-------------|------------------|---------------|
@@ -993,6 +993,7 @@ Purchased with crystals. 7 upgrade types:
 | **Stomp** | 15 | `200 x 1.30^level` | +1 radius per 5 levels | 4 radius |
 | **Blast** | 15 | `250 x 1.30^level` | +1 radius per 5 levels | 4 radius |
 | **Haste** | 20 | `40 x 1.20^level` | +5% mining speed | +100% speed |
+| **Conveyor Capacity** | 25 | `30 x 1.18^level` | +200 buffer blocks | 6000 blocks |
 
 #### Bag Capacity
 
@@ -1023,6 +1024,14 @@ Purchased with crystals. 7 upgrade types:
 
 - **Formula:** `speedBonus = level x 5%`
 - **Effect:** Increases mining speed permanently
+
+#### Conveyor Capacity
+
+- **Formula:** `capacity = 1000 + level x 200`
+- **Effect:** Maximum number of blocks the conveyor chest can hold
+- **Level 0:** 1000 blocks
+- **Level 25:** 6000 blocks
+- **Note:** When full, miners stop working. In-flight conveyor items are counted toward capacity.
 
 ### Mine Unlocking
 

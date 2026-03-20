@@ -8,12 +8,12 @@ Audit du mode Mine au 2026-03-20.
 - **MineManager** - Tracking des blocs cassés par zone, ratio de destruction, cooldown de regen, regeneration (remplissage aléatoire pondéré)
 - **MineConfigStore** - CRUD mine/zones/gate/prix en MySQL, cache mémoire avec locks, single-mine convenience methods (getMine(), getZone(), getMineId(), getMinerSlots())
 - **MinePlayerStore** - Cache session joueur, dirty tracking avec auto-save 5s debounce, persistance multi-table
-- **MinePlayerProgress** - Cristaux, upgrades (7 types), inventaire, slot-based miner progression
+- **MinePlayerProgress** - Cristaux, upgrades (8 types), inventaire, slot-based miner progression
 
 ### Data Models
 - **Mine** - id, name, displayOrder, unlockCost (BigNumber), spawn coords/rotation, zones
 - **MineZone** - AABB bounds, blockTable (poids par type de bloc), regenThreshold (0.8), regenCooldownSeconds (45), depth layers (Y-range + block distribution)
-- **MineUpgradeType** - 7 upgrades avec courbes de coût hardcodées :
+- **MineUpgradeType** - 8 upgrades avec courbes de coût hardcodées :
   - Bag Capacity (max 50) : `25 x 1.2^level`, +10 slots/level (base 50)
   - Momentum (max 25) : `50 x 1.22^level`, combo count for more damage
   - Fortune (max 25) : `60 x 1.22^level`, double drop chance %
@@ -21,6 +21,7 @@ Audit du mode Mine au 2026-03-20.
   - Stomp (max 15) : `200 x 1.30^level`, breaks layer of blocks around feet
   - Blast (max 15) : `250 x 1.30^level`, breaks blocks in sphere around target
   - Haste (max 20) : `40 x 1.20^level`, +5% mining speed/level
+  - Conveyor Capacity (max 25) : `30 x 1.18^level`, +200 buffer blocks/level (base 1000)
 
 ### Gameplay Systems
 - **MineBreakSystem** - Handler BreakBlockEvent : validation joueur, zone, cooldown, stockage inventaire

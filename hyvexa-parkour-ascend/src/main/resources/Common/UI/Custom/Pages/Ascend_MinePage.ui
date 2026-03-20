@@ -327,6 +327,13 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           LayoutMode: Top;
         }
+
+        Group { Anchor: (Height: 10); }
+
+        Group #SlotConveyor {
+          Anchor: (Left: 0, Right: 0);
+          LayoutMode: Top;
+        }
       }
 
       // === SLOTS TAB CONTENT (hidden by default) ===

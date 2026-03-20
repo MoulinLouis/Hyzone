@@ -12,6 +12,7 @@
 - Haste speed system and Momentum combo HUD
 - Fortune, Momentum, and AoE break system hooks
 - Upgrade tab redesigned as 3x2 card grid with tooltips
+- Conveyor chest now has an upgradeable capacity limit (base 1000, +200/level, max 6000 at level 25). Miners stop when the buffer is full.
 
 ### Added
 - **Parkour: Persist in-progress runs across disconnects and restarts** - Active parkour runs survive player disconnects and server restarts
