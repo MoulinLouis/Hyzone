@@ -57,30 +57,40 @@ public class PlayerPerksManager {
         return cachedRankNames.computeIfAbsent(playerId, id -> progressStore.getRankName(id, mapStore));
     }
 
-    public String getSpecialRankLabel(UUID playerId) {
+    public enum SpecialRank {
+        FOUNDER("FOUNDER", "#ff8a3d"),
+        VIP("VIP", "#b76cff");
+
+        private final String label;
+        private final String color;
+
+        SpecialRank(String label, String color) {
+            this.label = label;
+            this.color = color;
+        }
+    }
+
+    private SpecialRank getSpecialRank(UUID playerId) {
         if (playerId == null || progressStore == null) {
             return null;
         }
         if (progressStore.isFounder(playerId)) {
-            return "FOUNDER";
+            return SpecialRank.FOUNDER;
         }
         if (progressStore.isVip(playerId)) {
-            return "VIP";
+            return SpecialRank.VIP;
         }
         return null;
     }
 
+    public String getSpecialRankLabel(UUID playerId) {
+        SpecialRank rank = getSpecialRank(playerId);
+        return rank != null ? rank.label : null;
+    }
+
     public String getSpecialRankColor(UUID playerId) {
-        if (playerId == null || progressStore == null) {
-            return null;
-        }
-        if (progressStore.isFounder(playerId)) {
-            return "#ff8a3d";
-        }
-        if (progressStore.isVip(playerId)) {
-            return "#b76cff";
-        }
-        return null;
+        SpecialRank rank = getSpecialRank(playerId);
+        return rank != null ? rank.color : null;
     }
 
     public float getVipSpeedMultiplier(UUID playerId) {
@@ -272,6 +282,6 @@ public class PlayerPerksManager {
         if (value == (long) value) {
             return String.valueOf((long) value);
         }
-        return String.valueOf(value);
+        return String.format("%.1f", value);
     }
 }

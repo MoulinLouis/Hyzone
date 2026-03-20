@@ -30,9 +30,7 @@ public class LeaderboardHologramManager {
     private String parkourWorldName;
 
     public LeaderboardHologramManager(ProgressStore progressStore, MapStore mapStore) {
-        this.progressStore = progressStore;
-        this.mapStore = mapStore;
-        this.parkourWorldName = "Parkour";
+        this(progressStore, mapStore, "Parkour");
     }
 
     public LeaderboardHologramManager(ProgressStore progressStore, MapStore mapStore, String parkourWorldName) {
@@ -91,15 +89,7 @@ public class LeaderboardHologramManager {
         World targetWorld = null;
         Store<EntityStore> targetStore = null;
         if (holo != null && holo.getWorldName() != null) {
-            targetWorld = Universe.get().getWorld(holo.getWorldName());
-            if (targetWorld == null) {
-                for (World candidate : Universe.get().getWorlds().values()) {
-                    if (candidate != null && holo.getWorldName().equalsIgnoreCase(candidate.getName())) {
-                        targetWorld = candidate;
-                        break;
-                    }
-                }
-            }
+            targetWorld = resolveWorldByName(holo.getWorldName());
         }
         if (targetWorld == null) {
             targetWorld = store.getExternalData().getWorld();
@@ -193,12 +183,16 @@ public class LeaderboardHologramManager {
     }
 
     private World resolveParkourWorld() {
-        World world = Universe.get().getWorld(parkourWorldName);
+        return resolveWorldByName(parkourWorldName);
+    }
+
+    private World resolveWorldByName(String name) {
+        World world = Universe.get().getWorld(name);
         if (world != null) {
             return world;
         }
         for (World candidate : Universe.get().getWorlds().values()) {
-            if (candidate != null && parkourWorldName.equalsIgnoreCase(candidate.getName())) {
+            if (candidate != null && name.equalsIgnoreCase(candidate.getName())) {
                 return candidate;
             }
         }

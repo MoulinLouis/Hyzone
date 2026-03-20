@@ -182,9 +182,6 @@ public class AnnouncementManager {
             if (chatAnnouncements.isEmpty()) {
                 return;
             }
-            if (chatAnnouncementIndex >= chatAnnouncements.size()) {
-                chatAnnouncementIndex = 0;
-            }
             message = chatAnnouncements.get(chatAnnouncementIndex);
             chatAnnouncementIndex = (chatAnnouncementIndex + 1) % chatAnnouncements.size();
         }

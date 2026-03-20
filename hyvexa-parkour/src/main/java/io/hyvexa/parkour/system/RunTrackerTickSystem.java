@@ -13,7 +13,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.manager.PlayerPerksManager;
 import io.hyvexa.parkour.tracker.RunTracker;
 
@@ -24,25 +23,19 @@ public class RunTrackerTickSystem extends EntityTickingSystem<EntityStore> {
     private final HyvexaPlugin plugin;
     private final RunTracker runTracker;
     private final PlayerPerksManager perksManager;
-    private final DuelTracker duelTracker;
     private volatile Query<EntityStore> query;
 
     public RunTrackerTickSystem(HyvexaPlugin plugin,
                                 RunTracker runTracker,
-                                PlayerPerksManager perksManager,
-                                DuelTracker duelTracker) {
+                                PlayerPerksManager perksManager) {
         this.plugin = plugin;
         this.runTracker = runTracker;
         this.perksManager = perksManager;
-        this.duelTracker = duelTracker;
     }
 
     @Override
     public void tick(float delta, int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
                      CommandBuffer<EntityStore> buffer) {
-        if (runTracker == null || plugin == null) {
-            return;
-        }
         PlayerRef playerRef = chunk.getComponent(entityId, PlayerRef.getComponentType());
         Player player = chunk.getComponent(entityId, Player.getComponentType());
         TransformComponent transform = chunk.getComponent(entityId, TransformComponent.getComponentType());
@@ -51,10 +44,7 @@ public class RunTrackerTickSystem extends EntityTickingSystem<EntityStore> {
         }
         World world = store.getExternalData().getWorld();
         UUID playerId = playerRef.getUuid();
-        if (!plugin.shouldApplyParkourMode(playerId, world)) {
-            return;
-        }
-        if (duelTracker != null && duelTracker.isInMatch(playerId)) {
+        if (!plugin.shouldApplyParkourMode(world)) {
             return;
         }
         Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
