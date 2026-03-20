@@ -89,6 +89,28 @@ $C.@PageOverlay {
           Visible: false;
         }
 
+        Group #CooldownSection {
+          Anchor: (Left: 0, Right: 0, Top: 6);
+          LayoutMode: Top;
+
+          Group #CooldownRow {
+            Anchor: (Left: 0, Right: 0, Height: 22);
+            LayoutMode: Left;
+
+            Label #CooldownLabel {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
+              Text: "Reset";
+            }
+            Group { FlexWeight: 1; }
+            Label #CooldownTimer {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
+              Text: "0:00";
+            }
+          }
+        }
+
         Group #BagSep {
           Anchor: (Left: 0, Width: 30, Height: 2, Top: 6);
           Background: #f59e0b;
@@ -212,33 +234,6 @@ $C.@PageOverlay {
           }
         }
 
-        Group #CooldownSection {
-          Anchor: (Left: 0, Right: 0, Top: 10);
-          LayoutMode: Top;
-          Visible: false;
-
-          Group #CooldownDivider {
-            Anchor: (Left: 0, Right: 0, Height: 1);
-            Background: #ffffff(0.06);
-          }
-
-          Group #CooldownRow {
-            Anchor: (Left: 0, Right: 0, Top: 8, Height: 22);
-            LayoutMode: Left;
-
-            Label #CooldownLabel {
-              Anchor: (Top: 0, Bottom: 0);
-              Style: (FontSize: 16, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center);
-              Text: "Regen";
-            }
-            Group { FlexWeight: 1; }
-            Label #CooldownTimer {
-              Anchor: (Top: 0, Bottom: 0);
-              Style: (FontSize: 16, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center);
-              Text: "0s";
-            }
-          }
-        }
       }
     }
 

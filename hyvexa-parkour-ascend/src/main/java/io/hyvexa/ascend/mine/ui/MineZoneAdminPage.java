@@ -357,23 +357,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private void handleSetThreshold(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
-        MineZone zone = resolveSelectedZone(player);
-        if (zone == null) return;
-        double value;
-        try {
-            value = Double.parseDouble(threshold);
-        } catch (NumberFormatException e) {
-            player.sendMessage(Message.raw("Threshold must be a number (0.0-1.0)."));
-            return;
-        }
-        if (value < 0.0 || value > 1.0) {
-            player.sendMessage(Message.raw("Threshold must be between 0.0 and 1.0."));
-            return;
-        }
-        zone.setRegenThreshold(value);
-        mineConfigStore.saveZone(zone);
-        player.sendMessage(Message.raw("Threshold set: " + value));
-        sendRefresh(ref, store);
+        player.sendMessage(Message.raw("Threshold no longer used. Use cooldown field to set reset interval (seconds)."));
     }
 
     private void handleSetCooldown(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -385,16 +369,16 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         try {
             value = Integer.parseInt(cooldown);
         } catch (NumberFormatException e) {
-            player.sendMessage(Message.raw("Cooldown must be a whole number (seconds)."));
+            player.sendMessage(Message.raw("Interval must be a whole number (seconds)."));
             return;
         }
         if (value < 0) {
-            player.sendMessage(Message.raw("Cooldown must be >= 0."));
+            player.sendMessage(Message.raw("Interval must be >= 0."));
             return;
         }
-        zone.setRegenCooldownSeconds(value);
+        zone.setRegenIntervalSeconds(value);
         mineConfigStore.saveZone(zone);
-        player.sendMessage(Message.raw("Cooldown set: " + value + "s"));
+        player.sendMessage(Message.raw("Reset interval set: " + value + "s"));
         sendRefresh(ref, store);
     }
 
@@ -644,8 +628,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
                 StringBuilder sb = new StringBuilder();
                 sb.append(w).append("x").append(h).append("x").append(d);
                 sb.append(" | Blocks: ").append(zone.getBlockTable().size());
-                sb.append(" | Regen: ").append(formatPercent(zone.getRegenThreshold()));
-                sb.append("/").append(zone.getRegenCooldownSeconds()).append("s");
+                sb.append(" | Reset: ").append(zone.getRegenIntervalSeconds()).append("s");
                 sb.append(" | Layers: ").append(zone.getLayers().size());
                 zoneInfo = sb.toString();
             } else {
@@ -695,7 +678,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             int d = zone.getMaxZ() - zone.getMinZ() + 1;
             String info = w + "x" + h + "x" + d
                 + " | Blocks: " + zone.getBlockTable().size()
-                + " | Regen: " + formatPercent(zone.getRegenThreshold()) + "/" + zone.getRegenCooldownSeconds() + "s";
+                + " | Reset: " + zone.getRegenIntervalSeconds() + "s";
             commandBuilder.set(entrySelector + " #ZoneInfo.Text", info);
 
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -814,10 +797,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         buildLayerList(commandBuilder, eventBuilder);
         bindEvents(eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
-    }
-
-    private String formatPercent(double value) {
-        return ((int) (value * 100)) + "%";
     }
 
     private String formatProb(double value) {

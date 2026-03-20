@@ -11,8 +11,7 @@ public class MineZone {
     private int minX, minY, minZ;
     private int maxX, maxY, maxZ;
     private final Map<String, Double> blockTable = new HashMap<>();
-    private double regenThreshold = 0.8;
-    private int regenCooldownSeconds = 45;
+    private int regenIntervalSeconds = 600;
     private final List<MineZoneLayer> layers = new ArrayList<>();
 
     public MineZone(String id, String mineId, int x1, int y1, int z1, int x2, int y2, int z2) {
@@ -46,8 +45,7 @@ public class MineZone {
     public int getMaxZ() { return maxZ; }
     public Map<String, Double> getBlockTable() { return blockTable; }
     public List<MineZoneLayer> getLayers() { return layers; }
-    public double getRegenThreshold() { return regenThreshold; }
-    public int getRegenCooldownSeconds() { return regenCooldownSeconds; }
+    public int getRegenIntervalSeconds() { return regenIntervalSeconds; }
 
     /**
      * Returns the layer that covers the given Y coordinate, or null if none.
@@ -80,6 +78,5 @@ public class MineZone {
     public void setMaxX(int maxX) { this.maxX = maxX; }
     public void setMaxY(int maxY) { this.maxY = maxY; }
     public void setMaxZ(int maxZ) { this.maxZ = maxZ; }
-    public void setRegenThreshold(double regenThreshold) { this.regenThreshold = regenThreshold; }
-    public void setRegenCooldownSeconds(int regenCooldownSeconds) { this.regenCooldownSeconds = regenCooldownSeconds; }
+    public void setRegenIntervalSeconds(int regenIntervalSeconds) { this.regenIntervalSeconds = regenIntervalSeconds; }
 }

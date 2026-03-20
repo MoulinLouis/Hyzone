@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -106,6 +107,10 @@ public class MineHudManager {
         return huds.containsKey(playerId);
     }
 
+    public Set<UUID> getTrackedPlayerIds() {
+        return huds.keySet();
+    }
+
     private void updateCrystals(MineHudState state, MinePlayerProgress progress) {
         long crystals = progress.getCrystals();
         if (crystals == state.lastCrystals) {
@@ -174,26 +179,19 @@ public class MineHudManager {
             state.hud.update(false, nameBuilder);
         }
 
-        // Existing cooldown logic
-        long remainingMs = 0;
-        if (currentZone != null && mineManager.isZoneInCooldown(currentZone.getId())) {
-            remainingMs = mineManager.getZoneCooldownRemainingMs(currentZone.getId());
-        }
+        // Always-visible regen timer
+        long remainingMs = mineManager.getRegenRemainingMs();
+        int totalSeconds = (int) Math.ceil(remainingMs / 1000.0);
+        String timerText = String.format("%d:%02d", totalSeconds / 60, totalSeconds % 60);
 
-        boolean showCooldown = remainingMs > 0;
-        int remainingSeconds = (int) Math.ceil(remainingMs / 1000.0);
-        String cooldownKey = showCooldown + "|" + remainingSeconds;
-
-        if (cooldownKey.equals(state.lastCooldownKey)) {
+        if (timerText.equals(state.lastCooldownKey)) {
             return;
         }
-        state.lastCooldownKey = cooldownKey;
+        state.lastCooldownKey = timerText;
 
         UICommandBuilder cb = new UICommandBuilder();
-        cb.set("#CooldownSection.Visible", showCooldown);
-        if (showCooldown) {
-            cb.set("#CooldownTimer.Text", remainingSeconds + "s");
-        }
+        cb.set("#CooldownSection.Visible", true);
+        cb.set("#CooldownTimer.Text", timerText);
         state.hud.update(false, cb);
     }
 

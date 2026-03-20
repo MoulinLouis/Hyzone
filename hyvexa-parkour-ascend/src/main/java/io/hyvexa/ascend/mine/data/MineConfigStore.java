@@ -159,8 +159,7 @@ public class MineConfigStore {
                         }
                     }
 
-                    zone.setRegenThreshold(rs.getDouble("regen_threshold"));
-                    zone.setRegenCooldownSeconds(rs.getInt("regen_cooldown_seconds"));
+                    zone.setRegenIntervalSeconds(rs.getInt("regen_cooldown_seconds"));
                     mine.getZones().add(zone);
                 }
             }
@@ -530,13 +529,12 @@ public class MineConfigStore {
 
         String sql = """
             INSERT INTO mine_zones (id, mine_id, min_x, min_y, min_z, max_x, max_y, max_z,
-                block_table_json, regen_threshold, regen_cooldown_seconds)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                block_table_json, regen_cooldown_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 min_x = VALUES(min_x), min_y = VALUES(min_y), min_z = VALUES(min_z),
                 max_x = VALUES(max_x), max_y = VALUES(max_y), max_z = VALUES(max_z),
                 block_table_json = VALUES(block_table_json),
-                regen_threshold = VALUES(regen_threshold),
                 regen_cooldown_seconds = VALUES(regen_cooldown_seconds)
             """;
 
@@ -554,8 +552,7 @@ public class MineConfigStore {
                 stmt.setInt(i++, zone.getMaxY());
                 stmt.setInt(i++, zone.getMaxZ());
                 stmt.setString(i++, GSON.toJson(zone.getBlockTable()));
-                stmt.setDouble(i++, zone.getRegenThreshold());
-                stmt.setInt(i, zone.getRegenCooldownSeconds());
+                stmt.setInt(i, zone.getRegenIntervalSeconds());
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {

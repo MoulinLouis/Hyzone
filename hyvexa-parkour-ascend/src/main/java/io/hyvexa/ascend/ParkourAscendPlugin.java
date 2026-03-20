@@ -48,6 +48,7 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.mine.MineBonusCalculator;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.egg.EggRouletteAnimation;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -225,6 +226,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Mine HUD manager
         if (minePlayerStore != null && mineManager != null && mineConfigStore != null) {
             mineHudManager = new MineHudManager(minePlayerStore, mineManager, mineConfigStore);
+            mineManager.setMineHudManager(mineHudManager);
+            mineManager.initTimer();
         }
 
         // Mine achievement tracker
@@ -537,6 +540,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: VexaStore");
             runSafe(() -> DiscordLinkStore.getInstance().evictPlayer(playerId),
                     "Disconnect cleanup: DiscordLinkStore");
+            runSafe(() -> EggRouletteAnimation.cancelIfActive(playerId),
+                    "Disconnect cleanup: eggRoulette");
         });
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
@@ -1038,5 +1043,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 },
                 (plugin, player) -> plugin.getMinePlayerStore() != null && plugin.getMineConfigStore() != null,
                 true, true)));
+        // Mine Leaderboard -> MineLeaderboardPage
+        registry.register("Mine_Leaderboard_Interaction",
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> new io.hyvexa.ascend.mine.ui.MineLeaderboardPage(
+                    playerRef, plugin.getMineAchievementTracker()),
+                (plugin, player) -> plugin.getMineAchievementTracker() != null,
+                false, true)));
     }
 }

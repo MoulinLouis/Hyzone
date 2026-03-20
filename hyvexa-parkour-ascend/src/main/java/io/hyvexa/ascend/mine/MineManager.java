@@ -9,9 +9,20 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.World;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.mine.hud.MineHudManager;
+import com.hypixel.hytale.math.vector.Vector3d;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -24,8 +35,9 @@ public class MineManager {
     // Cache of resolved block tables per zone to avoid re-resolving on every regen
     private final Map<String, ResolvedZoneCache> resolvedZoneCache = new ConcurrentHashMap<>();
 
-    // zoneId -> timestamp when cooldown started (0 = not in cooldown)
-    private final Map<String, Long> zoneCooldownStart = new ConcurrentHashMap<>();
+    private volatile long nextRegenTimestamp = 0;
+    private volatile boolean regenerating = false;
+    private MineHudManager mineHudManager;
 
     private volatile World mineWorld;
 
@@ -111,27 +123,13 @@ public class MineManager {
         return broken != null && broken.contains(MinePositionUtils.packPosition(x, y, z));
     }
 
-    public double getBrokenRatio(String zoneId) {
-        MineZone zone = findZoneById(zoneId);
-        if (zone == null) return 0;
-        Set<Long> broken = brokenBlocks.get(zoneId);
-        if (broken == null) return 0;
-        return (double) broken.size() / zone.getTotalBlocks();
-    }
-
     public boolean isZoneInCooldown(String zoneId) {
-        Long start = zoneCooldownStart.get(zoneId);
-        return start != null && start > 0;
+        return regenerating;
     }
 
-    public long getZoneCooldownRemainingMs(String zoneId) {
-        Long start = zoneCooldownStart.get(zoneId);
-        if (start == null || start == 0) return 0;
-        MineZone zone = findZoneById(zoneId);
-        if (zone == null) return 0;
-        long elapsed = System.currentTimeMillis() - start;
-        long cooldownMs = zone.getRegenCooldownSeconds() * 1000L;
-        return Math.max(0, cooldownMs - elapsed);
+    public long getRegenRemainingMs() {
+        if (nextRegenTimestamp == 0) return 0;
+        return Math.max(0, nextRegenTimestamp - System.currentTimeMillis());
     }
 
     private MineZone findZoneById(String zoneId) {
@@ -147,6 +145,15 @@ public class MineManager {
     }
 
     public void setWorld(World world) { this.mineWorld = world; }
+
+    public void setMineHudManager(MineHudManager mineHudManager) { this.mineHudManager = mineHudManager; }
+
+    public void initTimer() {
+        MineZone zone = configStore.getZone();
+        if (zone != null) {
+            nextRegenTimestamp = System.currentTimeMillis() + zone.getRegenIntervalSeconds() * 1000L;
+        }
+    }
 
     /**
      * Sets a block to air on the world thread using the canonical mineWorld reference.
@@ -167,35 +174,51 @@ public class MineManager {
 
     public void tick() {
         MineZone zone = configStore.getZone();
-        if (zone == null) return;
+        if (zone == null || regenerating || nextRegenTimestamp == 0) return;
+        if (System.currentTimeMillis() < nextRegenTimestamp) return;
 
-        long now = System.currentTimeMillis();
-        String zoneId = zone.getId();
+        World world = mineWorld;
+        if (world == null) return;
 
-        // Check if zone is in cooldown
-        Long cooldownStart = zoneCooldownStart.get(zoneId);
-        if (cooldownStart != null && cooldownStart > 0) {
-            // Check if cooldown is over
-            long cooldownMs = zone.getRegenCooldownSeconds() * 1000L;
-            if (now - cooldownStart >= cooldownMs) {
-                // Regenerate on world thread
-                World world = mineWorld;
-                if (world != null) {
-                    world.execute(() -> {
-                        if (generateZone(world, zone)) {
-                            zoneCooldownStart.remove(zoneId, cooldownStart);
-                        }
-                    });
-                }
+        regenerating = true;
+        world.execute(() -> {
+            try {
+                teleportPlayersOutOfZone(world, zone);
+                generateZone(world, zone);
+            } finally {
+                nextRegenTimestamp = System.currentTimeMillis() + zone.getRegenIntervalSeconds() * 1000L;
+                regenerating = false;
             }
-            return; // skip threshold check while in cooldown
-        }
+        });
+    }
 
-        // Check if threshold is reached
-        double ratio = getBrokenRatio(zoneId);
-        if (ratio >= zone.getRegenThreshold()) {
-            // Start cooldown
-            zoneCooldownStart.put(zoneId, now);
+    private void teleportPlayersOutOfZone(World world, MineZone zone) {
+        MineHudManager hudMgr = this.mineHudManager;
+        if (hudMgr == null) return;
+
+        double safeX = (zone.getMinX() + zone.getMaxX()) / 2.0;
+        double safeY = zone.getMaxY() + 2.0;
+        double safeZ = (zone.getMinZ() + zone.getMaxZ()) / 2.0;
+        Vector3d safePos = new Vector3d(safeX, safeY, safeZ);
+
+        for (UUID playerId : hudMgr.getTrackedPlayerIds()) {
+            PlayerRef playerRef = ParkourAscendPlugin.getInstance().getPlayerRef(playerId);
+            if (playerRef == null) continue;
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) continue;
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) continue;
+
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform == null || transform.getPosition() == null) continue;
+
+            int px = (int) Math.floor(transform.getPosition().getX());
+            int py = (int) Math.floor(transform.getPosition().getY());
+            int pz = (int) Math.floor(transform.getPosition().getZ());
+            if (!zone.contains(px, py, pz)) continue;
+
+            store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(world, safePos, transform.getRotation()));
         }
     }
 

@@ -61,6 +61,7 @@ public final class MineRewardHelper {
             MineAchievementTracker achievementTracker = achPlugin.getMineAchievementTracker();
             if (achievementTracker != null) {
                 achievementTracker.incrementBlocksMined(playerId, blocksGained);
+                achievementTracker.incrementManualBlocksMined(playerId, blocksGained);
             }
         }
 
@@ -94,9 +95,7 @@ public final class MineRewardHelper {
         Long last = lastRegenMessage.get(playerId);
         if (last == null || now - last > 3000) {
             lastRegenMessage.put(playerId, now);
-            long remaining = mineManager.getZoneCooldownRemainingMs(zoneId);
-            int secondsLeft = (int) Math.ceil(remaining / 1000.0);
-            player.sendMessage(Message.raw("Zone regenerating... " + secondsLeft + "s remaining"));
+            player.sendMessage(Message.raw("Mine is resetting..."));
         }
     }
 }
