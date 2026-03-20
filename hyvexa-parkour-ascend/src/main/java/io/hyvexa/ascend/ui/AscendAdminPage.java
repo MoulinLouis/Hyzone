@@ -378,10 +378,10 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
     }
 
     private void populateFields(UICommandBuilder commandBuilder) {
-        commandBuilder.set("#MapIdField.Value", mapId != null ? mapId : "");
-        commandBuilder.set("#MapNameField.Value", mapName != null ? mapName : "");
-        commandBuilder.set("#MapOrderField.Value", mapOrder != null ? mapOrder : "0");
-        commandBuilder.set("#MapSearchField.Value", mapSearch != null ? mapSearch : "");
+        commandBuilder.set("#MapIdField.Value", mapId);
+        commandBuilder.set("#MapNameField.Value", mapName);
+        commandBuilder.set("#MapOrderField.Value", mapOrder);
+        commandBuilder.set("#MapSearchField.Value", mapSearch);
 
         String selectedInfo = "No map selected";
         if (selectedMapId != null && !selectedMapId.isBlank()) {

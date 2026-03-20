@@ -17,6 +17,8 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -52,6 +54,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     private static final String COLOR_OFF = "#6b7280";
     private static final String COLOR_ACCENT = "#f59e0b";
     private static final String COLOR_LOCKED_BORDER = "#4b5563";
+    private static final SummitCategory[] SUMMIT_CATEGORIES = SummitCategory.values();
     private static final long REFRESH_INTERVAL_MS = 1000L;
 
     private final AscendPlayerStore playerStore;
@@ -167,9 +170,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         // Timer field
         commandBuilder.set("#ElevTimerField.Value", String.valueOf(playerStore.getAutoElevationTimerSeconds(playerId)));
 
-        // Recalculate targetIndex based on current multiplier before displaying
         List<Long> targets = playerStore.getAutoElevationTargets(playerId);
-        recalculateTargetIndex(playerId, targets);
         int targetIndex = playerStore.getAutoElevationTargetIndex(playerId);
         for (int i = 0; i < MAX_TARGETS; i++) {
             if (i < targets.size()) {
@@ -200,7 +201,6 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         // Summit categories
         List<AscendPlayerProgress.AutoSummitCategoryConfig> sumConfig = playerStore.getAutoSummitConfig(playerId);
-        io.hyvexa.ascend.AscendConstants.SummitCategory[] categories = io.hyvexa.ascend.AscendConstants.SummitCategory.values();
 
         int activeCount = 0;
         int reachedCount = 0;
@@ -211,8 +211,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
             // Level display
             int level = 0;
-            if (i < categories.length) {
-                level = playerStore.getSummitLevel(playerId, categories[i]);
+            if (i < SUMMIT_CATEGORIES.length) {
+                level = playerStore.getSummitLevel(playerId, SUMMIT_CATEGORIES[i]);
             }
 
             int targetLevel = catConfig.getTargetLevel();
@@ -539,9 +539,9 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
                 return;
             }
             int currentLevel = playerStore.getOrCreatePlayer(playerId).getElevationMultiplier();
-            long currentActualMultiplier = Math.round(io.hyvexa.ascend.AscendConstants.getElevationMultiplier(currentLevel));
+            long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
             if (value <= currentActualMultiplier) {
-                player.sendMessage(Message.raw("[Automation] Target must be higher than your current elevation (" + io.hyvexa.ascend.AscendConstants.formatElevationMultiplier(currentLevel) + ").")
+                player.sendMessage(Message.raw("[Automation] Target must be higher than your current elevation (" + AscendConstants.formatElevationMultiplier(currentLevel) + ").")
                     .color(SystemMessageUtils.ERROR));
                 return;
             }
@@ -589,7 +589,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
      */
     private void recalculateTargetIndex(UUID playerId, List<Long> targets) {
         int currentLevel = playerStore.getOrCreatePlayer(playerId).getElevationMultiplier();
-        long currentActualMultiplier = Math.round(io.hyvexa.ascend.AscendConstants.getElevationMultiplier(currentLevel));
+        long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
         int newIndex = 0;
         while (newIndex < targets.size() && targets.get(newIndex) <= currentActualMultiplier) {
             newIndex++;

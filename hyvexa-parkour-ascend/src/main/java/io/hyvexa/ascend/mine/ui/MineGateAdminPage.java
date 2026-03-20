@@ -32,6 +32,13 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
     private static final Map<UUID, double[]> exitPos1 = new ConcurrentHashMap<>();
     private static final Map<UUID, double[]> exitPos2 = new ConcurrentHashMap<>();
 
+    public static void clearPlayer(UUID playerId) {
+        entryPos1.remove(playerId);
+        entryPos2.remove(playerId);
+        exitPos1.remove(playerId);
+        exitPos2.remove(playerId);
+    }
+
     private final PlayerRef playerRef;
     private final MineConfigStore mineConfigStore;
 

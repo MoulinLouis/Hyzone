@@ -37,6 +37,11 @@ public class SummitPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SUMMIT_PREFIX = "Summit_";
+    private static final SummitCategory[] CATEGORIES = {
+        SummitCategory.MULTIPLIER_GAIN,
+        SummitCategory.RUNNER_SPEED,
+        SummitCategory.EVOLUTION_POWER
+    };
     private static final long REFRESH_INTERVAL_MS = 1000L;
 
     private final AscendPlayerStore playerStore;
@@ -85,14 +90,8 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         // Build 3 category cards
-        SummitCategory[] categories = {
-            SummitCategory.MULTIPLIER_GAIN,
-            SummitCategory.RUNNER_SPEED,
-            SummitCategory.EVOLUTION_POWER
-        };
-
-        for (int i = 0; i < categories.length; i++) {
-            SummitCategory category = categories[i];
+        for (int i = 0; i < CATEGORIES.length; i++) {
+            SummitCategory category = CATEGORIES[i];
             commandBuilder.append("#CategoryCards", "Pages/Ascend_SummitEntry.ui");
 
             String accentColor = resolveCategoryAccentColor(i);
@@ -135,14 +134,8 @@ public class SummitPage extends BaseAscendPage {
             FormatUtils.formatBigNumber(voltForNextXp) + " accumulated volt";
         commandBuilder.set("#ProgressText.Text", progressText);
 
-        SummitCategory[] categories = {
-            SummitCategory.MULTIPLIER_GAIN,
-            SummitCategory.RUNNER_SPEED,
-            SummitCategory.EVOLUTION_POWER
-        };
-
-        for (int i = 0; i < categories.length; i++) {
-            SummitCategory category = categories[i];
+        for (int i = 0; i < CATEGORIES.length; i++) {
+            SummitCategory category = CATEGORIES[i];
             SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
             // Category name with level progression
             String levelText;
@@ -154,8 +147,8 @@ public class SummitPage extends BaseAscendPage {
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryName.Text", category.getDisplayName() + levelText);
 
             // Bonus text
-            String bonusText = "Current: " + formatBonus(category, preview.currentBonus())
-                + " -> Next: " + formatBonus(category, preview.newBonus());
+            String bonusText = "Current: " + formatBonus(preview.currentBonus())
+                + " -> Next: " + formatBonus(preview.newBonus());
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
 
             // XP progress text
@@ -321,8 +314,8 @@ public class SummitPage extends BaseAscendPage {
 
         AscendHudManager.showToastSafe(playerId, ToastType.EVOLUTION,
             category.getDisplayName() + " Lv." + FormatUtils.formatLong(preview.currentLevel())
-            + " -> Lv." + FormatUtils.formatLong(result.newLevel()) + " | " + formatBonus(category, preview.currentBonus())
-            + " -> " + formatBonus(category, preview.newBonus()));
+            + " -> Lv." + FormatUtils.formatLong(result.newLevel()) + " | " + formatBonus(preview.currentBonus())
+            + " -> " + formatBonus(preview.newBonus()));
         player.sendMessage(Message.raw("[Summit] Progress reset: volt, elevation, multipliers, runners, map unlocks")
             .color(SystemMessageUtils.SECONDARY));
 
@@ -369,7 +362,7 @@ public class SummitPage extends BaseAscendPage {
     /**
      * Format a bonus value for display - all categories show as multipliers.
      */
-    private String formatBonus(SummitCategory category, double value) {
+    private String formatBonus(double value) {
         return String.format(Locale.US, "x%.2f", value);
     }
 

@@ -24,7 +24,6 @@ import java.util.Map;
 
 /**
  * Unified block config page: shows ALL registered blocks with their HP and price.
- * Replaces both MineBlockPricesPage and the old block HP page.
  */
 public class MineBlockHpPage extends InteractiveCustomUIPage<MineBlockHpPage.ConfigData> {
 

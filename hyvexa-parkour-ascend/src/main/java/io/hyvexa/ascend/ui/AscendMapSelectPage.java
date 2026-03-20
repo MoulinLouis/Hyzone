@@ -2,9 +2,11 @@ package io.hyvexa.ascend.ui;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -77,7 +79,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
     private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
     private int lastMapCount;
-    private final List<String> displayedMapIds = new ArrayList<>();
+    private final Set<String> displayedMapIds = new LinkedHashSet<>();
     private final Map<String, int[]> cachedMapState = new HashMap<>(); // mapId -> [speedLevel, stars, hasRobot]
 
 
@@ -644,31 +646,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Check if new level unlocks next map
             if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
-                List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
-                if (!unlockedMapIds.isEmpty()) {
-                    // Trigger map unlock tutorial
-                    ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                    if (plugin != null && plugin.getTutorialTriggerService() != null) {
-                        plugin.getTutorialTriggerService().checkMapUnlock(playerRef.getUuid(), ref);
-                    }
-                }
-                for (String unlockedMapId : unlockedMapIds) {
-                    AscendMap unlockedMap = mapStore.getMap(unlockedMapId);
-                    if (unlockedMap != null) {
-                        String mapName = unlockedMap.getName() != null && !unlockedMap.getName().isBlank()
-                            ? unlockedMap.getName()
-                            : unlockedMap.getId();
-                        Player player = store.getComponent(ref, Player.getComponentType());
-                        if (player != null) {
-                            player.sendMessage(Message.raw("New map unlocked: " + mapName + "!"));
-                        }
-
-                        // Add map to UI immediately
-                        if (isCurrentPage() && ref.isValid()) {
-                            addMapToUI(ref, store, unlockedMap);
-                        }
-                    }
-                }
+                checkAndProcessMapUnlocks(ref, store, playerRef);
             }
 
             updateRobotRow(ref, store, mapId);
@@ -935,6 +913,31 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
     }
 
+    private void checkAndProcessMapUnlocks(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
+        if (!unlockedMapIds.isEmpty()) {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin != null && plugin.getTutorialTriggerService() != null) {
+                plugin.getTutorialTriggerService().checkMapUnlock(playerRef.getUuid(), ref);
+            }
+        }
+        for (String unlockedMapId : unlockedMapIds) {
+            AscendMap unlockedMap = mapStore.getMap(unlockedMapId);
+            if (unlockedMap != null) {
+                String mapName = unlockedMap.getName() != null && !unlockedMap.getName().isBlank()
+                    ? unlockedMap.getName()
+                    : unlockedMap.getId();
+                Player player = store.getComponent(ref, Player.getComponentType());
+                if (player != null) {
+                    player.sendMessage(Message.raw("New map unlocked: " + mapName + "!"));
+                }
+                if (isCurrentPage() && ref.isValid()) {
+                    addMapToUI(ref, store, unlockedMap);
+                }
+            }
+        }
+    }
+
     private void sendMessage(Store<EntityStore> store, Ref<EntityStore> ref, String text) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
@@ -1027,29 +1030,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
                     // Check if new level unlocks next map
                     if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
-                        List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
-                        if (!unlockedMapIds.isEmpty()) {
-                            ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
-                            if (p != null && p.getTutorialTriggerService() != null) {
-                                p.getTutorialTriggerService().checkMapUnlock(playerRef.getUuid(), ref);
-                            }
-                        }
-                        for (String unlockedMapId : unlockedMapIds) {
-                            AscendMap unlockedMap = mapStore.getMap(unlockedMapId);
-                            if (unlockedMap != null) {
-                                String mapName = unlockedMap.getName() != null && !unlockedMap.getName().isBlank()
-                                    ? unlockedMap.getName()
-                                    : unlockedMap.getId();
-                                Player player = store.getComponent(ref, Player.getComponentType());
-                                if (player != null) {
-                                    player.sendMessage(Message.raw("New map unlocked: " + mapName + "!"));
-                                }
-                                // Add map to UI immediately to prevent crash when updating non-existent elements
-                                if (isCurrentPage() && ref.isValid()) {
-                                    addMapToUI(ref, store, unlockedMap);
-                                }
-                            }
-                        }
+                        checkAndProcessMapUnlocks(ref, store, playerRef);
                     }
                     success = true;
                 }

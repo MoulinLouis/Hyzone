@@ -290,8 +290,8 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     }
 
     private void populateFields(UICommandBuilder commandBuilder, Store<EntityStore> store, Ref<EntityStore> ref) {
-        commandBuilder.set("#VoltAmountField.Value", amountInput != null ? amountInput : "");
-        commandBuilder.set("#SkillPointsAmountField.Value", skillPointsInput != null ? skillPointsInput : "");
+        commandBuilder.set("#VoltAmountField.Value", amountInput);
+        commandBuilder.set("#SkillPointsAmountField.Value", skillPointsInput);
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
             AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
