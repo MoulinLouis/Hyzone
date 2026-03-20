@@ -36,9 +36,18 @@ public class CosmeticManager {
     private static final CosmeticManager INSTANCE = new CosmeticManager();
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final float PREVIEW_DURATION_SECONDS = 5f;
+    private static final long APPLY_DELAY_MS = 100;
+    private static final long LOGIN_APPLY_DELAY_MS = 1000;
 
     /** Tracks active preview timers so we can cancel on disconnect. */
     private final ConcurrentHashMap<UUID, ScheduledFuture<?>> previewTimers = new ConcurrentHashMap<>();
+
+    /**
+     * Tracks the latest cosmetic ID that should be applied per player.
+     * Used to handle rapid equip switches: only the last requested cosmetic gets applied
+     * when the deferred next-tick task runs.
+     */
+    private final ConcurrentHashMap<UUID, String> pendingCosmeticId = new ConcurrentHashMap<>();
 
     private CosmeticManager() {}
 
@@ -48,6 +57,9 @@ public class CosmeticManager {
 
     /**
      * Apply an equipped cosmetic. Must be called from world thread.
+     * The effect is cleared immediately but the new effect is applied on the next tick,
+     * because clearEffects + addInfiniteEffect in the same tick causes the engine to
+     * lose the new effect.
      */
     public void applyCosmetic(Ref<EntityStore> ref, Store<EntityStore> store, String cosmeticId) {
         if (ref == null || !ref.isValid()) return;
@@ -55,14 +67,40 @@ public class CosmeticManager {
 
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) return;
+        UUID playerId = playerRef.getUuid();
 
         if (def == null) {
-            clearCosmeticChannels(ref, store, playerRef.getUuid());
+            pendingCosmeticId.remove(playerId);
+            clearCosmeticChannels(ref, store, playerId);
             return;
         }
 
-        clearCosmeticChannels(ref, store, playerRef.getUuid());
-        applyDefinition(ref, store, playerRef, def, false);
+        clearCosmeticChannels(ref, store, playerId);
+
+        // Record the desired cosmetic and defer the apply after a short delay.
+        // clearEffects + addInfiniteEffect in the same tick causes the engine to lose the effect.
+        // world.execute() can still run in the same tick, so we use a real time delay.
+        // If the player rapidly switches cosmetics, only the latest one is applied.
+        pendingCosmeticId.put(playerId, cosmeticId);
+        World world = store.getExternalData().getWorld();
+        if (world == null) return;
+
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            if (!ref.isValid()) return;
+            if (!cosmeticId.equals(pendingCosmeticId.get(playerId))) return;
+            pendingCosmeticId.remove(playerId);
+
+            AsyncExecutionHelper.runBestEffort(world, () -> {
+                if (!ref.isValid()) return;
+                PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (pRef == null) return;
+
+                CosmeticDefinition latestDef = CosmeticDefinition.fromId(cosmeticId);
+                if (latestDef == null) return;
+
+                applyDefinition(ref, store, pRef, latestDef, false);
+            }, "cosmetic.apply.deferred", "deferred cosmetic apply", "player=" + playerId);
+        }, APPLY_DELAY_MS, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -72,6 +110,7 @@ public class CosmeticManager {
         if (ref == null || !ref.isValid()) return;
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         UUID playerId = playerRef != null ? playerRef.getUuid() : null;
+        if (playerId != null) pendingCosmeticId.remove(playerId);
         clearCosmeticChannels(ref, store, playerId);
     }
 
@@ -89,11 +128,22 @@ public class CosmeticManager {
         UUID playerId = playerRef.getUuid();
 
         cancelPreviewTimer(playerId);
+        pendingCosmeticId.remove(playerId);
         clearCosmeticChannels(ref, store, playerId);
-        applyDefinition(ref, store, playerRef, def, true);
 
+        // Delay needed: clearEffects + addEffect in same tick loses the effect
         World world = store.getExternalData().getWorld();
         if (world == null) return;
+
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            if (!ref.isValid()) return;
+            AsyncExecutionHelper.runBestEffort(world, () -> {
+                if (!ref.isValid()) return;
+                PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (pRef == null) return;
+                applyDefinition(ref, store, pRef, def, true);
+            }, "cosmetic.preview.apply", "deferred preview apply", "player=" + playerId);
+        }, APPLY_DELAY_MS, TimeUnit.MILLISECONDS);
 
         ScheduledFuture<?> timer = HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             previewTimers.remove(playerId);
@@ -114,7 +164,9 @@ public class CosmeticManager {
     }
 
     /**
-     * Re-apply the player's equipped cosmetic on login. Must be called from world thread.
+     * Re-apply the player's equipped cosmetic on login.
+     * Delayed to let the client finish receiving the initial entity state from the entity tracker,
+     * otherwise our sync packet gets overwritten.
      */
     public void reapplyOnLogin(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (ref == null || !ref.isValid()) return;
@@ -127,9 +179,19 @@ public class CosmeticManager {
             if (CosmeticDefinition.fromId(equipped) == null) {
                 CosmeticStore.getInstance().unequipCosmetic(playerRef.getUuid());
                 removeCosmetic(ref, store);
-            } else {
-                applyCosmetic(ref, store, equipped);
+                return;
             }
+
+            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            if (world == null) return;
+
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                if (!ref.isValid()) return;
+                AsyncExecutionHelper.runBestEffort(world, () -> {
+                    if (!ref.isValid()) return;
+                    applyCosmetic(ref, store, equipped);
+                }, "cosmetic.login.reapply", "reapply cosmetic on login", "player=" + playerRef.getUuid());
+            }, LOGIN_APPLY_DELAY_MS, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -168,6 +230,7 @@ public class CosmeticManager {
     public void cleanupOnDisconnect(UUID playerId) {
         if (playerId == null) return;
         cancelPreviewTimer(playerId);
+        pendingCosmeticId.remove(playerId);
         TrailManager.getInstance().stopTrail(playerId);
         ModelParticleTrailManager.getInstance().stopTrail(playerId);
     }
@@ -180,6 +243,7 @@ public class CosmeticManager {
             if (timer != null) timer.cancel(false);
         }
         previewTimers.clear();
+        pendingCosmeticId.clear();
         TrailManager.getInstance().shutdown();
         ModelParticleTrailManager.getInstance().shutdown();
     }
