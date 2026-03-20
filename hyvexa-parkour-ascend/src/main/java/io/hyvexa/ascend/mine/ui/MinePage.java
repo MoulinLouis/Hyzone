@@ -17,18 +17,22 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.achievement.MineAchievement;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
-import io.hyvexa.ascend.mine.data.Mine;
+import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
+import io.hyvexa.ascend.mine.data.MineZoneLayer;
+import io.hyvexa.ascend.mine.data.MinerRarity;
+import io.hyvexa.ascend.mine.egg.EggOpenService;
+import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
-import io.hyvexa.ascend.mine.robot.MinerRobotState;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import io.hyvexa.ascend.mine.data.PickaxeTier;
@@ -38,27 +42,26 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 
 /**
  * Tabbed mine page opened by pickaxe right-click.
- * Tab "Miner": per-mine miner cards (buy, upgrade speed, evolve).
- * Tab "Upgrade": global pickaxe upgrades (bag capacity).
+ * Tabs: Upgrade, Slots, Eggs, Collection.
  */
 public class MinePage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
-    private static final String BUTTON_TAB_MINER = "TabMiner";
     private static final String BUTTON_TAB_UPGRADE = "TabUpgrade";
+    private static final String BUTTON_TAB_SLOTS = "TabSlots";
+    private static final String BUTTON_TAB_EGGS = "TabEggs";
+    private static final String BUTTON_TAB_COLLECTION = "TabCollection";
     private static final String BUTTON_BUY_UPGRADE_PREFIX = "BuyUpgrade_";
-    private static final String BUTTON_BUY_MINER_PREFIX = "BuyMiner_";
-    private static final String BUTTON_MINER_SPEED_PREFIX = "MinerSpeed_";
-    private static final String BUTTON_MINER_EVOLVE_PREFIX = "MinerEvolve_";
     private static final String BUTTON_RESET = "ResetAll";
     private static final String BUTTON_BUY_PICKAXE = "BuyPickaxe";
+    private static final String BUTTON_ENHANCE_PICKAXE = "EnhancePickaxe";
 
-    private static final String[] ACCENT_COLORS = {
-        "Violet", "Red", "Orange", "Green", "Blue", "Gold"
-    };
-    private static final String[] ACCENT_HEX = {
-        "#7c3aed", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#f59e0b"
-    };
+    // Gacha buttons
+    private static final String BUTTON_OPEN_EGG_PREFIX = "OpenEgg_";
+    private static final String BUTTON_ASSIGN_SLOT_PREFIX = "AssignSlot_";
+    private static final String BUTTON_REMOVE_SLOT_PREFIX = "RemoveSlot_";
+    private static final String BUTTON_SPEED_SLOT_PREFIX = "SpeedSlot_";
+    private static final String BUTTON_PICK_MINER_PREFIX = "PickMiner_";
 
     private static final String[] UPGRADE_ACCENT_COLORS = {
         "Green", "Blue", "Gold", "Red", "Orange", "Violet", "Blue"
@@ -78,7 +81,8 @@ public class MinePage extends BaseAscendPage {
 
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
-    private boolean minerTabActive = false;
+    private String activeTab = "Upgrade";
+    private int pickerSlotIndex = -1;
 
     public MinePage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -91,183 +95,240 @@ public class MinePage extends BaseAscendPage {
                       @Nonnull UIEventBuilder evt, @Nonnull Store<EntityStore> store) {
         cmd.append("Pages/Ascend_MinePage.ui");
 
-        // Close button
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
-
-        // Tab buttons
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabMiner",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_MINER), false);
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabUpgrade",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_UPGRADE), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabSlots",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_SLOTS), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabEggs",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_EGGS), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabCollection",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_COLLECTION), false);
 
-        // OP reset
         if (PermissionUtils.isOp(playerRef.getUuid())) {
             cmd.set("#ResetWrap.Visible", true);
             evt.addEventBinding(CustomUIEventBindingType.Activating, "#ResetButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET), false);
         }
 
-        populateMinerTab(cmd, evt);
         populateUpgradeTab(cmd, evt);
+        populateSlotsTab(cmd, evt);
+        populateEggsTab(cmd, evt);
+        populateCollectionTab(cmd, evt);
     }
 
-    // ==================== Content Population ====================
+    // ==================== Slots Tab ====================
 
-    private void populateMinerTab(UICommandBuilder cmd, UIEventBuilder evt) {
+    private void populateSlotsTab(UICommandBuilder cmd, UIEventBuilder evt) {
         MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
         if (configStore == null) return;
 
-        Mine mine = configStore.getMine();
-        if (mine == null) return;
-
         List<io.hyvexa.ascend.mine.data.MinerSlot> slots = configStore.getMinerSlots();
-        int entryIndex = 0;
+        int i = 0;
+        for (io.hyvexa.ascend.mine.data.MinerSlot slot : slots) {
+            addSlotEntry(cmd, evt, i, slot.getSlotIndex());
+            i++;
+        }
         if (slots.isEmpty()) {
-            entryIndex = addMinerEntry(cmd, evt, entryIndex, mine, 0);
+            addSlotEntry(cmd, evt, 0, 0);
+        }
+    }
+
+    private void addSlotEntry(UICommandBuilder cmd, UIEventBuilder evt, int i, int slotIndex) {
+        cmd.append("#SlotEntries", "Pages/Ascend_MineSlotEntry.ui");
+        String sel = "#SlotEntries[" + i + "]";
+
+        cmd.set(sel + " #SlotTitle.Text", "Slot #" + (slotIndex + 1));
+
+        CollectedMiner assigned = mineProgress.getAssignedMiner(slotIndex);
+        if (assigned != null) {
+            cmd.set(sel + " #AccentEmpty.Visible", false);
+            cmd.set(sel + " #AccentFilled.Visible", true);
+            cmd.set(sel + " #AccentFilled.Background", assigned.getRarity().getColor());
+
+            MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+            MineZoneLayer layer = configStore != null ? configStore.getLayerById(assigned.getLayerId()) : null;
+            String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : assigned.getLayerId();
+
+            cmd.set(sel + " #MinerInfo.Text", assigned.getRarity().getDisplayName() + " - " + layerName);
+            cmd.set(sel + " #MinerInfo.Style.TextColor", assigned.getRarity().getColor());
+            cmd.set(sel + " #ProductionInfo.Text",
+                "Lv." + assigned.getSpeedLevel() + " | " +
+                String.format("%.1f", assigned.getProductionRate()) + " b/m");
+
+            cmd.set(sel + " #AssignText.Text", "Remove");
+            cmd.set(sel + " #AssignBtnBg.Background", "#ef4444(0.85)");
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #AssignButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_REMOVE_SLOT_PREFIX + slotIndex), false);
+
+            cmd.set(sel + " #SpeedBtnWrap.Visible", true);
+            long speedCost = CollectedMiner.getSpeedUpgradeCost(assigned.getSpeedLevel());
+            cmd.set(sel + " #SpeedText.Text", "Speed " + speedCost + "c");
+            boolean canAfford = mineProgress.getCrystals() >= speedCost;
+            cmd.set(sel + " #SpeedDisabledOverlay.Visible", !canAfford);
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #SpeedButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPEED_SLOT_PREFIX + slotIndex), false);
         } else {
-            for (io.hyvexa.ascend.mine.data.MinerSlot slot : slots) {
-                entryIndex = addMinerEntry(cmd, evt, entryIndex, mine, slot.getSlotIndex());
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #AssignButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASSIGN_SLOT_PREFIX + slotIndex), false);
+        }
+    }
+
+    // ==================== Eggs Tab ====================
+
+    private void populateEggsTab(UICommandBuilder cmd, UIEventBuilder evt) {
+        Map<String, Integer> eggs = mineProgress.getEggInventory();
+        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+
+        if (eggs.isEmpty()) {
+            cmd.set("#NoEggsLabel.Visible", true);
+            return;
+        }
+        cmd.set("#NoEggsLabel.Visible", false);
+
+        int i = 0;
+        for (var entry : eggs.entrySet()) {
+            String layerId = entry.getKey();
+            int count = entry.getValue();
+            if (count <= 0) continue;
+
+            cmd.append("#EggEntries", "Pages/Ascend_MineEggEntry.ui");
+            String sel = "#EggEntries[" + i + "]";
+
+            MineZoneLayer layer = configStore != null ? configStore.getLayerById(layerId) : null;
+            String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : layerId;
+
+            cmd.set(sel + " #LayerName.Text", layerName);
+            cmd.set(sel + " #EggCount.Text", count + " egg" + (count > 1 ? "s" : ""));
+
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #OpenButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_OPEN_EGG_PREFIX + layerId), false);
+            i++;
+        }
+    }
+
+    // ==================== Collection Tab ====================
+
+    private void populateCollectionTab(UICommandBuilder cmd, UIEventBuilder evt) {
+        List<CollectedMiner> miners = mineProgress.getMinerCollection();
+        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+
+        if (miners.isEmpty()) {
+            cmd.set("#NoMinersLabel.Visible", true);
+            return;
+        }
+        cmd.set("#NoMinersLabel.Visible", false);
+
+        int i = 0;
+        for (CollectedMiner miner : miners) {
+            cmd.append("#CollectionEntries", "Pages/Ascend_MineCollectionEntry.ui");
+            String sel = "#CollectionEntries[" + i + "]";
+
+            cmd.set(sel + " #RarityBar.Background", miner.getRarity().getColor());
+            cmd.set(sel + " #RarityLabel.Text", miner.getRarity().getDisplayName());
+            cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
+
+            MineZoneLayer layer = configStore != null ? configStore.getLayerById(miner.getLayerId()) : null;
+            String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : "";
+            cmd.set(sel + " #LayerLabel.Text", layerName);
+
+            cmd.set(sel + " #SpeedLabel.Text",
+                "Speed Lv." + miner.getSpeedLevel() + " | " +
+                String.format("%.1f", miner.getProductionRate()) + " b/m");
+
+            if (mineProgress.isMinerAssigned(miner.getId())) {
+                cmd.set(sel + " #AssignedText.Visible", true);
+                cmd.set(sel + " #AssignedText.Text", "Assigned");
             }
+            i++;
         }
     }
 
-    private int addMinerEntry(UICommandBuilder cmd, UIEventBuilder evt, int i,
-                               Mine mine, int slotIndex) {
-        cmd.append("#MinerEntries", "Pages/Ascend_MinePageMinerEntry.ui");
-        String sel = "#MinerEntries[" + i + "]";
-        String slotId = String.valueOf(slotIndex);
+    // ==================== Picker ====================
 
-        // Accent color + button zone color
-        int colorIndex = i % ACCENT_COLORS.length;
-        String colorName = ACCENT_COLORS[colorIndex];
-        String colorHex = ACCENT_HEX[colorIndex];
-        cmd.set(sel + " #AccentViolet.Visible", colorIndex == 0);
-        cmd.set(sel + " #Accent" + colorName + ".Visible", true);
-        cmd.set(sel + " #ButtonBg" + colorName + ".Visible", true);
+    private void showPicker(int slotIndex) {
+        pickerSlotIndex = slotIndex;
 
-        // Set segment colors to match accent
-        for (int seg = 1; seg <= MinerRobotState.MAX_SPEED_PER_STAR; seg++) {
-            cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
+        UICommandBuilder cmd = new UICommandBuilder();
+        UIEventBuilder evt = new UIEventBuilder();
+
+        cmd.set("#SlotEntries.Visible", false);
+        cmd.set("#PickerOverlay.Visible", true);
+        cmd.set("#PickerTitle.Text", "Select a miner for Slot #" + (slotIndex + 1) + ":");
+        cmd.clear("#PickerEntries");
+
+        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+        List<CollectedMiner> miners = mineProgress.getMinerCollection();
+
+        int i = 0;
+        for (CollectedMiner miner : miners) {
+            if (mineProgress.isMinerAssigned(miner.getId())) continue;
+
+            cmd.append("#PickerEntries", "Pages/Ascend_MineMinerPicker.ui");
+            String sel = "#PickerEntries[" + i + "]";
+
+            cmd.set(sel + " #RarityBar.Background", miner.getRarity().getColor());
+            cmd.set(sel + " #RarityLabel.Text", miner.getRarity().getDisplayName());
+            cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
+
+            MineZoneLayer layer = configStore != null ? configStore.getLayerById(miner.getLayerId()) : null;
+            String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : "";
+            cmd.set(sel + " #LayerLabel.Text", layerName);
+            cmd.set(sel + " #SpeedLabel.Text",
+                "Lv." + miner.getSpeedLevel() + " | " +
+                String.format("%.1f", miner.getProductionRate()) + " b/m");
+
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #SelectButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PICK_MINER_PREFIX + miner.getId()), false);
+            i++;
         }
 
-        // Label: "Mine Name" or "Mine Name #2" for slot > 0
-        String label = mine.getName();
-        if (slotIndex > 0) {
-            label = label + " #" + (slotIndex + 1);
-        }
-        cmd.set(sel + " #MineName.Text", label);
-
-        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(slotIndex);
-        boolean hasMiner = minerState.hasMiner();
-        int speedLevel = hasMiner ? minerState.speedLevel() : 0;
-        int stars = hasMiner ? minerState.stars() : 0;
-
-        // Progress bar segments
-        for (int seg = 1; seg <= speedLevel; seg++) {
-            cmd.set(sel + " #Seg" + seg + ".Visible", true);
-        }
-
-        // Stars
-        for (int s = 1; s <= stars; s++) {
-            cmd.set(sel + " #Star" + s + ".Visible", true);
-        }
-
-        // Level text
-        cmd.set(sel + " #MinerLevel.Style.TextColor", "#ffffff");
-
-        // Bind buy button
-        evt.addEventBinding(CustomUIEventBindingType.Activating,
-            sel + " #MinerBuyButton",
-            EventData.of(ButtonEventData.KEY_BUTTON, resolveMinerButtonId(hasMiner, speedLevel, stars, slotId)), false);
-
-        if (!hasMiner) {
-            cmd.set(sel + " #MinerLevel.Text", "");
-            cmd.set(sel + " #MinerActionStatus.Text", "No Miner");
-            cmd.set(sel + " #ActionText.Text", "Buy Miner");
-            cmd.set(sel + " #ActionPrice.Text", "");
-            cmd.set(sel + " #MinerStatus.Text", "");
-        } else {
-            boolean fullyMaxed = stars >= MinerRobotState.MAX_STARS && speedLevel >= MinerRobotState.MAX_SPEED_PER_STAR;
-            double blocksPerMin = MinerRobotState.getProductionRate(speedLevel, stars);
-            cmd.set(sel + " #MinerStatus.Text", String.format("%.1f", blocksPerMin) + " blocks/min");
-
-            if (fullyMaxed) {
-                cmd.set(sel + " #MinerLevel.Text", "MAX");
-                cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
-                cmd.set(sel + " #ActionText.Text", "Maxed!");
-                cmd.set(sel + " #ActionPrice.Text", "");
-            } else if (speedLevel >= MinerRobotState.MAX_SPEED_PER_STAR) {
-                cmd.set(sel + " #MinerLevel.Text", "Lv." + speedLevel);
-                cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
-                cmd.set(sel + " #ActionText.Text", "Evolve");
-                cmd.set(sel + " #ActionPrice.Text", "");
-            } else {
-                cmd.set(sel + " #MinerLevel.Text", "Lv." + speedLevel);
-                cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
-                long cost = MinerRobotState.getMinerSpeedCost(speedLevel, stars);
-                cmd.set(sel + " #ActionText.Text", "Cost:");
-                cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
-                boolean canAfford = mineProgress.getCrystals() >= cost;
-                cmd.set(sel + " #ButtonDisabledOverlay.Visible", !canAfford);
-                if (!canAfford) {
-                    cmd.set(sel + " #MinerActionStatus.Style.TextColor", "#9fb0ba");
-                    cmd.set(sel + " #ActionText.Style.TextColor", "#9fb0ba");
-                    cmd.set(sel + " #ActionPrice.Style.TextColor", "#9fb0ba");
-                }
-            }
-        }
-        return i + 1;
+        this.sendUpdate(cmd, evt, false);
     }
 
-    private String resolveMinerButtonId(boolean hasMiner, int speedLevel, int stars, String slotId) {
-        if (!hasMiner) return BUTTON_BUY_MINER_PREFIX + slotId;
-        if (stars >= MinerRobotState.MAX_STARS && speedLevel >= MinerRobotState.MAX_SPEED_PER_STAR) return "Noop";
-        if (speedLevel >= MinerRobotState.MAX_SPEED_PER_STAR) return BUTTON_MINER_EVOLVE_PREFIX + slotId;
-        return BUTTON_MINER_SPEED_PREFIX + slotId;
+    private void hidePicker() {
+        pickerSlotIndex = -1;
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#SlotEntries.Visible", true);
+        cmd.set("#PickerOverlay.Visible", false);
+        this.sendUpdate(cmd, new UIEventBuilder(), false);
     }
+
+    // ==================== Upgrade Tab ====================
 
     private void populateUpgradeTab(UICommandBuilder cmd, UIEventBuilder evt) {
-        // --- Pickaxe Tier Card ---
         populatePickaxeCard(cmd, evt);
-
-        // --- Grid cards (6 power upgrades in 3x2 grid) ---
         for (int slot = 0; slot < GRID_UPGRADE_ORDER.length; slot++) {
             MineUpgradeType type = GRID_UPGRADE_ORDER[slot];
             cmd.append("#Slot" + slot, "Pages/Ascend_MinePageUpgradeCard.ui");
             String sel = "#Slot" + slot + "[0]";
             populateUpgradeCard(cmd, evt, sel, type);
         }
-
-        // --- Bag Capacity (bottom row, uses existing horizontal entry) ---
         populateBagCapacityEntry(cmd, evt);
     }
 
-    private void populateUpgradeCard(UICommandBuilder cmd, UIEventBuilder evt,
-                                     String sel, MineUpgradeType type) {
+    private void populateUpgradeCard(UICommandBuilder cmd, UIEventBuilder evt, String sel, MineUpgradeType type) {
         int level = mineProgress.getUpgradeLevel(type);
         int maxLevel = type.getMaxLevel();
         boolean maxed = level >= maxLevel;
         int ordinal = type.ordinal();
-
         String colorName = UPGRADE_ACCENT_COLORS[ordinal];
-        String colorHex = UPGRADE_ACCENT_HEX[ordinal];
 
-        // Accent bar color
         cmd.set(sel + " #Accent" + colorName + ".Visible", true);
-
-        // Labels
         cmd.set(sel + " #CardName.Text", type.getDisplayName());
         cmd.set(sel + " #CardEffect.Text", getEffectDescription(type, level));
-
-        // Tooltip
         cmd.set(sel + " #CardBuyBtn.TooltipText", buildUpgradeTooltip(type, level, maxLevel));
 
         if (maxed) {
             cmd.set(sel + " #CardLevel.Text", "MAX");
             cmd.set(sel + " #CardCost.Text", "");
-            evt.addEventBinding(CustomUIEventBindingType.Activating,
-                sel + " #CardBuyBtn",
+            evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #CardBuyBtn",
                 EventData.of(ButtonEventData.KEY_BUTTON, "Noop"), false);
         } else {
             cmd.set(sel + " #CardLevel.Text", "Lv." + level);
@@ -275,8 +336,7 @@ public class MinePage extends BaseAscendPage {
             cmd.set(sel + " #CardCost.Text", cost + " cryst");
             boolean canAfford = mineProgress.getCrystals() >= cost;
             cmd.set(sel + " #CardDisabled.Visible", !canAfford);
-            evt.addEventBinding(CustomUIEventBindingType.Activating,
-                sel + " #CardBuyBtn",
+            evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #CardBuyBtn",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
         }
     }
@@ -290,26 +350,20 @@ public class MinePage extends BaseAscendPage {
         cmd.append("#SlotBag", "Pages/Ascend_MinePageUpgradeEntry.ui");
         String sel = "#SlotBag[0]";
 
-        // Accent + button: Green
         cmd.set(sel + " #AccentViolet.Visible", false);
         cmd.set(sel + " #AccentGreen.Visible", true);
         cmd.set(sel + " #ButtonBgGreen.Visible", true);
 
-        // Segment colors + progress
         String colorHex = "#10b981";
         int filledSegments = maxLevel > 0 ? Math.min(UPGRADE_SEGMENT_COUNT, level * UPGRADE_SEGMENT_COUNT / maxLevel) : 0;
         for (int seg = 1; seg <= UPGRADE_SEGMENT_COUNT; seg++) {
             cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
-            if (seg <= filledSegments) {
-                cmd.set(sel + " #Seg" + seg + ".Visible", true);
-            }
+            if (seg <= filledSegments) cmd.set(sel + " #Seg" + seg + ".Visible", true);
         }
 
         cmd.set(sel + " #UpgradeName.Text", "Bag Capacity");
         cmd.set(sel + " #EffectText.Text", getEffectDescription(type, level));
-
-        evt.addEventBinding(CustomUIEventBindingType.Activating,
-            sel + " #UpgradeBuyButton",
+        evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #UpgradeBuyButton",
             EventData.of(ButtonEventData.KEY_BUTTON, maxed ? "Noop" : BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
 
         if (maxed) {
@@ -339,72 +393,82 @@ public class MinePage extends BaseAscendPage {
 
         PickaxeTier current = mineProgress.getPickaxeTierEnum();
         PickaxeTier next = current.next();
+        int enhancement = mineProgress.getPickaxeEnhancement();
+        int damage = mineProgress.getPickaxeDamage();
 
-        cmd.set(sel + " #TierName.Text", current.getDisplayName());
-        cmd.set(sel + " #SpeedText.Text", "Speed: " + String.format("%.1f", current.getSpeedMultiplier()) + "x");
+        cmd.set(sel + " #TierName.Text", current.getDisplayName(enhancement));
+        cmd.set(sel + " #SpeedText.Text", "Damage: " + damage);
         cmd.set(sel + " #TierLabel.Text", "Tier " + current.getTier());
 
-        if (next == null) {
-            // Maxed
+        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+
+        if (next == null && enhancement >= PickaxeTier.MAX_ENHANCEMENT) {
             cmd.set(sel + " #RequirementText.Text", "");
             cmd.set(sel + " #ActionText.Text", "Maxed!");
             cmd.set(sel + " #ActionPrice.Text", "");
-            evt.addEventBinding(CustomUIEventBindingType.Activating,
-                sel + " #PickaxeBuyButton",
+            evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #PickaxeBuyButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, "Noop"), false);
+        } else if (enhancement < PickaxeTier.MAX_ENHANCEMENT) {
+            int nextLevel = enhancement + 1;
+            long cost = configStore != null ? configStore.getEnhanceCost(current.getTier(), nextLevel) : 0;
+            cmd.set(sel + " #RequirementText.Text", "Next: +" + nextLevel);
+            cmd.set(sel + " #ActionText.Text", "Enhance");
+            cmd.set(sel + " #ActionPrice.Text", cost > 0 ? cost + " cryst" : "Free");
+            boolean canAfford = cost <= 0 || mineProgress.getCrystals() >= cost;
+            if (!canAfford) cmd.set(sel + " #ButtonDisabledOverlay.Visible", true);
+            evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #PickaxeBuyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, canAfford ? BUTTON_ENHANCE_PICKAXE : "Noop"), false);
         } else {
-            cmd.set(sel + " #RequirementText.Text", "Next: " + next.getDisplayName());
-            cmd.set(sel + " #ActionText.Text", "Upgrade");
-            cmd.set(sel + " #ActionPrice.Text", next.getUnlockCost() + " cryst");
+            Map<String, Integer> recipe = configStore != null
+                ? configStore.getTierRecipe(next.getTier()) : java.util.Collections.emptyMap();
+            boolean configured = !recipe.isEmpty();
+            boolean hasBlocks = configured && mineProgress.hasInventoryBlocks(recipe);
 
-            boolean meetsReq = checkPickaxeRequirement(next);
-            boolean canAfford = mineProgress.getCrystals() >= next.getUnlockCost();
-            boolean canBuy = meetsReq && canAfford;
-
-            if (!canBuy) {
-                cmd.set(sel + " #ButtonDisabledOverlay.Visible", true);
-                if (!meetsReq) {
-                    cmd.set(sel + " #RequirementText.Text", "Requires: " + next.getRequirementDescription());
-                    cmd.set(sel + " #RequirementText.Style.TextColor", "#ef4444");
+            if (!configured) {
+                cmd.set(sel + " #RequirementText.Text", "Not configured");
+                cmd.set(sel + " #RequirementText.Style.TextColor", "#ef4444");
+            } else {
+                StringBuilder reqText = new StringBuilder();
+                for (var entry : recipe.entrySet()) {
+                    if (reqText.length() > 0) reqText.append(", ");
+                    reqText.append(entry.getValue()).append("x ").append(formatBlockName(entry.getKey()));
                 }
+                cmd.set(sel + " #RequirementText.Text", reqText.toString());
+                if (!hasBlocks) cmd.set(sel + " #RequirementText.Style.TextColor", "#ef4444");
             }
 
-            evt.addEventBinding(CustomUIEventBindingType.Activating,
-                sel + " #PickaxeBuyButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, canBuy ? BUTTON_BUY_PICKAXE : "Noop"), false);
+            cmd.set(sel + " #ActionText.Text", "Upgrade");
+            cmd.set(sel + " #ActionPrice.Text", next.getDisplayName());
+            boolean canUpgrade = configured && hasBlocks;
+            if (!canUpgrade) cmd.set(sel + " #ButtonDisabledOverlay.Visible", true);
+            evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #PickaxeBuyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, canUpgrade ? BUTTON_BUY_PICKAXE : "Noop"), false);
         }
     }
 
-    private boolean checkPickaxeRequirement(PickaxeTier tier) {
-        // Single mine: mine-count requirements are always met
-        return true;
+    private static String formatBlockName(String blockTypeId) {
+        if (blockTypeId == null) return "?";
+        return MineBlockDisplay.getDisplayName(blockTypeId);
     }
 
     // ==================== Tab Switching ====================
-    // Uses overlay visibility pattern from AscendLeaderboardPage.setTabActive()
 
-    private void switchToMinerTab() {
-        if (minerTabActive) return;
-        minerTabActive = true;
-
-        UICommandBuilder cmd = new UICommandBuilder();
-        setTabActive(cmd, "TabMiner", true);
-        setTabActive(cmd, "TabUpgrade", false);
-        cmd.set("#MinerContent.Visible", true);
-        cmd.set("#UpgradeContent.Visible", false);
-
-        this.sendUpdate(cmd, new UIEventBuilder(), false);
-    }
-
-    private void switchToUpgradeTab() {
-        if (!minerTabActive) return;
-        minerTabActive = false;
+    private void switchTab(String tabName) {
+        if (activeTab.equals(tabName)) return;
+        activeTab = tabName;
+        pickerSlotIndex = -1;
 
         UICommandBuilder cmd = new UICommandBuilder();
-        setTabActive(cmd, "TabMiner", false);
-        setTabActive(cmd, "TabUpgrade", true);
-        cmd.set("#MinerContent.Visible", false);
-        cmd.set("#UpgradeContent.Visible", true);
+        setTabActive(cmd, "TabUpgrade", "Upgrade".equals(tabName));
+        setTabActive(cmd, "TabSlots", "Slots".equals(tabName));
+        setTabActive(cmd, "TabEggs", "Eggs".equals(tabName));
+        setTabActive(cmd, "TabCollection", "Collection".equals(tabName));
+        cmd.set("#UpgradeContent.Visible", "Upgrade".equals(tabName));
+        cmd.set("#SlotsContent.Visible", "Slots".equals(tabName));
+        cmd.set("#EggsContent.Visible", "Eggs".equals(tabName));
+        cmd.set("#CollectionContent.Visible", "Collection".equals(tabName));
+        cmd.set("#SlotEntries.Visible", true);
+        cmd.set("#PickerOverlay.Visible", false);
 
         this.sendUpdate(cmd, new UIEventBuilder(), false);
     }
@@ -429,8 +493,10 @@ public class MinePage extends BaseAscendPage {
 
         switch (button) {
             case BUTTON_CLOSE -> this.close();
-            case BUTTON_TAB_MINER -> switchToMinerTab();
-            case BUTTON_TAB_UPGRADE -> switchToUpgradeTab();
+            case BUTTON_TAB_UPGRADE -> switchTab("Upgrade");
+            case BUTTON_TAB_SLOTS -> switchTab("Slots");
+            case BUTTON_TAB_EGGS -> switchTab("Eggs");
+            case BUTTON_TAB_COLLECTION -> switchTab("Collection");
             case BUTTON_RESET -> handleResetAll(ref, store);
             default -> handleActionButton(ref, store, button);
         }
@@ -439,51 +505,155 @@ public class MinePage extends BaseAscendPage {
     private void handleActionButton(Ref<EntityStore> ref, Store<EntityStore> store, String button) {
         if (button.equals(BUTTON_BUY_PICKAXE)) {
             handleBuyPickaxe(ref, store);
-        } else if (button.startsWith(BUTTON_BUY_MINER_PREFIX)) {
-            int slotIndex = Integer.parseInt(button.substring(BUTTON_BUY_MINER_PREFIX.length()));
-            handleBuyMiner(ref, store, slotIndex);
-        } else if (button.startsWith(BUTTON_MINER_SPEED_PREFIX)) {
-            int slotIndex = Integer.parseInt(button.substring(BUTTON_MINER_SPEED_PREFIX.length()));
-            handleMinerSpeedUpgrade(ref, store, slotIndex);
-        } else if (button.startsWith(BUTTON_MINER_EVOLVE_PREFIX)) {
-            int slotIndex = Integer.parseInt(button.substring(BUTTON_MINER_EVOLVE_PREFIX.length()));
-            handleMinerEvolve(ref, store, slotIndex);
+        } else if (button.equals(BUTTON_ENHANCE_PICKAXE)) {
+            handleEnhancePickaxe(ref, store);
         } else if (button.startsWith(BUTTON_BUY_UPGRADE_PREFIX)) {
             handleBuyUpgrade(ref, store, button.substring(BUTTON_BUY_UPGRADE_PREFIX.length()));
+        } else if (button.startsWith(BUTTON_OPEN_EGG_PREFIX)) {
+            handleOpenEgg(ref, store, button.substring(BUTTON_OPEN_EGG_PREFIX.length()));
+        } else if (button.startsWith(BUTTON_ASSIGN_SLOT_PREFIX)) {
+            showPicker(Integer.parseInt(button.substring(BUTTON_ASSIGN_SLOT_PREFIX.length())));
+        } else if (button.startsWith(BUTTON_REMOVE_SLOT_PREFIX)) {
+            handleRemoveSlot(ref, store, Integer.parseInt(button.substring(BUTTON_REMOVE_SLOT_PREFIX.length())));
+        } else if (button.startsWith(BUTTON_SPEED_SLOT_PREFIX)) {
+            handleSlotSpeed(ref, store, Integer.parseInt(button.substring(BUTTON_SPEED_SLOT_PREFIX.length())));
+        } else if (button.startsWith(BUTTON_PICK_MINER_PREFIX)) {
+            handlePickMiner(ref, store, Long.parseLong(button.substring(BUTTON_PICK_MINER_PREFIX.length())));
         }
     }
+
+    // ==================== Gacha Handlers ====================
+
+    private void handleOpenEgg(Ref<EntityStore> ref, Store<EntityStore> store, String layerId) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+        EggOpenService eggService = plugin.getEggOpenService();
+        if (eggService == null) return;
+
+        CollectedMiner miner = eggService.openEgg(playerRef.getUuid(), layerId, mineProgress);
+        if (miner == null) {
+            player.sendMessage(Message.raw("No eggs of this type!"));
+            return;
+        }
+
+        player.sendMessage(Message.raw("Hatched a " + miner.getRarity().getDisplayName() + " miner!"));
+        sendRefresh(ref, store);
+    }
+
+    private void handlePickMiner(Ref<EntityStore> ref, Store<EntityStore> store, long minerId) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null || pickerSlotIndex < 0) return;
+
+        CollectedMiner miner = mineProgress.getMinerById(minerId);
+        if (miner == null || mineProgress.isMinerAssigned(minerId)) return;
+
+        int slotIndex = pickerSlotIndex;
+        mineProgress.assignMinerToSlot(slotIndex, minerId);
+        markDirty();
+
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        MineRobotManager robotManager = plugin != null ? plugin.getMineRobotManager() : null;
+        if (robotManager != null && store.getExternalData() != null) {
+            robotManager.syncAssignedMiner(playerRef.getUuid(), slotIndex, store.getExternalData().getWorld());
+        }
+
+        player.sendMessage(Message.raw("Assigned " + miner.getRarity().getDisplayName() + " miner to Slot #" + (slotIndex + 1) + "!"));
+        hidePicker();
+        sendRefresh(ref, store);
+    }
+
+    private void handleRemoveSlot(Ref<EntityStore> ref, Store<EntityStore> store, int slotIndex) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null || !mineProgress.isSlotAssigned(slotIndex)) return;
+
+        mineProgress.unassignSlot(slotIndex);
+        markDirty();
+
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        MineRobotManager robotManager = plugin != null ? plugin.getMineRobotManager() : null;
+        if (robotManager != null) robotManager.syncUnassignedMiner(playerRef.getUuid(), slotIndex);
+
+        player.sendMessage(Message.raw("Removed miner from Slot #" + (slotIndex + 1)));
+        sendRefresh(ref, store);
+    }
+
+    private void handleSlotSpeed(Ref<EntityStore> ref, Store<EntityStore> store, int slotIndex) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+
+        CollectedMiner assigned = mineProgress.getAssignedMiner(slotIndex);
+        if (assigned == null) return;
+
+        long cost = CollectedMiner.getSpeedUpgradeCost(assigned.getSpeedLevel());
+        MinePlayerProgress.MinerSpeedUpgradeResult result = mineProgress.upgradeMinerSpeed(assigned.getId(), cost);
+        if (result == MinePlayerProgress.MinerSpeedUpgradeResult.INSUFFICIENT_CRYSTALS) {
+            player.sendMessage(Message.raw("Not enough crystals!"));
+            return;
+        }
+        if (result != MinePlayerProgress.MinerSpeedUpgradeResult.SUCCESS) return;
+
+        markDirty();
+
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        MineRobotManager robotManager = plugin != null ? plugin.getMineRobotManager() : null;
+        if (robotManager != null) {
+            robotManager.syncMinerSpeed(playerRef.getUuid(), slotIndex, assigned.getSpeedLevel());
+        }
+
+        player.sendMessage(Message.raw("Miner speed -> Lv " + assigned.getSpeedLevel() + "!"));
+        sendRefresh(ref, store);
+    }
+
+    // ==================== Pickaxe Handlers ====================
 
     private void handleBuyPickaxe(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
         PickaxeTier next = mineProgress.getPickaxeTierEnum().next();
-        if (next == null) {
-            player.sendMessage(Message.raw("Already at max pickaxe tier!"));
-            return;
+        if (next == null) { player.sendMessage(Message.raw("Already at max pickaxe tier!")); return; }
+
+        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+        Map<String, Integer> recipe = configStore != null ? configStore.getTierRecipe(next.getTier()) : java.util.Collections.emptyMap();
+
+        MinePlayerProgress.PickaxeUpgradeResult result = mineProgress.upgradePickaxeTier(recipe);
+        switch (result) {
+            case ALREADY_MAXED -> { player.sendMessage(Message.raw("Already at max pickaxe tier!")); return; }
+            case NOT_AT_MAX_ENHANCEMENT -> { player.sendMessage(Message.raw("Max enhancement first!")); return; }
+            case MISSING_BLOCKS -> { player.sendMessage(Message.raw("Missing required blocks!")); return; }
+            case NOT_CONFIGURED -> { player.sendMessage(Message.raw("Tier recipe not configured!")); return; }
+            case SUCCESS -> {}
         }
 
-        if (!checkPickaxeRequirement(next)) {
-            player.sendMessage(Message.raw("Requirement not met: " + next.getRequirementDescription()));
-            return;
-        }
+        markDirty();
+        swapPickaxeItem(player);
+        player.sendMessage(Message.raw("Upgraded to " + next.getDisplayName() + "!"));
+        sendRefresh(ref, store);
+    }
 
-        MinePlayerProgress.PickaxeUpgradeResult result = mineProgress.purchasePickaxeTier();
-        if (result == MinePlayerProgress.PickaxeUpgradeResult.ALREADY_MAXED) {
-            player.sendMessage(Message.raw("Already at max pickaxe tier!"));
+    private void handleEnhancePickaxe(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+
+        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+        int nextLevel = mineProgress.getPickaxeEnhancement() + 1;
+        long cost = configStore != null ? configStore.getEnhanceCost(mineProgress.getPickaxeTier(), nextLevel) : 0;
+
+        MinePlayerProgress.PickaxeEnhanceResult result = mineProgress.purchasePickaxeEnhancement(cost);
+        if (result == MinePlayerProgress.PickaxeEnhanceResult.ALREADY_MAXED) {
+            player.sendMessage(Message.raw("Enhancement maxed! Upgrade tier."));
             return;
         }
-        if (result == MinePlayerProgress.PickaxeUpgradeResult.INSUFFICIENT_CRYSTALS) {
+        if (result == MinePlayerProgress.PickaxeEnhanceResult.INSUFFICIENT_CRYSTALS) {
             player.sendMessage(Message.raw("Not enough crystals!"));
             return;
         }
 
         markDirty();
-
-        // Swap held pickaxe to new tier
-        swapPickaxeItem(player);
-
-        player.sendMessage(Message.raw("Upgraded to " + next.getDisplayName() + "!"));
+        player.sendMessage(Message.raw("Pickaxe enhanced to +" + mineProgress.getPickaxeEnhancement() + "!"));
         sendRefresh(ref, store);
     }
 
@@ -492,94 +662,7 @@ public class MinePage extends BaseAscendPage {
         if (inventory == null) return;
         ItemContainer hotbar = inventory.getHotbar();
         if (hotbar == null) return;
-        String newItemId = mineProgress.getPickaxeTierEnum().getItemId();
-        hotbar.setItemStackForSlot((short) 0, new ItemStack(newItemId, 1), false);
-    }
-
-    // ==================== Miner Handlers ====================
-
-    private void handleBuyMiner(Ref<EntityStore> ref, Store<EntityStore> store, int slotIndex) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) return;
-
-        long cost = MinerRobotState.getMinerBuyCost();
-        MinePlayerProgress.MinerPurchaseResult result = mineProgress.purchaseMiner(slotIndex, cost);
-        if (result == MinePlayerProgress.MinerPurchaseResult.ALREADY_OWNED) {
-            player.sendMessage(Message.raw("Already own this miner!"));
-            return;
-        }
-        if (result == MinePlayerProgress.MinerPurchaseResult.INSUFFICIENT_CRYSTALS) {
-            player.sendMessage(Message.raw("Not enough crystals!"));
-            return;
-        }
-
-        markDirty();
-        syncBoughtMiner(store, slotIndex);
-        checkMineAchievement(MineAchievement.FIRST_MINER);
-
-        String mineName = getMineName();
-        String label = slotIndex > 0 ? mineName + " #" + (slotIndex + 1) : mineName;
-        player.sendMessage(Message.raw("Bought miner for " + label + "!"));
-        sendRefresh(ref, store);
-    }
-
-    private void handleMinerSpeedUpgrade(Ref<EntityStore> ref, Store<EntityStore> store, int slotIndex) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) return;
-
-        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(slotIndex);
-        int speedLevel = minerState.speedLevel();
-
-        long cost = MinerRobotState.getMinerSpeedCost(speedLevel, minerState.stars());
-        MinePlayerProgress.MinerSpeedUpgradeResult result =
-            mineProgress.upgradeMinerSpeed(slotIndex, cost, MinerRobotState.MAX_SPEED_PER_STAR);
-        if (result == MinePlayerProgress.MinerSpeedUpgradeResult.NO_MINER) return;
-        if (result == MinePlayerProgress.MinerSpeedUpgradeResult.SPEED_MAXED) {
-            player.sendMessage(Message.raw("Speed maxed! Evolve to continue."));
-            return;
-        }
-        if (result == MinePlayerProgress.MinerSpeedUpgradeResult.INSUFFICIENT_CRYSTALS) {
-            player.sendMessage(Message.raw("Not enough crystals!"));
-            return;
-        }
-
-        markDirty();
-        syncMinerSpeed(slotIndex);
-
-        player.sendMessage(Message.raw("Miner speed -> Lv " + (speedLevel + 1) + "!"));
-        sendRefresh(ref, store);
-    }
-
-    private void handleMinerEvolve(Ref<EntityStore> ref, Store<EntityStore> store, int slotIndex) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) return;
-
-        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(slotIndex);
-        int stars = minerState.stars();
-
-        long cost = MinerRobotState.getMinerEvolveCost(stars);
-        MinePlayerProgress.MinerEvolutionResult result =
-            mineProgress.evolveMiner(slotIndex, cost, MinerRobotState.MAX_SPEED_PER_STAR, MinerRobotState.MAX_STARS);
-        if (result == MinePlayerProgress.MinerEvolutionResult.NO_MINER) return;
-        if (result == MinePlayerProgress.MinerEvolutionResult.SPEED_NOT_MAXED) {
-            player.sendMessage(Message.raw("Max speed first before evolving!"));
-            return;
-        }
-        if (result == MinePlayerProgress.MinerEvolutionResult.STAR_MAXED) {
-            player.sendMessage(Message.raw("Already max stars!"));
-            return;
-        }
-        if (result == MinePlayerProgress.MinerEvolutionResult.INSUFFICIENT_CRYSTALS) {
-            player.sendMessage(Message.raw("Not enough crystals!"));
-            return;
-        }
-
-        markDirty();
-        syncMinerEvolution(store, slotIndex);
-        checkMineAchievement(MineAchievement.EVOLVE_STAR1);
-
-        player.sendMessage(Message.raw("Miner evolved to Star " + (stars + 1) + "!"));
-        sendRefresh(ref, store);
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(mineProgress.getPickaxeTierEnum().getItemId(), 1), false);
     }
 
     // ==================== Upgrade Handlers ====================
@@ -589,38 +672,23 @@ public class MinePage extends BaseAscendPage {
         if (player == null) return;
 
         MineUpgradeType type;
-        try {
-            type = MineUpgradeType.valueOf(typeName);
-        } catch (IllegalArgumentException e) {
-            return;
-        }
+        try { type = MineUpgradeType.valueOf(typeName); } catch (IllegalArgumentException e) { return; }
 
         boolean success = mineProgress.purchaseUpgrade(type);
         if (!success) {
             int level = mineProgress.getUpgradeLevel(type);
-            if (level >= type.getMaxLevel()) {
-                player.sendMessage(Message.raw("Already maxed!"));
-            } else {
-                player.sendMessage(Message.raw("Not enough crystals!"));
-            }
+            player.sendMessage(Message.raw(level >= type.getMaxLevel() ? "Already maxed!" : "Not enough crystals!"));
             return;
         }
 
         markDirty();
 
-        // Check if all 3 global upgrades are now maxed
         boolean allMaxed = true;
         for (MineUpgradeType t : MineUpgradeType.values()) {
-            if (mineProgress.getUpgradeLevel(t) < t.getMaxLevel()) {
-                allMaxed = false;
-                break;
-            }
+            if (mineProgress.getUpgradeLevel(t) < t.getMaxLevel()) { allMaxed = false; break; }
         }
-        if (allMaxed) {
-            checkMineAchievement(MineAchievement.MAX_UPGRADES);
-        }
+        if (allMaxed) checkMineAchievement(MineAchievement.MAX_UPGRADES);
 
-        // Apply Haste speed boost immediately if player is in mine
         if (type == MineUpgradeType.HASTE && mineProgress.isInMine()) {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin != null && plugin.getMineGateChecker() != null) {
@@ -634,31 +702,20 @@ public class MinePage extends BaseAscendPage {
 
     private void handleResetAll(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) return;
-        if (!PermissionUtils.isOp(playerRef.getUuid())) return;
+        if (player == null || !PermissionUtils.isOp(playerRef.getUuid())) return;
 
-        // Reset all upgrades
-        for (MineUpgradeType type : MineUpgradeType.values()) {
-            mineProgress.setUpgradeLevel(type, 0);
-        }
+        for (MineUpgradeType type : MineUpgradeType.values()) mineProgress.setUpgradeLevel(type, 0);
         mineProgress.setPickaxeTier(0);
+        mineProgress.setPickaxeEnhancement(0);
         swapPickaxeItem(player);
 
-        // Despawn all miners and reset ownership (all slots)
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         MineRobotManager robotManager = plugin != null ? plugin.getMineRobotManager() : null;
         UUID uuid = playerRef.getUuid();
 
-        for (var entry : mineProgress.getMinerStates().entrySet()) {
-            if (!entry.getValue().hasMiner()) continue;
-
-            int slotIndex = entry.getKey();
-
-            if (robotManager != null) {
-                robotManager.despawnMiner(uuid, slotIndex);
-            }
-
-            mineProgress.loadMinerState(slotIndex, false, 0, 0);
+        for (var entry : mineProgress.getSlotAssignments().entrySet()) {
+            if (robotManager != null) robotManager.despawnMiner(uuid, entry.getKey());
+            mineProgress.unassignSlot(entry.getKey());
         }
 
         markDirty();
@@ -671,36 +728,31 @@ public class MinePage extends BaseAscendPage {
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
         UICommandBuilder cmd = new UICommandBuilder();
         UIEventBuilder evt = new UIEventBuilder();
-        cmd.clear("#MinerEntries");
         cmd.clear("#PickaxeRow");
-        for (int slot = 0; slot < GRID_UPGRADE_ORDER.length; slot++) {
-            cmd.clear("#Slot" + slot);
-        }
+        for (int slot = 0; slot < GRID_UPGRADE_ORDER.length; slot++) cmd.clear("#Slot" + slot);
         cmd.clear("#SlotBag");
-        populateMinerTab(cmd, evt);
+        cmd.clear("#SlotEntries");
+        cmd.clear("#EggEntries");
+        cmd.clear("#CollectionEntries");
+        cmd.clear("#PickerEntries");
         populateUpgradeTab(cmd, evt);
+        populateSlotsTab(cmd, evt);
+        populateEggsTab(cmd, evt);
+        populateCollectionTab(cmd, evt);
         this.sendUpdate(cmd, evt, false);
     }
 
     private void markDirty() {
         MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
-        if (mineStore != null) {
-            mineStore.markDirty(playerRef.getUuid());
-        }
+        if (mineStore != null) mineStore.markDirty(playerRef.getUuid());
     }
 
     private String buildUpgradeTooltip(MineUpgradeType type, int level, int maxLevel) {
         boolean maxed = level >= maxLevel;
-        String name = type.getDisplayName();
-        String desc = getUpgradeDescription(type);
-
         StringBuilder sb = new StringBuilder();
-        sb.append(name).append("\n");
-        sb.append(desc).append("\n\n");
-
+        sb.append(type.getDisplayName()).append("\n").append(type.getDescription()).append("\n\n");
         if (maxed) {
-            sb.append("-- Fully Maxed --\n");
-            sb.append(getEffectDescription(type, level));
+            sb.append("-- Fully Maxed --\n").append(getEffectDescription(type, level));
         } else {
             sb.append("Purchase Upgrade:\n");
             sb.append("- Level ").append(level).append("/").append(maxLevel).append("\n");
@@ -709,10 +761,6 @@ public class MinePage extends BaseAscendPage {
             sb.append("Left Click to purchase one level");
         }
         return sb.toString();
-    }
-
-    private static String getUpgradeDescription(MineUpgradeType type) {
-        return type.getDescription();
     }
 
     private String getEffectDescription(MineUpgradeType type, int level) {
@@ -728,51 +776,10 @@ public class MinePage extends BaseAscendPage {
         };
     }
 
-    private String getMineName() {
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
-        if (configStore != null) {
-            Mine mine = configStore.getMine();
-            if (mine != null) return mine.getName();
-        }
-        return "Mine";
-    }
-
     private void checkMineAchievement(MineAchievement achievement) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) return;
         MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-        if (tracker != null) {
-            tracker.checkAchievement(playerRef.getUuid(), achievement);
-        }
-    }
-
-    private void syncBoughtMiner(Store<EntityStore> store, int slotIndex) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        MineRobotManager robotManager = plugin.getMineRobotManager();
-        if (robotManager == null || store.getExternalData() == null) return;
-        robotManager.syncPurchasedMiner(playerRef.getUuid(), slotIndex, store.getExternalData().getWorld());
-    }
-
-    private void syncMinerSpeed(int slotIndex) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        MineRobotManager robotManager = plugin.getMineRobotManager();
-        if (robotManager == null) return;
-        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(slotIndex);
-        robotManager.syncMinerSpeed(playerRef.getUuid(), slotIndex, minerState.speedLevel());
-    }
-
-    private void syncMinerEvolution(Store<EntityStore> store, int slotIndex) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        MineRobotManager robotManager = plugin.getMineRobotManager();
-        if (robotManager == null || store.getExternalData() == null) return;
-        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(slotIndex);
-        robotManager.syncMinerEvolution(
-            playerRef.getUuid(), slotIndex,
-            minerState.speedLevel(), minerState.stars(),
-            store.getExternalData().getWorld()
-        );
+        if (tracker != null) tracker.checkAchievement(playerRef.getUuid(), achievement);
     }
 }

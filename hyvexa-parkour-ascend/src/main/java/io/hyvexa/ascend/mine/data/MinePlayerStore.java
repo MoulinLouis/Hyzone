@@ -2,13 +2,13 @@ package io.hyvexa.ascend.mine.data;
 
 import com.google.common.flogger.FluentLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +79,7 @@ public class MinePlayerStore {
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT crystals, bag_capacity_level, upgrade_momentum, upgrade_fortune, " +
                     "upgrade_jackhammer, upgrade_stomp, upgrade_blast, upgrade_haste, " +
-                    "in_mine, pickaxe_tier FROM mine_players WHERE uuid = ?")) {
+                    "in_mine, pickaxe_tier, pickaxe_enhancement FROM mine_players WHERE uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
@@ -94,6 +94,7 @@ public class MinePlayerStore {
                         progress.setUpgradeLevel(MineUpgradeType.HASTE, rs.getInt("upgrade_haste"));
                         progress.setInMine(rs.getBoolean("in_mine"));
                         progress.setPickaxeTier(rs.getInt("pickaxe_tier"));
+                        progress.setPickaxeEnhancement(rs.getInt("pickaxe_enhancement"));
                     }
                 }
             }
@@ -113,18 +114,43 @@ public class MinePlayerStore {
                 }
             }
 
-            // Load miner states (keyed by slot_index only, mine_id ignored)
+            // Load egg inventory
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT slot_index, has_miner, speed_level, stars FROM mine_player_miners WHERE player_uuid = ?")) {
+                    "SELECT layer_id, count FROM mine_player_eggs WHERE player_uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        progress.loadMinerState(
-                            rs.getInt("slot_index"),
-                            rs.getBoolean("has_miner"),
-                            rs.getInt("speed_level"),
-                            rs.getInt("stars")
+                        progress.loadEgg(rs.getString("layer_id"), rs.getInt("count"));
+                    }
+                }
+            }
+
+            // Load miner collection
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT id, layer_id, rarity, speed_level FROM mine_player_miners_v2 WHERE player_uuid = ? ORDER BY id")) {
+                ps.setString(1, playerId.toString());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        MinerRarity rarity = MinerRarity.fromName(rs.getString("rarity"));
+                        if (rarity == null) rarity = MinerRarity.COMMON;
+                        CollectedMiner miner = new CollectedMiner(
+                            rs.getLong("id"),
+                            rs.getString("layer_id"),
+                            rarity,
+                            rs.getInt("speed_level")
                         );
+                        progress.addMiner(miner);
+                    }
+                }
+            }
+
+            // Load slot assignments
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT slot_index, miner_id FROM mine_player_slot_assignments WHERE player_uuid = ?")) {
+                ps.setString(1, playerId.toString());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        progress.assignMinerToSlot(rs.getInt("slot_index"), rs.getLong("miner_id"));
                     }
                 }
             }
@@ -174,6 +200,32 @@ public class MinePlayerStore {
         return dirtyVersions.remove(playerId, dirtyVersion);
     }
 
+    /**
+     * Insert a new miner into the database and return its auto-generated ID.
+     * Called immediately when opening an egg (not batched).
+     */
+    public long insertMiner(UUID playerId, CollectedMiner miner) {
+        if (!DatabaseManager.getInstance().isInitialized()) return -1;
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return -1;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO mine_player_miners_v2 (player_uuid, layer_id, rarity, speed_level) VALUES (?, ?, ?, ?)",
+                    Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, playerId.toString());
+                ps.setString(2, miner.getLayerId());
+                ps.setString(3, miner.getRarity().name());
+                ps.setInt(4, miner.getSpeedLevel());
+                ps.executeUpdate();
+                try (ResultSet keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) return keys.getLong(1);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to insert miner for %s: %s", playerId, e.getMessage());
+        }
+        return -1;
+    }
+
     private boolean savePlayerSync(UUID playerId) {
         MinePlayerProgress progress = players.get(playerId);
         if (progress == null) return true;
@@ -191,8 +243,8 @@ public class MinePlayerStore {
                         INSERT INTO mine_players (uuid, crystals,
                             bag_capacity_level, upgrade_momentum, upgrade_fortune,
                             upgrade_jackhammer, upgrade_stomp, upgrade_blast, upgrade_haste,
-                            in_mine, pickaxe_tier)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            in_mine, pickaxe_tier, pickaxe_enhancement)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE crystals = VALUES(crystals),
                                                 bag_capacity_level = VALUES(bag_capacity_level),
                                                 upgrade_momentum = VALUES(upgrade_momentum),
@@ -202,7 +254,8 @@ public class MinePlayerStore {
                                                 upgrade_blast = VALUES(upgrade_blast),
                                                 upgrade_haste = VALUES(upgrade_haste),
                                                 in_mine = VALUES(in_mine),
-                                                pickaxe_tier = VALUES(pickaxe_tier)
+                                                pickaxe_tier = VALUES(pickaxe_tier),
+                                                pickaxe_enhancement = VALUES(pickaxe_enhancement)
                         """)) {
                     ps.setString(1, playerId.toString());
                     ps.setLong(2, snapshot.crystals());
@@ -215,6 +268,7 @@ public class MinePlayerStore {
                     ps.setInt(9, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.HASTE, 0));
                     ps.setBoolean(10, snapshot.inMine());
                     ps.setInt(11, snapshot.pickaxeTier());
+                    ps.setInt(12, snapshot.pickaxeEnhancement());
                     ps.executeUpdate();
                 }
 
@@ -260,26 +314,56 @@ public class MinePlayerStore {
                     }
                 }
 
-                // Save miner states (keyed by slot index, write single mine's ID)
-                Map<Integer, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.minerStates();
-                if (!minerStates.isEmpty()) {
-                    String mineId = ParkourAscendPlugin.getInstance().getMineConfigStore().getMineId();
-                    if (mineId == null) mineId = "";
-                    try (PreparedStatement ps = conn.prepareStatement("""
-                            INSERT INTO mine_player_miners (player_uuid, mine_id, slot_index, has_miner, speed_level, stars)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE has_miner = VALUES(has_miner),
-                                                    speed_level = VALUES(speed_level),
-                                                    stars = VALUES(stars)
-                            """)) {
-                        for (var entry : minerStates.entrySet()) {
+                // Save egg inventory — delete + re-insert
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "DELETE FROM mine_player_eggs WHERE player_uuid = ?")) {
+                    ps.setString(1, playerId.toString());
+                    ps.executeUpdate();
+                }
+
+                Map<String, Integer> eggs = snapshot.eggInventory();
+                if (!eggs.isEmpty()) {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "INSERT INTO mine_player_eggs (player_uuid, layer_id, count) VALUES (?, ?, ?)")) {
+                        for (var entry : eggs.entrySet()) {
                             ps.setString(1, playerId.toString());
-                            ps.setString(2, mineId);
-                            ps.setInt(3, entry.getKey());
-                            MinePlayerProgress.MinerProgressSnapshot state = entry.getValue();
-                            ps.setBoolean(4, state.hasMiner());
-                            ps.setInt(5, state.speedLevel());
-                            ps.setInt(6, state.stars());
+                            ps.setString(2, entry.getKey());
+                            ps.setInt(3, entry.getValue());
+                            ps.addBatch();
+                        }
+                        ps.executeBatch();
+                    }
+                }
+
+                // Save miner speed levels (INSERTs happen at egg-open time via insertMiner)
+                List<CollectedMiner> miners = snapshot.minerCollection();
+                if (!miners.isEmpty()) {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "UPDATE mine_player_miners_v2 SET speed_level = ? WHERE id = ?")) {
+                        for (CollectedMiner m : miners) {
+                            ps.setInt(1, m.getSpeedLevel());
+                            ps.setLong(2, m.getId());
+                            ps.addBatch();
+                        }
+                        ps.executeBatch();
+                    }
+                }
+
+                // Save slot assignments — delete + re-insert
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "DELETE FROM mine_player_slot_assignments WHERE player_uuid = ?")) {
+                    ps.setString(1, playerId.toString());
+                    ps.executeUpdate();
+                }
+
+                Map<Integer, Long> slots = snapshot.slotAssignments();
+                if (!slots.isEmpty()) {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "INSERT INTO mine_player_slot_assignments (player_uuid, slot_index, miner_id) VALUES (?, ?, ?)")) {
+                        for (var entry : slots.entrySet()) {
+                            ps.setString(1, playerId.toString());
+                            ps.setInt(2, entry.getKey());
+                            ps.setLong(3, entry.getValue());
                             ps.addBatch();
                         }
                         ps.executeBatch();

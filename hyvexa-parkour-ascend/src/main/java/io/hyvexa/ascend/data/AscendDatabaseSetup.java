@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -416,11 +417,150 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // --- Egg-based miner gacha system tables ---
+
+            // Player egg inventory
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_player_eggs (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    layer_id VARCHAR(64) NOT NULL,
+                    count INT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (player_uuid, layer_id)
+                ) ENGINE=InnoDB
+                """);
+
+            // Player miner collection (v2 — gacha-based)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_player_miners_v2 (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    player_uuid VARCHAR(36) NOT NULL,
+                    layer_id VARCHAR(64) NOT NULL,
+                    rarity VARCHAR(16) NOT NULL,
+                    speed_level INT NOT NULL DEFAULT 0,
+                    INDEX idx_player (player_uuid)
+                ) ENGINE=InnoDB
+                """);
+
+            // Miner-to-slot assignments
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_player_slot_assignments (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    slot_index INT NOT NULL,
+                    miner_id BIGINT NOT NULL,
+                    PRIMARY KEY (player_uuid, slot_index)
+                ) ENGINE=InnoDB
+                """);
+
+            // Per-layer per-rarity block tables (admin-configured or auto-seeded)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_layer_rarity_blocks (
+                    layer_id VARCHAR(64) NOT NULL,
+                    rarity VARCHAR(16) NOT NULL,
+                    block_table_json TEXT NOT NULL DEFAULT '{}',
+                    PRIMARY KEY (layer_id, rarity)
+                ) ENGINE=InnoDB
+                """);
+
+            // Add egg_drop_chance and display_name columns to mine_zone_layers
+            ensureLayerGachaColumns(conn);
+
+            // Migrate old miners to v2
+            migrateOldMinersToV2(conn);
+
+            // Pickaxe enhancement + recipe system
+            ensurePickaxeEnhancementColumn(conn);
+
+            // Pickaxe tier recipes (block requirements for tier upgrades)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS pickaxe_tier_recipes (
+                    tier INT NOT NULL,
+                    block_type_id VARCHAR(64) NOT NULL,
+                    amount INT NOT NULL DEFAULT 1,
+                    PRIMARY KEY (tier, block_type_id)
+                ) ENGINE=InnoDB
+                """);
+
+            // Pickaxe enhancement costs (crystal cost per tier/level)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS pickaxe_enhance_costs (
+                    tier INT NOT NULL,
+                    level INT NOT NULL,
+                    crystal_cost BIGINT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (tier, level)
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to create Ascend tables: " + e.getMessage());
+        }
+    }
+
+    private static void ensureLayerGachaColumns(Connection conn) {
+        if (!columnExists(conn, "mine_zone_layers", "egg_drop_chance")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE mine_zone_layers ADD COLUMN egg_drop_chance DOUBLE NOT NULL DEFAULT 0.5");
+                LOGGER.atInfo().log("Added egg_drop_chance column to mine_zone_layers");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add egg_drop_chance column: " + e.getMessage());
+            }
+        }
+        if (!columnExists(conn, "mine_zone_layers", "display_name")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE mine_zone_layers ADD COLUMN display_name VARCHAR(64) NOT NULL DEFAULT ''");
+                LOGGER.atInfo().log("Added display_name column to mine_zone_layers");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add display_name column: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * One-time migration: convert old mine_player_miners rows (has_miner=1) into
+     * mine_player_miners_v2 entries as COMMON miners, and create slot assignments.
+     */
+    private static void migrateOldMinersToV2(Connection conn) {
+        // Only migrate if v2 table is empty and old table has data
+        try (Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM mine_player_miners_v2")) {
+                if (rs.next() && rs.getInt(1) > 0) return; // already migrated
+            }
+
+            // Check if old table has any miners
+            int oldCount = 0;
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM mine_player_miners WHERE has_miner = 1")) {
+                if (rs.next()) oldCount = rs.getInt(1);
+            }
+            if (oldCount == 0) return;
+
+            // Get first layer ID as fallback origin
+            String firstLayerId = "";
+            try (ResultSet rs = stmt.executeQuery("SELECT id FROM mine_zone_layers ORDER BY min_y ASC LIMIT 1")) {
+                if (rs.next()) firstLayerId = rs.getString("id");
+            }
+
+            // Migrate each old miner
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO mine_player_miners_v2 (player_uuid, layer_id, rarity, speed_level) " +
+                    "SELECT m.player_uuid, ?, 'COMMON', m.speed_level " +
+                    "FROM mine_player_miners m WHERE m.has_miner = 1")) {
+                ps.setString(1, firstLayerId);
+                ps.executeUpdate();
+            }
+
+            // Create slot assignments
+            stmt.executeUpdate(
+                "INSERT INTO mine_player_slot_assignments (player_uuid, slot_index, miner_id) " +
+                "SELECT m.player_uuid, m.slot_index, v2.id " +
+                "FROM mine_player_miners m " +
+                "JOIN mine_player_miners_v2 v2 ON v2.player_uuid = m.player_uuid " +
+                "WHERE m.has_miner = 1");
+
+            LOGGER.atInfo().log("Migrated " + oldCount + " old miners to v2 gacha system");
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to migrate old miners to v2: " + e.getMessage());
         }
     }
 
@@ -1371,6 +1511,17 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN pickaxe_tier INT NOT NULL DEFAULT 0");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add pickaxe_tier column to mine_players: %s", e.getMessage());
+            }
+        }
+    }
+
+    private static void ensurePickaxeEnhancementColumn(Connection conn) {
+        if (conn == null) return;
+        if (!columnExists(conn, "mine_players", "pickaxe_enhancement")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN pickaxe_enhancement INT NOT NULL DEFAULT 0");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add pickaxe_enhancement column to mine_players: %s", e.getMessage());
             }
         }
     }

@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 480, Height: 320);
+    Anchor: (Width: 480, Height: 370);
 
     #Title {
       Group {
@@ -59,6 +59,16 @@ $C.@PageOverlay {
         $C.@TextButton #MinesButton {
           Anchor: (Left: 10, Width: 96, Height: 36);
           Text: "Mines";
+        }
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 10, Height: 38);
+
+        $C.@TextButton #PickaxeButton {
+          Anchor: (Width: 96, Height: 36);
+          Text: "Pickaxe";
         }
       }
     }

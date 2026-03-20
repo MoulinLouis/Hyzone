@@ -1,0 +1,30 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 24);
+  LayoutMode: Left;
+  Padding: (Left: 4, Top: 2);
+
+  Label #EntryText {
+    FlexWeight: 1;
+    Anchor: (Top: 3);
+    Style: (FontSize: 12, TextColor: #f0f4f8);
+    Text: "1x Block";
+  }
+
+  TextButton #RemoveBtn {
+    Anchor: (Width: 40, Height: 20);
+    Text: "X";
+    Style: TextButtonStyle(
+      Default: (
+        Background: #ef4444(0.6),
+        LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Hovered: (
+        Background: #ef4444(0.9),
+        LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+}

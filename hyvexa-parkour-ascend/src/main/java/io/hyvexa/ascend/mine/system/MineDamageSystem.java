@@ -80,12 +80,13 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
         if (blockTypeName == null) return;
 
-        // Multi-HP: record hit with Momentum damage bonus
+        // Multi-HP: record hit with pickaxe damage * Momentum bonus
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         MineConfigStore configStore = plugin.getMineConfigStore();
         int blockHp = configStore.getBlockHp(blockTypeName);
-        double damageMultiplier = mineProgress.getMomentumMultiplier();
-        BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, blockHp, damageMultiplier);
+        int pickaxeDamage = mineProgress.getPickaxeDamage();
+        double totalDamage = pickaxeDamage * mineProgress.getMomentumMultiplier();
+        BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, blockHp, totalDamage);
 
         MineHudManager mineHudManager = plugin.getMineHudManager();
 
@@ -128,6 +129,9 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
 
         // Momentum combo
         MineRewardHelper.handleMomentumCombo(playerId, mineProgress);
+
+        // Egg drop chance
+        EggDropHelper.tryDropEgg(playerId, zone, by, mineProgress, minePlayerStore);
 
         // AoE upgrades (Jackhammer, Stomp, Blast)
         if (world != null) {

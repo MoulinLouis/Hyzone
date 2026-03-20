@@ -15,6 +15,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.ui.MineAdminPage;
+import io.hyvexa.ascend.mine.ui.PickaxeAdminPage;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
@@ -25,6 +26,7 @@ public class AscendAdminPanelPage extends BaseAscendPage {
     private static final String BUTTON_ADMIN = "AdminPanel";
     private static final String BUTTON_WHITELIST = "Whitelist";
     private static final String BUTTON_MINES = "Mines";
+    private static final String BUTTON_PICKAXE = "Pickaxe";
     private static final String BUTTON_CLOSE = "Close";
 
     public AscendAdminPanelPage(@Nonnull PlayerRef playerRef) {
@@ -43,6 +45,8 @@ public class AscendAdminPanelPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_WHITELIST), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MinesButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_MINES), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PickaxeButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PICKAXE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
     }
@@ -60,6 +64,7 @@ public class AscendAdminPanelPage extends BaseAscendPage {
             case BUTTON_ADMIN -> openAdminPanel(ref, store);
             case BUTTON_WHITELIST -> openWhitelist(ref, store);
             case BUTTON_MINES -> openMines(ref, store);
+            case BUTTON_PICKAXE -> openPickaxe(ref, store);
             default -> {
             }
         }
@@ -107,6 +112,23 @@ public class AscendAdminPanelPage extends BaseAscendPage {
         }
         if (player != null) {
             player.getPageManager().openCustomPage(ref, store, new MineAdminPage(playerRef, mineConfigStore));
+        }
+    }
+
+    private void openPickaxe(Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+        MineConfigStore mineConfigStore = plugin.getMineConfigStore();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (mineConfigStore == null || playerRef == null) {
+            if (player != null) {
+                player.sendMessage(Message.raw("[Ascend] Mine systems are still loading."));
+            }
+            return;
+        }
+        if (player != null) {
+            player.getPageManager().openCustomPage(ref, store, new PickaxeAdminPage(playerRef, mineConfigStore));
         }
     }
 

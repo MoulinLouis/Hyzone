@@ -125,6 +125,11 @@ Use `grepai search` as the primary tool for code exploration. Use `grepai trace`
 See [docs/GREPAI.md](docs/GREPAI.md) for full reference.
 
 
+## Language
+
+- The user's native language is French — conversation in French is fine.
+- **All written files must be in English**: code, comments, documentation, plans, commit messages, changelogs, UI text. No exceptions.
+
 ## Behavioral Guidelines
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.

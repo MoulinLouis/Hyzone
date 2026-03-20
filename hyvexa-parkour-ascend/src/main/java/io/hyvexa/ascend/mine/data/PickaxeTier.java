@@ -1,38 +1,36 @@
 package io.hyvexa.ascend.mine.data;
 
-import java.util.List;
-
 public enum PickaxeTier {
-    WOOD(0, "Wood Pickaxe", 1.0, 0, "Tool_Pickaxe_Wood", null),
-    STONE(1, "Stone Pickaxe", 1.5, 500, "Tool_Pickaxe_Stone", null),
-    IRON(2, "Iron Pickaxe", 2.0, 5_000, "Tool_Pickaxe_Iron", null),
-    CRYSTAL(3, "Crystal Pickaxe", 3.0, 25_000, "Tool_Pickaxe_Crystal", "Mine 2 unlocked"),
-    VOID(4, "Void Pickaxe", 4.0, 100_000, "Tool_Pickaxe_Void", "Mine 3 unlocked"),
-    PRISMATIC(5, "Prismatic Pickaxe", 5.0, 500_000, "Tool_Pickaxe_Prismatic", "All mines unlocked");
+    WOOD(0, "Wood Pickaxe", "Tool_Pickaxe_Wood", 1),
+    STONE(1, "Stone Pickaxe", "Tool_Pickaxe_Stone", 12),
+    IRON(2, "Iron Pickaxe", "Tool_Pickaxe_Iron", 34),
+    CRYSTAL(3, "Crystal Pickaxe", "Tool_Pickaxe_Crystal", 78),
+    VOID(4, "Void Pickaxe", "Tool_Pickaxe_Void", 166),
+    PRISMATIC(5, "Prismatic Pickaxe", "Tool_Pickaxe_Prismatic", 342);
+
+    public static final int MAX_ENHANCEMENT = 5;
 
     private final int tier;
     private final String displayName;
-    private final double speedMultiplier;
-    private final long unlockCost;
     private final String itemId;
-    private final String requirementDescription;
+    private final int baseDamage;
 
-    PickaxeTier(int tier, String displayName, double speedMultiplier, long unlockCost,
-                String itemId, String requirementDescription) {
+    PickaxeTier(int tier, String displayName, String itemId, int baseDamage) {
         this.tier = tier;
         this.displayName = displayName;
-        this.speedMultiplier = speedMultiplier;
-        this.unlockCost = unlockCost;
         this.itemId = itemId;
-        this.requirementDescription = requirementDescription;
+        this.baseDamage = baseDamage;
     }
 
     public int getTier() { return tier; }
     public String getDisplayName() { return displayName; }
-    public double getSpeedMultiplier() { return speedMultiplier; }
-    public long getUnlockCost() { return unlockCost; }
     public String getItemId() { return itemId; }
-    public String getRequirementDescription() { return requirementDescription; }
+    public int getBaseDamage() { return baseDamage; }
+
+    public String getDisplayName(int enhancement) {
+        if (enhancement <= 0) return displayName;
+        return displayName + " +" + enhancement;
+    }
 
     public static PickaxeTier fromTier(int tier) {
         for (PickaxeTier pt : values()) {
@@ -45,19 +43,5 @@ public enum PickaxeTier {
         int nextOrdinal = ordinal() + 1;
         if (nextOrdinal >= values().length) return null;
         return values()[nextOrdinal];
-    }
-
-    /**
-     * Check if the player meets the unlock requirement for this tier.
-     * @param unlockedMineIds list of mine IDs the player has unlocked (sorted by display order)
-     * @param totalMineCount total number of mines in the system
-     */
-    public boolean meetsRequirement(List<String> unlockedMineIds, int totalMineCount) {
-        return switch (this) {
-            case WOOD, STONE, IRON -> true;
-            case CRYSTAL -> unlockedMineIds.size() >= 2;
-            case VOID -> unlockedMineIds.size() >= 3;
-            case PRISMATIC -> totalMineCount > 0 && unlockedMineIds.size() >= totalMineCount;
-        };
     }
 }

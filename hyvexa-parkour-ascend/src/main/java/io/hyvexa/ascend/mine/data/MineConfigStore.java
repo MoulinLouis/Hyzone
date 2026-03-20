@@ -44,6 +44,15 @@ public class MineConfigStore {
     // blockTypeId -> hp (global, not per-zone)
     private final Map<String, Integer> blockHpMap = new ConcurrentHashMap<>();
 
+    // targetTier -> (blockTypeId -> amount) — recipes for tier upgrades
+    private final Map<Integer, Map<String, Integer>> tierRecipes = new ConcurrentHashMap<>();
+
+    // tier -> (level -> crystalCost) — enhancement costs
+    private final Map<Integer, Map<Integer, Long>> enhanceCosts = new ConcurrentHashMap<>();
+
+    // layerId -> MineZoneLayer (index built after loadLayers)
+    private final Map<String, MineZoneLayer> layerById = new ConcurrentHashMap<>();
+
     // mineId -> [slot0, slot1, ...] ordered by slotIndex
     private final Map<String, List<MinerSlot>> minerSlots = new ConcurrentHashMap<>();
 
@@ -72,11 +81,15 @@ public class MineConfigStore {
                 loadMines(conn);
                 loadZones(conn);
                 loadLayers(conn);
+                loadLayerRarityBlocks(conn);
+                seedRarityBlockTables(conn);
                 loadGate(conn);
                 loadBlockPrices(conn);
                 loadBlockHp(conn);
                 loadMinerSlots(conn);
                 loadConveyorWaypoints(conn);
+                loadTierRecipes(conn);
+                loadEnhanceCosts(conn);
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to load MineConfigStore: " + e.getMessage());
             }
@@ -155,7 +168,8 @@ public class MineConfigStore {
     }
 
     private void loadLayers(Connection conn) throws SQLException {
-        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json " +
+        layerById.clear();
+        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json, egg_drop_chance, display_name " +
             "FROM mine_zone_layers ORDER BY zone_id, min_y, max_y, id";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -174,6 +188,13 @@ public class MineConfigStore {
                             layer.getBlockTable().putAll(table);
                         }
                     }
+                    try {
+                        layer.setEggDropChance(rs.getDouble("egg_drop_chance"));
+                    } catch (SQLException ignored) {}
+                    try {
+                        layer.setDisplayName(rs.getString("display_name"));
+                    } catch (SQLException ignored) {}
+                    layerById.put(layer.getId(), layer);
                     boolean attached = false;
                     for (Mine mine : mines.values()) {
                         for (MineZone zone : mine.getZones()) {
@@ -189,6 +210,93 @@ public class MineConfigStore {
                 }
             }
         }
+    }
+
+    private void loadLayerRarityBlocks(Connection conn) throws SQLException {
+        String sql = "SELECT layer_id, rarity, block_table_json FROM mine_layer_rarity_blocks";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String layerId = rs.getString("layer_id");
+                    MinerRarity rarity = MinerRarity.fromName(rs.getString("rarity"));
+                    if (rarity == null) continue;
+                    String json = rs.getString("block_table_json");
+                    if (json == null || json.isEmpty()) continue;
+                    Map<String, Double> table = GSON.fromJson(json,
+                        new TypeToken<Map<String, Double>>(){}.getType());
+                    if (table == null || table.isEmpty()) continue;
+                    MineZoneLayer layer = getLayerById(layerId);
+                    if (layer != null) {
+                        layer.getRarityBlockTables().put(rarity, table);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Seeds default rarity block tables for layers that don't have them yet.
+     * Rare blocks = the 2 blocks with the lowest weight in the base table.
+     */
+    private void seedRarityBlockTables(Connection conn) throws SQLException {
+        List<MineZoneLayer> allLayers = new ArrayList<>();
+        for (Mine mine : mines.values()) {
+            for (MineZone zone : mine.getZones()) {
+                allLayers.addAll(zone.getLayers());
+            }
+        }
+
+        for (MineZoneLayer layer : allLayers) {
+            if (layer.getBlockTable().isEmpty()) continue;
+            if (layer.getRarityBlockTables().size() >= MinerRarity.values().length) continue;
+
+            // Find the 2 rarest blocks (lowest weight)
+            List<Map.Entry<String, Double>> sorted = new ArrayList<>(layer.getBlockTable().entrySet());
+            sorted.sort(Map.Entry.comparingByValue());
+            java.util.Set<String> rareBlocks = new java.util.HashSet<>();
+            for (int i = 0; i < Math.min(2, sorted.size()); i++) {
+                rareBlocks.add(sorted.get(i).getKey());
+            }
+
+            double[][] multipliers = {
+                {1.0, 1.0},     // COMMON: no change
+                {1.25, 0.90},   // UNCOMMON
+                {1.5, 0.75},    // RARE
+                {2.0, 0.50},    // EPIC
+                {3.0, 0.25},    // LEGENDARY
+            };
+
+            for (MinerRarity rarity : MinerRarity.values()) {
+                if (layer.getRarityBlockTables().containsKey(rarity)) continue;
+
+                double rareMult = multipliers[rarity.ordinal()][0];
+                double commonMult = multipliers[rarity.ordinal()][1];
+
+                Map<String, Double> table = new HashMap<>();
+                for (var entry : layer.getBlockTable().entrySet()) {
+                    double mult = rareBlocks.contains(entry.getKey()) ? rareMult : commonMult;
+                    table.put(entry.getKey(), entry.getValue() * mult);
+                }
+                layer.getRarityBlockTables().put(rarity, table);
+
+                // Persist to DB
+                String json = GSON.toJson(table);
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT IGNORE INTO mine_layer_rarity_blocks (layer_id, rarity, block_table_json) VALUES (?, ?, ?)")) {
+                    ps.setString(1, layer.getId());
+                    ps.setString(2, rarity.name());
+                    ps.setString(3, json);
+                    ps.executeUpdate();
+                }
+            }
+        }
+    }
+
+    /** Finds a layer by its ID. O(1) via index map. */
+    public MineZoneLayer getLayerById(String layerId) {
+        if (layerId == null) return null;
+        return layerById.get(layerId);
     }
 
     private void loadGate(Connection conn) throws SQLException {
@@ -1026,6 +1134,158 @@ public class MineConfigStore {
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to delete zone layer: " + e.getMessage());
         }
+    }
+
+    // --- Tier Recipes ---
+
+    private void loadTierRecipes(Connection conn) throws SQLException {
+        tierRecipes.clear();
+        String sql = "SELECT tier, block_type_id, amount FROM pickaxe_tier_recipes";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int tier = rs.getInt("tier");
+                    String blockTypeId = rs.getString("block_type_id");
+                    int amount = rs.getInt("amount");
+                    tierRecipes.computeIfAbsent(tier, k -> new ConcurrentHashMap<>())
+                        .put(blockTypeId, amount);
+                }
+            }
+        }
+    }
+
+    public void saveTierRecipe(int targetTier, String blockTypeId, int amount) {
+        if (targetTier < 1 || blockTypeId == null || amount <= 0) return;
+
+        tierRecipes.computeIfAbsent(targetTier, k -> new ConcurrentHashMap<>())
+            .put(blockTypeId, amount);
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = """
+            INSERT INTO pickaxe_tier_recipes (tier, block_type_id, amount)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE amount = VALUES(amount)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setInt(1, targetTier);
+                stmt.setString(2, blockTypeId);
+                stmt.setInt(3, amount);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to save tier recipe: " + e.getMessage());
+        }
+    }
+
+    public void removeTierRecipe(int targetTier, String blockTypeId) {
+        if (blockTypeId == null) return;
+
+        Map<String, Integer> recipe = tierRecipes.get(targetTier);
+        if (recipe != null) {
+            recipe.remove(blockTypeId);
+            if (recipe.isEmpty()) tierRecipes.remove(targetTier);
+        }
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM pickaxe_tier_recipes WHERE tier = ? AND block_type_id = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setInt(1, targetTier);
+                stmt.setString(2, blockTypeId);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to remove tier recipe: " + e.getMessage());
+        }
+    }
+
+    public Map<String, Integer> getTierRecipe(int targetTier) {
+        Map<String, Integer> recipe = tierRecipes.get(targetTier);
+        return recipe != null ? Collections.unmodifiableMap(recipe) : Collections.emptyMap();
+    }
+
+    // --- Enhancement Costs ---
+
+    private void loadEnhanceCosts(Connection conn) throws SQLException {
+        enhanceCosts.clear();
+        String sql = "SELECT tier, level, crystal_cost FROM pickaxe_enhance_costs";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int tier = rs.getInt("tier");
+                    int level = rs.getInt("level");
+                    long cost = rs.getLong("crystal_cost");
+                    enhanceCosts.computeIfAbsent(tier, k -> new ConcurrentHashMap<>())
+                        .put(level, cost);
+                }
+            }
+        }
+    }
+
+    public void saveEnhanceCost(int tier, int level, long cost) {
+        if (tier < 0 || level < 1 || level > PickaxeTier.MAX_ENHANCEMENT) return;
+
+        enhanceCosts.computeIfAbsent(tier, k -> new ConcurrentHashMap<>())
+            .put(level, cost);
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = """
+            INSERT INTO pickaxe_enhance_costs (tier, level, crystal_cost)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE crystal_cost = VALUES(crystal_cost)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setInt(1, tier);
+                stmt.setInt(2, level);
+                stmt.setLong(3, cost);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to save enhance cost: " + e.getMessage());
+        }
+    }
+
+    public void removeEnhanceCost(int tier, int level) {
+        Map<Integer, Long> costs = enhanceCosts.get(tier);
+        if (costs != null) {
+            costs.remove(level);
+            if (costs.isEmpty()) enhanceCosts.remove(tier);
+        }
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM pickaxe_enhance_costs WHERE tier = ? AND level = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setInt(1, tier);
+                stmt.setInt(2, level);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to remove enhance cost: " + e.getMessage());
+        }
+    }
+
+    public long getEnhanceCost(int tier, int level) {
+        Map<Integer, Long> costs = enhanceCosts.get(tier);
+        return costs != null ? costs.getOrDefault(level, 0L) : 0L;
     }
 
     private void sortLayers(MineZone zone) {

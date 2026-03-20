@@ -1,8 +1,10 @@
 package io.hyvexa.ascend.mine.data;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -15,8 +17,13 @@ public class MinePlayerProgress {
     private long crystals;
     private volatile boolean inMine;
     private volatile int pickaxeTier;
+    private volatile int pickaxeEnhancement;
     private final Map<MineUpgradeType, Integer> upgradeLevels = new ConcurrentHashMap<>();
-    private final Map<Integer, MinerProgress> minerStates = new ConcurrentHashMap<>();
+
+    // --- Gacha system ---
+    private final Map<String, Integer> eggInventory = new ConcurrentHashMap<>(); // layerId -> count
+    private final List<CollectedMiner> minerCollection = new ArrayList<>();
+    private final Map<Integer, Long> slotAssignments = new ConcurrentHashMap<>(); // slotIndex -> minerId
 
     // Momentum combo state (transient, not persisted)
     private volatile int comboCount;
@@ -176,7 +183,14 @@ public class MinePlayerProgress {
     public int getPickaxeTier() { return pickaxeTier; }
     public void setPickaxeTier(int tier) { this.pickaxeTier = tier; }
 
+    public int getPickaxeEnhancement() { return pickaxeEnhancement; }
+    public void setPickaxeEnhancement(int enhancement) { this.pickaxeEnhancement = enhancement; }
+
     public PickaxeTier getPickaxeTierEnum() { return PickaxeTier.fromTier(pickaxeTier); }
+
+    public int getPickaxeDamage() {
+        return getPickaxeTierEnum().getBaseDamage() + pickaxeEnhancement;
+    }
 
     public boolean isHoldingExpectedPickaxe(String heldItemId) {
         if (heldItemId == null || heldItemId.isEmpty()) return false;
@@ -204,19 +218,63 @@ public class MinePlayerProgress {
         return true;
     }
 
-    public synchronized PickaxeUpgradeResult purchasePickaxeTier() {
+    public synchronized PickaxeEnhanceResult purchasePickaxeEnhancement(long cost) {
+        if (pickaxeEnhancement >= PickaxeTier.MAX_ENHANCEMENT) return PickaxeEnhanceResult.ALREADY_MAXED;
+        if (cost > 0 && !trySpendCrystals(cost)) return PickaxeEnhanceResult.INSUFFICIENT_CRYSTALS;
+        pickaxeEnhancement++;
+        return PickaxeEnhanceResult.SUCCESS;
+    }
+
+    public synchronized PickaxeUpgradeResult upgradePickaxeTier(Map<String, Integer> requiredBlocks) {
+        if (pickaxeEnhancement < PickaxeTier.MAX_ENHANCEMENT) return PickaxeUpgradeResult.NOT_AT_MAX_ENHANCEMENT;
         PickaxeTier current = getPickaxeTierEnum();
         PickaxeTier next = current.next();
         if (next == null) return PickaxeUpgradeResult.ALREADY_MAXED;
-        if (!trySpendCrystals(next.getUnlockCost())) return PickaxeUpgradeResult.INSUFFICIENT_CRYSTALS;
+        if (requiredBlocks == null || requiredBlocks.isEmpty()) return PickaxeUpgradeResult.NOT_CONFIGURED;
+        if (!hasInventoryBlocks(requiredBlocks)) return PickaxeUpgradeResult.MISSING_BLOCKS;
+        removeInventoryBlocks(requiredBlocks);
         pickaxeTier = next.getTier();
+        pickaxeEnhancement = 0;
         return PickaxeUpgradeResult.SUCCESS;
+    }
+
+    public synchronized boolean hasInventoryBlocks(Map<String, Integer> required) {
+        for (var entry : required.entrySet()) {
+            int have = inventory.getOrDefault(entry.getKey(), 0);
+            if (have < entry.getValue()) return false;
+        }
+        return true;
+    }
+
+    public synchronized void removeInventoryBlocks(Map<String, Integer> required) {
+        for (var entry : required.entrySet()) {
+            String blockId = entry.getKey();
+            int toRemove = entry.getValue();
+            Integer current = inventory.get(blockId);
+            if (current == null) continue;
+            int remaining = current - toRemove;
+            if (remaining <= 0) {
+                inventory.remove(blockId);
+                inventoryCount -= current;
+            } else {
+                inventory.put(blockId, remaining);
+                inventoryCount -= toRemove;
+            }
+        }
+    }
+
+    public enum PickaxeEnhanceResult {
+        SUCCESS,
+        ALREADY_MAXED,
+        INSUFFICIENT_CRYSTALS
     }
 
     public enum PickaxeUpgradeResult {
         SUCCESS,
         ALREADY_MAXED,
-        INSUFFICIENT_CRYSTALS
+        NOT_AT_MAX_ENHANCEMENT,
+        MISSING_BLOCKS,
+        NOT_CONFIGURED
     }
 
     // --- Momentum combo ---
@@ -278,95 +336,97 @@ public class MinePlayerProgress {
         return (int) MineUpgradeType.BAG_CAPACITY.getEffect(getUpgradeLevel(MineUpgradeType.BAG_CAPACITY));
     }
 
-    // --- Per-slot miner state (single mine) ---
+    // --- Egg inventory ---
 
-    public static class MinerProgress {
-        volatile boolean hasMiner;
-        volatile int speedLevel;
-        volatile int stars;
-
-        public MinerProgress() {}
-        public boolean isHasMiner() { return hasMiner; }
-        public void setHasMiner(boolean h) { hasMiner = h; }
-        public int getSpeedLevel() { return speedLevel; }
-        public void setSpeedLevel(int s) { speedLevel = s; }
-        public int getStars() { return stars; }
-        public void setStars(int s) { stars = s; }
+    public synchronized void addEgg(String layerId) {
+        eggInventory.merge(layerId, 1, Integer::sum);
     }
 
-    public MinerProgress getMinerState(int slotIndex) {
-        return minerStates.computeIfAbsent(slotIndex, k -> new MinerProgress());
+    public synchronized boolean removeEgg(String layerId) {
+        Integer count = eggInventory.get(layerId);
+        if (count == null || count <= 0) return false;
+        if (count == 1) {
+            eggInventory.remove(layerId);
+        } else {
+            eggInventory.put(layerId, count - 1);
+        }
+        return true;
     }
 
-    public synchronized MinerProgressSnapshot getMinerSnapshot(int slotIndex) {
-        MinerProgress state = getMinerState(slotIndex);
-        return new MinerProgressSnapshot(state.isHasMiner(), state.getSpeedLevel(), state.getStars());
+    public synchronized int getEggCount(String layerId) {
+        return eggInventory.getOrDefault(layerId, 0);
     }
 
-    public synchronized Map<Integer, MinerProgressSnapshot> getMinerStates() {
-        Map<Integer, MinerProgressSnapshot> copy = new HashMap<>();
-        for (var entry : minerStates.entrySet()) {
-            MinerProgress state = entry.getValue();
-            copy.put(entry.getKey(), new MinerProgressSnapshot(
-                state.isHasMiner(),
-                state.getSpeedLevel(),
-                state.getStars()
-            ));
-        }
-        return copy;
+    public synchronized Map<String, Integer> getEggInventory() {
+        return new LinkedHashMap<>(eggInventory);
     }
 
-    public synchronized void loadMinerState(int slotIndex, boolean hasMiner, int speedLevel, int stars) {
-        MinerProgress state = getMinerState(slotIndex);
-        state.setHasMiner(hasMiner);
-        state.setSpeedLevel(speedLevel);
-        state.setStars(stars);
+    public synchronized void loadEgg(String layerId, int count) {
+        if (layerId == null || count <= 0) return;
+        eggInventory.put(layerId, count);
     }
 
-    public synchronized MinerPurchaseResult purchaseMiner(int slotIndex, long cost) {
-        MinerProgress state = getMinerState(slotIndex);
-        if (state.isHasMiner()) {
-            return MinerPurchaseResult.ALREADY_OWNED;
-        }
-        if (!trySpendCrystals(cost)) {
-            return MinerPurchaseResult.INSUFFICIENT_CRYSTALS;
-        }
-        state.setHasMiner(true);
-        return MinerPurchaseResult.SUCCESS;
+    // --- Miner collection ---
+
+    public synchronized void addMiner(CollectedMiner miner) {
+        minerCollection.add(miner);
     }
 
-    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(int slotIndex, long cost, int maxSpeedLevel) {
-        MinerProgress state = getMinerState(slotIndex);
-        if (!state.isHasMiner()) {
-            return MinerSpeedUpgradeResult.NO_MINER;
+    public synchronized CollectedMiner getMinerById(long minerId) {
+        for (CollectedMiner m : minerCollection) {
+            if (m.getId() == minerId) return m;
         }
-        if (state.getSpeedLevel() >= maxSpeedLevel) {
-            return MinerSpeedUpgradeResult.SPEED_MAXED;
-        }
-        if (!trySpendCrystals(cost)) {
-            return MinerSpeedUpgradeResult.INSUFFICIENT_CRYSTALS;
-        }
-        state.setSpeedLevel(state.getSpeedLevel() + 1);
+        return null;
+    }
+
+    public synchronized List<CollectedMiner> getMinerCollection() {
+        return new ArrayList<>(minerCollection);
+    }
+
+    // --- Slot assignments ---
+
+    public synchronized void assignMinerToSlot(int slotIndex, long minerId) {
+        slotAssignments.put(slotIndex, minerId);
+    }
+
+    public synchronized void unassignSlot(int slotIndex) {
+        slotAssignments.remove(slotIndex);
+    }
+
+    public synchronized Long getAssignedMinerId(int slotIndex) {
+        return slotAssignments.get(slotIndex);
+    }
+
+    public synchronized CollectedMiner getAssignedMiner(int slotIndex) {
+        Long minerId = slotAssignments.get(slotIndex);
+        if (minerId == null) return null;
+        return getMinerById(minerId);
+    }
+
+    public synchronized boolean isSlotAssigned(int slotIndex) {
+        return slotAssignments.containsKey(slotIndex);
+    }
+
+    public synchronized Map<Integer, Long> getSlotAssignments() {
+        return new LinkedHashMap<>(slotAssignments);
+    }
+
+    /**
+     * Returns true if the given miner is currently assigned to any slot.
+     */
+    public synchronized boolean isMinerAssigned(long minerId) {
+        return slotAssignments.containsValue(minerId);
+    }
+
+    /**
+     * Upgrade the speed of a collected miner by ID.
+     */
+    public synchronized MinerSpeedUpgradeResult upgradeMinerSpeed(long minerId, long cost) {
+        CollectedMiner miner = getMinerById(minerId);
+        if (miner == null) return MinerSpeedUpgradeResult.NO_MINER;
+        if (!trySpendCrystals(cost)) return MinerSpeedUpgradeResult.INSUFFICIENT_CRYSTALS;
+        miner.setSpeedLevel(miner.getSpeedLevel() + 1);
         return MinerSpeedUpgradeResult.SUCCESS;
-    }
-
-    public synchronized MinerEvolutionResult evolveMiner(int slotIndex, long cost, int maxSpeedLevel, int maxStars) {
-        MinerProgress state = getMinerState(slotIndex);
-        if (!state.isHasMiner()) {
-            return MinerEvolutionResult.NO_MINER;
-        }
-        if (state.getSpeedLevel() < maxSpeedLevel) {
-            return MinerEvolutionResult.SPEED_NOT_MAXED;
-        }
-        if (state.getStars() >= maxStars) {
-            return MinerEvolutionResult.STAR_MAXED;
-        }
-        if (!trySpendCrystals(cost)) {
-            return MinerEvolutionResult.INSUFFICIENT_CRYSTALS;
-        }
-        state.setSpeedLevel(0);
-        state.setStars(state.getStars() + 1);
-        return MinerEvolutionResult.SUCCESS;
     }
 
     public synchronized PlayerSaveSnapshot createSaveSnapshot() {
@@ -376,9 +436,12 @@ public class MinePlayerProgress {
             crystals,
             upgradeSnapshot,
             new LinkedHashMap<>(inventory),
-            getMinerStates(),
+            new LinkedHashMap<>(eggInventory),
+            new ArrayList<>(minerCollection),
+            new LinkedHashMap<>(slotAssignments),
             inMine,
             pickaxeTier,
+            pickaxeEnhancement,
             new LinkedHashMap<>(conveyorBuffer)
         );
     }
@@ -460,34 +523,20 @@ public class MinePlayerProgress {
         return toMove;
     }
 
-    public enum MinerPurchaseResult {
-        SUCCESS,
-        ALREADY_OWNED,
-        INSUFFICIENT_CRYSTALS
-    }
-
     public enum MinerSpeedUpgradeResult {
         SUCCESS,
         NO_MINER,
-        SPEED_MAXED,
         INSUFFICIENT_CRYSTALS
     }
-
-    public enum MinerEvolutionResult {
-        SUCCESS,
-        NO_MINER,
-        SPEED_NOT_MAXED,
-        STAR_MAXED,
-        INSUFFICIENT_CRYSTALS
-    }
-
-    public record MinerProgressSnapshot(boolean hasMiner, int speedLevel, int stars) {}
 
     public record PlayerSaveSnapshot(long crystals,
                                      Map<MineUpgradeType, Integer> upgradeLevels,
                                      Map<String, Integer> inventory,
-                                     Map<Integer, MinerProgressSnapshot> minerStates,
+                                     Map<String, Integer> eggInventory,
+                                     List<CollectedMiner> minerCollection,
+                                     Map<Integer, Long> slotAssignments,
                                      boolean inMine,
                                      int pickaxeTier,
+                                     int pickaxeEnhancement,
                                      Map<String, Integer> conveyorBuffer) {}
 }
