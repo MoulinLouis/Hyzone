@@ -8,7 +8,8 @@ public enum MineUpgradeType {
     STOMP(15),
     BLAST(15),
     HASTE(20),
-    CONVEYOR_CAPACITY(25);
+    CONVEYOR_CAPACITY(25),
+    CASHBACK(20);
 
     private final int maxLevel;
 
@@ -28,6 +29,7 @@ public enum MineUpgradeType {
             case BLAST -> Math.round(250 * Math.pow(1.30, currentLevel));
             case HASTE -> Math.round(40 * Math.pow(1.20, currentLevel));
             case CONVEYOR_CAPACITY -> Math.round(30 * Math.pow(1.18, currentLevel));
+            case CASHBACK -> Math.round(80 * Math.pow(1.22, currentLevel));
         };
     }
 
@@ -41,6 +43,7 @@ public enum MineUpgradeType {
             case BLAST -> 1 + Math.floor(level / 5.0); // radius
             case HASTE -> level * 5.0;                // speed bonus %
             case CONVEYOR_CAPACITY -> 1000 + level * 200.0; // max buffer blocks
+            case CASHBACK -> level * 0.5;                  // cashback percentage
         };
     }
 
@@ -57,6 +60,7 @@ public enum MineUpgradeType {
             case BLAST -> "upgrade_blast";
             case HASTE -> "upgrade_haste";
             case CONVEYOR_CAPACITY -> "upgrade_conveyor_capacity";
+            case CASHBACK -> "upgrade_cashback";
         };
     }
 
@@ -70,6 +74,7 @@ public enum MineUpgradeType {
             case BLAST -> "Blast";
             case HASTE -> "Haste";
             case CONVEYOR_CAPACITY -> "Conveyor Capacity";
+            case CASHBACK -> "Cashback";
         };
     }
 
@@ -83,6 +88,7 @@ public enum MineUpgradeType {
             case BLAST -> "Chance to break blocks in a sphere.";
             case HASTE -> "Increases your mining speed permanently.";
             case CONVEYOR_CAPACITY -> "Increases how many blocks your conveyor chest can hold.";
+            case CASHBACK -> "Earn crystals equal to a percentage of each block's value.";
         };
     }
 

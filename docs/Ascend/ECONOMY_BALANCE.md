@@ -982,7 +982,7 @@ Block prices are global (not per-mine), configured by admins in the Block Prices
 
 ### Mine Upgrades
 
-Purchased with crystals. 8 upgrade types:
+Purchased with crystals. 9 upgrade types:
 
 | Upgrade | Max Level | Cost Formula | Effect per Level | Effect at Max |
 |---------|-----------|-------------|------------------|---------------|
@@ -994,6 +994,7 @@ Purchased with crystals. 8 upgrade types:
 | **Blast** | 15 | `250 x 1.30^level` | +1 radius per 5 levels | 4 radius |
 | **Haste** | 20 | `40 x 1.20^level` | +5% mining speed | +100% speed |
 | **Conveyor Capacity** | 25 | `30 x 1.18^level` | +200 buffer blocks | 6000 blocks |
+| **Cashback** | 20 | `80 x 1.22^level` | +0.5% crystal return | 10% return |
 
 #### Bag Capacity
 
@@ -1032,6 +1033,17 @@ Purchased with crystals. 8 upgrade types:
 - **Level 0:** 1000 blocks
 - **Level 25:** 6000 blocks
 - **Note:** When full, miners stop working. In-flight conveyor items are counted toward capacity.
+
+#### Cashback
+
+- **Formula:** `cashbackPercent = level x 0.5`
+- **Effect:** Earn crystals equal to a percentage of each mined block's sell value
+- **Applies to:** Manual breaks and AoE breaks (Jackhammer, Stomp, Blast)
+- **Rounding:** Truncated to 2 decimal places (floor, not round)
+- **Level 0:** No cashback
+- **Level 1 (0.5%):** Block worth 1 crystal -> 0 cashback (too small). Block worth 10 crystals -> 0.05 cashback
+- **Level 20 (10%):** Block worth 1 crystal -> 0.10 cashback
+- **Note:** Crystals are stored as DECIMAL(20,2) in the database to support fractional amounts
 
 ### Mine Unlocking
 

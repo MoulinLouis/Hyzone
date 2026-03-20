@@ -174,62 +174,7 @@ $C.@PageOverlay {
 
         Group { Anchor: (Width: 4); }
 
-        // Tab 3: Eggs
-        Group #TabEggsWrap {
-          Anchor: (Height: 36);
-          FlexWeight: 1;
-          OutlineColor: #ffffff(0.04);
-          OutlineSize: 1;
-
-          Group #TabEggsInactiveBg {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Background: #142029;
-            Visible: true;
-          }
-
-          Group #TabEggsActiveBg {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Background: #2d3f50;
-            Visible: false;
-          }
-
-          Group #TabEggsAccent {
-            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
-
-            Group #TabEggsAccentInactive {
-              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Background: #142029;
-              Visible: true;
-            }
-
-            Group #TabEggsAccentActive {
-              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Background: #f59e0b;
-              Visible: false;
-            }
-          }
-
-          Label #TabEggsLabel {
-            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
-            Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
-            Text: "Eggs";
-          }
-
-          TextButton #TabEggs {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Text: "";
-            Style: TextButtonStyle(
-              Default: (Background: #000000(0)),
-              Hovered: (Background: #ffffff(0.05)),
-              Pressed: (Background: #ffffff(0.1)),
-              Sounds: $C.@ButtonSounds,
-            );
-          }
-        }
-
-        Group { Anchor: (Width: 4); }
-
-        // Tab 4: Collection
+        // Tab 3: Collection
         Group #TabCollectionWrap {
           Anchor: (Height: 36);
           FlexWeight: 1;
@@ -323,16 +268,15 @@ $C.@PageOverlay {
 
         Group { Anchor: (Height: 10); }
 
-        Group #SlotBag {
-          Anchor: (Left: 0, Right: 0);
-          LayoutMode: Top;
-        }
+        Group #CardRow3 {
+          Anchor: (Left: 0, Right: 0, Height: 115);
+          LayoutMode: Left;
 
-        Group { Anchor: (Height: 10); }
-
-        Group #SlotConveyor {
-          Anchor: (Left: 0, Right: 0);
-          LayoutMode: Top;
+          Group #Slot6 { Anchor: (Width: 146, Height: 115); }
+          Group { Anchor: (Width: 10); }
+          Group #Slot7 { Anchor: (Width: 146, Height: 115); }
+          Group { Anchor: (Width: 10); }
+          Group #Slot8 { Anchor: (Width: 146, Height: 115); }
         }
       }
 
@@ -364,25 +308,6 @@ $C.@PageOverlay {
           Group #PickerEntries {
             LayoutMode: Top;
           }
-        }
-      }
-
-      // === EGGS TAB CONTENT (hidden by default) ===
-      Group #EggsContent {
-        Anchor: (Left: 0, Right: 0, Top: 8);
-        FlexWeight: 1;
-        LayoutMode: TopScrolling;
-        ScrollbarStyle: $C.@DefaultScrollbarStyle;
-        Visible: false;
-
-        Group #EggEntries {
-          LayoutMode: Top;
-        }
-
-        Label #NoEggsLabel {
-          Anchor: (Top: 20);
-          Style: (FontSize: 14, TextColor: #9fb0ba, Alignment: Center);
-          Text: "No eggs yet. Break blocks to find eggs!";
         }
       }
 

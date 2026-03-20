@@ -21,6 +21,7 @@ import io.hyvexa.ascend.mine.ui.MinePage;
 import io.hyvexa.ascend.mine.ui.MineBagPage;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.CommandUtils;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -114,14 +115,18 @@ public class MineCommand extends AbstractAsyncCommand {
                         return;
                     }
                     try {
-                        long amount = Long.parseLong(args[1]);
+                        double amount = Double.parseDouble(args[1]);
+                        if (!Double.isFinite(amount)) {
+                            player.sendMessage(Message.raw("[Mine] Invalid number: " + args[1]).color(SystemMessageUtils.SECONDARY));
+                            return;
+                        }
                         if (amount < 0) {
                             player.sendMessage(Message.raw("[Mine] Crystal amount must be 0 or higher.").color(SystemMessageUtils.SECONDARY));
                             return;
                         }
                         progress.addCrystals(amount);
                         mineStore.markDirty(playerRef.getUuid());
-                        player.sendMessage(Message.raw("[Mine] Added " + amount + " crystals. Total: " + progress.getCrystals()).color(SystemMessageUtils.SECONDARY));
+                        player.sendMessage(Message.raw("[Mine] Added " + amount + " crystals. Total: " + FormatUtils.formatDouble(progress.getCrystals())).color(SystemMessageUtils.SECONDARY));
                     } catch (NumberFormatException e) {
                         player.sendMessage(Message.raw("[Mine] Invalid number: " + args[1]).color(SystemMessageUtils.SECONDARY));
                     }

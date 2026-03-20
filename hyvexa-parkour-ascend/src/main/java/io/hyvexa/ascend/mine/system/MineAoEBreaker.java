@@ -80,6 +80,8 @@ public final class MineAoEBreaker {
                                       UUID playerId, World world, MineManager mineManager, int fortuneLevel) {
         int totalBroken = 0;
         MineConfigStore configStore = mineManager.getConfigStore();
+        int cashbackLevel = progress.getUpgradeLevel(MineUpgradeType.CASHBACK);
+        double cashbackPercent = cashbackLevel > 0 ? MineUpgradeType.CASHBACK.getEffect(cashbackLevel) : 0;
 
         for (Vector3i pos : positions) {
             int x = pos.getX(), y = pos.getY(), z = pos.getZ();
@@ -113,11 +115,19 @@ public final class MineAoEBreaker {
 
             // Add to inventory, auto-sell overflow
             int stored = progress.addToInventoryUpTo(blockTypeId, blocksGained);
+            long blockPrice = configStore.getBlockPrice(blockTypeId);
             if (stored < blocksGained) {
                 int overflow = blocksGained - stored;
-                long blockPrice = configStore.getBlockPrice(blockTypeId);
                 long fallbackCrystals = blockPrice * overflow;
                 progress.addCrystals(fallbackCrystals);
+            }
+
+            // Cashback
+            if (cashbackLevel > 0) {
+                double cashbackAmount = Math.floor(blockPrice * blocksGained * cashbackPercent / 100.0 * 100.0) / 100.0;
+                if (cashbackAmount > 0) {
+                    progress.addCrystals(cashbackAmount);
+                }
             }
 
             // Feed Momentum combo

@@ -49,6 +49,17 @@ public final class MineRewardHelper {
                 bagFull = true;
             }
         }
+        int cashbackLevel = mineProgress.getUpgradeLevel(MineUpgradeType.CASHBACK);
+        if (cashbackLevel > 0) {
+            MineConfigStore configStore = mineManager.getConfigStore();
+            long blockPrice = configStore.getBlockPrice(blockTypeName);
+            double cashbackPercent = MineUpgradeType.CASHBACK.getEffect(cashbackLevel);
+            double cashbackAmount = Math.floor(blockPrice * blocksGained * cashbackPercent / 100.0 * 100.0) / 100.0;
+            if (cashbackAmount > 0) {
+                mineProgress.addCrystals(cashbackAmount);
+            }
+        }
+
         minePlayerStore.markDirty(playerId);
 
         MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();

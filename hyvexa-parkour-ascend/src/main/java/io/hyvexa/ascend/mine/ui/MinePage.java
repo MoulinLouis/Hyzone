@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
-import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -25,9 +24,6 @@ import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
-import io.hyvexa.ascend.mine.data.MinerRarity;
-import io.hyvexa.ascend.mine.egg.EggOpenService;
-import io.hyvexa.ascend.mine.egg.EggRouletteAnimation;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.ui.BaseAscendPage;
@@ -52,7 +48,6 @@ public class MinePage extends BaseAscendPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_TAB_UPGRADE = "TabUpgrade";
     private static final String BUTTON_TAB_SLOTS = "TabSlots";
-    private static final String BUTTON_TAB_EGGS = "TabEggs";
     private static final String BUTTON_TAB_COLLECTION = "TabCollection";
     private static final String BUTTON_BUY_UPGRADE_PREFIX = "BuyUpgrade_";
     private static final String BUTTON_RESET = "ResetAll";
@@ -60,26 +55,21 @@ public class MinePage extends BaseAscendPage {
     private static final String BUTTON_ENHANCE_PICKAXE = "EnhancePickaxe";
 
     // Gacha buttons
-    private static final String BUTTON_OPEN_EGG_PREFIX = "OpenEgg_";
     private static final String BUTTON_ASSIGN_SLOT_PREFIX = "AssignSlot_";
     private static final String BUTTON_REMOVE_SLOT_PREFIX = "RemoveSlot_";
     private static final String BUTTON_SPEED_SLOT_PREFIX = "SpeedSlot_";
     private static final String BUTTON_PICK_MINER_PREFIX = "PickMiner_";
 
-    private static final String[] UPGRADE_ACCENT_COLORS = {
-        "Green", "Blue", "Gold", "Red", "Orange", "Violet", "Blue", "Gold"
-    };
-    private static final String[] UPGRADE_ACCENT_HEX = {
-        "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#f97316", "#7c3aed", "#3b82f6", "#f59e0b"
-    };
-    private static final int UPGRADE_SEGMENT_COUNT = 20;
     private static final MineUpgradeType[] GRID_UPGRADE_ORDER = {
         MineUpgradeType.MOMENTUM,
         MineUpgradeType.FORTUNE,
         MineUpgradeType.JACKHAMMER,
         MineUpgradeType.STOMP,
         MineUpgradeType.BLAST,
-        MineUpgradeType.HASTE
+        MineUpgradeType.HASTE,
+        MineUpgradeType.BAG_CAPACITY,
+        MineUpgradeType.CONVEYOR_CAPACITY,
+        MineUpgradeType.CASHBACK
     };
 
     private final MinePlayerProgress mineProgress;
@@ -104,8 +94,6 @@ public class MinePage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_UPGRADE), false);
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabSlots",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_SLOTS), false);
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabEggs",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_EGGS), false);
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabCollection",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_COLLECTION), false);
 
@@ -117,7 +105,6 @@ public class MinePage extends BaseAscendPage {
 
         populateUpgradeTab(cmd, evt);
         populateSlotsTab(cmd, evt);
-        populateEggsTab(cmd, evt);
         populateCollectionTab(cmd, evt);
     }
 
@@ -178,40 +165,6 @@ public class MinePage extends BaseAscendPage {
             evt.addEventBinding(CustomUIEventBindingType.Activating,
                 sel + " #AssignButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASSIGN_SLOT_PREFIX + slotIndex), false);
-        }
-    }
-
-    // ==================== Eggs Tab ====================
-
-    private void populateEggsTab(UICommandBuilder cmd, UIEventBuilder evt) {
-        Map<String, Integer> eggs = mineProgress.getEggInventory();
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
-
-        if (eggs.isEmpty()) {
-            cmd.set("#NoEggsLabel.Visible", true);
-            return;
-        }
-        cmd.set("#NoEggsLabel.Visible", false);
-
-        int i = 0;
-        for (var entry : eggs.entrySet()) {
-            String layerId = entry.getKey();
-            int count = entry.getValue();
-            if (count <= 0) continue;
-
-            cmd.append("#EggEntries", "Pages/Ascend_MineEggEntry.ui");
-            String sel = "#EggEntries[" + i + "]";
-
-            MineZoneLayer layer = configStore != null ? configStore.getLayerById(layerId) : null;
-            String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : layerId;
-
-            cmd.set(sel + " #LayerName.Text", layerName);
-            cmd.set(sel + " #EggCount.Text", count + " egg" + (count > 1 ? "s" : ""));
-
-            evt.addEventBinding(CustomUIEventBindingType.Activating,
-                sel + " #OpenButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_OPEN_EGG_PREFIX + layerId), false);
-            i++;
         }
     }
 
@@ -313,18 +266,13 @@ public class MinePage extends BaseAscendPage {
             String sel = "#Slot" + slot + "[0]";
             populateUpgradeCard(cmd, evt, sel, type);
         }
-        populateBagCapacityEntry(cmd, evt);
-        populateConveyorCapacityEntry(cmd, evt);
     }
 
     private void populateUpgradeCard(UICommandBuilder cmd, UIEventBuilder evt, String sel, MineUpgradeType type) {
         int level = mineProgress.getUpgradeLevel(type);
         int maxLevel = type.getMaxLevel();
         boolean maxed = level >= maxLevel;
-        int ordinal = type.ordinal();
-        String colorName = UPGRADE_ACCENT_COLORS[ordinal];
 
-        cmd.set(sel + " #Accent" + colorName + ".Visible", true);
         cmd.set(sel + " #CardName.Text", type.getDisplayName());
         cmd.set(sel + " #CardEffect.Text", getEffectDescription(type, level));
         cmd.set(sel + " #CardBuyBtn.TooltipText", buildUpgradeTooltip(type, level, maxLevel));
@@ -342,98 +290,6 @@ public class MinePage extends BaseAscendPage {
             cmd.set(sel + " #CardDisabled.Visible", !canAfford);
             evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #CardBuyBtn",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
-        }
-    }
-
-    private void populateBagCapacityEntry(UICommandBuilder cmd, UIEventBuilder evt) {
-        MineUpgradeType type = MineUpgradeType.BAG_CAPACITY;
-        int level = mineProgress.getUpgradeLevel(type);
-        int maxLevel = type.getMaxLevel();
-        boolean maxed = level >= maxLevel;
-
-        cmd.append("#SlotBag", "Pages/Ascend_MinePageUpgradeEntry.ui");
-        String sel = "#SlotBag[0]";
-
-        cmd.set(sel + " #AccentViolet.Visible", false);
-        cmd.set(sel + " #AccentGreen.Visible", true);
-        cmd.set(sel + " #ButtonBgGreen.Visible", true);
-
-        String colorHex = "#10b981";
-        int filledSegments = maxLevel > 0 ? Math.min(UPGRADE_SEGMENT_COUNT, level * UPGRADE_SEGMENT_COUNT / maxLevel) : 0;
-        for (int seg = 1; seg <= UPGRADE_SEGMENT_COUNT; seg++) {
-            cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
-            if (seg <= filledSegments) cmd.set(sel + " #Seg" + seg + ".Visible", true);
-        }
-
-        cmd.set(sel + " #UpgradeName.Text", "Bag Capacity");
-        cmd.set(sel + " #EffectText.Text", getEffectDescription(type, level));
-        evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #UpgradeBuyButton",
-            EventData.of(ButtonEventData.KEY_BUTTON, maxed ? "Noop" : BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
-
-        if (maxed) {
-            cmd.set(sel + " #LevelText.Text", "MAX");
-            cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
-            cmd.set(sel + " #ActionText.Text", "Maxed!");
-            cmd.set(sel + " #ActionPrice.Text", "");
-        } else {
-            cmd.set(sel + " #LevelText.Text", "Lv." + level);
-            cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
-            long cost = type.getCost(level);
-            cmd.set(sel + " #ActionText.Text", "Cost:");
-            cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
-            boolean canAfford = mineProgress.getCrystals() >= cost;
-            cmd.set(sel + " #ButtonDisabledOverlay.Visible", !canAfford);
-            if (!canAfford) {
-                cmd.set(sel + " #UpgradeStatus.Style.TextColor", "#9fb0ba");
-                cmd.set(sel + " #ActionText.Style.TextColor", "#9fb0ba");
-                cmd.set(sel + " #ActionPrice.Style.TextColor", "#9fb0ba");
-            }
-        }
-    }
-
-    private void populateConveyorCapacityEntry(UICommandBuilder cmd, UIEventBuilder evt) {
-        MineUpgradeType type = MineUpgradeType.CONVEYOR_CAPACITY;
-        int level = mineProgress.getUpgradeLevel(type);
-        int maxLevel = type.getMaxLevel();
-        boolean maxed = level >= maxLevel;
-
-        cmd.append("#SlotConveyor", "Pages/Ascend_MinePageUpgradeEntry.ui");
-        String sel = "#SlotConveyor[0]";
-
-        cmd.set(sel + " #AccentViolet.Visible", false);
-        cmd.set(sel + " #AccentGold.Visible", true);
-        cmd.set(sel + " #ButtonBgGold.Visible", true);
-
-        String colorHex = "#f59e0b";
-        int filledSegments = maxLevel > 0 ? Math.min(UPGRADE_SEGMENT_COUNT, level * UPGRADE_SEGMENT_COUNT / maxLevel) : 0;
-        for (int seg = 1; seg <= UPGRADE_SEGMENT_COUNT; seg++) {
-            cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
-            if (seg <= filledSegments) cmd.set(sel + " #Seg" + seg + ".Visible", true);
-        }
-
-        cmd.set(sel + " #UpgradeName.Text", "Conveyor Capacity");
-        cmd.set(sel + " #EffectText.Text", getEffectDescription(type, level));
-        evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #UpgradeBuyButton",
-            EventData.of(ButtonEventData.KEY_BUTTON, maxed ? "Noop" : BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
-
-        if (maxed) {
-            cmd.set(sel + " #LevelText.Text", "MAX");
-            cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
-            cmd.set(sel + " #ActionText.Text", "Maxed!");
-            cmd.set(sel + " #ActionPrice.Text", "");
-        } else {
-            cmd.set(sel + " #LevelText.Text", "Lv." + level);
-            cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
-            long cost = type.getCost(level);
-            cmd.set(sel + " #ActionText.Text", "Cost:");
-            cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
-            boolean canAfford = mineProgress.getCrystals() >= cost;
-            cmd.set(sel + " #ButtonDisabledOverlay.Visible", !canAfford);
-            if (!canAfford) {
-                cmd.set(sel + " #UpgradeStatus.Style.TextColor", "#9fb0ba");
-                cmd.set(sel + " #ActionText.Style.TextColor", "#9fb0ba");
-                cmd.set(sel + " #ActionPrice.Style.TextColor", "#9fb0ba");
-            }
         }
     }
 
@@ -511,11 +367,9 @@ public class MinePage extends BaseAscendPage {
         UICommandBuilder cmd = new UICommandBuilder();
         setTabActive(cmd, "TabUpgrade", "Upgrade".equals(tabName));
         setTabActive(cmd, "TabSlots", "Slots".equals(tabName));
-        setTabActive(cmd, "TabEggs", "Eggs".equals(tabName));
         setTabActive(cmd, "TabCollection", "Collection".equals(tabName));
         cmd.set("#UpgradeContent.Visible", "Upgrade".equals(tabName));
         cmd.set("#SlotsContent.Visible", "Slots".equals(tabName));
-        cmd.set("#EggsContent.Visible", "Eggs".equals(tabName));
         cmd.set("#CollectionContent.Visible", "Collection".equals(tabName));
         cmd.set("#SlotEntries.Visible", true);
         cmd.set("#PickerOverlay.Visible", false);
@@ -545,7 +399,6 @@ public class MinePage extends BaseAscendPage {
             case BUTTON_CLOSE -> this.close();
             case BUTTON_TAB_UPGRADE -> switchTab("Upgrade");
             case BUTTON_TAB_SLOTS -> switchTab("Slots");
-            case BUTTON_TAB_EGGS -> switchTab("Eggs");
             case BUTTON_TAB_COLLECTION -> switchTab("Collection");
             case BUTTON_RESET -> handleResetAll(ref, store);
             default -> handleActionButton(ref, store, button);
@@ -559,8 +412,6 @@ public class MinePage extends BaseAscendPage {
             handleEnhancePickaxe(ref, store);
         } else if (button.startsWith(BUTTON_BUY_UPGRADE_PREFIX)) {
             handleBuyUpgrade(ref, store, button.substring(BUTTON_BUY_UPGRADE_PREFIX.length()));
-        } else if (button.startsWith(BUTTON_OPEN_EGG_PREFIX)) {
-            handleOpenEgg(ref, store, button.substring(BUTTON_OPEN_EGG_PREFIX.length()));
         } else if (button.startsWith(BUTTON_ASSIGN_SLOT_PREFIX)) {
             showPicker(Integer.parseInt(button.substring(BUTTON_ASSIGN_SLOT_PREFIX.length())));
         } else if (button.startsWith(BUTTON_REMOVE_SLOT_PREFIX)) {
@@ -573,34 +424,6 @@ public class MinePage extends BaseAscendPage {
     }
 
     // ==================== Gacha Handlers ====================
-
-    private void handleOpenEgg(Ref<EntityStore> ref, Store<EntityStore> store, String layerId) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) return;
-
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        EggOpenService eggService = plugin.getEggOpenService();
-        if (eggService == null) return;
-
-        CollectedMiner miner = eggService.openEgg(playerRef.getUuid(), layerId, mineProgress);
-        if (miner == null) {
-            player.sendMessage(Message.raw("No eggs of this type!"));
-            return;
-        }
-
-        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
-        PacketHandler ph = playerRef.getPacketHandler();
-        if (world == null || ph == null) {
-            // Fallback: no cinematic
-            player.sendMessage(Message.raw("Hatched a " + miner.getRarity().getDisplayName() + " miner!"));
-            sendRefresh(ref, store);
-            return;
-        }
-        this.forceClose();
-        EggRouletteAnimation.play(player, ph, playerRef, store, ref, world, miner.getRarity(),
-                () -> sendRefresh(ref, store));
-    }
 
     private void handlePickMiner(Ref<EntityStore> ref, Store<EntityStore> store, long minerId) {
         Player player = store.getComponent(ref, Player.getComponentType());
@@ -789,15 +612,11 @@ public class MinePage extends BaseAscendPage {
         UIEventBuilder evt = new UIEventBuilder();
         cmd.clear("#PickaxeRow");
         for (int slot = 0; slot < GRID_UPGRADE_ORDER.length; slot++) cmd.clear("#Slot" + slot);
-        cmd.clear("#SlotBag");
-        cmd.clear("#SlotConveyor");
         cmd.clear("#SlotEntries");
-        cmd.clear("#EggEntries");
         cmd.clear("#CollectionEntries");
         cmd.clear("#PickerEntries");
         populateUpgradeTab(cmd, evt);
         populateSlotsTab(cmd, evt);
-        populateEggsTab(cmd, evt);
         populateCollectionTab(cmd, evt);
         this.sendUpdate(cmd, evt, false);
     }
@@ -834,6 +653,7 @@ public class MinePage extends BaseAscendPage {
             case BLAST -> level == 0 ? "No sphere break" : String.format("%.0f%%", type.getChance(level) * 100) + " | Radius: " + (int) effect;
             case HASTE -> level == 0 ? "No speed bonus" : "+" + (int) effect + "% speed";
             case CONVEYOR_CAPACITY -> "Capacity: " + (int) effect + " blocks";
+            case CASHBACK -> level == 0 ? "No cashback" : String.format("%.1f", effect) + "% crystal return";
         };
     }
 

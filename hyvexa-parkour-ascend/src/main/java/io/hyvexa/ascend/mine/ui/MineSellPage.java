@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -58,7 +59,7 @@ public class MineSellPage extends BaseAscendPage {
         int capacity = mineProgress.getBagCapacity();
 
         commandBuilder.set("#CapacityValue.Text", total + " / " + capacity + " blocks");
-        commandBuilder.set("#CrystalsValue.Text", String.valueOf(mineProgress.getCrystals()));
+        commandBuilder.set("#CrystalsValue.Text", FormatUtils.formatDouble(mineProgress.getCrystals()));
 
         Map<String, Long> prices = gatherAllPrices();
         long totalValue = mineProgress.calculateInventoryValue(prices);

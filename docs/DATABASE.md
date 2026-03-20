@@ -1058,7 +1058,7 @@ Stores per-player mine progress including crystal currency and upgrade levels.
 ```sql
 CREATE TABLE IF NOT EXISTS mine_players (
   uuid VARCHAR(36) PRIMARY KEY,
-  crystals BIGINT NOT NULL DEFAULT 0,
+  crystals DECIMAL(20,2) NOT NULL DEFAULT 0,
   -- Migration columns (added via ALTER TABLE):
   mining_speed_level INT NOT NULL DEFAULT 0,  -- DEPRECATED: no longer used
   bag_capacity_level INT NOT NULL DEFAULT 0,
@@ -1071,6 +1071,7 @@ CREATE TABLE IF NOT EXISTS mine_players (
   upgrade_blast INT NOT NULL DEFAULT 0,
   upgrade_haste INT NOT NULL DEFAULT 0,
   upgrade_conveyor_capacity INT NOT NULL DEFAULT 0,
+  upgrade_cashback INT NOT NULL DEFAULT 0,
   in_mine TINYINT(1) NOT NULL DEFAULT 0,
   pickaxe_tier INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1080,9 +1081,9 @@ CREATE TABLE IF NOT EXISTS mine_players (
 ```
 
 Notes:
-- `crystals` is the mine-specific currency (migrated from BigNumber mantissa+exp10 to plain BIGINT)
+- `crystals` is the mine-specific currency (migrated from BigNumber mantissa+exp10 to BIGINT, then to DECIMAL(20,2) for fractional cashback amounts)
 - Upgrade level columns added via `ensureMineUpgradeColumns()` migration
-- `upgrade_momentum` through `upgrade_conveyor_capacity` are the 7 active upgrade types (see `MineUpgradeType` enum)
+- `upgrade_momentum` through `upgrade_cashback` are the 8 active upgrade types (see `MineUpgradeType` enum)
 - `mining_speed_level` and `multi_break_level` are deprecated legacy columns (no longer read by code)
 - `pickaxe_tier` tracks the player's current pickaxe tier
 - `in_mine` tracks whether the player is currently in the mine (persisted for reconnect restoration)

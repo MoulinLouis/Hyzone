@@ -6,18 +6,6 @@ Group {
   OutlineColor: #ffffff(0.06);
   OutlineSize: 1;
 
-  // === Accent bar (top 3px) ===
-  Group #CardAccent {
-    Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
-
-    Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
-    Group #AccentGold { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
-    Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
-    Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f97316; Visible: false; }
-    Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-    Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
-  }
-
   // === Card icon (centered, placeholder — replace per-upgrade later) ===
   Group #CardIcon {
     Anchor: (Left: 55, Width: 36, Height: 36, Top: 28);

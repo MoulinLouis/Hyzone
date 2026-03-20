@@ -79,13 +79,13 @@ public class MinePlayerStore {
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT crystals, bag_capacity_level, upgrade_momentum, upgrade_fortune, " +
                     "upgrade_jackhammer, upgrade_stomp, upgrade_blast, upgrade_haste, " +
-                    "upgrade_conveyor_capacity, " +
+                    "upgrade_conveyor_capacity, upgrade_cashback, " +
                     "in_mine, pickaxe_tier, pickaxe_enhancement FROM mine_players WHERE uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         progress = new MinePlayerProgress(playerId);
-                        progress.setCrystals(rs.getLong("crystals"));
+                        progress.setCrystals(rs.getDouble("crystals"));
                         progress.setUpgradeLevel(MineUpgradeType.BAG_CAPACITY, rs.getInt("bag_capacity_level"));
                         progress.setUpgradeLevel(MineUpgradeType.MOMENTUM, rs.getInt("upgrade_momentum"));
                         progress.setUpgradeLevel(MineUpgradeType.FORTUNE, rs.getInt("upgrade_fortune"));
@@ -94,6 +94,7 @@ public class MinePlayerStore {
                         progress.setUpgradeLevel(MineUpgradeType.BLAST, rs.getInt("upgrade_blast"));
                         progress.setUpgradeLevel(MineUpgradeType.HASTE, rs.getInt("upgrade_haste"));
                         progress.setUpgradeLevel(MineUpgradeType.CONVEYOR_CAPACITY, rs.getInt("upgrade_conveyor_capacity"));
+                        progress.setUpgradeLevel(MineUpgradeType.CASHBACK, rs.getInt("upgrade_cashback"));
                         progress.setInMine(rs.getBoolean("in_mine"));
                         progress.setPickaxeTier(rs.getInt("pickaxe_tier"));
                         progress.setPickaxeEnhancement(rs.getInt("pickaxe_enhancement"));
@@ -245,9 +246,9 @@ public class MinePlayerStore {
                         INSERT INTO mine_players (uuid, crystals,
                             bag_capacity_level, upgrade_momentum, upgrade_fortune,
                             upgrade_jackhammer, upgrade_stomp, upgrade_blast, upgrade_haste,
-                            upgrade_conveyor_capacity,
+                            upgrade_conveyor_capacity, upgrade_cashback,
                             in_mine, pickaxe_tier, pickaxe_enhancement)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE crystals = VALUES(crystals),
                                                 bag_capacity_level = VALUES(bag_capacity_level),
                                                 upgrade_momentum = VALUES(upgrade_momentum),
@@ -257,12 +258,13 @@ public class MinePlayerStore {
                                                 upgrade_blast = VALUES(upgrade_blast),
                                                 upgrade_haste = VALUES(upgrade_haste),
                                                 upgrade_conveyor_capacity = VALUES(upgrade_conveyor_capacity),
+                                                upgrade_cashback = VALUES(upgrade_cashback),
                                                 in_mine = VALUES(in_mine),
                                                 pickaxe_tier = VALUES(pickaxe_tier),
                                                 pickaxe_enhancement = VALUES(pickaxe_enhancement)
                         """)) {
                     ps.setString(1, playerId.toString());
-                    ps.setLong(2, snapshot.crystals());
+                    ps.setDouble(2, snapshot.crystals());
                     ps.setInt(3, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.BAG_CAPACITY, 0));
                     ps.setInt(4, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MOMENTUM, 0));
                     ps.setInt(5, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.FORTUNE, 0));
@@ -271,9 +273,10 @@ public class MinePlayerStore {
                     ps.setInt(8, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.BLAST, 0));
                     ps.setInt(9, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.HASTE, 0));
                     ps.setInt(10, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.CONVEYOR_CAPACITY, 0));
-                    ps.setBoolean(11, snapshot.inMine());
-                    ps.setInt(12, snapshot.pickaxeTier());
-                    ps.setInt(13, snapshot.pickaxeEnhancement());
+                    ps.setInt(11, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.CASHBACK, 0));
+                    ps.setBoolean(12, snapshot.inMine());
+                    ps.setInt(13, snapshot.pickaxeTier());
+                    ps.setInt(14, snapshot.pickaxeEnhancement());
                     ps.executeUpdate();
                 }
 

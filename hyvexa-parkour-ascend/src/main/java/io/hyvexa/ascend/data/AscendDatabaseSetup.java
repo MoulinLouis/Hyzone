@@ -281,7 +281,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS mine_players (
                     uuid VARCHAR(36) PRIMARY KEY,
-                    crystals BIGINT NOT NULL DEFAULT 0,
+                    crystals DECIMAL(20,2) NOT NULL DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
@@ -303,6 +303,7 @@ public final class AscendDatabaseSetup {
             ensureMineInMineColumn(conn);
             ensurePickaxeTierColumn(conn);
             migrateCrystalsToBigint(conn);
+            migrateCrystalsToDecimal(conn);
             ensureBlockHpColumns(conn);
             migrateBlockPricesToSimple(conn);
 
@@ -1464,7 +1465,8 @@ public final class AscendDatabaseSetup {
             {"upgrade_stomp", "INT NOT NULL DEFAULT 0"},
             {"upgrade_blast", "INT NOT NULL DEFAULT 0"},
             {"upgrade_haste", "INT NOT NULL DEFAULT 0"},
-            {"upgrade_conveyor_capacity", "INT NOT NULL DEFAULT 0"}
+            {"upgrade_conveyor_capacity", "INT NOT NULL DEFAULT 0"},
+            {"upgrade_cashback", "INT NOT NULL DEFAULT 0"}
         };
         for (String[] col : columns) {
             if (!columnExists(conn, "mine_players", col[0])) {
@@ -1559,6 +1561,26 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Migrated mine_players crystals from mantissa+exp10 to BIGINT");
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to migrate crystals to BIGINT: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Migrate crystals column from BIGINT to DECIMAL(20,2) for fractional cashback amounts.
+     * Idempotent: only runs if the column is still BIGINT.
+     */
+    private static void migrateCrystalsToDecimal(Connection conn) {
+        if (conn == null) return;
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM mine_players LIKE 'crystals'")) {
+            if (rs.next()) {
+                String type = rs.getString("Type").toUpperCase();
+                if (type.contains("BIGINT")) {
+                    stmt.executeUpdate("ALTER TABLE mine_players MODIFY COLUMN crystals DECIMAL(20,2) NOT NULL DEFAULT 0");
+                    LOGGER.atInfo().log("Migrated mine_players crystals column from BIGINT to DECIMAL(20,2)");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to migrate crystals to DECIMAL: " + e.getMessage());
         }
     }
 

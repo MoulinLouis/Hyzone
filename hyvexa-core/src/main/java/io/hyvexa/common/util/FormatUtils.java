@@ -119,6 +119,16 @@ public final class FormatUtils {
     /** Max exponent that fits in a long: 10^18 = 1,000,000,000,000,000,000. */
     private static final int MAX_LONG_EXPONENT = 18;
 
+    public static String formatDouble(double value) {
+        if (value < 1_000.0) {
+            if (value == Math.floor(value) && value < 1e15) {
+                return String.valueOf((long) value);
+            }
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2f", value));
+        }
+        return formatLong(Math.round(value));
+    }
+
     public static String formatLong(long value) {
         if (value < 1_000L) {
             return String.valueOf(value);

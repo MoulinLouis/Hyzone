@@ -112,13 +112,13 @@ public class MineHudManager {
     }
 
     private void updateCrystals(MineHudState state, MinePlayerProgress progress) {
-        long crystals = progress.getCrystals();
+        double crystals = progress.getCrystals();
         if (crystals == state.lastCrystals) {
             return;
         }
         state.lastCrystals = crystals;
         UICommandBuilder cb = new UICommandBuilder();
-        cb.set("#CrystalLabel.Text", FormatUtils.formatLong(crystals));
+        cb.set("#CrystalLabel.Text", FormatUtils.formatDouble(crystals));
         state.hud.update(false, cb);
     }
 
@@ -398,7 +398,7 @@ public class MineHudManager {
         final MineHud hud;
         final MineToastManager toastManager = new MineToastManager();
         long readyAtMs;
-        long lastCrystals = -1;
+        double lastCrystals = -1;
         String lastInventoryKey;
         String lastCooldownKey;
         String lastMineName;
