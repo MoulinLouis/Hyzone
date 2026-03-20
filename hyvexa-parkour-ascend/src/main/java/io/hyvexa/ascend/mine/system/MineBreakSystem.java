@@ -67,6 +67,12 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             return;
         }
 
+        // Check mine unlock state
+        MinePlayerProgress unlockCheck = minePlayerStore.getOrCreatePlayer(playerId);
+        if (!unlockCheck.getMineState(zone.getMineId()).isUnlocked()) {
+            return;
+        }
+
         // Check if zone is regenerating
         if (mineManager.isZoneInCooldown(zone.getId())) {
             MineRewardHelper.sendRegenMessageIfNeeded(playerId, player, mineManager, zone.getId(), lastRegenMessage);
@@ -90,11 +96,12 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             return;
         }
 
+        World world = store.getExternalData().getWorld();
+
         // For non-OP: manually remove the block (set to air) — we can't rely on setCancelled(false)
         // because NoBreakSystem may run after us and re-cancel the event.
         // For OP: NoBreakSystem already allows the break, no manual removal needed.
         if (!isOp) {
-            World world = store.getExternalData().getWorld();
             long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
             var worldChunk = world.getChunkIfInMemory(chunkIndex);
             if (worldChunk == null) worldChunk = world.loadChunkIfInMemory(chunkIndex);
@@ -118,9 +125,8 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         MineRewardHelper.handleMomentumCombo(playerId, mineProgress);
 
         // AoE upgrades (Jackhammer, Stomp, Blast)
-        World aoeWorld = store.getExternalData().getWorld();
-        if (aoeWorld != null) {
-            MineAoEBreaker.triggerAoE(playerId, playerRef, mineProgress, zone, aoeWorld, bx, by, bz, mineManager);
+        if (world != null) {
+            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager);
         }
     }
 

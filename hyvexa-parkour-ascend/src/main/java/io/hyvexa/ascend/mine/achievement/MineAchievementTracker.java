@@ -104,6 +104,15 @@ public class MineAchievementTracker {
     }
 
     /**
+     * Pre-load player state asynchronously on join so that later calls
+     * to getOrLoadState don't block the game thread with synchronous DB reads.
+     */
+    public void onPlayerJoin(UUID playerId) {
+        if (playerId == null) return;
+        HytaleServer.SCHEDULED_EXECUTOR.execute(() -> getOrLoadState(playerId));
+    }
+
+    /**
      * Evict player from cache (on disconnect).
      */
     public void evict(UUID playerId) {
@@ -222,6 +231,10 @@ public class MineAchievementTracker {
     }
 
     private void saveAchievementCompletion(UUID playerId, String achievementId) {
+        HytaleServer.SCHEDULED_EXECUTOR.execute(() -> saveAchievementCompletionSync(playerId, achievementId));
+    }
+
+    private void saveAchievementCompletionSync(UUID playerId, String achievementId) {
         if (!DatabaseManager.getInstance().isInitialized()) return;
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             if (conn == null) return;

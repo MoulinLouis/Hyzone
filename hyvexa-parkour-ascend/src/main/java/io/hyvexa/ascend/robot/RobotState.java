@@ -25,7 +25,8 @@ public class RobotState {
     private final AtomicInteger speedLevel = new AtomicInteger(0);
     private final AtomicInteger stars = new AtomicInteger(0);
     private final AtomicLong lastCompletionMs = new AtomicLong(0);
-    private volatile double[] previousPosition;  // For calculating movement direction/rotation [x, y, z]
+    private volatile boolean hasPreviousPosition;
+    private volatile double prevX, prevY, prevZ;
     private final AtomicLong invalidSinceMs = new AtomicLong(0);  // When entityRef became invalid (0 = valid)
     private volatile AscendMap cachedMap;
     private volatile World cachedWorld;
@@ -149,19 +150,26 @@ public class RobotState {
     public void resetForNewRun() {
         this.currentWaypointIndex.set(0);
         this.waypointReachedMs.set(0);
-        this.previousPosition = null;
+        this.hasPreviousPosition = false;
     }
 
-    public double[] getPreviousPosition() {
-        return previousPosition;
+    public boolean hasPreviousPosition() {
+        return hasPreviousPosition;
     }
+
+    public double getPrevX() { return prevX; }
+    public double getPrevY() { return prevY; }
+    public double getPrevZ() { return prevZ; }
 
     public void setPreviousPosition(double x, double y, double z) {
-        this.previousPosition = new double[]{x, y, z};
+        this.prevX = x;
+        this.prevY = y;
+        this.prevZ = z;
+        this.hasPreviousPosition = true;
     }
 
     public void clearPreviousPosition() {
-        this.previousPosition = null;
+        this.hasPreviousPosition = false;
     }
 
     public long getInvalidSinceMs() {

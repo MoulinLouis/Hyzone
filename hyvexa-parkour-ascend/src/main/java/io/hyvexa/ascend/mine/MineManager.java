@@ -3,6 +3,7 @@ package io.hyvexa.ascend.mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
+import io.hyvexa.ascend.mine.util.MinePositionUtils;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -19,6 +20,9 @@ public class MineManager {
 
     // zoneId -> set of broken block positions (packed as long: x<<38 | y<<26 | z)
     private final Map<String, Set<Long>> brokenBlocks = new ConcurrentHashMap<>();
+
+    // Cache of resolved block tables per zone to avoid re-resolving on every regen
+    private final Map<String, ResolvedZoneCache> resolvedZoneCache = new ConcurrentHashMap<>();
 
     // zoneId -> timestamp when cooldown started (0 = not in cooldown)
     private final Map<String, Long> zoneCooldownStart = new ConcurrentHashMap<>();
@@ -43,7 +47,7 @@ public class MineManager {
      */
     public boolean tryClaimBlock(String zoneId, int x, int y, int z) {
         return brokenBlocks.computeIfAbsent(zoneId, k -> ConcurrentHashMap.newKeySet())
-            .add(packPosition(x, y, z));
+            .add(MinePositionUtils.packPosition(x, y, z));
     }
 
     /**
@@ -52,7 +56,7 @@ public class MineManager {
     public void unclaimBlock(String zoneId, int x, int y, int z) {
         Set<Long> broken = brokenBlocks.get(zoneId);
         if (broken != null) {
-            broken.remove(packPosition(x, y, z));
+            broken.remove(MinePositionUtils.packPosition(x, y, z));
         }
     }
 
@@ -104,7 +108,7 @@ public class MineManager {
 
     public boolean isBlockBroken(String zoneId, int x, int y, int z) {
         Set<Long> broken = brokenBlocks.get(zoneId);
-        return broken != null && broken.contains(packPosition(x, y, z));
+        return broken != null && broken.contains(MinePositionUtils.packPosition(x, y, z));
     }
 
     public double getBrokenRatio(String zoneId) {
@@ -203,15 +207,11 @@ public class MineManager {
     }
 
     public boolean generateZone(World world, MineZone zone) {
-        // Resolve tables: one per layer + zone fallback
-        Map<MineZoneLayer, ResolvedZoneTable> layerTables = new LinkedHashMap<>();
-        for (MineZoneLayer layer : zone.getLayers()) {
-            ResolvedZoneTable resolved = resolveBlockTable(layer.getBlockTable());
-            if (resolved != null && resolved.blockIds().length > 0) {
-                layerTables.put(layer, resolved);
-            }
-        }
-        ResolvedZoneTable fallbackTable = resolveBlockTable(zone.getBlockTable());
+        // Use cached resolved tables (avoids re-resolving BlockType asset map on every regen)
+        ResolvedZoneCache cached = resolvedZoneCache.computeIfAbsent(zone.getId(),
+                k -> buildResolvedZoneCache(zone));
+        Map<MineZoneLayer, ResolvedZoneTable> layerTables = cached.layerTables();
+        ResolvedZoneTable fallbackTable = cached.fallbackTable();
 
         boolean hasAnyTable = !layerTables.isEmpty()
             || (fallbackTable != null && fallbackTable.blockIds().length > 0);
@@ -292,9 +292,27 @@ public class MineManager {
         return new ResolvedZoneTable(blockIds, cumulativeWeights, totalWeight);
     }
 
-    private static long packPosition(int x, int y, int z) {
-        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (y & 0xFFF) << 26) | (z & 0x3FFFFFF);
+    private ResolvedZoneCache buildResolvedZoneCache(MineZone zone) {
+        Map<MineZoneLayer, ResolvedZoneTable> layerTables = new LinkedHashMap<>();
+        for (MineZoneLayer layer : zone.getLayers()) {
+            ResolvedZoneTable resolved = resolveBlockTable(layer.getBlockTable());
+            if (resolved != null && resolved.blockIds().length > 0) {
+                layerTables.put(layer, resolved);
+            }
+        }
+        ResolvedZoneTable fallbackTable = resolveBlockTable(zone.getBlockTable());
+        return new ResolvedZoneCache(layerTables, fallbackTable);
+    }
+
+    /**
+     * Invalidates the resolved block table cache for a zone (e.g. after admin edits block table).
+     */
+    public void invalidateZoneCache(String zoneId) {
+        resolvedZoneCache.remove(zoneId);
     }
 
     private record ResolvedZoneTable(int[] blockIds, double[] cumulativeWeights, double totalWeight) {}
+
+    private record ResolvedZoneCache(Map<MineZoneLayer, ResolvedZoneTable> layerTables,
+                                     ResolvedZoneTable fallbackTable) {}
 }

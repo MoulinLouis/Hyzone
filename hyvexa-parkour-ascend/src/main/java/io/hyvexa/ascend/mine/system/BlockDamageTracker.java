@@ -1,5 +1,7 @@
 package io.hyvexa.ascend.mine.system;
 
+import io.hyvexa.ascend.mine.util.MinePositionUtils;
+
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +34,7 @@ public class BlockDamageTracker {
             return HitResult.INSTANT_BREAK;
         }
 
-        long packedPos = packPosition(x, y, z);
+        long packedPos = MinePositionUtils.packPosition(x, y, z);
         long now = System.currentTimeMillis();
 
         Map<Long, BlockDamageState> blocks = playerDamage.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
@@ -73,10 +75,6 @@ public class BlockDamageTracker {
         if (blocks.isEmpty()) {
             playerDamage.remove(playerId);
         }
-    }
-
-    private static long packPosition(int x, int y, int z) {
-        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (y & 0xFFF) << 26) | (z & 0x3FFFFFF);
     }
 
     public static class BlockDamageState {
