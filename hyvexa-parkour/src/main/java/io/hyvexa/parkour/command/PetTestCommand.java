@@ -1,12 +1,14 @@
 package io.hyvexa.parkour.command;
 
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.PermissionUtils;
@@ -72,16 +74,22 @@ public class PetTestCommand extends AbstractAsyncCommand {
         }
 
         String sub = args[0].toLowerCase();
-        switch (sub) {
-            case "spawn" -> handleSpawn(ctx, ref, player, petManager, args);
-            case "despawn" -> handleDespawn(ctx, player, petManager);
-            case "scale" -> handleScale(ctx, player, petManager, args);
-            case "type" -> handleType(ctx, ref, player, petManager, args);
-            case "types" -> handleTypes(ctx);
-            default -> sendHelp(ctx);
+        if (sub.equals("types")) {
+            handleTypes(ctx);
+            return CompletableFuture.completedFuture(null);
         }
 
-        return CompletableFuture.completedFuture(null);
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData().getWorld();
+        return CompletableFuture.runAsync(() -> {
+            switch (sub) {
+                case "spawn" -> handleSpawn(ctx, ref, player, petManager, args);
+                case "despawn" -> handleDespawn(ctx, player, petManager);
+                case "scale" -> handleScale(ctx, player, petManager, args);
+                case "type" -> handleType(ctx, ref, player, petManager, args);
+                default -> sendHelp(ctx);
+            }
+        }, world);
     }
 
     private void handleSpawn(CommandContext ctx, Ref<EntityStore> ref, Player player,
@@ -142,7 +150,7 @@ public class PetTestCommand extends AbstractAsyncCommand {
         String type = args[1];
         PetManager.PetState state = petManager.getPetState(player.getUuid());
         float scale = state != null ? state.scale : DEFAULT_SCALE;
-        petManager.respawn(player.getUuid(), ref, type, scale);
+        petManager.spawnPet(player.getUuid(), ref, type, scale);
         ctx.sendMessage(Message.raw("Pet respawned as: " + type));
     }
 

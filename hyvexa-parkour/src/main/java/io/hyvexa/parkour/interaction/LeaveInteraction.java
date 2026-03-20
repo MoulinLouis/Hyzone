@@ -96,7 +96,7 @@ public class LeaveInteraction extends SimpleInteraction {
                 : mapId;
         player.sendMessage(SystemMessageUtils.withParkourPrefix(
                 Message.raw("Run ended: ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(mapName != null ? mapName : "Map").color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(".").color(SystemMessageUtils.SECONDARY)
         ));
     }
