@@ -264,6 +264,7 @@ public class MineGateChecker {
         if (minePlayerStore != null) {
             MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
             progress.setInMine(false);
+            progress.clearChestSlots();
             minePlayerStore.markDirty(playerId);
         }
         return true;
@@ -360,6 +361,24 @@ public class MineGateChecker {
         hotbar.setItemStackForSlot((short) 0, new ItemStack(pickaxeItemId, 1), false);
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_MINE_CHEST, 1), false);
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_MINE_LEADERBOARD, 1), false);
+
+        // Restore egg chests from virtual inventory
+        if (minePlayerStore != null) {
+            MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
+            progress.clearChestSlots();
+            Map<String, Integer> eggs = progress.getEggInventory();
+            short nextSlot = 3;
+            for (var entry : eggs.entrySet()) {
+                if (nextSlot > 6) break;
+                int count = entry.getValue();
+                if (count <= 0) continue;
+                int capped = Math.min(count, 64);
+                hotbar.setItemStackForSlot(nextSlot, new ItemStack(AscendConstants.ITEM_MINE_EGG_CHEST, capped), false);
+                progress.assignChestSlot(nextSlot, entry.getKey());
+                nextSlot++;
+            }
+        }
+
         InventoryUtils.giveGlobalItems(hotbar);
     }
 

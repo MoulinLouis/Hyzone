@@ -6,12 +6,10 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.protocol.AccumulationMode;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.SoundCategory;
-import com.hypixel.hytale.protocol.packets.camera.CameraShakeEffect;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -49,11 +47,13 @@ public class EggRouletteAnimation {
     private static final long WARNING_THROTTLE_MS = 10_000L;
     private static final Map<String, Long> LAST_WARNING_BY_PHASE = new ConcurrentHashMap<>();
 
-    // One animation per player at a time
-    private static final Map<UUID, AtomicBoolean> ACTIVE_ROULETTES = new ConcurrentHashMap<>();
 
     private static final MinerRarity[] ALL_RARITIES = MinerRarity.values();
     private static final double SPAWN_DISTANCE = 3.0;
+
+    public static boolean isActive(UUID playerId) {
+        return false; // Multiple concurrent roulettes are allowed
+    }
 
     public static void play(Player player, PacketHandler ph, PlayerRef playerRef,
                             Store<EntityStore> store, Ref<EntityStore> ref, World world,
@@ -70,19 +70,10 @@ public class EggRouletteAnimation {
             return;
         }
 
-        // Concurrency guard: one roulette per player
-        AtomicBoolean existing = ACTIVE_ROULETTES.putIfAbsent(playerId, new AtomicBoolean(false));
-        if (existing != null) {
-            player.sendMessage(Message.raw("Roulette already in progress!"));
-            if (onComplete != null) onComplete.run();
-            return;
-        }
-
         NPCPlugin npcPlugin;
         try {
             npcPlugin = NPCPlugin.get();
         } catch (Exception e) {
-            ACTIVE_ROULETTES.remove(playerId);
             player.sendMessage(Message.raw("Hatched a " + result.getDisplayName() + " miner!"));
             if (onComplete != null) onComplete.run();
             return;
@@ -162,29 +153,28 @@ public class EggRouletteAnimation {
             }
             ms = slowMs;
 
-            // Phase 4: Reveal
+            // Phase 4: Reveal — firework finale (same effect regardless of rarity)
             final long revealDelay = ms;
             schedulePhase(world, revealDelay, "phase4-reveal", playerRef, () -> {
                 if (finalized.get() || !ref.isValid()) return;
-                // Final NPC is already the result from last slowdown step
                 playSound2D(ph, playerRef, "phase4-reveal", "SFX_Memories_Unlock_Local", 1.5f, 1.0f);
-                spawnParticleAt(ph, spawnPos, "Firework_GS", 1.5f);
-
-                if (result == MinerRarity.LEGENDARY) {
-                    playSound2D(ph, playerRef, "phase4-legendary", "SFX_Divine_Respawn", 2.0f, 1.0f);
-                    playSound2D(ph, playerRef, "phase4-legendary2", "SFX_Avatar_Powers_Enable", 2.0f, 1.0f);
-                    spawnParticleAt(ph, spawnPos, "Teleport", 1.5f);
-                    spawnParticleAt(ph, spawnPos, "Magic_Sparks_GS", 2.0f);
-                    ph.writeNoCache(new CameraShakeEffect(0, 0.6f, AccumulationMode.Set));
-                } else if (result == MinerRarity.EPIC) {
-                    spawnParticleAt(ph, spawnPos, "Magic_Sparks_GS", 1.5f);
-                    ph.writeNoCache(new CameraShakeEffect(0, 0.3f, AccumulationMode.Set));
-                } else if (result == MinerRarity.RARE) {
-                    spawnParticleAt(ph, spawnPos, "Magic_Sparks_GS", 1.0f);
-                }
-
+                spawnParticleAt(ph, spawnPos, "Firework_GS", 2.0f);
+                spawnParticleAt(ph, spawnPos, "Firework_Mix4", 1.5f);
                 player.sendMessage(Message.raw("Hatched a " + result.getDisplayName() + " miner!"));
             });
+
+            // Phase 4b: Second firework burst
+            schedulePhase(world, ms + 300, "phase4b-firework", playerRef, () -> {
+                if (finalized.get() || !ref.isValid()) return;
+                spawnParticleAt(ph, spawnPos, "Firework_GS", 1.8f);
+            });
+
+            // Phase 4c: Third firework burst
+            schedulePhase(world, ms + 600, "phase4c-firework", playerRef, () -> {
+                if (finalized.get() || !ref.isValid()) return;
+                spawnParticleAt(ph, spawnPos, "Firework_Mix4", 2.0f);
+            });
+
             ms += 2500;
 
             // Phase 5: Finalizer
@@ -198,12 +188,11 @@ public class EggRouletteAnimation {
     }
 
     /**
-     * Cancel an active roulette for a disconnecting player.
-     * The finalizer's AtomicBoolean guard prevents double-cleanup.
+     * Cancel active roulettes for a disconnecting player.
+     * Each animation self-cleans via its own finalizer.
      */
     public static void cancelIfActive(UUID playerId) {
-        if (playerId == null) return;
-        ACTIVE_ROULETTES.remove(playerId);
+        // Each animation has its own finalizer that handles NPC cleanup
     }
 
     // ── Sequence Generation ─────────────────────────────────────────────
@@ -364,20 +353,15 @@ public class EggRouletteAnimation {
                     despawnNpc(currentNpcRef[0], store);
                     currentNpcRef[0] = null;
 
-                    // Remove concurrency guard
-                    ACTIVE_ROULETTES.remove(playerId);
-
                     if (onComplete != null) {
                         onComplete.run();
                     }
                 } catch (Exception e) {
                     logPhaseWarning(playerRef, phaseId, e);
-                    ACTIVE_ROULETTES.remove(playerId);
                 }
             });
         } catch (Exception e) {
             logPhaseWarning(playerRef, phaseId + "-dispatch", e);
-            ACTIVE_ROULETTES.remove(playerId);
         }
     }
 

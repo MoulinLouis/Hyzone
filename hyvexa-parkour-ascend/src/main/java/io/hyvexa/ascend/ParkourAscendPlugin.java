@@ -41,6 +41,7 @@ import io.hyvexa.ascend.interaction.AscendDevInteraction;
 import io.hyvexa.ascend.interaction.ConveyorChestInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.interaction.MineChestInteraction;
+import io.hyvexa.ascend.interaction.MineEggChestInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -1025,6 +1026,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             MineChestInteraction.class, MineChestInteraction.CODEC);
         registry.register("Conveyor_Chest_Interaction",
             ConveyorChestInteraction.class, ConveyorChestInteraction.CODEC);
+        registry.register("Mine_Egg_Chest_Interaction",
+            MineEggChestInteraction.class, MineEggChestInteraction.CODEC);
         // Mine Sell -> MineSellPage
         registry.register("Mine_Sell_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(

@@ -131,7 +131,7 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         MineRewardHelper.handleMomentumCombo(playerId, mineProgress);
 
         // Egg drop chance
-        EggDropHelper.tryDropEgg(playerId, zone, by, mineProgress, minePlayerStore);
+        EggDropHelper.tryDropEgg(playerId, player, zone, by, mineProgress, minePlayerStore);
 
         // AoE upgrades (Jackhammer, Stomp, Blast)
         if (world != null) {
