@@ -50,6 +50,9 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                 values[i][1] = String.valueOf(r.silver);
                 values[i][2] = String.valueOf(r.gold);
                 values[i][3] = String.valueOf(r.emerald);
+                if ("insane".equals(CATEGORIES[i])) {
+                    insaneRewardValue = String.valueOf(r.insane);
+                }
             } else {
                 values[i][0] = "0";
                 values[i][1] = "0";
@@ -57,9 +60,6 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                 values[i][3] = "0";
             }
         }
-        // Load insane reward from the insane category
-        MedalRewardStore.MedalRewards insaneRewards = store.getRewards("insane");
-        insaneRewardValue = insaneRewards != null ? String.valueOf(insaneRewards.insane) : "0";
     }
 
     @Override

@@ -15,7 +15,6 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
-import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
@@ -29,18 +28,16 @@ public class LeaderboardMenuPage extends BaseParkourPage {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
-    private final RunTracker runTracker;
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_GLOBAL = "Global";
     private static final String BUTTON_CATEGORY_PREFIX = "Category:";
 
     public LeaderboardMenuPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                      ProgressStore progressStore, RunTracker runTracker) {
+                                      ProgressStore progressStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
-        this.runTracker = runTracker;
     }
 
     @Override
@@ -71,13 +68,13 @@ public class LeaderboardMenuPage extends BaseParkourPage {
         }
         if (BUTTON_GLOBAL.equals(data.getButton())) {
             player.getPageManager().openCustomPage(ref, store,
-                    new LeaderboardPage(playerRef, mapStore, progressStore, runTracker));
+                    new LeaderboardPage(playerRef, mapStore, progressStore));
             return;
         }
         if (data.getButton().startsWith(BUTTON_CATEGORY_PREFIX)) {
             String category = data.getButton().substring(BUTTON_CATEGORY_PREFIX.length());
             player.getPageManager().openCustomPage(ref, store,
-                    new LeaderboardMapSelectPage(playerRef, mapStore, progressStore, runTracker, category));
+                    new LeaderboardMapSelectPage(playerRef, mapStore, progressStore, category));
         }
     }
 

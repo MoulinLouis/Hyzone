@@ -38,6 +38,8 @@ import java.util.UUID;
 
 public class AdminPlayerStatsPage extends BaseParkourPage {
 
+    private record ResolvedTarget(PlayerRef ref, Ref<EntityStore> entityRef, Store<EntityStore> store) {}
+
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_TELEPORT_TO_PLAYER = "TeleportToPlayer";
     private static final String BUTTON_TELEPORT_PLAYER_HERE = "TeleportPlayerHere";
@@ -153,23 +155,16 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
         if (!confirmAction(BUTTON_TELEPORT_TO_PLAYER, "Teleporting to player")) {
             return;
         }
-        PlayerRef targetRef = Universe.get().getPlayer(targetId);
-        if (targetRef == null) {
-            setStatus("Player not connected.");
+        ResolvedTarget target = resolveTarget();
+        if (target == null) {
             return;
         }
-        Ref<EntityStore> targetEntityRef = targetRef.getReference();
-        if (targetEntityRef == null || !targetEntityRef.isValid()) {
-            setStatus("Player entity not available.");
-            return;
-        }
-        Store<EntityStore> targetStore = targetEntityRef.getStore();
-        World targetWorld = targetStore.getExternalData().getWorld();
+        World targetWorld = target.store().getExternalData().getWorld();
         if (targetWorld == null) {
             setStatus("Player world unavailable.");
             return;
         }
-        TransformComponent transform = targetStore.getComponent(targetEntityRef, TransformComponent.getComponentType());
+        TransformComponent transform = target.store().getComponent(target.entityRef(), TransformComponent.getComponentType());
         if (transform == null) {
             setStatus("Player position unavailable.");
             return;
@@ -181,7 +176,7 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
         Vector3d position = transform.getPosition();
         Vector3f rotation = transform.getRotation();
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(targetWorld, position, rotation));
-        setStatus("Teleporting to " + resolveTargetName(targetRef) + ".");
+        setStatus("Teleporting to " + resolveTargetName(target.ref()) + ".");
     }
 
     private void handleTeleportPlayerHere(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -201,46 +196,28 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
         if (adminWorld == null) {
             return;
         }
-        PlayerRef targetRef = Universe.get().getPlayer(targetId);
-        if (targetRef == null) {
-            setStatus("Player not connected.");
-            return;
-        }
-        Ref<EntityStore> targetEntityRef = targetRef.getReference();
-        if (targetEntityRef == null || !targetEntityRef.isValid()) {
-            setStatus("Player entity not available.");
-            return;
-        }
-        Store<EntityStore> targetStore = targetEntityRef.getStore();
-        World targetWorld = targetStore.getExternalData().getWorld();
-        if (targetWorld == null) {
+        ResolvedTarget target = resolveTarget();
+        if (target == null) {
             return;
         }
         Vector3d position = adminTransform.getPosition();
         Vector3f rotation = adminTransform.getRotation();
-        targetStore.addComponent(targetEntityRef, Teleport.getComponentType(),
+        target.store().addComponent(target.entityRef(), Teleport.getComponentType(),
                 new Teleport(adminWorld, position, rotation));
-        setStatus("Teleporting " + resolveTargetName(targetRef) + " to you.");
+        setStatus("Teleporting " + resolveTargetName(target.ref()) + " to you.");
     }
 
     private void handleKillPlayer(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (!confirmAction(BUTTON_KILL_PLAYER, "Killing player")) {
             return;
         }
-        PlayerRef targetRef = Universe.get().getPlayer(targetId);
-        if (targetRef == null) {
-            setStatus("Player not connected.");
+        ResolvedTarget target = resolveTarget();
+        if (target == null) {
             return;
         }
-        Ref<EntityStore> targetEntityRef = targetRef.getReference();
-        if (targetEntityRef == null || !targetEntityRef.isValid()) {
-            setStatus("Player entity not available.");
-            return;
-        }
-        Store<EntityStore> targetStore = targetEntityRef.getStore();
         Damage damage = new Damage(Damage.NULL_SOURCE, DamageCause.COMMAND, 9999f);
-        DamageSystems.executeDamage(targetEntityRef, targetStore, damage);
-        setStatus("Damage applied to " + resolveTargetName(targetRef) + ".");
+        DamageSystems.executeDamage(target.entityRef(), target.store(), damage);
+        setStatus("Damage applied to " + resolveTargetName(target.ref()) + ".");
     }
 
     private void handleFlyToggle(Ref<EntityStore> ref, Store<EntityStore> store, boolean enabled) {
@@ -249,23 +226,16 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
         if (!confirmAction(actionKey, label)) {
             return;
         }
-        PlayerRef targetRef = Universe.get().getPlayer(targetId);
-        if (targetRef == null) {
-            setStatus("Player not connected.");
+        ResolvedTarget target = resolveTarget();
+        if (target == null) {
             return;
         }
-        Ref<EntityStore> targetEntityRef = targetRef.getReference();
-        if (targetEntityRef == null || !targetEntityRef.isValid()) {
-            setStatus("Player entity not available.");
-            return;
-        }
-        Store<EntityStore> targetStore = targetEntityRef.getStore();
-        MovementManager movementManager = targetStore.getComponent(targetEntityRef, MovementManager.getComponentType());
+        MovementManager movementManager = target.store().getComponent(target.entityRef(), MovementManager.getComponentType());
         if (movementManager == null) {
             setStatus("Movement settings unavailable.");
             return;
         }
-        movementManager.refreshDefaultSettings(targetEntityRef, targetStore);
+        movementManager.refreshDefaultSettings(target.entityRef(), target.store());
         movementManager.applyDefaultSettings();
         MovementSettings settings = movementManager.getSettings();
         if (settings == null) {
@@ -273,42 +243,35 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
             return;
         }
         settings.canFly = enabled;
-        var packetHandler = targetRef.getPacketHandler();
+        var packetHandler = target.ref().getPacketHandler();
         if (packetHandler != null) {
             movementManager.update(packetHandler);
         }
         if (!enabled) {
-            MovementStatesComponent movementStates = targetStore.getComponent(targetEntityRef,
+            MovementStatesComponent movementStates = target.store().getComponent(target.entityRef(),
                     MovementStatesComponent.getComponentType());
             if (movementStates != null && movementStates.getMovementStates() != null) {
                 movementStates.getMovementStates().flying = false;
             }
         }
-        setStatus((enabled ? "Fly enabled for " : "Fly removed from ") + resolveTargetName(targetRef) + ".");
+        setStatus((enabled ? "Fly enabled for " : "Fly removed from ") + resolveTargetName(target.ref()) + ".");
     }
 
     private void handleResetInventory(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (!confirmAction(BUTTON_RESET_INVENTORY, "Resetting inventory")) {
             return;
         }
-        PlayerRef targetRef = Universe.get().getPlayer(targetId);
-        if (targetRef == null) {
-            setStatus("Player not connected.");
+        ResolvedTarget target = resolveTarget();
+        if (target == null) {
             return;
         }
-        Ref<EntityStore> targetEntityRef = targetRef.getReference();
-        if (targetEntityRef == null || !targetEntityRef.isValid()) {
-            setStatus("Player entity not available.");
-            return;
-        }
-        Store<EntityStore> targetStore = targetEntityRef.getStore();
-        Player targetPlayer = targetStore.getComponent(targetEntityRef, Player.getComponentType());
+        Player targetPlayer = target.store().getComponent(target.entityRef(), Player.getComponentType());
         if (targetPlayer == null) {
             setStatus("Player entity not available.");
             return;
         }
         InventoryUtils.giveMenuItems(targetPlayer);
-        setStatus("Inventory reset for " + resolveTargetName(targetRef) + ".");
+        setStatus("Inventory reset for " + resolveTargetName(target.ref()) + ".");
     }
 
     private void handleClearAllProgress(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -340,6 +303,21 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
         pendingAction = "";
         statusText = text != null ? text : "";
         sendRefresh();
+    }
+
+    private ResolvedTarget resolveTarget() {
+        PlayerRef targetRef = Universe.get().getPlayer(targetId);
+        if (targetRef == null) {
+            setStatus("Player not connected.");
+            return null;
+        }
+        Ref<EntityStore> targetEntityRef = targetRef.getReference();
+        if (targetEntityRef == null || !targetEntityRef.isValid()) {
+            setStatus("Player entity not available.");
+            return null;
+        }
+        Store<EntityStore> targetStore = targetEntityRef.getStore();
+        return new ResolvedTarget(targetRef, targetEntityRef, targetStore);
     }
 
     private void sendRefresh() {

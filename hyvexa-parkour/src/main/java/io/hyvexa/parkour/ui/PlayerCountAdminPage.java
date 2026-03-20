@@ -123,7 +123,7 @@ public class PlayerCountAdminPage extends BaseParkourPage {
             total += count;
         }
         PlayerCountStore.Sample latest = samples.get(samples.size() - 1);
-        double average = samples.isEmpty() ? 0.0 : (double) total / samples.size();
+        double average = (double) total / samples.size();
         summaryText = "Latest: " + latest.getCount() + " players @ " + formatTime(latest.getTimestampMs())
                 + "\nPeak: " + max + " | Avg: " + String.format(Locale.ROOT, "%.1f", average) + " | Min: " + min
                 + "\nSamples: " + samples.size();
@@ -235,30 +235,22 @@ public class PlayerCountAdminPage extends BaseParkourPage {
     private static final class DisplaySample {
         private final long startMs;
         private final long endMs;
-        private final int min;
         private final int max;
         private final double average;
         private final int latest;
-        private final long latestTimestampMs;
-        private final boolean aggregated;
 
-        private DisplaySample(long startMs, long endMs, int min, int max, double average, int latest,
-                              long latestTimestampMs, boolean aggregated) {
+        private DisplaySample(long startMs, long endMs, int max, double average, int latest) {
             this.startMs = startMs;
             this.endMs = endMs;
-            this.min = min;
             this.max = max;
             this.average = average;
             this.latest = latest;
-            this.latestTimestampMs = latestTimestampMs;
-            this.aggregated = aggregated;
         }
     }
 
     private static final class Bucket {
         private final long startMs;
         private final long endMs;
-        private int min = Integer.MAX_VALUE;
         private int max = 0;
         private int total = 0;
         private int count = 0;
@@ -272,7 +264,6 @@ public class PlayerCountAdminPage extends BaseParkourPage {
 
         private void accept(PlayerCountStore.Sample sample) {
             int value = sample.getCount();
-            min = Math.min(min, value);
             max = Math.max(max, value);
             total += value;
             count++;
@@ -283,10 +274,8 @@ public class PlayerCountAdminPage extends BaseParkourPage {
         }
 
         private DisplaySample toDisplaySample() {
-            int safeMin = min == Integer.MAX_VALUE ? 0 : min;
             double avg = count == 0 ? 0.0 : (double) total / count;
-            boolean aggregated = count > 1;
-            return new DisplaySample(startMs, endMs, safeMin, max, avg, latest, latestTimestampMs, aggregated);
+            return new DisplaySample(startMs, endMs, max, avg, latest);
         }
     }
 }

@@ -252,34 +252,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setDuelEnabled(mapDuelEnabled);
         map.setActive(mapActive);
-        Long bronzeMs = parseMedalTime(player, medalBronzeSec, "Bronze");
-        Long silverMs = parseMedalTime(player, medalSilverSec, "Silver");
-        Long goldMs = parseMedalTime(player, medalGoldSec, "Gold");
-        Long emeraldMs = parseMedalTime(player, medalEmeraldSec, "Emerald");
-        if (bronzeMs != null && bronzeMs == -1L) { return; }
-        if (silverMs != null && silverMs == -1L) { return; }
-        if (goldMs != null && goldMs == -1L) { return; }
-        if (emeraldMs != null && emeraldMs == -1L) { return; }
-        if (goldMs != null && silverMs != null && goldMs >= silverMs) {
-            player.sendMessage(Message.raw("Gold time must be less than silver time."));
+        if (!applyMedalTimes(player, map)) {
             return;
         }
-        if (silverMs != null && bronzeMs != null && silverMs >= bronzeMs) {
-            player.sendMessage(Message.raw("Silver time must be less than bronze time."));
-            return;
-        }
-        if (goldMs != null && bronzeMs != null && goldMs >= bronzeMs) {
-            player.sendMessage(Message.raw("Gold time must be less than bronze time."));
-            return;
-        }
-        if (emeraldMs != null && goldMs != null && emeraldMs >= goldMs) {
-            player.sendMessage(Message.raw("Emerald time must be less than gold time."));
-            return;
-        }
-        map.setBronzeTimeMs(bronzeMs);
-        map.setSilverTimeMs(silverMs);
-        map.setGoldTimeMs(goldMs);
-        map.setEmeraldTimeMs(emeraldMs);
         map.setStart(start);
         map.setCreatedAt(System.currentTimeMillis());
         map.setUpdatedAt(map.getCreatedAt());
@@ -448,34 +423,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setDuelEnabled(mapDuelEnabled);
         map.setActive(mapActive);
-        Long bronzeMs = parseMedalTime(player, medalBronzeSec, "Bronze");
-        Long silverMs = parseMedalTime(player, medalSilverSec, "Silver");
-        Long goldMs = parseMedalTime(player, medalGoldSec, "Gold");
-        Long emeraldMs = parseMedalTime(player, medalEmeraldSec, "Emerald");
-        if (bronzeMs != null && bronzeMs == -1L) { return; }
-        if (silverMs != null && silverMs == -1L) { return; }
-        if (goldMs != null && goldMs == -1L) { return; }
-        if (emeraldMs != null && emeraldMs == -1L) { return; }
-        if (goldMs != null && silverMs != null && goldMs >= silverMs) {
-            player.sendMessage(Message.raw("Gold time must be less than silver time."));
+        if (!applyMedalTimes(player, map)) {
             return;
         }
-        if (silverMs != null && bronzeMs != null && silverMs >= bronzeMs) {
-            player.sendMessage(Message.raw("Silver time must be less than bronze time."));
-            return;
-        }
-        if (goldMs != null && bronzeMs != null && goldMs >= bronzeMs) {
-            player.sendMessage(Message.raw("Gold time must be less than bronze time."));
-            return;
-        }
-        if (emeraldMs != null && goldMs != null && emeraldMs >= goldMs) {
-            player.sendMessage(Message.raw("Emerald time must be less than gold time."));
-            return;
-        }
-        map.setBronzeTimeMs(bronzeMs);
-        map.setSilverTimeMs(silverMs);
-        map.setGoldTimeMs(goldMs);
-        map.setEmeraldTimeMs(emeraldMs);
         map.setUpdatedAt(System.currentTimeMillis());
         try {
             mapStore.updateMap(map);
@@ -484,6 +434,38 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             player.sendMessage(Message.raw(exception.getMessage()));
         }
         sendRefresh(ref, store);
+    }
+
+    private boolean applyMedalTimes(Player player, Map map) {
+        Long bronzeMs = parseMedalTime(player, medalBronzeSec, "Bronze");
+        Long silverMs = parseMedalTime(player, medalSilverSec, "Silver");
+        Long goldMs = parseMedalTime(player, medalGoldSec, "Gold");
+        Long emeraldMs = parseMedalTime(player, medalEmeraldSec, "Emerald");
+        if (bronzeMs != null && bronzeMs == -1L) { return false; }
+        if (silverMs != null && silverMs == -1L) { return false; }
+        if (goldMs != null && goldMs == -1L) { return false; }
+        if (emeraldMs != null && emeraldMs == -1L) { return false; }
+        if (goldMs != null && silverMs != null && goldMs >= silverMs) {
+            player.sendMessage(Message.raw("Gold time must be less than silver time."));
+            return false;
+        }
+        if (silverMs != null && bronzeMs != null && silverMs >= bronzeMs) {
+            player.sendMessage(Message.raw("Silver time must be less than bronze time."));
+            return false;
+        }
+        if (goldMs != null && bronzeMs != null && goldMs >= bronzeMs) {
+            player.sendMessage(Message.raw("Gold time must be less than bronze time."));
+            return false;
+        }
+        if (emeraldMs != null && goldMs != null && emeraldMs >= goldMs) {
+            player.sendMessage(Message.raw("Emerald time must be less than gold time."));
+            return false;
+        }
+        map.setBronzeTimeMs(bronzeMs);
+        map.setSilverTimeMs(silverMs);
+        map.setGoldTimeMs(goldMs);
+        map.setEmeraldTimeMs(emeraldMs);
+        return true;
     }
 
     /** Returns null if empty (unset), -1 on parse error, or the value in ms. */
@@ -553,10 +535,6 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             return;
         }
         String holoName = map.getId() + "_holo";
-        if (plugin == null) {
-            player.sendMessage(Message.raw("Plugin not available."));
-            return;
-        }
         List<String> lines = plugin.buildMapLeaderboardHologramLines(map.getId());
         if (HylogramsBridge.exists(holoName)) {
             HylogramsBridge.Hologram holo = HylogramsBridge.get(holoName);
@@ -694,15 +672,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        ProgressStore progressStore = HyvexaPlugin.getInstance().getProgressStore();
-        player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, HyvexaPlugin.getInstance().getSettingsStore(),
-                        HyvexaPlugin.getInstance().getPlayerCountStore()));
+        AdminPageUtils.openIndex(ref, store);
     }
 
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {

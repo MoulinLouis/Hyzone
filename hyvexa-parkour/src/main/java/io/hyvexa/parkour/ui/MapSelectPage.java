@@ -132,7 +132,7 @@ public class MapSelectPage extends BaseParkourPage {
         String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
         player.sendMessage(SystemMessageUtils.withParkourPrefix(
                 Message.raw("Run started: ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(mapName != null ? mapName : "Map").color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(".").color(SystemMessageUtils.SECONDARY)
         ));
         InventoryUtils.giveRunItems(player, map, false);

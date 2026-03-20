@@ -130,10 +130,6 @@ public final class PlayerSettingsStore {
         ADVANCED_HUD_ENABLED.remove(playerId);
     }
 
-    public static void clear(UUID playerId) {
-        clearSession(playerId);
-    }
-
     private static void persistField(UUID playerId, java.util.function.Consumer<PlayerSettingsPersistence.PlayerSettings> updater) {
         PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
         if (persistence == null) {

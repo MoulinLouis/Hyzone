@@ -12,11 +12,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
-import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.ParkourUtils;
 
@@ -25,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -98,8 +95,7 @@ public class CategorySelectPage extends BaseParkourPage {
                 completedByCategory.merge(category, 1, Integer::sum);
             }
         }
-        List<String> orderedCategories = applyCategoryOrder(categories);
-        orderedCategories = applyCategoryMapOrder(orderedCategories, maps);
+        List<String> orderedCategories = applyCategoryMapOrder(new ArrayList<>(categories), maps);
         int index = 0;
         for (String category : orderedCategories) {
             commandBuilder.append("#CategoryCards", "Pages/Parkour_CategoryEntry.ui");
@@ -115,23 +111,6 @@ public class CategorySelectPage extends BaseParkourPage {
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + category), false);
             index++;
         }
-    }
-
-    private List<String> applyCategoryOrder(Set<String> categories) {
-        List<String> ordered = new LinkedList<>();
-        SettingsStore settingsStore = HyvexaPlugin.getInstance() != null
-                ? HyvexaPlugin.getInstance().getSettingsStore()
-                : null;
-        if (settingsStore != null) {
-            for (String entry : settingsStore.getCategoryOrder()) {
-                String normalized = FormatUtils.normalizeCategory(entry);
-                if (categories.remove(normalized)) {
-                    ordered.add(normalized);
-                }
-            }
-        }
-        ordered.addAll(categories);
-        return ordered;
     }
 
     private List<String> applyCategoryMapOrder(List<String> categories, List<Map> maps) {

@@ -13,22 +13,23 @@ import io.hyvexa.duel.DuelConstants;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 
-import java.util.Optional;
-
 public final class InventoryUtils {
 
     private InventoryUtils() {
     }
 
-    private static Optional<ItemContainer> getValidHotbar(Player player) {
-        if (player == null) {
-            return Optional.empty();
+    private static int assignWeaponSlots(Inventory inventory, Map map, int startSlot) {
+        int slotIndex = startSlot;
+        if (map != null && map.isMithrilSwordEnabled()) {
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
         }
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return Optional.empty();
+        if (map != null && map.isMithrilDaggersEnabled()) {
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_DAGGERS, 1));
         }
-        return Optional.ofNullable(inventory.getHotbar());
+        if (map != null && map.isGliderEnabled()) {
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_GLIDER, 1));
+        }
+        return slotIndex;
     }
 
     public static void giveRunItems(Player player) {
@@ -47,21 +48,8 @@ public final class InventoryUtils {
         boolean isOp = PermissionUtils.isOp(player);
         prepareInventory(inventory, isOp);
 
-        boolean hasSword = map != null && map.isMithrilSwordEnabled();
-        boolean hasDaggers = map != null && map.isMithrilDaggersEnabled();
-        boolean hasGlider = map != null && map.isGliderEnabled();
+        int slotIndex = assignWeaponSlots(inventory, map, 0);
         if (practiceEnabled) {
-            int slotIndex = 0;
-            if (hasSword) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
-            }
-            if (hasDaggers) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_DAGGERS, 1));
-            }
-            if (hasGlider) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_GLIDER, 1));
-            }
-
             // Practice mode order:
             // Set checkpoint, Restart to checkpoint, Leave map, Leave practice, Toggle fly, Player settings
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
@@ -74,16 +62,6 @@ public final class InventoryUtils {
             return;
         }
 
-        int slotIndex = 0;
-        if (hasSword) {
-            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
-        }
-        if (hasDaggers) {
-            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_DAGGERS, 1));
-        }
-        if (hasGlider) {
-            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_GLIDER, 1));
-        }
         if (PlayerSettingsStore.isResetItemEnabled(PlayerUtils.resolvePlayerId(player))) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RESET, 1));
         }
@@ -95,14 +73,23 @@ public final class InventoryUtils {
     }
 
     public static void giveDuelItems(Player player, Map map) {
-        getValidHotbar(player).ifPresent(hotbar -> {
-            hotbar.setItemStackForSlot((short) 0, new ItemStack(ParkourConstants.ITEM_RESET, 1), false);
-            hotbar.setItemStackForSlot((short) 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1), false);
-            hotbar.setItemStackForSlot((short) 2, new ItemStack(DuelConstants.ITEM_FORFEIT, 1), false);
-            for (short i = 3; i < 9; i++) {
-                hotbar.setItemStackForSlot(i, ItemStack.EMPTY, false);
-            }
-        });
+        if (player == null) {
+            return;
+        }
+        Inventory inventory = player.getInventory();
+        if (inventory == null) {
+            return;
+        }
+        ItemContainer hotbar = inventory.getHotbar();
+        if (hotbar == null) {
+            return;
+        }
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(ParkourConstants.ITEM_RESET, 1), false);
+        hotbar.setItemStackForSlot((short) 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1), false);
+        hotbar.setItemStackForSlot((short) 2, new ItemStack(DuelConstants.ITEM_FORFEIT, 1), false);
+        for (short i = 3; i < 9; i++) {
+            hotbar.setItemStackForSlot(i, ItemStack.EMPTY, false);
+        }
     }
 
     public static void giveMenuItems(Player player) {

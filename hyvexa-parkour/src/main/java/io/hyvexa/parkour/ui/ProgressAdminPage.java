@@ -100,7 +100,7 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
         if (player == null) {
             return;
         }
-        String mapId = mapIdInput != null ? mapIdInput.trim() : "";
+        String mapId = mapIdInput != null ? mapIdInput : "";
         if (mapId.isEmpty()) {
             player.sendMessage(Message.raw("Map id is required."));
             purgeStatusText = "Map id is required.";

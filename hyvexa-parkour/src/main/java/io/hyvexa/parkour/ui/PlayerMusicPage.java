@@ -39,7 +39,7 @@ public class PlayerMusicPage extends BaseParkourPage {
     private static final String CHECKPOINT_SFX_LABEL_SELECTOR = "#CheckpointSfxButton.Text";
     private static final String VICTORY_SFX_LABEL_SELECTOR = "#VictorySfxButton.Text";
     private static final String DEFAULT_MUSIC_LABEL = "Zelda OST";
-    private static final String Hytale_MUSIC_LABEL = "Default Music";
+    private static final String HYTALE_MUSIC_LABEL = "Default Music";
     private static final String NO_MUSIC_LABEL = "No Music";
     private static final String SFX_ENABLED_LABEL = "Disable";
     private static final String SFX_DISABLED_LABEL = "Enable";
@@ -107,7 +107,7 @@ public class PlayerMusicPage extends BaseParkourPage {
             return;
         }
         if (BUTTON_PLAY_DEFAULT.equals(data.getButton())) {
-            playHytaleDefaultMusic(ref, store, playerRef, Hytale_MUSIC_LABEL);
+            playHytaleDefaultMusic(ref, store, playerRef, HYTALE_MUSIC_LABEL);
             return;
         }
         if (BUTTON_PLAY_NONE.equals(data.getButton())) {
@@ -414,7 +414,7 @@ public class PlayerMusicPage extends BaseParkourPage {
             if ("Celeste OST".equals(label)) {
                 return ambienceSelection(label, CELESTE_MUSIC_AMBIENCE);
             }
-            if (Hytale_MUSIC_LABEL.equals(label)) {
+            if (HYTALE_MUSIC_LABEL.equals(label)) {
                 return ambienceSelection(label, HYTALE_DEFAULT_MUSIC_AMBIENCE);
             }
             if (NO_MUSIC_LABEL.equals(label)) {
