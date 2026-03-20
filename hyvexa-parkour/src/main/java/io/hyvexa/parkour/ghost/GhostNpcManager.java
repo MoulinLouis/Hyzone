@@ -305,7 +305,7 @@ public class GhostNpcManager {
 
         World world = Universe.get().getWorld(worldName);
         if (world == null) {
-            return false;
+            return true;
         }
 
         long elapsed = now - state.playbackStartMs;
