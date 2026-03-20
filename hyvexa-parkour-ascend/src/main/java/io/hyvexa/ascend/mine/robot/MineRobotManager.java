@@ -260,6 +260,7 @@ public class MineRobotManager {
             // Place initial block and start mining animation
             placeInitialBlock(world, slot, state);
             AnimationUtils.playAnimation(entityRef, AnimationSlot.Action, "Pickaxe", "Mine", store);
+            AnimationUtils.stopAnimation(entityRef, AnimationSlot.Movement, store);
             state.setAnimating(true);
             state.setLastAnimTime(System.currentTimeMillis());
         } catch (Exception e) {
@@ -909,6 +910,7 @@ public class MineRobotManager {
             Store<EntityStore> store = world.getEntityStore().getStore();
             if (store != null) {
                 AnimationUtils.playAnimation(ref, AnimationSlot.Action, "Pickaxe", "Mine", store);
+                AnimationUtils.stopAnimation(ref, AnimationSlot.Movement, store);
             }
         });
     }
