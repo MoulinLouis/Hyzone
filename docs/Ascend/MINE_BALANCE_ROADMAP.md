@@ -1,5 +1,7 @@
 # Mine Balance Roadmap - v1 Draft
 
+> **SUPERSEDED** — This document was a design proposal for a 5-mine system. The mine was refactored to a single-mine model (commit `536cbf4`). Kept for historical reference only; do not use for current balancing.
+
 > **Statut :** proposition initiale à retravailler — tous les chiffres sont des points de départ raisonnés, pas des valeurs finales.
 >
 > **Objectif :** poser une base cohérente pour les 5 premières mines, avec un arc de progression de ~8-12h de jeu pur (sans compter les upgrades qui accélèrent).
