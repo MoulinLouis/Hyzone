@@ -2,6 +2,14 @@
 
 A multi-module Hytale server plugin suite for a parkour minigame server. Players join a hub and choose between game modes: classic Parkour, Parkour Ascend (idle/incremental progression), Purge (zombie wave survival), and Run or Fall (platforming minigame).
 
+## Repository Status
+
+This repository is public for visibility and reference only.
+
+Unless Hyvexa grants prior written permission, you may not copy, modify, redistribute, sublicense, publish, or reuse the code, assets, or documentation in this repository.
+
+See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the governing terms.
+
 ## Modules
 
 | Module | Purpose |
@@ -64,7 +72,9 @@ A multi-module Hytale server plugin suite for a parkour minigame server. Players
 ### Run or Fall
 - **Last Player Standing** - Players stand on platforms that break when stepped on; last player alive wins. Includes blink ability, stats, and leaderboards.
 
-## Quick Start
+## Local Build Notes
+
+The commands below document the repository's development workflow. They do not grant any reuse or distribution rights.
 
 ### Build
 ```bash
@@ -148,4 +158,8 @@ For AI agent instructions, see [CLAUDE.md](CLAUDE.md).
 
 ## License
 
-Internal project. Add a license before distributing.
+This repository is publicly visible, but the Hyvexa codebase and bundled project assets remain proprietary.
+
+All rights are reserved. You may not copy, modify, redistribute, sublicense, publish, or reuse this repository or its contents without prior written permission from Hyvexa.
+
+Third-party components included with this repository remain under their own licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -1,6 +1,7 @@
 ### Gradle ###
 .gradle
 build/
+*.class
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -49,6 +50,10 @@ discord-bot/.env
 
 ### Deploy ###
 .env
+
+### Operational Artifacts ###
+*.log
+docs/prod_logs/
 
 ### Claude ###
 .claude/
