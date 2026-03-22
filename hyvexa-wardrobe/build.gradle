@@ -6,6 +6,9 @@ dependencies {
     implementation project(':hyvexa-core')
     compileOnly hytaleServerJar
     runtimeOnly hytaleServerJar
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation hytaleServerJar
 }
 
 tasks.register('updatePluginManifest') {
@@ -23,6 +26,10 @@ tasks.register('updatePluginManifest') {
 
 tasks.named('processResources') {
     dependsOn 'updatePluginManifest'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
 
 tasks.named('jar') {
