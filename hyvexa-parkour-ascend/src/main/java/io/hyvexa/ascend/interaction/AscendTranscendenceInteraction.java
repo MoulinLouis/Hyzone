@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ui.TranscendencePage;
 import io.hyvexa.common.util.PermissionUtils;
@@ -22,14 +21,14 @@ public class AscendTranscendenceInteraction extends AbstractAscendPageInteractio
         BuilderCodec.builder(AscendTranscendenceInteraction.class, AscendTranscendenceInteraction::new).build();
 
     @Override
-    protected boolean validateDependencies(ParkourAscendPlugin plugin, Player player) {
+    protected boolean validateDependencies(AscendInteractionBridge.Services services, Player player) {
         if (!PermissionUtils.isOp(player)) {
             player.sendMessage(Message.raw("[Transcendence] This feature is currently locked.")
                 .color(SystemMessageUtils.SECONDARY));
             return false;
         }
 
-        if (plugin.getPlayerStore() == null || plugin.getTranscendenceManager() == null) {
+        if (services.playerStore() == null || services.transcendenceManager() == null) {
             player.sendMessage(LOADING_MESSAGE);
             return false;
         }
@@ -46,7 +45,7 @@ public class AscendTranscendenceInteraction extends AbstractAscendPageInteractio
         }
 
         UUID playerId = playerRef.getUuid();
-        AscendPlayerProgress progress = plugin.getPlayerStore().getPlayer(playerId);
+        AscendPlayerProgress progress = services.playerStore().getPlayer(playerId);
         if (progress == null || !progress.hasAllChallengeRewards()) {
             player.sendMessage(Message.raw("[Transcendence] Complete all challenges to unlock Transcendence.")
                 .color(SystemMessageUtils.SECONDARY));
@@ -58,13 +57,14 @@ public class AscendTranscendenceInteraction extends AbstractAscendPageInteractio
 
     @Override
     protected InteractiveCustomUIPage<?> createPage(Ref<EntityStore> ref, Store<EntityStore> store,
-                                                    PlayerRef playerRef, ParkourAscendPlugin plugin) {
+                                                    PlayerRef playerRef,
+                                                    AscendInteractionBridge.Services services) {
         return new TranscendencePage(
             playerRef,
-            plugin.getPlayerStore(),
-            plugin.getTranscendenceManager(),
-            plugin.getRobotManager(),
-            plugin.getAchievementManager()
+            services.playerStore(),
+            services.transcendenceManager(),
+            services.robotManager(),
+            services.achievementManager()
         );
     }
 }

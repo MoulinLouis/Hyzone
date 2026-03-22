@@ -16,7 +16,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -44,11 +43,11 @@ public class MineEggChestInteraction extends SimpleInteraction {
         if (player == null || playerRef == null) return;
 
         UUID playerId = playerRef.getUuid();
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
+        AscendInteractionBridge.Services services = AscendInteractionBridge.get();
+        if (services == null) return;
 
-        MinePlayerStore minePlayerStore = plugin.getMinePlayerStore();
-        EggOpenService eggService = plugin.getEggOpenService();
+        MinePlayerStore minePlayerStore = services.minePlayerStore();
+        EggOpenService eggService = services.eggOpenService();
         if (minePlayerStore == null || eggService == null) return;
 
         MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);

@@ -13,7 +13,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -38,9 +39,23 @@ import java.util.concurrent.CompletableFuture;
  * Equivalent to clicking the Elevate button on the Elevation page.
  */
 public class ElevateCommand extends AbstractAsyncCommand {
+    private final AscendPlayerStore playerStore;
+    private final ChallengeManager challengeManager;
+    private final RobotManager robotManager;
+    private final AscendHudManager hudManager;
+    private final AscendMapStore mapStore;
+    private final AchievementManager achievementManager;
 
-    public ElevateCommand() {
+    public ElevateCommand(AscendPlayerStore playerStore, ChallengeManager challengeManager,
+                          RobotManager robotManager, AscendHudManager hudManager,
+                          AscendMapStore mapStore, AchievementManager achievementManager) {
         super("elevate", "Elevate your multiplier");
+        this.playerStore = playerStore;
+        this.challengeManager = challengeManager;
+        this.robotManager = robotManager;
+        this.hudManager = hudManager;
+        this.mapStore = mapStore;
+        this.achievementManager = achievementManager;
         this.setPermissionGroup(GameMode.Adventure);
     }
 
@@ -70,18 +85,15 @@ public class ElevateCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null || plugin.getPlayerStore() == null) {
+            if (playerStore == null) {
                 player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                 return;
             }
 
-            AscendPlayerStore playerStore = plugin.getPlayerStore();
             UUID playerId = playerRef.getUuid();
 
             // Block elevation during active challenge that blocks elevation
-            if (plugin.getChallengeManager() != null
-                    && plugin.getChallengeManager().isElevationBlocked(playerId)) {
+            if (challengeManager != null && challengeManager.isElevationBlocked(playerId)) {
                 player.sendMessage(Message.raw("[Ascend] Elevation is blocked during this challenge.")
                     .color(SystemMessageUtils.SECONDARY));
                 return;
@@ -102,7 +114,6 @@ public class ElevateCommand extends AbstractAsyncCommand {
             }
 
             // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-            RobotManager robotManager = plugin.getRobotManager();
             if (robotManager != null) {
                 robotManager.despawnRobotsForPlayer(playerId);
             }
@@ -112,16 +123,13 @@ public class ElevateCommand extends AbstractAsyncCommand {
             playerStore.atomicSetElevationAndResetVolt(playerId, newElevation);
 
             // Toast notification
-            AscendHudManager hm = plugin.getHudManager();
-            if (hm != null) {
-                hm.showToast(playerId, ToastType.ECONOMY, "Elevation: "
+            if (hudManager != null) {
+                hudManager.showToast(playerId, ToastType.ECONOMY, "Elevation: "
                     + AscendConstants.formatElevationMultiplier(currentElevation) + " -> "
                     + AscendConstants.formatElevationMultiplier(newElevation));
             }
 
             // Reset progress (volt, map unlocks, runners)
-            AscendMapStore mapStore = plugin.getMapStore();
-
             String firstMapId = null;
             if (mapStore != null) {
                 List<AscendMap> maps = mapStore.listMapsSorted();
@@ -132,8 +140,8 @@ public class ElevateCommand extends AbstractAsyncCommand {
 
             playerStore.resetProgressForElevation(playerId, firstMapId);
 
-            if (plugin.getAchievementManager() != null) {
-                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+            if (achievementManager != null) {
+                achievementManager.checkAndUnlockAchievements(playerId, player);
             }
 
             player.sendMessage(Message.raw("[Ascend] Elevated! "

@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineBlockRegistry;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
@@ -42,9 +41,10 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private static Map<UUID, int[]> pos2Selections() { return io.hyvexa.ascend.command.AscendAdminCommand.minePos2; }
 
     private final MineConfigStore mineConfigStore;
+    private final MineManager mineManager;
+    private final AscendAdminNavigator adminNavigator;
     private final String mineId;
     private final UUID playerUuid;
-    private AscendAdminNavigator adminNavigator;
     private String zoneId = "";
     private String blockId = "";
     private String blockProb = "";
@@ -56,15 +56,15 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private String layerMaxY = "";
     private String activeTab = TAB_ZONES;
 
-    public MineZoneAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore, String mineId) {
+    public MineZoneAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore,
+                             MineManager mineManager, AscendAdminNavigator adminNavigator,
+                             String mineId) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ZoneData.CODEC);
         this.mineConfigStore = mineConfigStore;
+        this.mineManager = mineManager;
+        this.adminNavigator = adminNavigator;
         this.mineId = mineId;
         this.playerUuid = playerRef.getUuid();
-    }
-
-    public void setAdminNavigator(AscendAdminNavigator adminNavigator) {
-        this.adminNavigator = adminNavigator;
     }
 
     public void setSelectedZoneId(String zoneId) {
@@ -189,7 +189,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 MineBlockPickerPage picker = new MineBlockPickerPage(
-                    playerRef, mineConfigStore, selectedZoneId, selectedLayerId, blockId, adminNavigator
+                    playerRef, mineConfigStore, mineManager,
+                    selectedZoneId, selectedLayerId, blockId, adminNavigator
                 );
                 player.getPageManager().openCustomPage(ref, store, picker);
             }
@@ -394,7 +395,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         MineZone zone = resolveSelectedZone(player);
         if (zone == null) return;
 
-        MineManager mineManager = ParkourAscendPlugin.getInstance().getMineManager();
         if (mineManager == null) {
             player.sendMessage(Message.raw("Mine manager not initialized."));
             return;
@@ -474,7 +474,10 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) return;
-        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(playerRef, mineConfigStore, adminNavigator));
+        MineAdminPage page = adminNavigator.createMineAdminPage(playerRef);
+        if (page != null) {
+            player.getPageManager().openCustomPage(ref, store, page);
+        }
     }
 
     private MineZone resolveSelectedZone(Player player) {

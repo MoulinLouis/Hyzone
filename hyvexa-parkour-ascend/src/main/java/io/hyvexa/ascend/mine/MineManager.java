@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import com.hypixel.hytale.math.vector.Vector3d;
 
@@ -25,9 +24,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 public class MineManager {
     private final MineConfigStore configStore;
+    private final Function<UUID, PlayerRef> playerRefResolver;
 
     // zoneId -> set of broken block positions (packed as long: x<<38 | y<<26 | z)
     private final Map<String, Set<Long>> brokenBlocks = new ConcurrentHashMap<>();
@@ -41,8 +42,9 @@ public class MineManager {
 
     private volatile World mineWorld;
 
-    public MineManager(MineConfigStore configStore) {
+    public MineManager(MineConfigStore configStore, Function<UUID, PlayerRef> playerRefResolver) {
         this.configStore = configStore;
+        this.playerRefResolver = playerRefResolver;
     }
 
     public MineZone findZoneAt(int x, int y, int z) {
@@ -202,7 +204,7 @@ public class MineManager {
         Vector3d safePos = new Vector3d(safeX, safeY, safeZ);
 
         for (UUID playerId : hudMgr.getTrackedPlayerIds()) {
-            PlayerRef playerRef = ParkourAscendPlugin.getInstance().getPlayerRef(playerId);
+            PlayerRef playerRef = playerRefResolver != null ? playerRefResolver.apply(playerId) : null;
             if (playerRef == null) continue;
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) continue;

@@ -136,7 +136,10 @@ public class MineBlockHpPage extends InteractiveCustomUIPage<MineBlockHpPage.Con
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || pRef == null) return;
-        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(pRef, mineConfigStore, adminNavigator));
+        MineAdminPage page = adminNavigator.createMineAdminPage(pRef);
+        if (page != null) {
+            player.getPageManager().openCustomPage(ref, store, page);
+        }
     }
 
     private void bindEvents(UIEventBuilder eventBuilder) {

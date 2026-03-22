@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinerSlot;
@@ -35,6 +36,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
 
     private final PlayerRef playerRef;
     private final MineConfigStore mineConfigStore;
+    private final MineManager mineManager;
     private final AscendAdminNavigator adminNavigator;
     private String mineId = "";
     private String mineName = "";
@@ -45,10 +47,12 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
 
     public MineAdminPage(@Nonnull PlayerRef playerRef,
                          MineConfigStore mineConfigStore,
+                         MineManager mineManager,
                          AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MineData.CODEC);
         this.playerRef = playerRef;
         this.mineConfigStore = mineConfigStore;
+        this.mineManager = mineManager;
         this.adminNavigator = adminNavigator;
     }
 
@@ -262,8 +266,8 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         }
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
-        MineZoneAdminPage page = new MineZoneAdminPage(pRef, mineConfigStore, selectedMineId);
-        page.setAdminNavigator(adminNavigator);
+        MineZoneAdminPage page = new MineZoneAdminPage(
+            pRef, mineConfigStore, mineManager, adminNavigator, selectedMineId);
         player.getPageManager().openCustomPage(ref, store, page);
     }
 

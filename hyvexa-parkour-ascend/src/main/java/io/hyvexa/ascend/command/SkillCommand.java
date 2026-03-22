@@ -12,7 +12,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.AscensionManager.SkillTreeSummary;
@@ -63,9 +62,11 @@ public class SkillCommand extends AbstractAsyncCommand {
     /** Inverse lookup: normalized coordinate (with _ separator) -> node. */
     private static final Map<String, SkillTreeNode> COORD_TO_NODE = NODE_COORDS.entrySet().stream()
         .collect(Collectors.toMap(e -> e.getValue().replace(':', '_'), Map.Entry::getKey));
+    private final AscensionManager ascensionManager;
 
-    public SkillCommand() {
+    public SkillCommand(AscensionManager ascensionManager) {
         super("skill", "Unlock a skill tree node");
+        this.ascensionManager = ascensionManager;
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -96,13 +97,11 @@ public class SkillCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null || plugin.getAscensionManager() == null) {
+            if (ascensionManager == null) {
                 player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                 return;
             }
 
-            AscensionManager ascensionManager = plugin.getAscensionManager();
             UUID playerId = playerRef.getUuid();
 
             String[] args = CommandUtils.tokenize(ctx);

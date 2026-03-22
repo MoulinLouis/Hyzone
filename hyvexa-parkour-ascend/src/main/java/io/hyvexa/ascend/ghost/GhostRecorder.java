@@ -3,7 +3,6 @@ package io.hyvexa.ascend.ghost;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.common.ghost.AbstractGhostRecorder;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostSample;
@@ -11,13 +10,16 @@ import io.hyvexa.common.ghost.GhostStore;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 
 public class GhostRecorder extends AbstractGhostRecorder<GhostSample, GhostRecording> {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private final Function<UUID, PlayerRef> playerRefResolver;
 
-    public GhostRecorder(GhostStore ghostStore) {
+    public GhostRecorder(GhostStore ghostStore, Function<UUID, PlayerRef> playerRefResolver) {
         super(ghostStore::saveRecording);
+        this.playerRefResolver = playerRefResolver;
     }
 
     @Override
@@ -27,11 +29,7 @@ public class GhostRecorder extends AbstractGhostRecorder<GhostSample, GhostRecor
 
     @Override
     protected PlayerRef resolvePlayerRef(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return null;
-        }
-        return plugin.getPlayerRef(playerId);
+        return playerRefResolver != null ? playerRefResolver.apply(playerId) : null;
     }
 
     @Override

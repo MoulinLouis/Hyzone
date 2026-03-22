@@ -13,7 +13,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
@@ -56,11 +55,11 @@ public class AscendLeaveInteraction extends SimpleInteraction {
             player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);
             return;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
+        AscendInteractionBridge.Services services = AscendInteractionBridge.get();
+        if (services == null) {
             return;
         }
-        AscendRunTracker runTracker = plugin.getRunTracker();
+        AscendRunTracker runTracker = services.runTracker();
         if (runTracker == null) {
             player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
             return;
@@ -74,12 +73,12 @@ public class AscendLeaveInteraction extends SimpleInteraction {
         if (!confirmLeave(player, playerRef.getUuid(), mapId)) {
             return;
         }
-        CompletableFuture.runAsync(() -> handleLeave(ref, store, player, playerRef, plugin), world);
+        CompletableFuture.runAsync(() -> handleLeave(ref, store, player, playerRef, services), world);
     }
 
     private void handleLeave(Ref<EntityStore> ref, com.hypixel.hytale.component.Store<EntityStore> store,
-                             Player player, PlayerRef playerRef, ParkourAscendPlugin plugin) {
-        AscendRunTracker runTracker = plugin.getRunTracker();
+                             Player player, PlayerRef playerRef, AscendInteractionBridge.Services services) {
+        AscendRunTracker runTracker = services.runTracker();
         String mapId = runTracker.getActiveMapId(playerRef.getUuid());
         if (mapId == null) {
             player.sendMessage(Message.raw("[Ascend] No active map to leave."));
@@ -90,7 +89,7 @@ public class AscendLeaveInteraction extends SimpleInteraction {
         runTracker.cancelRun(playerRef.getUuid());
 
         // Teleport to spawn
-        AscendSettingsStore settingsStore = plugin.getSettingsStore();
+        AscendSettingsStore settingsStore = services.settingsStore();
         World world = store.getExternalData().getWorld();
         if (settingsStore != null && settingsStore.hasSpawnPosition() && world != null) {
             Vector3d pos = settingsStore.getSpawnPosition();

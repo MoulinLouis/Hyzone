@@ -8,7 +8,7 @@ This plan is now partially implemented.
 
 | Phase | Status | Handoff note |
 |-------|--------|--------------|
-| Phase 1 — Ascend plugin decoupling | In progress | Multiple page/manager/helper/command consumers migrated; **30** `ParkourAscendPlugin.getInstance()` calls still remain in `hyvexa-parkour-ascend/src/main/java` across **21** files |
+| Phase 1 — Ascend plugin decoupling | Completed | Ascend no longer calls `ParkourAscendPlugin.getInstance()` anywhere in `hyvexa-parkour-ascend/src/main/java`; the codec-instantiated interaction boundary now goes through a narrow `AscendInteractionBridge` instead |
 | Phase 2 — core interfaces | Partially completed | `CurrencyStore`, `PlayerAnalytics`, and `ConnectionProvider` exist; `AscendRunTracker` now consumes `PlayerAnalytics`, but broader adoption is still incomplete |
 | Phase 3 — store `DatabaseManager` migration | Not started | No broad `ConnectionProvider` propagation yet |
 | Phase 4 — other module singleton cleanup | Not started | Purge, RunOrFall, Hub, Parkour, and Wardrobe are untouched |
@@ -16,10 +16,11 @@ This plan is now partially implemented.
 
 ### Completed so far
 
-- **Phase 1: partial**
+- **Phase 1: completed**
   - `ParkourAscendPlugin.setup()` now wires a shared `RunnerSpeedCalculator`, injects explicit dependencies into `AscendRunTracker`, `RobotManager`, `SummitManager`, mine managers/helpers, tutorial scheduling, and command/page boundary classes, and closes the tracker/robot and HUD/robot ordering gaps with explicit setter injection instead of plugin lookups.
   - Added `AscendMenuNavigator` to keep profile/settings/music/stats/achievement page construction at the boundary instead of inside page classes.
   - Added `AscendAdminNavigator` to keep admin/whitelist/mine admin page construction and back-navigation at the boundary instead of inside admin pages.
+  - Added `AscendInteractionBridge` so codec-instantiated no-arg interactions can use a narrow static bootstrap without reaching back into `ParkourAscendPlugin`.
   - The following classes no longer call `ParkourAscendPlugin.getInstance()`:
     - `AscendMapSelectPage`
     - `AscendMapLeaderboardPage`
@@ -55,10 +56,29 @@ This plan is now partially implemented.
     - `AutoRunnerUpgradeEngine`
     - `TutorialTriggerService`
     - `PrestigeHelper`
+    - `AscendPlayerStore`
+    - `MapUnlockHelper`
+    - `ElevateCommand`
+    - `SummitCommand`
+    - `SkillCommand`
+    - `TranscendCommand`
+    - `HudPreviewCommand`
+    - `CatCommand`
+    - `MineCommand`
+    - `AscendAscensionExplainerPage`
+    - `MineManager`
+    - `EggDropHelper`
+    - `EggOpenService`
+    - `GhostRecorder`
+    - `MineZoneAdminPage`
+    - `RobotSpawner`
+    - `RobotRefreshSystem`
   - Commands / interaction bootstrap points were updated to pass those dependencies in from the plugin boundary.
   - Mine admin sub-pages now carry the injected admin navigator through their back-navigation flow instead of reconstructing admin pages ad hoc.
   - Mine reward / achievement / HUD flows now receive `MineHudManager`, `MineAchievementTracker`, `MinePlayerStore`, `MineConfigStore`, and player lookup callbacks explicitly instead of reaching back into the plugin singleton at runtime.
   - Prestige reset flows now receive `RobotManager` and `AchievementManager` explicitly through page constructors instead of using a static helper fallback to the plugin singleton.
+  - Ghost capture, mine egg opening/drops, ascension explainer continuation, mine zone regeneration, and mine player teleport safety now all receive their runtime collaborators explicitly from the composition root or parent page instead of lazily querying `ParkourAscendPlugin`.
+  - Codec-instantiated interaction handlers (`AbstractAscendPageInteraction`, reset/leave/mine egg handlers, and derived page-open interactions) now use `AscendInteractionBridge` instead of `ParkourAscendPlugin.getInstance()`.
   - `ParkourAscendPlugin` getters used as service-locator accessors were marked `@Deprecated` to signal the transition.
 
 - **Phase 2: partial propagation completed**
@@ -75,16 +95,6 @@ This plan is now partially implemented.
 
 ### Not completed yet
 
-- **Phase 1 still in progress**
-  - `ParkourAscendPlugin.getInstance()` calls remain in Ascend.
-  - Current count after this slice: **30** remaining calls under `hyvexa-parkour-ascend/src/main/java` across **21** files.
-  - The largest remaining service-locator consumers are now:
-    - `AscendPlayerStore`
-    - `AbstractAscendPageInteraction`
-    - `MapUnlockHelper`
-    - one-off command wrappers (`ElevateCommand`, `SummitCommand`, `SkillCommand`, `TranscendCommand`, `HudPreviewCommand`)
-    - one-off interaction / helper classes (`AscendAscensionExplainerPage`, `AscendLeaveInteraction`, `AscendResetInteraction`, `MineEggChestInteraction`, `MineZoneAdminPage`, `EggDropHelper`, `EggOpenService`, `MineCommand`, `MineManager`, `RobotSpawner`, `RobotRefreshSystem`, `GhostRecorder`)
-
 - **Phase 2 not fully propagated**
   - Consumers are not yet broadly typed against `CurrencyStore`, `PlayerAnalytics`, or `ConnectionProvider`.
   - The interfaces exist, but most store consumers still use concrete singleton-backed classes.
@@ -98,26 +108,21 @@ This plan is now partially implemented.
 
 ### Recommended next tasks for another agent
 
-1. Finish **Phase 1 in Ascend manager/store layer**:
-   - Inject remaining hidden dependencies into `AscendPlayerStore`
-   - Remove the `MapUnlockHelper` challenge lookup fallback by threading `ChallengeManager` explicitly
-   - Convert one-off command wrappers and helper pages to constructor-injected command/page factories where practical
+1. Reduce the **codec-instantiated interaction** static boundary further:
+   - Revisit `AscendInteractionBridge`
+   - If Hytale codec constraints still force no-arg handlers, keep the bridge narrow and consider splitting it into smaller purpose-specific bridges if interaction needs continue diverging
 
-2. Reduce the **codec-instantiated interaction** singleton boundary:
-   - Revisit `AbstractAscendPageInteraction`
-   - If Hytale codec constraints still force no-arg handlers, isolate the remaining access behind a narrower injected/factory-style bridge instead of the full plugin singleton
-
-3. Continue **Phase 2 propagation** on low-risk gameplay consumers:
+2. Continue **Phase 2 propagation** on low-risk gameplay consumers:
    - Replace direct `AnalyticsStore.getInstance()` usage outside Ascend with `PlayerAnalytics`
    - Replace remaining concrete currency store injections with `CurrencyStore`
 
-4. Start **Phase 3 store migration** with low-risk targets:
+3. Start **Phase 3 store migration** with low-risk targets:
    - `RunOrFallStatsStore`
    - `VoteStore`
    - `MedalStore`
    - `MedalRewardStore`
 
-5. After the next `ConnectionProvider` migrations, update this plan with:
+4. After the next `ConnectionProvider` migrations, update this plan with:
    - exact classes completed
    - remaining call counts
    - any constructor cycles that require setter injection or small helper services
@@ -187,6 +192,36 @@ This plan is now partially implemented.
   - `TranscendencePage`
   - `AscendChallengePage`
   - `ChallengeLeaderboardPage`
+  - `AscendPlayerStore`
+  - `MapUnlockHelper`
+  - `ElevateCommand`
+  - `SummitCommand`
+  - `SkillCommand`
+  - `TranscendCommand`
+  - `HudPreviewCommand`
+  - `CatCommand`
+  - `MineCommand`
+  - `AscendAscensionExplainerPage`
+  - `MineManager`
+  - `EggDropHelper`
+  - `EggOpenService`
+  - `GhostRecorder`
+  - `MineAdminPage`
+  - `MineZoneAdminPage`
+  - `MineBlockPickerPage`
+  - `MineBlockHpPage`
+  - `MineGateAdminPage`
+  - `AscendAdminNavigator`
+  - `RobotSpawner`
+  - `RobotRefreshSystem`
+  - `AscendInteractionBridge`
+  - `AbstractAscendPageInteraction`
+  - `AscendDevInteraction`
+  - `ConveyorChestInteraction`
+  - `AscendTranscendenceInteraction`
+  - `AscendLeaveInteraction`
+  - `AscendResetInteraction`
+  - `MineEggChestInteraction`
 
 ## Audit Summary
 

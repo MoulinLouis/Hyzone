@@ -8,6 +8,7 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.holo.AscendHologramManager;
+import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.mine.ui.MineAdminPage;
@@ -27,6 +28,7 @@ public class AscendAdminNavigator {
     private final AchievementManager achievementManager;
     private final AscendWhitelistManager whitelistManager;
     private final MineConfigStore mineConfigStore;
+    private final MineManager mineManager;
     private final AscendHologramManager hologramManager;
 
     public AscendAdminNavigator(AscendPlayerStore playerStore,
@@ -38,6 +40,7 @@ public class AscendAdminNavigator {
                                 AchievementManager achievementManager,
                                 AscendWhitelistManager whitelistManager,
                                 MineConfigStore mineConfigStore,
+                                MineManager mineManager,
                                 AscendHologramManager hologramManager) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
@@ -48,6 +51,7 @@ public class AscendAdminNavigator {
         this.achievementManager = achievementManager;
         this.whitelistManager = whitelistManager;
         this.mineConfigStore = mineConfigStore;
+        this.mineManager = mineManager;
         this.hologramManager = hologramManager;
     }
 
@@ -76,7 +80,7 @@ public class AscendAdminNavigator {
     }
 
     public MineAdminPage createMineAdminPage(@Nonnull PlayerRef playerRef) {
-        return mineConfigStore != null ? new MineAdminPage(playerRef, mineConfigStore, this) : null;
+        return mineConfigStore != null ? new MineAdminPage(playerRef, mineConfigStore, mineManager, this) : null;
     }
 
     public PickaxeAdminPage createPickaxeAdminPage(@Nonnull PlayerRef playerRef) {

@@ -497,7 +497,7 @@ public class AscendRunTracker {
 
                 // Player is on this map's start - check if unlocked
                 MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                    playerId, map, playerStore, mapStore);
+                    playerId, map, playerStore, mapStore, challengeManager);
                 if (!unlockResult.unlocked) {
                     // Map not unlocked - teleport player back to spawn
                     if (settingsStore != null && settingsStore.hasSpawnPosition()) {

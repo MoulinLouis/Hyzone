@@ -6,7 +6,6 @@ import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.achievement.MineAchievement;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -26,7 +25,8 @@ public final class EggDropHelper {
     private EggDropHelper() {}
 
     public static void tryDropEgg(UUID playerId, Player player, MineZone zone, int blockY,
-                                   MinePlayerProgress progress, MinePlayerStore store) {
+                                  MinePlayerProgress progress, MinePlayerStore store,
+                                  MineHudManager hudManager, MineAchievementTracker achievementTracker) {
         MineZoneLayer layer = zone.getLayerForY(blockY);
         if (layer == null) return;
 
@@ -39,19 +39,12 @@ public final class EggDropHelper {
         placeEggChest(player, progress, layer.getId());
 
         // Toast notification + achievement
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            MineHudManager hudManager = plugin.getMineHudManager();
-            if (hudManager != null) {
-                hudManager.showMineToast(playerId, "Egg", 1);
-            }
+        if (hudManager != null) {
+            hudManager.showMineToast(playerId, "Egg", 1);
         }
 
-        if (plugin != null) {
-            MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-            if (tracker != null) {
-                tracker.checkAchievement(playerId, MineAchievement.FIRST_EGG);
-            }
+        if (achievementTracker != null) {
+            achievementTracker.checkAchievement(playerId, MineAchievement.FIRST_EGG);
         }
     }
 

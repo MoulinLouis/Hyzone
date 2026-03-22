@@ -56,9 +56,11 @@ Composition root note:
 - `ParkourAscendPlugin.setup()` owns dependency wiring for pages, managers, and helper services.
 - Commands are registered with injected dependencies from `ParkourAscendPlugin.setup()`.
 - Interactions still bootstrap through `AbstractAscendPageInteraction` because Hytale codec instantiation requires no-arg handlers today.
+- `AscendInteractionBridge` is the narrow static bootstrap for those codec-instantiated handlers; interactions should depend on that bridge rather than on `ParkourAscendPlugin`.
 - Page/business logic and helper services should prefer constructor/setter injection instead of calling back into `ParkourAscendPlugin`.
 - `AscendMenuNavigator` is the focused page-construction helper for profile/settings/music/stats/achievement flows; page classes should use it instead of reaching back into the plugin singleton to open sibling pages.
 - `AscendAdminNavigator` plays the same role for admin/whitelist/mine admin pages, including back-navigation between admin sub-pages.
+- As of `2026-03-22`, Ascend runtime uses `0` `ParkourAscendPlugin.getInstance()` calls in Java code; the only remaining static bootstrap is the narrower `AscendInteractionBridge` used by codec-instantiated interactions.
 
 ## Commands
 

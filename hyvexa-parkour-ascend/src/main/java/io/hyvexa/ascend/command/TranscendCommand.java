@@ -11,8 +11,10 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.ModeGate;
@@ -28,9 +30,18 @@ import java.util.concurrent.CompletableFuture;
  * /transcend - Test command to perform transcendence directly via chat.
  */
 public class TranscendCommand extends AbstractAsyncCommand {
+    private final AscendPlayerStore playerStore;
+    private final TranscendenceManager transcendenceManager;
+    private final RobotManager robotManager;
+    private final AchievementManager achievementManager;
 
-    public TranscendCommand() {
+    public TranscendCommand(AscendPlayerStore playerStore, TranscendenceManager transcendenceManager,
+                            RobotManager robotManager, AchievementManager achievementManager) {
         super("transcend", "Transcend (4th prestige reset)");
+        this.playerStore = playerStore;
+        this.transcendenceManager = transcendenceManager;
+        this.robotManager = robotManager;
+        this.achievementManager = achievementManager;
         this.setPermissionGroup(GameMode.Adventure);
     }
 
@@ -66,14 +77,12 @@ public class TranscendCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null || plugin.getPlayerStore() == null || plugin.getTranscendenceManager() == null) {
+            if (playerStore == null || transcendenceManager == null) {
                 player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                 return;
             }
 
             UUID playerId = playerRef.getUuid();
-            TranscendenceManager transcendenceManager = plugin.getTranscendenceManager();
 
             if (!transcendenceManager.isEligible(playerId)) {
                 player.sendMessage(Message.raw("[Transcendence] Not eligible. Need 1e100 volt with BREAK_ASCENSION active and all challenges completed.")
@@ -82,8 +91,8 @@ public class TranscendCommand extends AbstractAsyncCommand {
             }
 
             // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-            if (plugin.getRobotManager() != null) {
-                plugin.getRobotManager().despawnRobotsForPlayer(playerId);
+            if (robotManager != null) {
+                robotManager.despawnRobotsForPlayer(playerId);
             }
 
             int newCount = transcendenceManager.performTranscendence(playerId);
@@ -103,8 +112,8 @@ public class TranscendCommand extends AbstractAsyncCommand {
                     .color(SystemMessageUtils.SUCCESS));
             }
 
-            if (plugin.getAchievementManager() != null) {
-                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+            if (achievementManager != null) {
+                achievementManager.checkAndUnlockAchievements(playerId, player);
             }
         }, world);
     }

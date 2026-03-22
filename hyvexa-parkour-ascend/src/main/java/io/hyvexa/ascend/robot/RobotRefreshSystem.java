@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -241,12 +240,7 @@ class RobotRefreshSystem {
         if (mapStore == null || onlinePlayers.isEmpty()) {
             return ViewerContext.empty();
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return ViewerContext.empty();
-        }
-
-        AscendRunTracker runTracker = plugin.getRunTracker();
+        AscendRunTracker runTracker = manager.getRunTracker();
         List<AscendMap> maps = mapStore.listMapsSorted();
         Set<String> relevantMapIds = new HashSet<>();
         Set<String> highFrequencyMapIds = new HashSet<>();
@@ -254,7 +248,7 @@ class RobotRefreshSystem {
         double fastDistanceSq = FAST_MAP_DISTANCE * FAST_MAP_DISTANCE;
 
         for (UUID playerId : onlinePlayers) {
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            PlayerRef playerRef = manager.getPlayerRef(playerId);
             if (playerRef == null) {
                 continue;
             }

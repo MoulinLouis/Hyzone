@@ -1,6 +1,5 @@
 package io.hyvexa.ascend.mine.egg;
 
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.achievement.MineAchievement;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.CollectedMiner;
@@ -27,9 +26,11 @@ public class EggOpenService {
     }
 
     private final MinePlayerStore store;
+    private final MineAchievementTracker achievementTracker;
 
-    public EggOpenService(MinePlayerStore store) {
+    public EggOpenService(MinePlayerStore store, MineAchievementTracker achievementTracker) {
         this.store = store;
+        this.achievementTracker = achievementTracker;
     }
 
     /**
@@ -48,14 +49,8 @@ public class EggOpenService {
         store.markDirty(playerId);
 
         // Check legendary achievement
-        if (rarity == MinerRarity.LEGENDARY) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null) {
-                MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-                if (tracker != null) {
-                    tracker.checkAchievement(playerId, MineAchievement.FIRST_LEGENDARY);
-                }
-            }
+        if (rarity == MinerRarity.LEGENDARY && achievementTracker != null) {
+            achievementTracker.checkAchievement(playerId, MineAchievement.FIRST_LEGENDARY);
         }
 
         return miner;

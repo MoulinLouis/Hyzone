@@ -13,7 +13,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
@@ -39,9 +40,23 @@ import java.util.concurrent.CompletableFuture;
  * Equivalent to clicking a Summit button on the Summit page.
  */
 public class SummitCommand extends AbstractAsyncCommand {
+    private final SummitManager summitManager;
+    private final AscendPlayerStore playerStore;
+    private final ChallengeManager challengeManager;
+    private final RobotManager robotManager;
+    private final AscendHudManager hudManager;
+    private final AchievementManager achievementManager;
 
-    public SummitCommand() {
+    public SummitCommand(SummitManager summitManager, AscendPlayerStore playerStore,
+                         ChallengeManager challengeManager, RobotManager robotManager,
+                         AscendHudManager hudManager, AchievementManager achievementManager) {
         super("summit", "Summit into a category");
+        this.summitManager = summitManager;
+        this.playerStore = playerStore;
+        this.challengeManager = challengeManager;
+        this.robotManager = robotManager;
+        this.hudManager = hudManager;
+        this.achievementManager = achievementManager;
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -87,19 +102,15 @@ public class SummitCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null || plugin.getSummitManager() == null) {
+            if (summitManager == null || playerStore == null) {
                 player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                 return;
             }
 
-            SummitManager summitManager = plugin.getSummitManager();
-            AscendPlayerStore playerStore = plugin.getPlayerStore();
             UUID playerId = playerRef.getUuid();
 
             // Check challenge block
-            if (plugin.getChallengeManager() != null
-                    && plugin.getChallengeManager().isSummitBlocked(playerId, category)) {
+            if (challengeManager != null && challengeManager.isSummitBlocked(playerId, category)) {
                 player.sendMessage(Message.raw("[Summit] " + category.getDisplayName()
                     + " is locked during your active challenge.")
                     .color(SystemMessageUtils.SECONDARY));
@@ -124,7 +135,6 @@ public class SummitCommand extends AbstractAsyncCommand {
             }
 
             // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-            RobotManager robotManager = plugin.getRobotManager();
             if (robotManager != null) {
                 robotManager.despawnRobotsForPlayer(playerId);
             }
@@ -138,9 +148,8 @@ public class SummitCommand extends AbstractAsyncCommand {
             }
 
             // Toast
-            AscendHudManager hm = plugin.getHudManager();
-            if (hm != null) {
-                hm.showToast(playerId, ToastType.EVOLUTION,
+            if (hudManager != null) {
+                hudManager.showToast(playerId, ToastType.EVOLUTION,
                     category.getDisplayName() + " Lv." + FormatUtils.formatLong(preview.currentLevel())
                     + " -> Lv." + FormatUtils.formatLong(result.newLevel())
                     + " | " + formatBonus(category, preview.currentBonus())
@@ -157,8 +166,8 @@ public class SummitCommand extends AbstractAsyncCommand {
                 .color(SystemMessageUtils.SECONDARY));
 
             // Achievements
-            if (plugin.getAchievementManager() != null) {
-                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+            if (achievementManager != null) {
+                achievementManager.checkAndUnlockAchievements(playerId, player);
             }
         }, world);
     }

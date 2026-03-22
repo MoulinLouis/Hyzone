@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
@@ -212,11 +211,7 @@ class RobotSpawner {
      * Skips the runner's owner so they can still see their own runner while playing.
      */
     void hideFromActiveRunners(String mapId, UUID runnerUuid) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        AscendRunTracker runTracker = plugin.getRunTracker();
+        AscendRunTracker runTracker = manager.getRunTracker();
         if (runTracker == null) {
             return;
         }

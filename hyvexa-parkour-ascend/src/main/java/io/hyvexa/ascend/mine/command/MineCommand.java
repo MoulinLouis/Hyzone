@@ -11,10 +11,12 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
+import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.MineGateChecker;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.mine.ui.MineAchievementsPage;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
 import io.hyvexa.ascend.mine.ui.MinePage;
@@ -31,9 +33,21 @@ import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
 public class MineCommand extends AbstractAsyncCommand {
+    private final MineGateChecker mineGateChecker;
+    private final MinePlayerStore minePlayerStore;
+    private final MineConfigStore mineConfigStore;
+    private final MineAchievementTracker mineAchievementTracker;
+    private final MineRobotManager mineRobotManager;
 
-    public MineCommand() {
+    public MineCommand(MineGateChecker mineGateChecker, MinePlayerStore minePlayerStore,
+                       MineConfigStore mineConfigStore, MineAchievementTracker mineAchievementTracker,
+                       MineRobotManager mineRobotManager) {
         super("mine", "Mine commands");
+        this.mineGateChecker = mineGateChecker;
+        this.minePlayerStore = minePlayerStore;
+        this.mineConfigStore = mineConfigStore;
+        this.mineAchievementTracker = mineAchievementTracker;
+        this.mineRobotManager = mineRobotManager;
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -63,11 +77,6 @@ public class MineCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null) {
-                return;
-            }
-            MineGateChecker mineGateChecker = plugin.getMineGateChecker();
             if (mineGateChecker == null) {
                 player.sendMessage(Message.raw("[Mine] Mining system not available.").color(SystemMessageUtils.SECONDARY));
                 return;
@@ -76,18 +85,17 @@ public class MineCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            MinePlayerStore mineStore = plugin.getMinePlayerStore();
-            if (mineStore == null) {
+            if (minePlayerStore == null) {
                 player.sendMessage(Message.raw("[Mine] Mining system not available.").color(SystemMessageUtils.SECONDARY));
                 return;
             }
 
             String[] args = CommandUtils.tokenize(ctx);
-            MinePlayerProgress progress = mineStore.getOrCreatePlayer(playerRef.getUuid());
+            MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerRef.getUuid());
 
             if (args.length == 0) {
                 MineBagPage page = new MineBagPage(playerRef, progress,
-                    plugin.getMineConfigStore(), mineStore, plugin.getMineAchievementTracker());
+                    mineConfigStore, minePlayerStore, mineAchievementTracker);
                 player.getPageManager().openCustomPage(ref, store, page);
                 return;
             }
@@ -96,17 +104,17 @@ public class MineCommand extends AbstractAsyncCommand {
             switch (subCommand) {
                 case "sell" -> {
                     MineSellPage page = new MineSellPage(playerRef, progress,
-                        plugin.getMineConfigStore(), mineStore, plugin.getMineAchievementTracker());
+                        mineConfigStore, minePlayerStore, mineAchievementTracker);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "upgrades" -> {
                     MinePage page = new MinePage(playerRef, progress,
-                        plugin.getMineConfigStore(), mineStore, plugin.getMineRobotManager(),
-                        plugin.getMineGateChecker(), plugin.getMineAchievementTracker());
+                        mineConfigStore, minePlayerStore, mineRobotManager,
+                        mineGateChecker, mineAchievementTracker);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "achievements" -> {
-                    MineAchievementsPage page = new MineAchievementsPage(playerRef, plugin.getMineAchievementTracker());
+                    MineAchievementsPage page = new MineAchievementsPage(playerRef, mineAchievementTracker);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "addcrystals" -> {
@@ -129,7 +137,7 @@ public class MineCommand extends AbstractAsyncCommand {
                             return;
                         }
                         progress.addCrystals(amount);
-                        mineStore.markDirty(playerRef.getUuid());
+                        minePlayerStore.markDirty(playerRef.getUuid());
                         player.sendMessage(Message.raw("[Mine] Added " + amount + " crystals. Total: " + FormatUtils.formatDouble(progress.getCrystals())).color(SystemMessageUtils.SECONDARY));
                     } catch (NumberFormatException e) {
                         player.sendMessage(Message.raw("[Mine] Invalid number: " + args[1]).color(SystemMessageUtils.SECONDARY));

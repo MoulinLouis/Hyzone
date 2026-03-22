@@ -2,13 +2,19 @@ package io.hyvexa.ascend.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
+import io.hyvexa.ascend.hud.AscendHudManager;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.util.MapUnlockHelper;
+import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -23,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 
 public class AscendPlayerStore {
@@ -35,9 +42,38 @@ public class AscendPlayerStore {
     private final Set<UUID> ascensionCinematicActive = ConcurrentHashMap.newKeySet();
 
     private final AscendPlayerPersistence persistence;
+    private volatile ChallengeManager challengeManager;
+    private volatile TutorialTriggerService tutorialTriggerService;
+    private volatile AscensionManager ascensionManager;
+    private volatile AscendHudManager hudManager;
+    private volatile RobotManager robotManager;
+    private volatile AchievementManager achievementManager;
+    private volatile AscendMapStore runtimeMapStore;
+    private volatile GhostStore ghostStore;
+    private volatile Function<UUID, PlayerRef> playerRefLookup;
 
     public AscendPlayerStore() {
         this.persistence = new AscendPlayerPersistence(players, playerNames, resetPendingPlayers);
+    }
+
+    public void setRuntimeServices(ChallengeManager challengeManager,
+                                   TutorialTriggerService tutorialTriggerService,
+                                   AscensionManager ascensionManager,
+                                   AscendHudManager hudManager,
+                                   RobotManager robotManager,
+                                   AchievementManager achievementManager,
+                                   AscendMapStore runtimeMapStore,
+                                   GhostStore ghostStore,
+                                   Function<UUID, PlayerRef> playerRefLookup) {
+        this.challengeManager = challengeManager;
+        this.tutorialTriggerService = tutorialTriggerService;
+        this.ascensionManager = ascensionManager;
+        this.hudManager = hudManager;
+        this.robotManager = robotManager;
+        this.achievementManager = achievementManager;
+        this.runtimeMapStore = runtimeMapStore;
+        this.ghostStore = ghostStore;
+        this.playerRefLookup = playerRefLookup;
     }
 
     public record LeaderboardEntry(UUID playerId, String playerName,
@@ -218,9 +254,8 @@ public class AscendPlayerStore {
      */
     public double getCalculatedElevationMultiplier(UUID playerId) {
         double base = AscendConstants.getElevationMultiplier(getElevationLevel(playerId));
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null) {
-            base *= plugin.getChallengeManager().getChallengeElevationBonus(playerId);
+        if (challengeManager != null) {
+            base *= challengeManager.getChallengeElevationBonus(playerId);
         }
         return base;
     }
@@ -340,13 +375,8 @@ public class AscendPlayerStore {
             markTutorialSeen(playerId, TutorialTriggerService.ASCENSION);
         }
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        TutorialTriggerService triggerService = plugin.getTutorialTriggerService();
-        if (triggerService != null) {
-            triggerService.checkVoltThresholds(playerId, oldBalance, newBalance);
+        if (tutorialTriggerService != null) {
+            tutorialTriggerService.checkVoltThresholds(playerId, oldBalance, newBalance);
         }
 
         AscendPlayerProgress progress = getPlayer(playerId);
@@ -359,7 +389,7 @@ public class AscendPlayerStore {
                 return; // Break mode active — suppress auto-ascension
             }
             // Auto Ascend skill + toggle: skip popup and cinematic, ascend immediately
-            if (plugin.getAscensionManager() != null && plugin.getAscensionManager().hasAutoAscend(playerId)
+            if (ascensionManager != null && ascensionManager.hasAutoAscend(playerId)
                     && isAutoAscendEnabled(playerId)) {
                 performInstantAscension(playerId);
             } else {
@@ -380,13 +410,8 @@ public class AscendPlayerStore {
             return;
         }
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        io.hyvexa.ascend.hud.AscendHudManager hm = plugin.getHudManager();
-        if (hm != null) {
-            hm.showToast(playerId, io.hyvexa.ascend.hud.ToastType.ECONOMY,
+        if (hudManager != null) {
+            hudManager.showToast(playerId, io.hyvexa.ascend.hud.ToastType.ECONOMY,
                 "Transcendence available! Talk to the NPC.");
         }
     }
@@ -408,13 +433,13 @@ public class AscendPlayerStore {
     private void resolvePlayerContext(UUID playerId,
                                       Runnable onFailure,
                                       java.util.function.Consumer<ResolvedPlayerContext> onResolved) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
+        Function<UUID, PlayerRef> playerRefLookup = this.playerRefLookup;
+        if (playerRefLookup == null) {
             onFailure.run();
             return;
         }
 
-        com.hypixel.hytale.server.core.universe.PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        com.hypixel.hytale.server.core.universe.PlayerRef playerRef = playerRefLookup.apply(playerId);
         if (playerRef == null) {
             onFailure.run();
             return;
@@ -466,7 +491,7 @@ public class AscendPlayerStore {
                 ctx -> ctx.player().getPageManager().openCustomPage(
                     ctx.ref(),
                     ctx.store(),
-                    new io.hyvexa.ascend.ui.AscendAscensionExplainerPage(ctx.playerRef())
+                    new io.hyvexa.ascend.ui.AscendAscensionExplainerPage(ctx.playerRef(), this)
                 )
             );
         }, 500, TimeUnit.MILLISECONDS);
@@ -529,16 +554,11 @@ public class AscendPlayerStore {
                                       com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref,
                                       com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store) {
         try {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null) return;
-
-            io.hyvexa.ascend.ascension.AscensionManager ascensionManager = plugin.getAscensionManager();
             if (ascensionManager == null) return;
 
             if (!ascensionManager.canAscend(playerId)) return;
 
             // Route to challenge completion if in a challenge
-            io.hyvexa.ascend.ascension.ChallengeManager challengeManager = plugin.getChallengeManager();
             if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
                 AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
                 long elapsedMs = challengeManager.completeChallenge(playerId);
@@ -555,7 +575,6 @@ public class AscendPlayerStore {
             }
 
             // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-            io.hyvexa.ascend.robot.RobotManager robotManager = plugin.getRobotManager();
             if (robotManager != null) {
                 robotManager.despawnRobotsForPlayer(playerId);
             }
@@ -564,14 +583,12 @@ public class AscendPlayerStore {
             if (newCount < 0) return;
 
             // Auto-buy map 1 runner so the player doesn't need any manual action
-            AscendMapStore mapStore = plugin.getMapStore();
-            if (mapStore != null) {
-                List<AscendMap> maps = mapStore.listMapsSorted();
+            if (runtimeMapStore != null) {
+                List<AscendMap> maps = runtimeMapStore.listMapsSorted();
                 if (!maps.isEmpty()) {
                     String firstMapId = maps.get(0).getId();
                     setMapUnlocked(playerId, firstMapId, true);
                     // Auto-buy runner if player has completed map 1 before (ghost or best time)
-                    io.hyvexa.common.ghost.GhostStore ghostStore = plugin.getGhostStore();
                     boolean hasGhost = ghostStore != null && ghostStore.getRecording(playerId, firstMapId) != null;
                     boolean hasBestTime = getBestTimeMs(playerId, firstMapId) != null;
                     if (hasGhost || hasBestTime) {
@@ -592,8 +609,8 @@ public class AscendPlayerStore {
                 .color(io.hyvexa.common.util.SystemMessageUtils.SECONDARY));
 
             // Check achievements
-            if (plugin.getAchievementManager() != null) {
-                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+            if (achievementManager != null) {
+                achievementManager.checkAndUnlockAchievements(playerId, player);
             }
 
             // Show ascension tutorial page only on first ascension
@@ -754,15 +771,8 @@ public class AscendPlayerStore {
                 continue;
             }
 
-            // Skip maps blocked by active challenge
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getChallengeManager() != null
-                    && plugin.getChallengeManager().isMapBlocked(playerId, map.getDisplayOrder())) {
-                continue;
-            }
-
             // Check if meets unlock requirement
-            if (MapUnlockHelper.meetsUnlockRequirement(playerId, map, this, mapStore)) {
+            if (MapUnlockHelper.meetsUnlockRequirement(playerId, map, this, mapStore, challengeManager)) {
                 setMapUnlocked(playerId, map.getId(), true);
                 newlyUnlockedMapIds.add(map.getId());
             }
@@ -1094,11 +1104,10 @@ public class AscendPlayerStore {
     }
 
     private void notifyRobotManager(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getRobotManager() == null) {
+        if (robotManager == null) {
             return;
         }
-        plugin.getRobotManager().markPlayerDirty(playerId);
+        robotManager.markPlayerDirty(playerId);
     }
 
     public boolean isSessionFirstRunClaimed(UUID playerId) {
@@ -1246,9 +1255,8 @@ public class AscendPlayerStore {
      * Delegates to ChallengeManager if available.
      */
     private double getChallengeMapBonus(UUID playerId, int displayOrder) {
-        io.hyvexa.ascend.ParkourAscendPlugin plugin = io.hyvexa.ascend.ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null) {
-            return plugin.getChallengeManager().getChallengeMapBaseMultiplier(playerId, displayOrder);
+        if (challengeManager != null) {
+            return challengeManager.getChallengeMapBaseMultiplier(playerId, displayOrder);
         }
         return 1.0;
     }
@@ -1561,9 +1569,8 @@ public class AscendPlayerStore {
 
         // If disabling break mode while above threshold, trigger ascension
         if (!enabled && progress.getVolt().gte(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getAscensionManager() != null
-                    && plugin.getAscensionManager().hasAutoAscend(playerId)
+            if (ascensionManager != null
+                    && ascensionManager.hasAutoAscend(playerId)
                     && isAutoAscendEnabled(playerId)) {
                 performInstantAscension(playerId);
             } else {

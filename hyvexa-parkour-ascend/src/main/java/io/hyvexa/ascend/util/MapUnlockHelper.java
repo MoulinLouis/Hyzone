@@ -1,7 +1,7 @@
 package io.hyvexa.ascend.util;
 
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -39,7 +39,7 @@ public final class MapUnlockHelper {
      * @return UnlockResult with status and updated progress
      */
     public static UnlockResult checkAndEnsureUnlock(UUID playerId, AscendMap map, AscendPlayerStore playerStore) {
-        return checkAndEnsureUnlock(playerId, map, playerStore, null);
+        return checkAndEnsureUnlock(playerId, map, playerStore, null, null);
     }
 
     /**
@@ -55,6 +55,13 @@ public final class MapUnlockHelper {
     public static UnlockResult checkAndEnsureUnlock(UUID playerId, AscendMap map,
                                                      AscendPlayerStore playerStore,
                                                      AscendMapStore mapStore) {
+        return checkAndEnsureUnlock(playerId, map, playerStore, mapStore, null);
+    }
+
+    public static UnlockResult checkAndEnsureUnlock(UUID playerId, AscendMap map,
+                                                    AscendPlayerStore playerStore,
+                                                    AscendMapStore mapStore,
+                                                    ChallengeManager challengeManager) {
         if (playerId == null || map == null || playerStore == null) {
             return new UnlockResult(false, null);
         }
@@ -67,7 +74,8 @@ public final class MapUnlockHelper {
         }
 
         // Check if this map meets the unlock requirement (runner level on previous map)
-        boolean meetsRequirement = mapStore != null && meetsUnlockRequirement(playerId, map, playerStore, mapStore);
+        boolean meetsRequirement = mapStore != null
+            && meetsUnlockRequirement(playerId, map, playerStore, mapStore, challengeManager);
 
         // Auto-unlock if requirement met
         if (meetsRequirement) {
@@ -131,6 +139,13 @@ public final class MapUnlockHelper {
     public static boolean meetsUnlockRequirement(UUID playerId, AscendMap map,
                                                    AscendPlayerStore playerStore,
                                                    AscendMapStore mapStore) {
+        return meetsUnlockRequirement(playerId, map, playerStore, mapStore, null);
+    }
+
+    public static boolean meetsUnlockRequirement(UUID playerId, AscendMap map,
+                                                 AscendPlayerStore playerStore,
+                                                 AscendMapStore mapStore,
+                                                 ChallengeManager challengeManager) {
         if (playerId == null || map == null || playerStore == null || mapStore == null) {
             return false;
         }
@@ -148,9 +163,7 @@ public final class MapUnlockHelper {
         }
 
         // Challenge 3: block maps with displayOrder 3 or 4
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null
-                && plugin.getChallengeManager().isMapBlocked(playerId, map.getDisplayOrder())) {
+        if (challengeManager != null && challengeManager.isMapBlocked(playerId, map.getDisplayOrder())) {
             return false;
         }
 

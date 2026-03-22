@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
@@ -21,22 +20,22 @@ public class AscendDevInteraction extends AbstractAscendPageInteraction {
     @FunctionalInterface
     public interface PageFactory {
         InteractiveCustomUIPage<?> create(Ref<EntityStore> ref, Store<EntityStore> store,
-                                          PlayerRef playerRef, ParkourAscendPlugin plugin);
+                                          PlayerRef playerRef, AscendInteractionBridge.Services services);
     }
 
     private final PageFactory pageFactory;
-    private final BiPredicate<ParkourAscendPlugin, Player> dependencyValidator;
+    private final BiPredicate<AscendInteractionBridge.Services, Player> dependencyValidator;
     private final boolean ascendWorldRequired;
-    private final boolean pluginRequired;
+    private final boolean servicesRequired;
 
     public AscendDevInteraction(PageFactory pageFactory,
-                                BiPredicate<ParkourAscendPlugin, Player> dependencyValidator,
+                                BiPredicate<AscendInteractionBridge.Services, Player> dependencyValidator,
                                 boolean ascendWorldRequired,
-                                boolean pluginRequired) {
+                                boolean servicesRequired) {
         this.pageFactory = pageFactory;
         this.dependencyValidator = dependencyValidator;
         this.ascendWorldRequired = ascendWorldRequired;
-        this.pluginRequired = pluginRequired;
+        this.servicesRequired = servicesRequired;
     }
 
     @Override
@@ -45,19 +44,20 @@ public class AscendDevInteraction extends AbstractAscendPageInteraction {
     }
 
     @Override
-    protected boolean requiresPlugin() {
-        return pluginRequired;
+    protected boolean requiresServices() {
+        return servicesRequired;
     }
 
     @Override
-    protected boolean validateDependencies(ParkourAscendPlugin plugin, Player player) {
-        return dependencyValidator.test(plugin, player);
+    protected boolean validateDependencies(AscendInteractionBridge.Services services, Player player) {
+        return dependencyValidator.test(services, player);
     }
 
     @Override
     protected InteractiveCustomUIPage<?> createPage(Ref<EntityStore> ref, Store<EntityStore> store,
-                                                     PlayerRef playerRef, ParkourAscendPlugin plugin) {
-        return pageFactory.create(ref, store, playerRef, plugin);
+                                                     PlayerRef playerRef,
+                                                     AscendInteractionBridge.Services services) {
+        return pageFactory.create(ref, store, playerRef, services);
     }
 
     /**

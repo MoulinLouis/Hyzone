@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.HudPreviewHud;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.common.util.PermissionUtils;
@@ -25,9 +25,11 @@ import java.util.concurrent.CompletableFuture;
  * Replaces current HUD with the 3-variation preview. Rejoin to restore.
  */
 public class HudPreviewCommand extends AbstractAsyncCommand {
+    private final AscendHudManager hudManager;
 
-    public HudPreviewCommand() {
+    public HudPreviewCommand(AscendHudManager hudManager) {
         super("hudpreview", "Show HUD design variations preview");
+        this.hudManager = hudManager;
         this.setPermissionGroup(GameMode.Adventure);
     }
 
@@ -57,9 +59,8 @@ public class HudPreviewCommand extends AbstractAsyncCommand {
             if (playerRef == null) return;
 
             // Stop the normal HUD from overwriting the preview
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getHudManager() != null) {
-                plugin.getHudManager().setPreviewMode(playerRef.getUuid(), true);
+            if (hudManager != null) {
+                hudManager.setPreviewMode(playerRef.getUuid(), true);
             }
 
             HudPreviewHud hud = new HudPreviewHud(playerRef);

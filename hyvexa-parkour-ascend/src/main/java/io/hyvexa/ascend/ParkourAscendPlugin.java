@@ -37,6 +37,7 @@ import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.holo.AscendHologramManager;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
+import io.hyvexa.ascend.interaction.AscendInteractionBridge;
 import io.hyvexa.ascend.interaction.AscendDevInteraction;
 import io.hyvexa.ascend.interaction.ConveyorChestInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
@@ -218,7 +219,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (mineConfigStore != null) {
             try {
                 minePlayerStore = new MinePlayerStore();
-                mineManager = new MineManager(mineConfigStore);
+                mineManager = new MineManager(mineConfigStore, this::getPlayerRef);
                 mineGateChecker = new MineGateChecker(mineConfigStore, playerStore, minePlayerStore);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
@@ -240,7 +241,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Mine robot manager (automated miners)
         if (mineConfigStore != null && minePlayerStore != null) {
-            eggOpenService = new io.hyvexa.ascend.mine.egg.EggOpenService(minePlayerStore);
+            eggOpenService = new io.hyvexa.ascend.mine.egg.EggOpenService(minePlayerStore, mineAchievementTracker);
             try {
                 mineRobotManager = new MineRobotManager(mineConfigStore, minePlayerStore, mineManager,
                     mineAchievementTracker);
@@ -255,7 +256,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             ghostStore = new GhostStore("ascend_ghost_recordings", "ascend");
             ghostStore.syncLoad();
 
-            ghostRecorder = new GhostRecorder(ghostStore);
+            ghostRecorder = new GhostRecorder(ghostStore, this::getPlayerRef);
             ghostRecorder.start();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize ghost system");
@@ -322,6 +323,17 @@ public class ParkourAscendPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize robot manager");
         }
+        playerStore.setRuntimeServices(
+            challengeManager,
+            tutorialTriggerService,
+            ascensionManager,
+            hudManager,
+            robotManager,
+            achievementManager,
+            mapStore,
+            ghostStore,
+            this::getPlayerRef
+        );
 
         // Initialize passive earnings manager
         passiveEarningsManager = new PassiveEarningsManager(
@@ -349,6 +361,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             achievementManager,
             whitelistManager,
             mineConfigStore,
+            mineManager,
             hologramManager
         );
         getCommandRegistry().registerCommand(new AscendCommand(this));
@@ -359,17 +372,44 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineConfigStore,
             hologramManager
         ));
-        getCommandRegistry().registerCommand(new ElevateCommand());
-        getCommandRegistry().registerCommand(new SummitCommand());
-        getCommandRegistry().registerCommand(new SkillCommand());
-        getCommandRegistry().registerCommand(new TranscendCommand());
-        getCommandRegistry().registerCommand(new CatCommand());
-        getCommandRegistry().registerCommand(new io.hyvexa.ascend.mine.command.MineCommand());
+        getCommandRegistry().registerCommand(new ElevateCommand(
+            playerStore, challengeManager, robotManager, hudManager, mapStore, achievementManager));
+        getCommandRegistry().registerCommand(new SummitCommand(
+            summitManager, playerStore, challengeManager, robotManager, hudManager, achievementManager));
+        getCommandRegistry().registerCommand(new SkillCommand(ascensionManager));
+        getCommandRegistry().registerCommand(new TranscendCommand(
+            playerStore, transcendenceManager, robotManager, achievementManager));
+        getCommandRegistry().registerCommand(new CatCommand(playerStore, hudManager, achievementManager));
+        getCommandRegistry().registerCommand(new io.hyvexa.ascend.mine.command.MineCommand(
+            mineGateChecker, minePlayerStore, mineConfigStore, mineAchievementTracker, mineRobotManager));
         if (runtimeConfig.isEnableTestCommands()) {
             getCommandRegistry().registerCommand(new CinematicTestCommand());
-            getCommandRegistry().registerCommand(new HudPreviewCommand());
+            getCommandRegistry().registerCommand(new HudPreviewCommand(hudManager));
         }
         getCommandRegistry().registerCommand(new io.hyvexa.core.queue.RunOrFallQueueCommand());
+        AscendInteractionBridge.configure(new AscendInteractionBridge.Services(
+            mapStore,
+            playerStore,
+            settingsStore,
+            ghostStore,
+            runTracker,
+            hudManager,
+            robotManager,
+            ascensionManager,
+            transcendenceManager,
+            summitManager,
+            challengeManager,
+            achievementManager,
+            tutorialTriggerService,
+            runnerSpeedCalculator,
+            eggOpenService,
+            minePlayerStore,
+            mineConfigStore,
+            mineAchievementTracker,
+            mineRobotManager,
+            mineGateChecker,
+            createMenuNavigator()
+        ));
         registerInteractionCodecs();
 
         // Register entity visibility filter system if not already registered
@@ -651,6 +691,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> playerTickWorlds.clear(), "Shutdown: playerTickWorlds clear");
         runSafe(() -> playerRefCache.clear(), "Shutdown: playerRefCache clear");
         runSafe(() -> playersInAscendWorld.clear(), "Shutdown: playersInAscendWorld clear");
+        runSafe(AscendInteractionBridge::clear, "Shutdown: interaction bridge clear");
         runSafe(() -> { if (ghostRecorder != null) ghostRecorder.stop(); }, "Shutdown: ghostRecorder stop");
         runSafe(() -> { if (robotManager != null) robotManager.stop(); }, "Shutdown: robotManager stop");
         runSafe(() -> { if (mineRobotManager != null) mineRobotManager.stop(); }, "Shutdown: mineRobotManager stop");
@@ -1060,15 +1101,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Cindercloth -> AscendMapSelectPage
         registry.register("Ascend_Dev_Cindercloth_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> new AscendMapSelectPage(playerRef,
-                    plugin.getMapStore(), plugin.getPlayerStore(), plugin.getRunTracker(),
-                    plugin.getRobotManager(), plugin.getGhostStore(),
-                    plugin.getAscensionManager(), plugin.getChallengeManager(), plugin.getSummitManager(),
-                    plugin.getTranscendenceManager(), plugin.getAchievementManager(),
-                    plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator()),
-                (plugin, player) -> {
-                    if (plugin.getMapStore() == null || plugin.getPlayerStore() == null
-                            || plugin.getRunTracker() == null || plugin.getGhostStore() == null) {
+                (ref, store, playerRef, services) -> new AscendMapSelectPage(playerRef,
+                    services.mapStore(), services.playerStore(), services.runTracker(),
+                    services.robotManager(), services.ghostStore(),
+                    services.ascensionManager(), services.challengeManager(), services.summitManager(),
+                    services.transcendenceManager(), services.achievementManager(),
+                    services.tutorialTriggerService(), services.runnerSpeedCalculator()),
+                (services, player) -> {
+                    if (services.mapStore() == null || services.playerStore() == null
+                            || services.runTracker() == null || services.ghostStore() == null) {
                         player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                         return false;
                     }
@@ -1077,10 +1118,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Stormsilk -> AscendLeaderboardPage
         registry.register("Ascend_Dev_Stormsilk_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> new AscendLeaderboardPage(playerRef,
-                    plugin.getPlayerStore()),
-                (plugin, player) -> {
-                    if (plugin.getPlayerStore() == null) {
+                (ref, store, playerRef, services) -> new AscendLeaderboardPage(playerRef,
+                    services.playerStore()),
+                (services, player) -> {
+                    if (services.playerStore() == null) {
                         player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                         return false;
                     }
@@ -1089,10 +1130,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Cotton -> AutomationPage
         registry.register("Ascend_Dev_Cotton_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> new AutomationPage(playerRef,
-                    plugin.getPlayerStore(), plugin.getAscensionManager()),
-                (plugin, player) -> {
-                    if (plugin.getPlayerStore() == null || plugin.getAscensionManager() == null) {
+                (ref, store, playerRef, services) -> new AutomationPage(playerRef,
+                    services.playerStore(), services.ascensionManager()),
+                (services, player) -> {
+                    if (services.playerStore() == null || services.ascensionManager() == null) {
                         player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                         return false;
                     }
@@ -1101,8 +1142,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Shadoweave -> AscendHelpPage
         registry.register("Ascend_Dev_Shadoweave_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> new AscendHelpPage(playerRef),
-                (plugin, player) -> true, false, false)));
+                (ref, store, playerRef, services) -> new AscendHelpPage(playerRef),
+                (services, player) -> true, false, false)));
         registry.register("Ascend_Reset_Interaction",
             AscendResetInteraction.class, AscendResetInteraction.CODEC);
         registry.register("Ascend_Leave_Interaction",
@@ -1110,9 +1151,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Silk -> AscendProfilePage
         registry.register("Ascend_Dev_Silk_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> plugin.createMenuNavigator().createProfilePage(playerRef),
-                (plugin, player) -> {
-                    if (plugin.getPlayerStore() == null || plugin.getRobotManager() == null) {
+                (ref, store, playerRef, services) -> services.menuNavigator().createProfilePage(playerRef),
+                (services, player) -> {
+                    if (services.playerStore() == null || services.robotManager() == null) {
                         player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                         return false;
                     }
@@ -1132,30 +1173,30 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Mine Sell -> MineSellPage
         registry.register("Mine_Sell_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> {
-                    MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
+                (ref, store, playerRef, services) -> {
+                    MinePlayerProgress progress = services.minePlayerStore().getOrCreatePlayer(playerRef.getUuid());
                     return new io.hyvexa.ascend.mine.ui.MineSellPage(playerRef, progress,
-                        plugin.getMineConfigStore(), plugin.getMinePlayerStore(), plugin.getMineAchievementTracker());
+                        services.mineConfigStore(), services.minePlayerStore(), services.mineAchievementTracker());
                 },
-                (plugin, player) -> plugin.getMinePlayerStore() != null,
+                (services, player) -> services.minePlayerStore() != null,
                 true, true)));
         // Mine Upgrades -> MinePage
         registry.register("Mine_Upgrades_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> {
-                    MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
+                (ref, store, playerRef, services) -> {
+                    MinePlayerProgress progress = services.minePlayerStore().getOrCreatePlayer(playerRef.getUuid());
                     return new io.hyvexa.ascend.mine.ui.MinePage(playerRef, progress,
-                        plugin.getMineConfigStore(), plugin.getMinePlayerStore(), plugin.getMineRobotManager(),
-                        plugin.getMineGateChecker(), plugin.getMineAchievementTracker());
+                        services.mineConfigStore(), services.minePlayerStore(), services.mineRobotManager(),
+                        services.mineGateChecker(), services.mineAchievementTracker());
                 },
-                (plugin, player) -> plugin.getMinePlayerStore() != null && plugin.getMineConfigStore() != null,
+                (services, player) -> services.minePlayerStore() != null && services.mineConfigStore() != null,
                 true, true)));
         // Mine Leaderboard -> MineLeaderboardPage
         registry.register("Mine_Leaderboard_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> new io.hyvexa.ascend.mine.ui.MineLeaderboardPage(
-                    playerRef, plugin.getMineAchievementTracker()),
-                (plugin, player) -> plugin.getMineAchievementTracker() != null,
+                (ref, store, playerRef, services) -> new io.hyvexa.ascend.mine.ui.MineLeaderboardPage(
+                    playerRef, services.mineAchievementTracker()),
+                (services, player) -> services.mineAchievementTracker() != null,
                 false, true)));
     }
 

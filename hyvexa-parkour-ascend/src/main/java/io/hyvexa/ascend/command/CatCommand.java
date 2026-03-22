@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
@@ -38,9 +38,16 @@ public class CatCommand extends AbstractAsyncCommand {
         "FLF", "Fluffball",
         "NKO", "Neko"
     );
+    private final AscendPlayerStore playerStore;
+    private final AscendHudManager hudManager;
+    private final AchievementManager achievementManager;
 
-    public CatCommand() {
+    public CatCommand(AscendPlayerStore playerStore, AscendHudManager hudManager,
+                      AchievementManager achievementManager) {
         super("cat", "Interact with a cat");
+        this.playerStore = playerStore;
+        this.hudManager = hudManager;
+        this.achievementManager = achievementManager;
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -80,12 +87,10 @@ public class CatCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null || plugin.getPlayerStore() == null) {
+            if (playerStore == null) {
                 return;
             }
 
-            AscendPlayerStore playerStore = plugin.getPlayerStore();
             UUID playerId = playerRef.getUuid();
             AscendPlayerProgress progress = playerStore.getPlayer(playerId);
             if (progress == null) {
@@ -93,9 +98,8 @@ public class CatCommand extends AbstractAsyncCommand {
             }
 
             if (progress.hasFoundCat(token)) {
-                AscendHudManager hm = plugin.getHudManager();
-                if (hm != null) {
-                    hm.showToast(playerId, ToastType.INFO, "You already found this cat!");
+                if (hudManager != null) {
+                    hudManager.showToast(playerId, ToastType.INFO, "You already found this cat!");
                 }
                 return;
             }
@@ -104,13 +108,13 @@ public class CatCommand extends AbstractAsyncCommand {
             playerStore.markDirty(playerId);
 
             int found = progress.getFoundCatCount();
-            AscendHudManager hm = plugin.getHudManager();
-            if (hm != null) {
-                hm.showToast(playerId, ToastType.ECONOMY, "You found " + VALID_CATS.get(token) + "! (" + found + "/" + VALID_CATS.size() + ")");
+            if (hudManager != null) {
+                hudManager.showToast(playerId, ToastType.ECONOMY,
+                    "You found " + VALID_CATS.get(token) + "! (" + found + "/" + VALID_CATS.size() + ")");
             }
 
-            if (found >= VALID_CATS.size() && plugin.getAchievementManager() != null) {
-                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+            if (found >= VALID_CATS.size() && achievementManager != null) {
+                achievementManager.checkAndUnlockAchievements(playerId, player);
             }
         }, world);
     }

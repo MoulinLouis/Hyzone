@@ -354,7 +354,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (MapUnlockHelper.isUnlocked(mapProgress, map)) {
             return true;
         }
-        return MapUnlockHelper.meetsUnlockRequirement(playerId, map, playerStore, mapStore);
+        return MapUnlockHelper.meetsUnlockRequirement(playerId, map, playerStore, mapStore, challengeManager);
     }
 
     private void updateProgressBar(UICommandBuilder cmd, int cardIndex, int speedLevel) {
@@ -602,7 +602,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-            playerRef.getUuid(), map, playerStore, mapStore);
+            playerRef.getUuid(), map, playerStore, mapStore, challengeManager);
         if (!unlockResult.unlocked) {
             sendMessage(store, ref, "[Ascend] Unlock the map before buying a runner.");
             return;
@@ -1122,7 +1122,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         for (AscendMap map : maps) {
             MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerRef.getUuid(), map, playerStore, mapStore);
+                playerRef.getUuid(), map, playerStore, mapStore, challengeManager);
             if (!unlockResult.unlocked) {
                 continue;
             }
@@ -1256,7 +1256,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private boolean ensureUnlocked(Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef playerRef,
                                    AscendMap map) {
         MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-            playerRef.getUuid(), map, playerStore, mapStore);
+            playerRef.getUuid(), map, playerStore, mapStore, challengeManager);
         if (!unlockResult.unlocked) {
             sendMessage(store, ref, "[Ascend] Unlock this map first.");
             return false;

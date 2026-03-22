@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCu
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.ui.ConveyorChestPage;
 
@@ -18,14 +17,15 @@ public class ConveyorChestInteraction extends AbstractAscendPageInteraction {
         BuilderCodec.builder(ConveyorChestInteraction.class, ConveyorChestInteraction::new).build();
 
     @Override
-    protected boolean validateDependencies(ParkourAscendPlugin plugin, Player player) {
-        return plugin.getMinePlayerStore() != null;
+    protected boolean validateDependencies(AscendInteractionBridge.Services services, Player player) {
+        return services.minePlayerStore() != null;
     }
 
     @Override
     protected InteractiveCustomUIPage<?> createPage(Ref<EntityStore> ref, Store<EntityStore> store,
-                                                     PlayerRef playerRef, ParkourAscendPlugin plugin) {
-        MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
+                                                     PlayerRef playerRef,
+                                                     AscendInteractionBridge.Services services) {
+        MinePlayerProgress progress = services.minePlayerStore().getOrCreatePlayer(playerRef.getUuid());
         if (progress == null) return null;
         if (!progress.hasConveyorItems()) {
             Player player = store.getComponent(ref, Player.getComponentType());
@@ -34,6 +34,6 @@ public class ConveyorChestInteraction extends AbstractAscendPageInteraction {
             }
             return null;
         }
-        return new ConveyorChestPage(playerRef, progress, plugin.getMinePlayerStore());
+        return new ConveyorChestPage(playerRef, progress, services.minePlayerStore());
     }
 }

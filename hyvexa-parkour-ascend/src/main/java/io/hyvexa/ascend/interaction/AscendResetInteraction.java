@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -40,12 +39,12 @@ public class AscendResetInteraction extends SimpleInteraction {
             player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);
             return;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
+        AscendInteractionBridge.Services services = AscendInteractionBridge.get();
+        if (services == null) {
             return;
         }
-        AscendRunTracker runTracker = plugin.getRunTracker();
-        AscendMapStore mapStore = plugin.getMapStore();
+        AscendRunTracker runTracker = services.runTracker();
+        AscendMapStore mapStore = services.mapStore();
         if (runTracker == null || mapStore == null) {
             player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
             return;
