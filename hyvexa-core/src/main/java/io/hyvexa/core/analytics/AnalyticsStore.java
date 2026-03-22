@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -27,8 +28,10 @@ public class AnalyticsStore implements PlayerAnalytics {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final AnalyticsStore INSTANCE = new AnalyticsStore();
     private static final Gson GSON = new Gson();
+    private final ConnectionProvider db;
 
     private AnalyticsStore() {
+        this.db = DatabaseManager.getInstance();
     }
 
     public static AnalyticsStore getInstance() {
@@ -44,7 +47,7 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Safe to call multiple times (idempotent).
      */
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, AnalyticsStore will not persist");
             return;
         }
@@ -72,7 +75,7 @@ public class AnalyticsStore implements PlayerAnalytics {
                 + "data_json TEXT NULL"
                 + ") ENGINE=InnoDB";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             try (PreparedStatement stmt = conn.prepareStatement(eventsTable)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
@@ -109,7 +112,7 @@ public class AnalyticsStore implements PlayerAnalytics {
         if (playerId == null || eventType == null) {
             return;
         }
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         long timestampMs = System.currentTimeMillis();
@@ -134,7 +137,7 @@ public class AnalyticsStore implements PlayerAnalytics {
     private void insertEvent(UUID playerId, String eventType, String dataJson, long timestampMs) {
         String sql = "INSERT INTO analytics_events (timestamp_ms, player_uuid, event_type, data_json) "
                 + "VALUES (?, ?, ?, ?)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setLong(1, timestampMs);
@@ -152,12 +155,12 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Sets first_join_ms only if isFirstJoin and not already set.
      */
     public void updatePlayerTimestamps(UUID playerId, boolean isFirstJoin) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return;
         }
         HytaleServer.SCHEDULED_EXECUTOR.execute(() -> {
             long now = System.currentTimeMillis();
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (Connection conn = this.db.getConnection()) {
                 // Always update last_seen_ms
                 try (PreparedStatement stmt = conn.prepareStatement(
                         "UPDATE players SET last_seen_ms = ? WHERE uuid = ?")) {
@@ -186,13 +189,13 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Compute daily aggregates for the given date and upsert into analytics_daily.
      */
     public void computeDailyAggregates(LocalDate date) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         long dayStartMs = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         long dayEndMs = date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             // DAU: distinct players with player_join events
             int dau = queryIntScalar(conn,
                     "SELECT COUNT(DISTINCT player_uuid) FROM analytics_events "
@@ -284,14 +287,14 @@ public class AnalyticsStore implements PlayerAnalytics {
      */
     public List<DailyStats> getRecentStats(int days) {
         List<DailyStats> results = new ArrayList<>();
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return results;
         }
         LocalDate cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(days);
         String sql = "SELECT date, dau, new_players, avg_session_ms, total_sessions, "
                 + "parkour_time_pct, ascend_time_pct, peak_concurrent "
                 + "FROM analytics_daily WHERE date >= ? ORDER BY date DESC";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, cutoff.toString());
@@ -320,7 +323,7 @@ public class AnalyticsStore implements PlayerAnalytics {
      * what percentage logged in again within checkDays after their first join.
      */
     public float getRetention(int daysAgo, int checkDays) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return 0f;
         }
         LocalDate cohortDate = LocalDate.now(ZoneOffset.UTC).minusDays(daysAgo);
@@ -328,7 +331,7 @@ public class AnalyticsStore implements PlayerAnalytics {
         long cohortEndMs = cohortDate.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         long checkEndMs = cohortDate.plusDays(checkDays + 1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             // Count players who first joined on cohort date
             int cohortSize = queryIntScalar(conn,
                     "SELECT COUNT(*) FROM players WHERE first_join_ms >= ? AND first_join_ms < ?",
@@ -356,14 +359,14 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Purge analytics events older than retentionDays.
      */
     public void purgeOldEvents(int retentionDays) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         long cutoffMs = LocalDate.now(ZoneOffset.UTC).minusDays(retentionDays)
                 .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         HytaleServer.SCHEDULED_EXECUTOR.execute(() -> {
             String sql = "DELETE FROM analytics_events WHERE timestamp_ms < ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setLong(1, cutoffMs);
@@ -381,9 +384,9 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Count events of a type in the last N days.
      */
     public int countEvents(String eventType, int days) {
-        if (!DatabaseManager.getInstance().isInitialized()) return 0;
+        if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             return queryIntScalar(conn,
                     "SELECT COUNT(*) FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?",
                     eventType, cutoffMs);
@@ -397,9 +400,9 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Count distinct players for an event type in the last N days.
      */
     public int countDistinctPlayers(String eventType, int days) {
-        if (!DatabaseManager.getInstance().isInitialized()) return 0;
+        if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             return queryIntScalar(conn,
                     "SELECT COUNT(DISTINCT player_uuid) FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?",
                     eventType, cutoffMs);
@@ -413,11 +416,11 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Count events matching a LIKE pattern in data_json.
      */
     public int countEventsWithFilter(String eventType, int days, String jsonLikePattern) {
-        if (!DatabaseManager.getInstance().isInitialized()) return 0;
+        if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
         String sql = "SELECT COUNT(*) FROM analytics_events "
                 + "WHERE event_type = ? AND timestamp_ms >= ? AND data_json LIKE ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, eventType);
@@ -438,7 +441,7 @@ public class AnalyticsStore implements PlayerAnalytics {
      */
     public List<Map.Entry<String, Integer>> getTopJsonValues(String eventType, String jsonKey, int days, int limit) {
         List<Map.Entry<String, Integer>> result = new ArrayList<>();
-        if (!DatabaseManager.getInstance().isInitialized()) return result;
+        if (!this.db.isInitialized()) return result;
         long cutoffMs = dayStartMs(days);
         String jsonPath = "$." + jsonKey;
         String sql = "SELECT JSON_UNQUOTE(JSON_EXTRACT(data_json, ?)) AS val, COUNT(*) AS cnt "
@@ -446,7 +449,7 @@ public class AnalyticsStore implements PlayerAnalytics {
                 + "WHERE event_type = ? AND timestamp_ms >= ? "
                 + "AND JSON_EXTRACT(data_json, ?) IS NOT NULL "
                 + "GROUP BY val ORDER BY cnt DESC LIMIT ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, jsonPath);
@@ -472,12 +475,12 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Sum a numeric JSON field across events of a type in the last N days.
      */
     public long sumJsonLongField(String eventType, String jsonKey, int days) {
-        if (!DatabaseManager.getInstance().isInitialized()) return 0;
+        if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
         String jsonPath = "$." + jsonKey;
         String sql = "SELECT COALESCE(SUM(JSON_EXTRACT(data_json, ?)), 0) AS total "
                 + "FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, jsonPath);

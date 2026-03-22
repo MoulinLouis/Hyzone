@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.cosmetic.CosmeticStore;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.CurrencyBridge;
 import io.hyvexa.core.economy.FeatherStore;
@@ -30,6 +31,7 @@ public class WardrobeBridge {
 
     /** All wardrobe cosmetics available for purchase. Populated by initialize(). */
     private volatile List<WardrobeCosmeticDef> cosmetics = List.of();
+    private final ConnectionProvider db;
     private volatile PlayerAnalytics analytics;
 
     /** Maps fine-grained categories to broad shop groups. */
@@ -57,6 +59,7 @@ public class WardrobeBridge {
     }
 
     private WardrobeBridge() {
+        this.db = DatabaseManager.getInstance();
     }
 
     public static WardrobeBridge getInstance() {
@@ -123,7 +126,7 @@ public class WardrobeBridge {
         }
 
         // Atomic: deduct currency + insert cosmetic ownership in one transaction
-        Boolean purchased = DatabaseManager.getInstance().withTransaction(conn -> {
+        Boolean purchased = this.db.withTransaction(conn -> {
             if (!deductCurrencyRow(conn, currency, playerId, price)) {
                 return false;
             }

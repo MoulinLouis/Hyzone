@@ -1,6 +1,7 @@
 package io.hyvexa.common.ghost;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.io.ByteArrayInputStream;
@@ -31,12 +32,18 @@ public class GhostStore {
     private final HytaleLogger logger;
     private final String tableName;
     private final String modeLabel;
+    private final ConnectionProvider db;
     private final Map<String, GhostRecording> cache = new ConcurrentHashMap<>();
 
     public GhostStore(String tableName, String modeLabel) {
+        this(tableName, modeLabel, this.db);
+    }
+
+    public GhostStore(String tableName, String modeLabel, ConnectionProvider db) {
         this.logger = HytaleLogger.forEnclosingClass();
         this.tableName = tableName;
         this.modeLabel = modeLabel;
+        this.db = db;
         validateTableName();
     }
 
@@ -47,7 +54,7 @@ public class GhostStore {
     }
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             logger.atWarning().log("Database not initialized, " + modeLabel + " GhostStore will be empty");
             return;
         }
@@ -57,7 +64,7 @@ public class GhostStore {
 
         String sql = "SELECT player_uuid, map_id, recording_blob, completion_time_ms FROM " + tableName;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -105,7 +112,7 @@ public class GhostStore {
                                             recorded_at = CURRENT_TIMESTAMP
                     """.formatted(tableName);
 
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.setString(2, mapId);
@@ -127,7 +134,7 @@ public class GhostStore {
         cache.remove(makeKey(playerId, mapId));
 
         String sql = "DELETE FROM " + tableName + " WHERE player_uuid = ? AND map_id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, mapId);
@@ -194,7 +201,7 @@ public class GhostStore {
                 ) ENGINE=InnoDB
                 """.formatted(tableName);
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
         } catch (SQLException e) {
