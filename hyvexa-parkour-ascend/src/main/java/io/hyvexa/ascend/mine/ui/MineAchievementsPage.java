@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.achievement.MineAchievement;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.ui.BaseAscendPage;
@@ -27,10 +26,13 @@ public class MineAchievementsPage extends BaseAscendPage {
     private static final int PROGRESS_SEGMENTS = 10;
 
     private final PlayerRef playerRef;
+    private final MineAchievementTracker mineAchievementTracker;
 
-    public MineAchievementsPage(@Nonnull PlayerRef playerRef) {
+    public MineAchievementsPage(@Nonnull PlayerRef playerRef,
+                                MineAchievementTracker mineAchievementTracker) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
+        this.mineAchievementTracker = mineAchievementTracker;
     }
 
     @Override
@@ -45,13 +47,10 @@ public class MineAchievementsPage extends BaseAscendPage {
     }
 
     private void populateAchievements(UICommandBuilder cmd) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-        if (tracker == null) return;
+        if (mineAchievementTracker == null) return;
 
         UUID playerId = playerRef.getUuid();
-        Set<String> completed = tracker.getCompletedIds(playerId);
+        Set<String> completed = mineAchievementTracker.getCompletedIds(playerId);
 
         MineAchievement[] achievements = MineAchievement.values();
         int completedCount = 0;
@@ -82,7 +81,7 @@ public class MineAchievementsPage extends BaseAscendPage {
                 // Show progress for counter-based achievements
                 MineAchievement.StatType statType = achievement.getStatType();
                 if (statType != null) {
-                    long current = tracker.getStatValue(playerId, statType);
+                    long current = mineAchievementTracker.getStatValue(playerId, statType);
                     long threshold = achievement.getThreshold();
                     long displayCurrent = Math.min(current, threshold);
                     cmd.set(sel + " #AchStatus.Text", displayCurrent + " / " + threshold);

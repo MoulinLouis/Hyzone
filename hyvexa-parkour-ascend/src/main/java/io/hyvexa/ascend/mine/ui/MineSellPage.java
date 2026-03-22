@@ -16,7 +16,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.common.util.FormatUtils;
@@ -34,11 +33,19 @@ public class MineSellPage extends BaseAscendPage {
 
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
+    private final MineConfigStore configStore;
+    private final MinePlayerStore minePlayerStore;
+    private final MineAchievementTracker mineAchievementTracker;
 
-    public MineSellPage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress) {
+    public MineSellPage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress,
+                        MineConfigStore configStore, MinePlayerStore minePlayerStore,
+                        MineAchievementTracker mineAchievementTracker) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.mineProgress = mineProgress;
+        this.configStore = configStore;
+        this.minePlayerStore = minePlayerStore;
+        this.mineAchievementTracker = mineAchievementTracker;
     }
 
     @Override
@@ -114,19 +121,15 @@ public class MineSellPage extends BaseAscendPage {
         Map<String, Long> prices = gatherAllPrices();
         long earned = mineProgress.sellAll(prices);
 
-        MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
-        if (mineStore != null) {
-            mineStore.markDirty(playerRef.getUuid());
+        if (minePlayerStore != null) {
+            minePlayerStore.markDirty(playerRef.getUuid());
         }
 
         player.sendMessage(Message.raw("Sold all blocks for " + earned + " crystals!"));
 
         // Track crystals earned for achievements
-        if (earned > 0) {
-            MineAchievementTracker tracker = ParkourAscendPlugin.getInstance().getMineAchievementTracker();
-            if (tracker != null) {
-                tracker.incrementCrystalsEarned(playerRef.getUuid(), earned);
-            }
+        if (earned > 0 && mineAchievementTracker != null) {
+            mineAchievementTracker.incrementCrystalsEarned(playerRef.getUuid(), earned);
         }
 
         sendRefresh(ref, store);
@@ -143,11 +146,6 @@ public class MineSellPage extends BaseAscendPage {
     }
 
     private Map<String, Long> gatherAllPrices() {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return Map.of();
-        MineConfigStore config = plugin.getMineConfigStore();
-        if (config == null) return Map.of();
-
-        return config.getBlockPrices();
+        return configStore != null ? configStore.getBlockPrices() : Map.of();
     }
 }

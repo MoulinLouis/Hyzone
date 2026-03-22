@@ -225,7 +225,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openStatsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null) return;
-        StatsPage page = new StatsPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore(), plugin.getGhostStore());
+        StatsPage page = new StatsPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore(),
+            plugin.getGhostStore(), plugin.getRunnerSpeedCalculator());
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
@@ -349,7 +350,10 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openMapLeaderboardPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null || plugin.getMapStore() == null) return;
-        AscendMapLeaderboardPage page = new AscendMapLeaderboardPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore());
+        AscendMapLeaderboardPage page = new AscendMapLeaderboardPage(playerRef, plugin.getPlayerStore(),
+            plugin.getMapStore(), plugin.getRunTracker(), plugin.getRobotManager(), plugin.getGhostStore(),
+            plugin.getAscensionManager(), plugin.getChallengeManager(), plugin.getTranscendenceManager(),
+            plugin.getAchievementManager(), plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator());
         openUntrackedPage(player, playerRef, ref, store, page);
     }
 
@@ -384,7 +388,10 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
             return;
         }
-        AscendMapSelectPage page = new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker, robotManager, ghostStore);
+        AscendMapSelectPage page = new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker,
+            robotManager, ghostStore, plugin.getAscensionManager(), plugin.getChallengeManager(),
+            plugin.getTranscendenceManager(), plugin.getAchievementManager(),
+            plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator());
         openTrackedPage(player, playerRef, ref, store, page);
     }
 

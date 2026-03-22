@@ -25,6 +25,28 @@ public MyCommand() {
 // Parse args with CommandUtils.tokenize(ctx), not ctx.args()
 ```
 
+## Dependency Wiring
+
+Use constructor injection for managers, stores, and page dependencies.
+
+```java
+public final class MyPage extends BaseAscendPage {
+    private final MyStore myStore;
+    private final MyManager myManager;
+
+    public MyPage(PlayerRef playerRef, MyStore myStore, MyManager myManager) {
+        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
+        this.myStore = myStore;
+        this.myManager = myManager;
+    }
+}
+```
+
+Composition root rule:
+1. `Plugin.setup()` creates stores/managers/services and wires them together.
+2. Commands, interactions, and other framework-owned entry points may read dependencies from the plugin singleton once to bootstrap.
+3. Business logic classes, pages, and helper services should not call `Plugin.getInstance().getXxx()` internally.
+
 ## UI Pages
 
 ```java

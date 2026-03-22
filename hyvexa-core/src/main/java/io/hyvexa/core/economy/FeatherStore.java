@@ -41,17 +41,7 @@ public class FeatherStore extends CachedCurrencyStore {
 
     @Override
     protected void registerBridge() {
-        CurrencyBridge.register("feathers", new CurrencyBridge.CurrencyProvider() {
-            @Override
-            public long getBalance(UUID playerId) {
-                return getFeathers(playerId);
-            }
-
-            @Override
-            public void deduct(UUID playerId, long amount) {
-                removeFeathers(playerId, amount);
-            }
-        });
+        CurrencyBridge.register("feathers", this);
     }
 
     // ── Convenience methods preserving existing public API ───────────────

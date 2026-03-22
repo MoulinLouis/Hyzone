@@ -90,12 +90,18 @@ public class AscendAdminPanelPage extends BaseAscendPage {
     }
 
     private void openAdminPanel(Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         if (playerRef == null || player == null) {
             return;
         }
-        player.getPageManager().openCustomPage(ref, store, new AscendAdminVoltPage(playerRef));
+        player.getPageManager().openCustomPage(ref, store, new AscendAdminVoltPage(playerRef,
+            plugin.getPlayerStore(), plugin.getMapStore(), plugin.getSettingsStore(),
+            plugin.getAscensionManager(), plugin.getChallengeManager()));
     }
 
     private void openMines(Ref<EntityStore> ref, Store<EntityStore> store) {

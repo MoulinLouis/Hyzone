@@ -7,15 +7,13 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
-import io.hyvexa.ascend.robot.RobotManager;
-import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
 import io.hyvexa.ascend.ui.PassiveEarningsPage;
 import io.hyvexa.common.math.BigNumber;
 
@@ -23,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 public class PassiveEarningsManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -30,12 +29,17 @@ public class PassiveEarningsManager {
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
     private final GhostStore ghostStore;
+    private final RunnerSpeedCalculator speedCalculator;
+    private final Function<UUID, PlayerRef> playerRefLookup;
 
     public PassiveEarningsManager(AscendPlayerStore playerStore, AscendMapStore mapStore,
-                                 GhostStore ghostStore) {
+                                 GhostStore ghostStore, RunnerSpeedCalculator speedCalculator,
+                                 Function<UUID, PlayerRef> playerRefLookup) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.ghostStore = ghostStore;
+        this.speedCalculator = speedCalculator;
+        this.playerRefLookup = playerRefLookup;
     }
 
     /**
@@ -94,16 +98,16 @@ public class PassiveEarningsManager {
             int stars = mapProgress.getRobotStars();
 
             // Calculate completion time (same logic as RobotManager)
-            double speedMultiplier = RobotManager.calculateSpeedMultiplier(
-                map, speedLevel, playerId
-            );
+            double speedMultiplier = speedCalculator != null
+                ? speedCalculator.calculateSpeedMultiplier(map, speedLevel, playerId)
+                : 1.0;
             long completionTimeMs = (long) (baseTimeMs / speedMultiplier);
 
             // Calculate number of theoretical runs
             double theoreticalRuns = (double) timeAwayMs / completionTimeMs;
 
-            // Get Summit bonuses (Multiplier Gain + Evolution Power)
-            SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
+            io.hyvexa.ascend.summit.SummitManager.BonusTriplet bonuses =
+                    io.hyvexa.ascend.summit.SummitManager.getSafeBonuses(playerId);
 
             // Multiplier gain per run (with Summit bonuses) - at offline rate
             BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
@@ -205,18 +209,15 @@ public class PassiveEarningsManager {
         }
 
         // Open PassiveEarningsPage UI
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef != null) {
-                Ref<EntityStore> ref = playerRef.getReference();
-                if (ref != null && ref.isValid()) {
-                    Store<EntityStore> store = ref.getStore();
-                    Player player = store.getComponent(ref, Player.getComponentType());
-                    if (player != null) {
-                        PassiveEarningsPage page = new PassiveEarningsPage(playerRef, result);
-                        player.getPageManager().openCustomPage(ref, store, page);
-                    }
+        PlayerRef playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
+        if (playerRef != null) {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                Player player = store.getComponent(ref, Player.getComponentType());
+                if (player != null) {
+                    PassiveEarningsPage page = new PassiveEarningsPage(playerRef, result);
+                    player.getPageManager().openCustomPage(ref, store, page);
                 }
             }
         }

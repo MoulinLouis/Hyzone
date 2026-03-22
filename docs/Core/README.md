@@ -11,11 +11,13 @@ Quick reference for `hyvexa-core`.
 
 ### Database (`core/db/`)
 - `DatabaseManager` -- singleton HikariCP connection pool to MySQL. Config loaded from `mods/Parkour/database.json`. First module to call `initialize()` creates the pool; subsequent calls are no-ops.
+- `ConnectionProvider` -- minimal interface for classes that need pooled SQL connections without depending on the concrete singleton.
 - `DatabaseConfig` -- reads JSON config.
 - `DatabaseRetry` -- retry helper for transient failures.
 - Helper methods: `columnExists`, `addColumnIfMissing`, `renameColumnIfExists`, `applyQueryTimeout`, `logSlowQuery`.
 
 ### Economy (`core/economy/`)
+- `CurrencyStore` -- shared contract for persistent player currencies.
 - `CachedCurrencyStore` -- abstract base with in-memory cache, TTL (30 min), async refresh, and immediate writes.
 - `VexaStore` -- primary currency (vexa). Table: `player_vexa`.
 - `FeatherStore` -- secondary currency (feathers, earned via voting, medal completions, and RunOrFall rewards). Table: `player_feathers`.
@@ -31,6 +33,7 @@ Quick reference for `hyvexa-core`.
 - Shared between the Java plugin and the external Discord bot (see `docs/DiscordBot/README.md`).
 
 ### Analytics (`core/analytics/`)
+- `PlayerAnalytics` -- write-side analytics interface for gameplay code.
 - `AnalyticsStore` -- fire-and-forget event logging, daily aggregate computation, retention analysis. Tables: `analytics_events`, `analytics_daily`.
 - Also adds `first_join_ms` and `last_seen_ms` columns to the `players` table.
 

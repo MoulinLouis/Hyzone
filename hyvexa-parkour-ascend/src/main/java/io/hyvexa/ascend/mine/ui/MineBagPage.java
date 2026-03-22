@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
@@ -38,12 +37,20 @@ public class MineBagPage extends BaseAscendPage {
 
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
+    private final MineConfigStore configStore;
+    private final MinePlayerStore minePlayerStore;
+    private final MineAchievementTracker mineAchievementTracker;
     private final Set<String> lockedBlocks = new HashSet<>();
 
-    public MineBagPage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress) {
+    public MineBagPage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress,
+                       MineConfigStore configStore, MinePlayerStore minePlayerStore,
+                       MineAchievementTracker mineAchievementTracker) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.mineProgress = mineProgress;
+        this.configStore = configStore;
+        this.minePlayerStore = minePlayerStore;
+        this.mineAchievementTracker = mineAchievementTracker;
     }
 
     @Override
@@ -189,18 +196,14 @@ public class MineBagPage extends BaseAscendPage {
     }
 
     private void markDirty() {
-        MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
-        if (mineStore != null) {
-            mineStore.markDirty(playerRef.getUuid());
+        if (minePlayerStore != null) {
+            minePlayerStore.markDirty(playerRef.getUuid());
         }
     }
 
     private void trackCrystals(long earned) {
-        if (earned > 0) {
-            MineAchievementTracker tracker = ParkourAscendPlugin.getInstance().getMineAchievementTracker();
-            if (tracker != null) {
-                tracker.incrementCrystalsEarned(playerRef.getUuid(), earned);
-            }
+        if (earned > 0 && mineAchievementTracker != null) {
+            mineAchievementTracker.incrementCrystalsEarned(playerRef.getUuid(), earned);
         }
     }
 
@@ -214,11 +217,6 @@ public class MineBagPage extends BaseAscendPage {
     }
 
     private Map<String, Long> gatherAllPrices() {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return Map.of();
-        MineConfigStore config = plugin.getMineConfigStore();
-        if (config == null) return Map.of();
-
-        return config.getBlockPrices();
+        return configStore != null ? configStore.getBlockPrices() : Map.of();
     }
 }

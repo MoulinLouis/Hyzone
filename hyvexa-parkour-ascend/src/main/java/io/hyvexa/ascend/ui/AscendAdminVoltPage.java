@@ -19,7 +19,6 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
@@ -41,9 +40,24 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     private String skillPointsInput = "";
     private String voidYThresholdInput = "";
     private int resetAllClickCount = 0;
+    private final AscendPlayerStore playerStore;
+    private final AscendMapStore mapStore;
+    private final AscendSettingsStore settingsStore;
+    private final AscensionManager ascensionManager;
+    private final ChallengeManager challengeManager;
 
-    public AscendAdminVoltPage(@Nonnull PlayerRef playerRef) {
+    public AscendAdminVoltPage(@Nonnull PlayerRef playerRef,
+                               AscendPlayerStore playerStore,
+                               AscendMapStore mapStore,
+                               AscendSettingsStore settingsStore,
+                               AscensionManager ascensionManager,
+                               ChallengeManager challengeManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, VoltData.CODEC);
+        this.playerStore = playerStore;
+        this.mapStore = mapStore;
+        this.settingsStore = settingsStore;
+        this.ascensionManager = ascensionManager;
+        this.challengeManager = challengeManager;
     }
 
     @Override
@@ -134,9 +148,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     }
 
     private void resetProgress(Player player, PlayerRef playerRef, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
-        AscendMapStore mapStore = plugin != null ? plugin.getMapStore() : null;
         if (playerStore == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
@@ -176,8 +187,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
 
         resetAllClickCount = 0;
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
         if (playerStore == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
@@ -193,9 +202,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     }
 
     private void simulateAscension(Player player, PlayerRef playerRef) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
-        AscensionManager ascensionManager = plugin != null ? plugin.getAscensionManager() : null;
         if (playerStore == null || ascensionManager == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
@@ -214,7 +220,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         PrestigeHelper.despawnRobots(playerId);
 
         // Complete active challenge if in one (same routing as normal ascension)
-        ChallengeManager challengeManager = plugin.getChallengeManager();
         if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
             AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
             long elapsedMs = challengeManager.completeChallenge(playerId);
@@ -253,8 +258,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     }
 
     private void endgame(Player player, PlayerRef playerRef) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
         if (playerStore == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
@@ -294,7 +297,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         commandBuilder.set("#SkillPointsAmountField.Value", skillPointsInput);
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
-            AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
             BigNumber volt = playerStore != null ? playerStore.getVolt(playerRef.getUuid()) : BigNumber.ZERO;
             int skillPoints = playerStore != null ? playerStore.getSkillTreePoints(playerRef.getUuid()) : 0;
             commandBuilder.set("#CurrentVoltValue.Text", FormatUtils.formatBigNumber(volt));
@@ -302,7 +304,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         }
 
         // Void Y threshold
-        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
         if (settingsStore != null) {
             Double voidY = settingsStore.getVoidYThreshold();
             String voidLabel = voidY != null ? String.format("%.2f", voidY) : "Not set";
@@ -332,7 +333,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         if (amount == null) {
             return;
         }
-        AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
         if (playerStore == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
@@ -360,7 +360,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         if (amount <= 0) {
             return;
         }
-        AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
         if (playerStore == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
@@ -419,7 +418,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     }
 
     private void saveVoidYThreshold(Player player) {
-        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
         if (settingsStore == null) {
             player.sendMessage(Message.raw("[Ascend] Settings store not available."));
             return;
@@ -450,7 +448,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     }
 
     private void clearVoidYThreshold(Player player) {
-        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
         if (settingsStore == null) {
             player.sendMessage(Message.raw("[Ascend] Settings store not available."));
             return;
@@ -465,7 +462,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     }
 
     private void setSpawnLocation(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
-        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
         if (settingsStore == null) {
             player.sendMessage(Message.raw("[Ascend] Settings store not available."));
             return;
@@ -497,7 +493,6 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     }
 
     private void setNpcLocation(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
-        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
         if (settingsStore == null) {
             player.sendMessage(Message.raw("[Ascend] Settings store not available."));
             return;

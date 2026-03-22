@@ -19,7 +19,7 @@ import java.util.function.LongUnaryOperator;
  * Base class for currency stores with in-memory cache, TTL expiration, and async refresh.
  * Subclasses provide the SQL table/column name and logger.
  */
-abstract class CachedCurrencyStore {
+abstract class CachedCurrencyStore implements CurrencyStore {
 
     private static final long CACHE_TTL_MS = 30 * 60 * 1_000L;
     private static final AtomicInteger REFRESH_THREAD_ID = new AtomicInteger(1);

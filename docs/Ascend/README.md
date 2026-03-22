@@ -20,6 +20,7 @@ Entry point: `hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/ParkourAscend
 | `TranscendenceManager` | Transcendence prestige (4th layer, resets ascension) |
 | `ChallengeManager` | Timed parkour challenges with leaderboard |
 | `AchievementManager` | Tracks and grants progression achievements |
+| `RunnerSpeedCalculator` | Shared runner speed formula used by robot simulation, passive earnings, and UI projections |
 | `PassiveEarningsManager` | Calculates offline volt earnings on login |
 | `TutorialTriggerService` | Shows progressive tutorials based on player milestones |
 | `AscendHologramManager` | In-world leaderboard holograms per map |
@@ -50,6 +51,11 @@ Entry point: `hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/ParkourAscend
 6. Commands and interaction codecs are registered.
 7. Event handlers: `PlayerReadyEvent` (cache player, spawn robots/miners, check passive earnings, attach HUD), `AddPlayerToWorldEvent` (track ascend world membership), `PlayerDisconnectEvent` (cleanup all state).
 8. A 50ms scheduled tick iterates online players per-world: gate checks, HUD updates, run tracking. Mine HUD ticks separately at 1s intervals.
+
+Composition root note:
+- `ParkourAscendPlugin.setup()` owns dependency wiring for pages, managers, and helper services.
+- Commands and interactions may bootstrap from the plugin singleton because Hytale instantiates them.
+- Page/business logic should prefer constructor-injected stores/managers instead of calling back into `ParkourAscendPlugin`.
 
 ## Commands
 

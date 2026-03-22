@@ -74,7 +74,8 @@ public class AscendProfilePage extends BaseAscendPage {
 
         if (BUTTON_STATS.equals(data.getButton())) {
             player.getPageManager().openCustomPage(ref, store,
-                    new StatsPage(playerRef, playerStore, plugin.getMapStore(), plugin.getGhostStore(), true));
+                    new StatsPage(playerRef, playerStore, plugin.getMapStore(),
+                        plugin.getGhostStore(), plugin.getRunnerSpeedCalculator(), true));
             return;
         }
 

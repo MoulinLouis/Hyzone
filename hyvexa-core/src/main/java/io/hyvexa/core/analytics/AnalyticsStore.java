@@ -22,7 +22,7 @@ import java.util.UUID;
  * computes daily aggregates into analytics_daily, and tracks player timestamps.
  * Singleton shared across all modules.
  */
-public class AnalyticsStore {
+public class AnalyticsStore implements PlayerAnalytics {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final AnalyticsStore INSTANCE = new AnalyticsStore();

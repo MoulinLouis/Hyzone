@@ -8,7 +8,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
-
 /**
  * Global vexa currency store. Singleton shared across all modules.
  * Lazy-loads per-player vexa counts from MySQL, evicts on disconnect.
@@ -52,17 +51,7 @@ public class VexaStore extends CachedCurrencyStore {
 
     @Override
     protected void registerBridge() {
-        CurrencyBridge.register("vexa", new CurrencyBridge.CurrencyProvider() {
-            @Override
-            public long getBalance(UUID playerId) {
-                return getVexa(playerId);
-            }
-
-            @Override
-            public void deduct(UUID playerId, long amount) {
-                removeVexa(playerId, amount);
-            }
-        });
+        CurrencyBridge.register("vexa", this);
     }
 
     // ── Convenience methods preserving existing public API ───────────────

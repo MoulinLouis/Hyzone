@@ -14,8 +14,14 @@ import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendPlayerStore.MapLeaderboardEntry;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.transcendence.TranscendenceManager;
+import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -49,21 +55,37 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
     private final AscendRunTracker runTracker;
     private final RobotManager robotManager;
     private final GhostStore ghostStore;
+    private final AscensionManager ascensionManager;
+    private final ChallengeManager challengeManager;
+    private final TranscendenceManager transcendenceManager;
+    private final AchievementManager achievementManager;
+    private final TutorialTriggerService tutorialTriggerService;
+    private final RunnerSpeedCalculator speedCalculator;
     private final List<AscendMap> maps;
     private int currentTabIndex = 0;
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore) {
-        this(playerRef, playerStore, mapStore, null, null, null);
+        this(playerRef, playerStore, mapStore, null, null, null, null, null, null, null, null, null);
     }
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore,
-                                    AscendRunTracker runTracker, RobotManager robotManager, GhostStore ghostStore) {
+                                    AscendRunTracker runTracker, RobotManager robotManager, GhostStore ghostStore,
+                                    AscensionManager ascensionManager, ChallengeManager challengeManager,
+                                    TranscendenceManager transcendenceManager, AchievementManager achievementManager,
+                                    TutorialTriggerService tutorialTriggerService,
+                                    RunnerSpeedCalculator speedCalculator) {
         super(playerRef, 50);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
         this.robotManager = robotManager;
         this.ghostStore = ghostStore;
+        this.ascensionManager = ascensionManager;
+        this.challengeManager = challengeManager;
+        this.transcendenceManager = transcendenceManager;
+        this.achievementManager = achievementManager;
+        this.tutorialTriggerService = tutorialTriggerService;
+        this.speedCalculator = speedCalculator;
         this.maps = new ArrayList<>(mapStore.listMapsSorted());
     }
 
@@ -133,7 +155,9 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (pRef != null && player != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                    new AscendMapSelectPage(pRef, mapStore, playerStore, runTracker, robotManager, ghostStore));
+                    new AscendMapSelectPage(pRef, mapStore, playerStore, runTracker, robotManager, ghostStore,
+                        ascensionManager, challengeManager, transcendenceManager,
+                        achievementManager, tutorialTriggerService, speedCalculator));
                 return;
             }
         }

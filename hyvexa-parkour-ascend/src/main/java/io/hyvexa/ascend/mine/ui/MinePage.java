@@ -12,12 +12,11 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.achievement.MineAchievement;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -75,13 +74,26 @@ public class MinePage extends BaseAscendPage {
 
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
+    private final MineConfigStore configStore;
+    private final MinePlayerStore minePlayerStore;
+    private final MineRobotManager mineRobotManager;
+    private final MineGateChecker mineGateChecker;
+    private final MineAchievementTracker mineAchievementTracker;
     private String activeTab = "Upgrade";
     private int pickerSlotIndex = -1;
 
-    public MinePage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress) {
+    public MinePage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress,
+                    MineConfigStore configStore, MinePlayerStore minePlayerStore,
+                    MineRobotManager mineRobotManager, MineGateChecker mineGateChecker,
+                    MineAchievementTracker mineAchievementTracker) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.mineProgress = mineProgress;
+        this.configStore = configStore;
+        this.minePlayerStore = minePlayerStore;
+        this.mineRobotManager = mineRobotManager;
+        this.mineGateChecker = mineGateChecker;
+        this.mineAchievementTracker = mineAchievementTracker;
     }
 
     @Override
@@ -112,7 +124,6 @@ public class MinePage extends BaseAscendPage {
     // ==================== Slots Tab ====================
 
     private void populateSlotsTab(UICommandBuilder cmd, UIEventBuilder evt) {
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
         if (configStore == null) return;
 
         List<io.hyvexa.ascend.mine.data.MinerSlot> slots = configStore.getMinerSlots();
@@ -138,7 +149,6 @@ public class MinePage extends BaseAscendPage {
             AccentOverlayUtils.applyAccent(cmd, sel + " #AccentBar",
                     assigned.getRarity().getColor(), AccentOverlayUtils.RARITY_ACCENTS);
 
-            MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
             MineZoneLayer layer = configStore != null ? configStore.getLayerById(assigned.getLayerId()) : null;
             String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : assigned.getLayerId();
 
@@ -174,7 +184,6 @@ public class MinePage extends BaseAscendPage {
 
     private void populateCollectionTab(UICommandBuilder cmd, UIEventBuilder evt) {
         List<CollectedMiner> miners = mineProgress.getMinerCollection();
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
 
         if (miners.isEmpty()) {
             cmd.set("#NoMinersLabel.Visible", true);
@@ -221,7 +230,6 @@ public class MinePage extends BaseAscendPage {
         cmd.set("#PickerTitle.Text", "Select a miner for Slot #" + (slotIndex + 1) + ":");
         cmd.clear("#PickerEntries");
 
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
         List<CollectedMiner> miners = mineProgress.getMinerCollection();
 
         int i = 0;
@@ -309,8 +317,6 @@ public class MinePage extends BaseAscendPage {
         cmd.set(sel + " #TierName.Text", current.getDisplayName(enhancement));
         cmd.set(sel + " #SpeedText.Text", "Damage: " + damage);
         cmd.set(sel + " #TierLabel.Text", "Tier " + current.getTier());
-
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
 
         if (next == null && enhancement >= PickaxeTier.MAX_ENHANCEMENT) {
             cmd.set(sel + " #RequirementText.Text", "");
@@ -440,10 +446,8 @@ public class MinePage extends BaseAscendPage {
         mineProgress.assignMinerToSlot(slotIndex, minerId);
         markDirty();
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        MineRobotManager robotManager = plugin != null ? plugin.getMineRobotManager() : null;
-        if (robotManager != null && store.getExternalData() != null) {
-            robotManager.syncAssignedMiner(playerRef.getUuid(), slotIndex, store.getExternalData().getWorld());
+        if (mineRobotManager != null && store.getExternalData() != null) {
+            mineRobotManager.syncAssignedMiner(playerRef.getUuid(), slotIndex, store.getExternalData().getWorld());
         }
 
         player.sendMessage(Message.raw("Assigned " + miner.getRarity().getDisplayName() + " miner to Slot #" + (slotIndex + 1) + "!"));
@@ -458,9 +462,9 @@ public class MinePage extends BaseAscendPage {
         mineProgress.unassignSlot(slotIndex);
         markDirty();
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        MineRobotManager robotManager = plugin != null ? plugin.getMineRobotManager() : null;
-        if (robotManager != null) robotManager.syncUnassignedMiner(playerRef.getUuid(), slotIndex);
+        if (mineRobotManager != null) {
+            mineRobotManager.syncUnassignedMiner(playerRef.getUuid(), slotIndex);
+        }
 
         player.sendMessage(Message.raw("Removed miner from Slot #" + (slotIndex + 1)));
         sendRefresh(ref, store);
@@ -483,10 +487,8 @@ public class MinePage extends BaseAscendPage {
 
         markDirty();
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        MineRobotManager robotManager = plugin != null ? plugin.getMineRobotManager() : null;
-        if (robotManager != null) {
-            robotManager.syncMinerSpeed(playerRef.getUuid(), slotIndex, assigned.getSpeedLevel());
+        if (mineRobotManager != null) {
+            mineRobotManager.syncMinerSpeed(playerRef.getUuid(), slotIndex, assigned.getSpeedLevel());
         }
 
         player.sendMessage(Message.raw("Miner speed -> Lv " + assigned.getSpeedLevel() + "!"));
@@ -502,7 +504,6 @@ public class MinePage extends BaseAscendPage {
         PickaxeTier next = mineProgress.getPickaxeTierEnum().next();
         if (next == null) { player.sendMessage(Message.raw("Already at max pickaxe tier!")); return; }
 
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
         Map<String, Integer> recipe = configStore != null ? configStore.getTierRecipe(next.getTier()) : java.util.Collections.emptyMap();
 
         MinePlayerProgress.PickaxeUpgradeResult result = mineProgress.upgradePickaxeTier(recipe);
@@ -524,7 +525,6 @@ public class MinePage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
         int nextLevel = mineProgress.getPickaxeEnhancement() + 1;
         long cost = configStore != null ? configStore.getEnhanceCost(mineProgress.getPickaxeTier(), nextLevel) : 0;
 
@@ -576,9 +576,8 @@ public class MinePage extends BaseAscendPage {
         if (allMaxed) checkMineAchievement(MineAchievement.MAX_UPGRADES);
 
         if (type == MineUpgradeType.HASTE && mineProgress.isInMine()) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getMineGateChecker() != null) {
-                plugin.getMineGateChecker().applyHasteSpeed(mineProgress, ref, store, playerRef);
+            if (mineGateChecker != null) {
+                mineGateChecker.applyHasteSpeed(mineProgress, ref, store, playerRef);
             }
         }
 
@@ -595,12 +594,10 @@ public class MinePage extends BaseAscendPage {
         mineProgress.setPickaxeEnhancement(0);
         swapPickaxeItem(player);
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        MineRobotManager robotManager = plugin != null ? plugin.getMineRobotManager() : null;
         UUID uuid = playerRef.getUuid();
 
         for (var entry : mineProgress.getSlotAssignments().entrySet()) {
-            if (robotManager != null) robotManager.despawnMiner(uuid, entry.getKey());
+            if (mineRobotManager != null) mineRobotManager.despawnMiner(uuid, entry.getKey());
             mineProgress.unassignSlot(entry.getKey());
         }
 
@@ -626,8 +623,9 @@ public class MinePage extends BaseAscendPage {
     }
 
     private void markDirty() {
-        MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
-        if (mineStore != null) mineStore.markDirty(playerRef.getUuid());
+        if (minePlayerStore != null) {
+            minePlayerStore.markDirty(playerRef.getUuid());
+        }
     }
 
     private String buildUpgradeTooltip(MineUpgradeType type, int level, int maxLevel) {
@@ -662,9 +660,8 @@ public class MinePage extends BaseAscendPage {
     }
 
     private void checkMineAchievement(MineAchievement achievement) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-        if (tracker != null) tracker.checkAchievement(playerRef.getUuid(), achievement);
+        if (mineAchievementTracker != null) {
+            mineAchievementTracker.checkAchievement(playerRef.getUuid(), achievement);
+        }
     }
 }

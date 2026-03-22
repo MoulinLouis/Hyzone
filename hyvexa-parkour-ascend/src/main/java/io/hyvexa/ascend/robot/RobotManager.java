@@ -84,6 +84,7 @@ public class RobotManager {
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final GhostStore ghostStore;
+    private final RunnerSpeedCalculator speedCalculator;
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> activeEntityUuids = ConcurrentHashMap.newKeySet();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
@@ -105,10 +106,12 @@ public class RobotManager {
     private volatile ViewerContext viewerContext = ViewerContext.empty();
     private volatile boolean viewerContextRefreshPending = false;
 
-    public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
+    public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore,
+                        RunnerSpeedCalculator speedCalculator) {
         this.mapStore = mapStore;
         this.playerStore = playerStore;
         this.ghostStore = ghostStore;
+        this.speedCalculator = speedCalculator;
         this.orphanCleanup = new OrphanedEntityCleanup(LOGGER,
                 Path.of("mods", "Parkour", RUNNER_UUIDS_FILE));
     }
@@ -1455,7 +1458,9 @@ public class RobotManager {
         }
 
         // Calculate speed multiplier
-        double speedMultiplier = calculateSpeedMultiplier(map, speedLevel, ownerId);
+        double speedMultiplier = speedCalculator != null
+                ? speedCalculator.calculateSpeedMultiplier(map, speedLevel, ownerId)
+                : 1.0;
 
         long interval = (long) (base / speedMultiplier);
         return Math.max(1L, interval);

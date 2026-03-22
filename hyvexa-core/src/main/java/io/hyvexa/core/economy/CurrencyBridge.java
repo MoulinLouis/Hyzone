@@ -12,20 +12,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CurrencyBridge {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final ConcurrentHashMap<String, CurrencyProvider> providers = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, CurrencyStore> providers = new ConcurrentHashMap<>();
 
-    public interface CurrencyProvider {
-        long getBalance(UUID playerId);
-        void deduct(UUID playerId, long amount);
-    }
-
-    public static void register(String name, CurrencyProvider provider) {
+    public static void register(String name, CurrencyStore provider) {
         providers.put(name, provider);
         LOGGER.atInfo().log("CurrencyBridge: registered provider '" + name + "'");
     }
 
     public static long getBalance(String currency, UUID playerId) {
-        CurrencyProvider provider = providers.get(currency);
+        CurrencyStore provider = providers.get(currency);
         if (provider == null) {
             LOGGER.atWarning().log("CurrencyBridge: unknown currency '" + currency + "'");
             return 0;
@@ -40,7 +35,7 @@ public class CurrencyBridge {
         if (amount <= 0) {
             return false;
         }
-        CurrencyProvider provider = providers.get(currency);
+        CurrencyStore provider = providers.get(currency);
         if (provider == null) {
             LOGGER.atWarning().log("CurrencyBridge: unknown currency '" + currency + "'");
             return false;
@@ -48,7 +43,7 @@ public class CurrencyBridge {
         if (provider.getBalance(playerId) < amount) {
             return false;
         }
-        provider.deduct(playerId, amount);
+        provider.removeBalance(playerId, amount);
         return true;
     }
 

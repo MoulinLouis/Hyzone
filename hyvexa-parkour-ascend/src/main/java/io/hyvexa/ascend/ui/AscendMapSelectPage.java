@@ -30,7 +30,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -38,10 +40,12 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
+import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
@@ -75,6 +79,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final AscendRunTracker runTracker;
     private final RobotManager robotManager;
     private final GhostStore ghostStore;
+    private final AscensionManager ascensionManager;
+    private final ChallengeManager challengeManager;
+    private final TranscendenceManager transcendenceManager;
+    private final AchievementManager achievementManager;
+    private final TutorialTriggerService tutorialTriggerService;
+    private final RunnerSpeedCalculator speedCalculator;
     private ScheduledFuture<?> refreshTask;
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
     private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
@@ -85,13 +95,24 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     public AscendMapSelectPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
                                AscendPlayerStore playerStore, AscendRunTracker runTracker,
-                               RobotManager robotManager, GhostStore ghostStore) {
+                               RobotManager robotManager, GhostStore ghostStore,
+                               AscensionManager ascensionManager, ChallengeManager challengeManager,
+                               TranscendenceManager transcendenceManager,
+                               AchievementManager achievementManager,
+                               TutorialTriggerService tutorialTriggerService,
+                               RunnerSpeedCalculator speedCalculator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.playerStore = playerStore;
         this.runTracker = runTracker;
         this.robotManager = robotManager;
         this.ghostStore = ghostStore;
+        this.ascensionManager = ascensionManager;
+        this.challengeManager = challengeManager;
+        this.transcendenceManager = transcendenceManager;
+        this.achievementManager = achievementManager;
+        this.tutorialTriggerService = tutorialTriggerService;
+        this.speedCalculator = speedCalculator;
     }
 
     @Override
@@ -118,15 +139,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Check if Challenge tab should be unlocked
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef != null) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getAscensionManager() != null
-                    && plugin.getAscensionManager().hasAscensionChallenges(pRef.getUuid())) {
+            if (ascensionManager != null && ascensionManager.hasAscensionChallenges(pRef.getUuid())) {
                 uiCommandBuilder.set("#TabUnlockedBg.Visible", true);
                 uiCommandBuilder.set("#TabLockedAContent.Visible", false);
                 uiCommandBuilder.set("#TabChallengeLabel.Visible", true);
             }
             // Check if Transcendence tab should be unlocked (milestone 1)
-            if (plugin != null && playerStore.getTranscendenceCount(pRef.getUuid()) >= 1) {
+            if (playerStore.getTranscendenceCount(pRef.getUuid()) >= 1) {
                 uiCommandBuilder.set("#TabTransUnlockedBg.Visible", true);
                 uiCommandBuilder.set("#TabLockedBContent.Visible", false);
                 uiCommandBuilder.set("#TabTransLabel.Visible", true);
@@ -516,7 +535,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return "-";
         }
         // Use full speed multiplier calculation (includes Summit and Ascension bonuses)
-        double speedMultiplier = RobotManager.calculateSpeedMultiplier(map, speedLevel, playerId);
+        double speedMultiplier = speedCalculator != null
+            ? speedCalculator.calculateSpeedMultiplier(map, speedLevel, playerId)
+            : 1.0;
         long intervalMs = (long) (base / speedMultiplier);
         intervalMs = Math.max(1L, intervalMs);
         double seconds = intervalMs / 1000.0;
@@ -614,21 +635,17 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     robotManager.respawnRobot(playerRef.getUuid(), mapId, newStars);
                 }
                 // Trigger evolution tutorial on first evolution (newStars == 1)
-                if (newStars == 1) {
-                    ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                    if (plugin != null && plugin.getTutorialTriggerService() != null) {
-                        plugin.getTutorialTriggerService().checkEvolution(playerRef.getUuid(), ref);
-                    }
+                if (newStars == 1 && tutorialTriggerService != null) {
+                    tutorialTriggerService.checkEvolution(playerRef.getUuid(), ref);
                 }
                 try {
                     io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerRef.getUuid(), "ascend_runner_evolve",
                             "{\"map_id\":\"" + mapId + "\",\"new_stars\":" + newStars + "}");
                 } catch (Exception e) { /* silent */ }
                 // Check achievements
-                ParkourAscendPlugin pluginForAch = ParkourAscendPlugin.getInstance();
-                if (pluginForAch != null && pluginForAch.getAchievementManager() != null) {
+                if (achievementManager != null) {
                     Player achPlayer = store.getComponent(ref, Player.getComponentType());
-                    pluginForAch.getAchievementManager().checkAndUnlockAchievements(playerRef.getUuid(), achPlayer);
+                    achievementManager.checkAndUnlockAchievements(playerRef.getUuid(), achPlayer);
                 }
 
                 String evoMsg = "Runner evolved! Now at " + newStars + " star" + (newStars > 1 ? "s" : "") + "!";
@@ -915,11 +932,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private void checkAndProcessMapUnlocks(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
         List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
-        if (!unlockedMapIds.isEmpty()) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getTutorialTriggerService() != null) {
-                plugin.getTutorialTriggerService().checkMapUnlock(playerRef.getUuid(), ref);
-            }
+        if (!unlockedMapIds.isEmpty() && tutorialTriggerService != null) {
+            tutorialTriggerService.checkMapUnlock(playerRef.getUuid(), ref);
         }
         for (String unlockedMapId : unlockedMapIds) {
             AscendMap unlockedMap = mapStore.getMap(unlockedMapId);
@@ -1073,11 +1087,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private record RunnerCardSnapshot(int speedLevel, int stars, boolean hasRobot) {}
 
     private String buildMomentumText(AscendPlayerProgress.MapProgress mapProgress, UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        boolean hasMastery = plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasMomentumMastery(playerId);
-        boolean hasSurge = plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasMomentumSurge(playerId);
+        boolean hasMastery = ascensionManager != null && ascensionManager.hasMomentumMastery(playerId);
+        boolean hasSurge = ascensionManager != null && ascensionManager.hasMomentumSurge(playerId);
         String mult = hasMastery ? "x3" : (hasSurge ? "x2.5" : "x2");
         long remainingMs = mapProgress.getMomentumExpireTimeMs() - System.currentTimeMillis();
         if (remainingMs <= 0) {
@@ -1139,10 +1150,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         // Check achievements
-        ParkourAscendPlugin pluginForAch = ParkourAscendPlugin.getInstance();
-        if (pluginForAch != null && pluginForAch.getAchievementManager() != null) {
+        if (achievementManager != null) {
             Player achPlayer = store.getComponent(ref, Player.getComponentType());
-            pluginForAch.getAchievementManager().checkAndUnlockAchievements(playerRef.getUuid(), achPlayer);
+            achievementManager.checkAndUnlockAchievements(playerRef.getUuid(), achPlayer);
         }
 
         String evolveAllMsg = "Evolve All: " + evolved + " runner" + (evolved > 1 ? "s" : "");
@@ -1172,7 +1182,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new AscendMapLeaderboardPage(playerRef, playerStore, mapStore, runTracker, robotManager, ghostStore));
+            new AscendMapLeaderboardPage(playerRef, playerStore, mapStore, runTracker, robotManager, ghostStore,
+                ascensionManager, challengeManager, transcendenceManager,
+                achievementManager, tutorialTriggerService, speedCalculator));
     }
 
     private void handleOpenChallenge(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -1184,18 +1196,16 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (player == null) {
             return;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getChallengeManager() == null) {
+        if (challengeManager == null) {
             return;
         }
-        if (plugin.getAscensionManager() == null
-                || !plugin.getAscensionManager().hasAscensionChallenges(playerRef.getUuid())) {
+        if (ascensionManager == null || !ascensionManager.hasAscensionChallenges(playerRef.getUuid())) {
             player.sendMessage(com.hypixel.hytale.server.core.Message.raw("[Ascend] Unlock the Ascension Challenges skill first.")
                 .color(io.hyvexa.common.util.SystemMessageUtils.SECONDARY));
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new AscendChallengePage(playerRef, playerStore, plugin.getChallengeManager()));
+            new AscendChallengePage(playerRef, playerStore, challengeManager));
     }
 
     private void handleOpenTranscendence(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -1212,12 +1222,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 .color(io.hyvexa.common.util.SystemMessageUtils.SECONDARY));
             return;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getTranscendenceManager() == null) {
+        if (transcendenceManager == null) {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new TranscendencePage(playerRef, playerStore, plugin.getTranscendenceManager()));
+            new TranscendencePage(playerRef, playerStore, transcendenceManager));
     }
 
     /**

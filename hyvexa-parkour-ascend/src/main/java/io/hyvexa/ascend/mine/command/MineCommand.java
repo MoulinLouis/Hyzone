@@ -86,7 +86,8 @@ public class MineCommand extends AbstractAsyncCommand {
             MinePlayerProgress progress = mineStore.getOrCreatePlayer(playerRef.getUuid());
 
             if (args.length == 0) {
-                MineBagPage page = new MineBagPage(playerRef, progress);
+                MineBagPage page = new MineBagPage(playerRef, progress,
+                    plugin.getMineConfigStore(), mineStore, plugin.getMineAchievementTracker());
                 player.getPageManager().openCustomPage(ref, store, page);
                 return;
             }
@@ -94,15 +95,18 @@ public class MineCommand extends AbstractAsyncCommand {
             String subCommand = args[0].toLowerCase();
             switch (subCommand) {
                 case "sell" -> {
-                    MineSellPage page = new MineSellPage(playerRef, progress);
+                    MineSellPage page = new MineSellPage(playerRef, progress,
+                        plugin.getMineConfigStore(), mineStore, plugin.getMineAchievementTracker());
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "upgrades" -> {
-                    MinePage page = new MinePage(playerRef, progress);
+                    MinePage page = new MinePage(playerRef, progress,
+                        plugin.getMineConfigStore(), mineStore, plugin.getMineRobotManager(),
+                        plugin.getMineGateChecker(), plugin.getMineAchievementTracker());
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "achievements" -> {
-                    MineAchievementsPage page = new MineAchievementsPage(playerRef);
+                    MineAchievementsPage page = new MineAchievementsPage(playerRef, plugin.getMineAchievementTracker());
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "addcrystals" -> {

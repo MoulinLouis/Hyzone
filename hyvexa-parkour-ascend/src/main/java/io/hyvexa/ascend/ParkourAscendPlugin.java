@@ -45,6 +45,7 @@ import io.hyvexa.ascend.interaction.MineEggChestInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.mine.MineBonusCalculator;
 import io.hyvexa.ascend.mine.MineGateChecker;
@@ -119,6 +120,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AchievementManager achievementManager;
     private PassiveEarningsManager passiveEarningsManager;
     private TutorialTriggerService tutorialTriggerService;
+    private RunnerSpeedCalculator runnerSpeedCalculator;
     private MineConfigStore mineConfigStore;
     private MineBonusCalculator mineBonusCalculator;
     private MineGateChecker mineGateChecker;
@@ -260,22 +262,29 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runTracker = new AscendRunTracker(mapStore, playerStore, ghostRecorder);
         mapStore.setOnChangeListener(runTracker::onMapStoreChanged);
         summitManager = new SummitManager(playerStore, mapStore);
-        hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager);
-
-        try {
-            robotManager = new RobotManager(mapStore, playerStore, ghostStore);
-            robotManager.start();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize robot manager");
-        }
         ascensionManager = new AscensionManager(playerStore, runTracker);
         transcendenceManager = new TranscendenceManager(playerStore, runTracker);
         challengeManager = new ChallengeManager(playerStore, mapStore, runTracker);
         achievementManager = new AchievementManager(playerStore);
+        runnerSpeedCalculator = new RunnerSpeedCalculator(
+            summitManager,
+            ascensionManager,
+            playerStore,
+            mineBonusCalculator,
+            minePlayerStore
+        );
+        hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager);
+
+        try {
+            robotManager = new RobotManager(mapStore, playerStore, ghostStore, runnerSpeedCalculator);
+            robotManager.start();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize robot manager");
+        }
 
         // Initialize passive earnings manager
         passiveEarningsManager = new PassiveEarningsManager(
-            playerStore, mapStore, ghostStore
+            playerStore, mapStore, ghostStore, runnerSpeedCalculator, this::getPlayerRef
         );
 
         // Initialize tutorial trigger service
@@ -596,106 +605,137 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return INSTANCE;
     }
 
+    @Deprecated
     public AscendMapStore getMapStore() {
         return mapStore;
     }
 
+    @Deprecated
     public AscendPlayerStore getPlayerStore() {
         return playerStore;
     }
 
+    @Deprecated
     public AscendSettingsStore getSettingsStore() {
         return settingsStore;
     }
 
+    @Deprecated
     public GhostStore getGhostStore() {
         return ghostStore;
     }
 
+    @Deprecated
     public AscendRunTracker getRunTracker() {
         return runTracker;
     }
 
+    @Deprecated
     public AscendHudManager getHudManager() {
         return hudManager;
     }
 
+    @Deprecated
     public RobotManager getRobotManager() {
         return robotManager;
     }
 
+    @Deprecated
     public AscendHologramManager getHologramManager() {
         return hologramManager;
     }
 
+    @Deprecated
     public SummitManager getSummitManager() {
         return summitManager;
     }
 
+    @Deprecated
     public AscensionManager getAscensionManager() {
         return ascensionManager;
     }
 
+    @Deprecated
     public TranscendenceManager getTranscendenceManager() {
         return transcendenceManager;
     }
 
+    @Deprecated
     public ChallengeManager getChallengeManager() {
         return challengeManager;
     }
 
+    @Deprecated
     public AchievementManager getAchievementManager() {
         return achievementManager;
     }
 
+    @Deprecated
     public AscendWhitelistManager getWhitelistManager() {
         return whitelistManager;
     }
 
+    @Deprecated
     public PassiveEarningsManager getPassiveEarningsManager() {
         return passiveEarningsManager;
     }
 
+    @Deprecated
     public TutorialTriggerService getTutorialTriggerService() {
         return tutorialTriggerService;
     }
 
+    @Deprecated
+    public RunnerSpeedCalculator getRunnerSpeedCalculator() {
+        return runnerSpeedCalculator;
+    }
+
+    @Deprecated
     public MineConfigStore getMineConfigStore() {
         return mineConfigStore;
     }
 
+    @Deprecated
     public MineBonusCalculator getMineBonusCalculator() {
         return mineBonusCalculator;
     }
 
+    @Deprecated
     public MineManager getMineManager() {
         return mineManager;
     }
 
+    @Deprecated
     public MinePlayerStore getMinePlayerStore() {
         return minePlayerStore;
     }
 
+    @Deprecated
     public MineGateChecker getMineGateChecker() {
         return mineGateChecker;
     }
 
+    @Deprecated
     public MineRobotManager getMineRobotManager() {
         return mineRobotManager;
     }
 
+    @Deprecated
     public MineHudManager getMineHudManager() {
         return mineHudManager;
     }
 
+    @Deprecated
     public MineDamageSystem getMineDamageSystem() {
         return mineDamageSystem;
     }
 
+    @Deprecated
     public MineAchievementTracker getMineAchievementTracker() {
         return mineAchievementTracker;
     }
 
+    @Deprecated
     public io.hyvexa.ascend.mine.egg.EggOpenService getEggOpenService() {
         return eggOpenService;
     }
@@ -964,7 +1004,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
                 (ref, store, playerRef, plugin) -> new AscendMapSelectPage(playerRef,
                     plugin.getMapStore(), plugin.getPlayerStore(), plugin.getRunTracker(),
-                    plugin.getRobotManager(), plugin.getGhostStore()),
+                    plugin.getRobotManager(), plugin.getGhostStore(),
+                    plugin.getAscensionManager(), plugin.getChallengeManager(),
+                    plugin.getTranscendenceManager(), plugin.getAchievementManager(),
+                    plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator()),
                 (plugin, player) -> {
                     if (plugin.getMapStore() == null || plugin.getPlayerStore() == null
                             || plugin.getRunTracker() == null || plugin.getGhostStore() == null) {
@@ -1034,7 +1077,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
                 (ref, store, playerRef, plugin) -> {
                     MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
-                    return new io.hyvexa.ascend.mine.ui.MineSellPage(playerRef, progress);
+                    return new io.hyvexa.ascend.mine.ui.MineSellPage(playerRef, progress,
+                        plugin.getMineConfigStore(), plugin.getMinePlayerStore(), plugin.getMineAchievementTracker());
                 },
                 (plugin, player) -> plugin.getMinePlayerStore() != null,
                 true, true)));
@@ -1043,7 +1087,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
                 (ref, store, playerRef, plugin) -> {
                     MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
-                    return new io.hyvexa.ascend.mine.ui.MinePage(playerRef, progress);
+                    return new io.hyvexa.ascend.mine.ui.MinePage(playerRef, progress,
+                        plugin.getMineConfigStore(), plugin.getMinePlayerStore(), plugin.getMineRobotManager(),
+                        plugin.getMineGateChecker(), plugin.getMineAchievementTracker());
                 },
                 (plugin, player) -> plugin.getMinePlayerStore() != null && plugin.getMineConfigStore() != null,
                 true, true)));

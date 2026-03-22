@@ -28,7 +28,7 @@ import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
-import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -40,22 +40,26 @@ public class StatsPage extends BaseAscendPage {
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
     private final GhostStore ghostStore;
+    private final RunnerSpeedCalculator speedCalculator;
     private final boolean fromProfile;
     private ScheduledFuture<?> refreshTask;
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
     private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
 
     public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                     AscendMapStore mapStore, GhostStore ghostStore) {
-        this(playerRef, playerStore, mapStore, ghostStore, false);
+                     AscendMapStore mapStore, GhostStore ghostStore,
+                     RunnerSpeedCalculator speedCalculator) {
+        this(playerRef, playerStore, mapStore, ghostStore, speedCalculator, false);
     }
 
     public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                     AscendMapStore mapStore, GhostStore ghostStore, boolean fromProfile) {
+                     AscendMapStore mapStore, GhostStore ghostStore,
+                     RunnerSpeedCalculator speedCalculator, boolean fromProfile) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.ghostStore = ghostStore;
+        this.speedCalculator = speedCalculator;
         this.fromProfile = fromProfile;
     }
 
@@ -184,7 +188,9 @@ public class StatsPage extends BaseAscendPage {
             }
 
             int speedLevel = mapProgress.getRobotSpeedLevel();
-            double speedMultiplier = RobotManager.calculateSpeedMultiplier(map, speedLevel, playerId);
+            double speedMultiplier = speedCalculator != null
+                ? speedCalculator.calculateSpeedMultiplier(map, speedLevel, playerId)
+                : 1.0;
 
             long intervalMs = (long) (ghost.getCompletionTimeMs() / speedMultiplier);
             intervalMs = Math.max(1L, intervalMs);

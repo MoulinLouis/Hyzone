@@ -12,7 +12,7 @@ import java.sql.Statement;
 import java.util.Set;
 
 /** Manages the MySQL connection pool and schema setup for parkour data. */
-public class DatabaseManager {
+public class DatabaseManager implements ConnectionProvider {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final int QUERY_TIMEOUT_SECONDS = 10;

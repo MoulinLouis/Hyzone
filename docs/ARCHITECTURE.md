@@ -48,6 +48,7 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - Hub routing targets the capitalized world names: `Hub`, `Parkour`, `Ascend`
 
 ### Ascend Plugin Lifecycle
+- `ParkourAscendPlugin.setup()` is the composition root for Ascend: it creates stores/managers/services and passes dependencies down through constructors.
 - Ensures Ascend DB tables on startup (`AscendDatabaseSetup`).
 - Loads map store and player store into memory (`AscendMapStore`, `AscendPlayerStore`).
 - Starts `AscendRunTracker` for manual completion detection.
@@ -57,6 +58,10 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - AddPlayerToWorld: re-ensures Ascend dev items + hub selector when entering the Ascend world (e.g., respawn).
 - PlayerDisconnect: clears HUD caches and cancels active run.
 - Schedules a 50ms tick (with a full-update pass every 4th tick = 200ms) that runs run tracking + HUD updates on the Ascend world thread.
+
+Dependency rule:
+- Framework-owned bootstrap points (commands, item interactions, Hytale callbacks) may use plugin singletons to obtain already-wired services.
+- Normal gameplay classes should receive stores/managers through constructors instead of reaching back into `ParkourAscendPlugin`.
 
 Module boundaries:
 - All gameplay modules (Parkour/Ascend/Hub/Purge/RunOrFall/Wardrobe) depend on Core only
