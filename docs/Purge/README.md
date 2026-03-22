@@ -108,6 +108,5 @@ Instance config (JSON, not DB):
 
 - Game design: `docs/Purge/GAME_DESIGN.md`
 - Agent working reference: `docs/Purge/PURGE_MODE_DEV.md`
-- Player scaling plan: `docs/Purge/PLAYER_SCALING_PLAN.md`
 - Architecture overview: `docs/ARCHITECTURE.md`
 - Database schema: `docs/DATABASE.md`

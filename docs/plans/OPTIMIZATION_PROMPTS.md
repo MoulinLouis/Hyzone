@@ -123,8 +123,7 @@ Concise prompts to send one at a time. Each one is a self-contained optimization
 
 ## Documentation
 
-### 32. Fix Critical Doc Errors
-> DOC_AUDIT.md lists 12+ HIGH/MEDIUM priority errors. Fix: ARCHITECTURE.md (MineUpgradeType enum wrong, XP values 10x off, missing tables), DATABASE.md (wrong summit categories, missing tables, undocumented columns), ECONOMY_BALANCE.md (Ascendancy Tree completely wrong — 13 vs 19 nodes, costs off 8x, challenge divisors all wrong).
+### 32. ~~Fix Critical Doc Errors~~ (DONE — 2026-03-22 documentation rework)
 
 ### 33. Document Threading Model
 > No documentation exists for the threading model. Document: which executors exist, what runs on world thread vs IO thread vs scheduled executor, which operations require `world.execute()`, and synchronization contracts for each Manager/Store.

@@ -4,7 +4,7 @@ This document defines the progressive tutorial system for Ascend mode. Tutorials
 
 **UI format:** Split panel — left panel (220px, 9:16 portrait image), right panel (text content). Navigation via Next/Back/Got It buttons.
 
-**Image convention:** `Textures/help/{tutorial}_step{N}.png` (9:16 portrait, 220×392px)
+**Image convention:** `Textures/help/{tutorial}_step{N}.png` (9:16 portrait, 220×320px)
 
 ---
 
@@ -15,7 +15,7 @@ This document defines the progressive tutorial system for Ascend mode. Tutorials
 | 1 | First join to Ascend | Welcome | 3 |
 | 2 | First manual map completion | First Completion | 2 |
 | 3 | Runner reaches level 5 (new map unlocks) | New Map Unlocked | 1 |
-| 4 | Runner reaches level 20 (evolution available) | Evolution | 2 |
+| 4 | First runner evolution (runner hits level 20 and evolves) | Evolution | 2 |
 | 5 | Volt reaches first elevation cost (~30K) | Elevation | 2 |
 | 6 | Volt reaches 1B (Summit available) | Summit | 2 |
 | 7 | Volt reaches 1Dc (Ascension available) | Ascension | 2 |
@@ -109,7 +109,7 @@ _Idea: Map select showing a new map appearing._
 
 ## 4. Evolution
 
-**Trigger:** Runner reaches level 20 (max speed) for the first time.
+**Trigger:** First runner evolution (runner hits max speed level 20 and player evolves it).
 
 ### Step 1 — Evolution Available
 
@@ -150,6 +150,8 @@ _Idea: Elevation UI showing level and multiplier preview._
 > Spend your volt to gain elevation levels. Higher levels give bigger multipliers: level 10 = ×10, level 100 = ×100.
 >
 > Open with **`/ascend elevate`**.
+>
+> **Note:** The in-game copy currently shows "x11" and "x126" which are stale — the formula gives ×level (level 10 = ×10, level 100 = ×100). `AscendOnboardingCopy.elevationCopy()` needs updating.
 
 ### Step 2 — Keep Elevating
 
@@ -215,15 +217,19 @@ _Idea: Ascendancy Tree overview._
 **Title:** Ascendancy Tree
 
 **Text:**
-> 19 ascendancy nodes to unlock:
->
-> **Tier 1 (1 AP):** Auto-Upgrade + Momentum, Auto-Evolution, Runner Speed Boost, Evolution Power+, Runner Speed II, Auto-Summit, Auto-Elevation, Ascension Challenges
->
-> **Tier 2 (10-50 AP):** Momentum Surge, Momentum Endurance, Multiplier Boost, Runner Speed III, Evolution Power II
->
-> **Tier 3 (100-1000 AP):** Runner Speed IV, Evolution Power III, Momentum Mastery, Multiplier Boost II, Auto Ascend, Runner Speed V
->
-> AP are permanent across all future Ascensions.
+> {N} ascendancy nodes to unlock: Auto-Upgrade, Auto-Evolution, Runner Speed, Evolution Power, Momentum Surge, Elevation Remnant, and more. AP are permanent across all future Ascensions.
+
+Node count is dynamic (`AscendConstants.SkillTreeNode.values().length`, currently 19). The copy uses an abbreviated list, not the full tier breakdown.
+
+> **Note:** The copy mentions "Elevation Remnant" which is not an actual node name — should be "Auto-Elevation" or similar. `AscendOnboardingCopy.ascensionCopy()` needs updating.
+
+Full tree reference:
+
+| Tier | Cost | Nodes |
+|------|------|-------|
+| 1 | 1 AP | Auto-Upgrade + Momentum, Auto-Evolution, Runner Speed Boost, Evolution Power+, Runner Speed II, Auto-Summit, Auto-Elevation, Ascension Challenges |
+| 2 | 10-50 AP | Momentum Surge (10), Momentum Endurance (10), Multiplier Boost (25), Runner Speed III (50), Evolution Power II (50) |
+| 3 | 100-1000 AP | Runner Speed IV (100), Evolution Power III (100), Momentum Mastery (200), Multiplier Boost II (400), Auto Ascend (400), Runner Speed V (1000) |
 
 ---
 
@@ -234,12 +240,14 @@ _Idea: Ascendancy Tree overview._
 ### Step 1 — Ascension Challenges
 
 **Image:** `challenges_step1.png`
-_Idea: Challenge selection UI with 4 challenge cards._
+_Idea: Challenge selection UI with 8 challenge cards._
 
 **Title:** Ascension Challenges
 
 **Text:**
-> Test your skills with timed challenge runs. Each challenge applies a handicap — complete an Ascension under those conditions to earn permanent rewards.
+> Test your skills with timed challenge runs. There are 7 progressive challenges, each with a handicap, and each completion permanently increases your AP multiplier.
+
+> **Note:** There are actually 8 challenges in code (`AscendConstants.ChallengeType`), but the copy says 7. Either the copy or the enum needs updating.
 
 ### Step 2 — How It Works
 
@@ -249,7 +257,7 @@ _Idea: Snapshot/restore flow diagram._
 **Title:** How It Works
 
 **Text:**
-> Starting a challenge snapshots your progress and resets you. Reach **1Dc** volt to complete it. Your original progress is fully restored afterward — win or quit.
+> Starting a challenge snapshots your progress and resets you. Reach **1Dc** volt to complete it. Every completed challenge adds +1 AP multiplier, so each future Ascension grants more AP. Your original progress is fully restored afterward — win or quit.
 
 ---
 
@@ -259,23 +267,24 @@ _Idea: Snapshot/restore flow diagram._
 
 Each tutorial needs a **trigger condition** and a **"seen" flag** stored per player to prevent re-showing.
 
-Suggested approach:
-- Store a `Set<String>` of completed tutorial IDs in the player's data (e.g., `ascend_settings` table or a new `ascend_tutorials` table)
-- Check triggers at key moments (map completion, runner purchase, runner upgrade, volt threshold reached)
-- Only show if the player hasn't seen that tutorial yet
+Implementation:
+- Stored as an `int` bitmask (`seen_tutorials` column in `ascend_players` table) — each tutorial is a bit constant in `TutorialTriggerService` (WELCOME=1, FIRST_COMPLETION=2, MAP_UNLOCK=4, EVOLUTION=8, ELEVATION=16, SUMMIT=32, ASCENSION=64, CHALLENGES=128)
+- `TutorialTriggerService` checks triggers at key moments (player join, map completion, evolution, volt threshold crossed, skill node unlock)
+- Marks tutorial as seen immediately (prevents re-triggers), then opens the page with a small delay
+- If the player is in a run, tutorial opening is deferred until the run ends (`flushPendingTutorials`)
 
 ### Trigger Checkpoints (where to hook)
 
 | Tutorial | Where to Check |
 |----------|---------------|
-| Welcome | `PlayerReady` / first Ascend world join |
-| First Completion | `AscendRunTracker` on manual completion |
-| New Map Unlocked | `MapUnlockHelper.checkAndEnsureUnlock()` |
-| Evolution | Evolution flow in map select page |
-| Elevation | `ElevationPage` open or HUD volt threshold check |
-| Summit | HUD volt threshold check or `/ascend summit` first open |
-| Ascension | HUD volt threshold check or `/ascend ascension` first open |
-| Challenges | `SkillTreePage` on ASCENSION_CHALLENGES node unlock or `/ascend challenge` first open |
+| Welcome | `ParkourAscendPlugin` player join handler (`checkWelcome`) |
+| First Completion | `AscendRunTracker.completeRun()` on first manual completion (`checkFirstCompletion`) |
+| New Map Unlocked | `AscendMapSelectPage.checkAndProcessMapUnlocks()` (`checkMapUnlock`) |
+| Evolution | `AscendMapSelectPage` evolution flow, on first evolution (`checkEvolution`) |
+| Elevation | `AscendPlayerStore` volt update → `checkVoltThresholds` (crosses 30K) |
+| Summit | `AscendPlayerStore` volt update → `checkVoltThresholds` (crosses 1B) |
+| Ascension | `AscendPlayerStore` volt update → `checkVoltThresholds` (crosses 1Dc) |
+| Challenges | `SkillTreePage` on ASCENSION_CHALLENGES node unlock, or `AscendCommand` on first `/ascend challenge` open |
 
 ### Image Checklist
 

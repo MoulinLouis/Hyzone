@@ -1,3 +1,4 @@
+<!-- Last verified against code: 2026-03-22 -->
 # Hyvexa Suite -- Database Schema
 
 This document is the suite-wide schema reference for the Hyvexa plugin family.
@@ -330,14 +331,14 @@ CREATE TABLE maps (
   bronze_time_ms BIGINT NULL,
   silver_time_ms BIGINT NULL,
   gold_time_ms BIGINT NULL,
-  author_time_ms BIGINT NULL,
+  emerald_time_ms BIGINT NULL,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- `bronze_time_ms`, `silver_time_ms`, `gold_time_ms`, `author_time_ms` -- optional medal time thresholds in milliseconds. Set via `/pk admin` Maps panel. Author < Gold < Silver < Bronze enforced by admin UI.
+- `bronze_time_ms`, `silver_time_ms`, `gold_time_ms`, `emerald_time_ms` -- optional medal time thresholds in milliseconds. Set via `/pk admin` Maps panel. Emerald < Gold < Silver < Bronze enforced by admin UI. Column was renamed from `author_time_ms` to `emerald_time_ms` via migration.
 
 ## map_checkpoints
 Stores checkpoint transforms per map.
@@ -530,6 +531,17 @@ Notes:
 - `music_label` stores the display label (e.g., "Zelda OST", "Celeste OST", "No Music"); NULL = default
 - `vip_speed_multiplier` only applied if player has VIP/Founder status
 
+## parkour_migrations
+Tracks applied migration keys for Parkour mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS parkour_migrations (
+  migration_key VARCHAR(64) NOT NULL PRIMARY KEY
+) ENGINE=InnoDB;
+```
+
+Manager: `ParkourDatabaseSetup` (in `hyvexa-parkour`)
+
 ---
 
 # Duel Tables
@@ -604,53 +616,6 @@ Notes:
 - Same schema as `ascend_ghost_recordings` but for parkour mode
 - Created by `GhostStore("parkour_ghost_recordings", "parkour")` in `HyvexaPlugin`
 - See `ascend_ghost_recordings` notes for blob format details
-
-## saved_run_state
-Persists in-progress run state so players can resume after disconnect or server restart.
-
-```sql
-CREATE TABLE IF NOT EXISTS saved_run_state (
-  player_uuid CHAR(36) NOT NULL PRIMARY KEY,
-  map_id VARCHAR(64) NOT NULL,
-  elapsed_ms BIGINT NOT NULL,
-  last_checkpoint INT NOT NULL DEFAULT -1,
-  touched_checkpoints TEXT NOT NULL,
-  checkpoint_times TEXT NOT NULL,
-  map_updated_at BIGINT NOT NULL,
-  saved_at BIGINT NOT NULL,
-  CONSTRAINT fk_saved_run_map FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-```
-
-Notes:
-- One row per player (replaced on each save via `REPLACE INTO`)
-- `touched_checkpoints` and `checkpoint_times` are comma-separated encoded strings
-- `map_updated_at` used to invalidate saved state if map was edited since save
-- Manager: `RunStateStore` (in `hyvexa-parkour`) -- no in-memory cache, loaded only on reconnect
-
-## player_settings
-Persists player settings (toggles, music, HUD, speed) across reconnections.
-
-```sql
-CREATE TABLE IF NOT EXISTS player_settings (
-  player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
-  reset_item_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  players_hidden BOOLEAN NOT NULL DEFAULT FALSE,
-  duel_hide_opponent BOOLEAN NOT NULL DEFAULT FALSE,
-  ghost_visible BOOLEAN NOT NULL DEFAULT TRUE,
-  advanced_hud_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  hud_hidden BOOLEAN NOT NULL DEFAULT FALSE,
-  music_label VARCHAR(32) DEFAULT NULL,
-  checkpoint_sfx_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  victory_sfx_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  vip_speed_multiplier FLOAT NOT NULL DEFAULT 1.0,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-```
-
-Notes:
-- Immediate write on change, lazy load per player (DuelPreferenceStore pattern)
-- Manager: `PlayerSettingsPersistence` (in `hyvexa-parkour`)
 
 ---
 
@@ -978,7 +943,8 @@ CREATE TABLE IF NOT EXISTS mine_definitions (
   spawn_z DOUBLE NOT NULL DEFAULT 0,
   spawn_rot_x FLOAT NOT NULL DEFAULT 0,
   spawn_rot_y FLOAT NOT NULL DEFAULT 0,
-  spawn_rot_z FLOAT NOT NULL DEFAULT 0
+  spawn_rot_z FLOAT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 ```
 
@@ -1017,12 +983,15 @@ Stores depth layers within mine zones for Y-dependent block distributions and HP
 
 ```sql
 CREATE TABLE IF NOT EXISTS mine_zone_layers (
-  id VARCHAR(64) NOT NULL,
+  id VARCHAR(32) NOT NULL,
   zone_id VARCHAR(32) NOT NULL,
   min_y INT NOT NULL,
   max_y INT NOT NULL,
   block_table_json TEXT NOT NULL DEFAULT '{}',
+  -- Migration columns (added via ALTER TABLE):
   block_hp_json TEXT NOT NULL DEFAULT '{}',
+  egg_drop_chance DOUBLE NOT NULL DEFAULT 0.5,
+  display_name VARCHAR(64) NOT NULL DEFAULT '',
   PRIMARY KEY (id),
   FOREIGN KEY (zone_id) REFERENCES mine_zones(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -1031,6 +1000,8 @@ CREATE TABLE IF NOT EXISTS mine_zone_layers (
 Notes:
 - Each layer overrides the zone's `block_table_json` and `block_hp_json` for its Y range
 - Layers must not overlap in Y range within the same zone
+- `egg_drop_chance` controls the probability of egg drops from blocks in this layer (for gacha system)
+- `display_name` is the human-readable name shown in UI
 - Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
 
 ## mine_gate
@@ -1074,6 +1045,7 @@ CREATE TABLE IF NOT EXISTS mine_players (
   upgrade_cashback INT NOT NULL DEFAULT 0,
   in_mine TINYINT(1) NOT NULL DEFAULT 0,
   pickaxe_tier INT NOT NULL DEFAULT 0,
+  pickaxe_enhancement INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
@@ -1086,6 +1058,7 @@ Notes:
 - `upgrade_momentum` through `upgrade_cashback` are the 8 active upgrade types (see `MineUpgradeType` enum)
 - `mining_speed_level` and `multi_break_level` are deprecated legacy columns (no longer read by code)
 - `pickaxe_tier` tracks the player's current pickaxe tier
+- `pickaxe_enhancement` tracks the player's current pickaxe enhancement level within their tier
 - `in_mine` tracks whether the player is currently in the mine (persisted for reconnect restoration)
 - Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`) -- dirty-tracking with 5-second batched saves
 
@@ -1113,14 +1086,13 @@ Stores global sell prices for each block type (not per-mine).
 ```sql
 CREATE TABLE IF NOT EXISTS block_prices (
   block_type_id VARCHAR(64) PRIMARY KEY,
-  price_mantissa DOUBLE NOT NULL DEFAULT 1,
-  price_exp10 INT NOT NULL DEFAULT 0
+  price BIGINT NOT NULL DEFAULT 1
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- Price stored as BigNumber pair (`price_mantissa` x 10^`price_exp10`)
 - Default price is 1 crystal per block if no row exists
+- Migrated from BigNumber pair (`price_mantissa` + `price_exp10`) to simple BIGINT
 - Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
 
 ## mine_player_mines
@@ -1152,7 +1124,9 @@ CREATE TABLE IF NOT EXISTS mine_player_miners (
   has_miner BOOLEAN NOT NULL DEFAULT FALSE,
   speed_level INT NOT NULL DEFAULT 0,
   stars INT NOT NULL DEFAULT 0,
-  PRIMARY KEY (player_uuid, mine_id),
+  -- Migration column (added via ALTER TABLE):
+  slot_index INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (player_uuid, mine_id, slot_index),
   FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE,
   FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -1161,7 +1135,228 @@ CREATE TABLE IF NOT EXISTS mine_player_miners (
 Notes:
 - `stars` tracks evolution level (similar to Ascend runners)
 - `speed_level` is the miner's speed upgrade level
+- `slot_index` added via migration to support multi-slot miners; PK migrated from `(player_uuid, mine_id)` to `(player_uuid, mine_id, slot_index)`
+- Legacy table -- new gacha-based miner system uses `mine_player_miners_v2` and `mine_player_slot_assignments`
 - Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`)
+
+## block_hp
+Stores global HP (hit points) for each block type.
+
+```sql
+CREATE TABLE IF NOT EXISTS block_hp (
+  block_type_id VARCHAR(64) PRIMARY KEY,
+  hp INT NOT NULL DEFAULT 1
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Blocks not listed default to 1 HP (instant break)
+- Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
+
+## mine_achievements
+Stores unlocked mine achievements per player.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_achievements (
+  player_uuid VARCHAR(36) NOT NULL,
+  achievement_id VARCHAR(50) NOT NULL,
+  completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, achievement_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Achievement unlocks are permanent
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
+
+## mine_player_stats
+Stores lifetime mine counters per player (for achievement tracking).
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_player_stats (
+  player_uuid VARCHAR(36) PRIMARY KEY,
+  total_blocks_mined BIGINT NOT NULL DEFAULT 0,
+  total_crystals_earned BIGINT NOT NULL DEFAULT 0,
+  -- Migration column (added via ALTER TABLE):
+  manual_blocks_mined BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `manual_blocks_mined` tracks blocks mined by the player directly (not by automated miners)
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
+
+## mine_miner_slots
+Stores admin-configured miner NPC positions and conveyor endpoints per mine per slot.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_miner_slots (
+  mine_id VARCHAR(32) NOT NULL,
+  -- Migration column (added via ALTER TABLE, PK migrated):
+  slot_index INT NOT NULL DEFAULT 0,
+  npc_x DOUBLE NOT NULL DEFAULT 0,
+  npc_y DOUBLE NOT NULL DEFAULT 0,
+  npc_z DOUBLE NOT NULL DEFAULT 0,
+  npc_yaw FLOAT NOT NULL DEFAULT 0,
+  block_x INT NOT NULL DEFAULT 0,
+  block_y INT NOT NULL DEFAULT 0,
+  block_z INT NOT NULL DEFAULT 0,
+  interval_seconds DOUBLE NOT NULL DEFAULT 5.0,
+  -- Migration columns (added via ALTER TABLE):
+  conveyor_end_x DOUBLE NOT NULL DEFAULT 0,
+  conveyor_end_y DOUBLE NOT NULL DEFAULT 0,
+  conveyor_end_z DOUBLE NOT NULL DEFAULT 0,
+  conveyor_speed DOUBLE NOT NULL DEFAULT 2.0,
+  PRIMARY KEY (mine_id, slot_index),
+  FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `slot_index` added via migration to support multiple miner slots per mine; PK migrated from `(mine_id)` to `(mine_id, slot_index)`
+- `conveyor_*` columns define the conveyor belt endpoint and speed for block transport
+- Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
+
+## mine_conveyor_waypoints
+Stores conveyor belt waypoints per mine per slot.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_conveyor_waypoints (
+  mine_id VARCHAR(32) NOT NULL,
+  slot_index INT NOT NULL,
+  waypoint_order INT NOT NULL,
+  x DOUBLE NOT NULL,
+  y DOUBLE NOT NULL,
+  z DOUBLE NOT NULL,
+  PRIMARY KEY (mine_id, slot_index, waypoint_order),
+  FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Waypoints define the path blocks follow from miner to conveyor endpoint
+- Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
+
+## mine_player_conveyor_buffer
+Stores per-player conveyor buffer contents (blocks in transit).
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_player_conveyor_buffer (
+  player_uuid VARCHAR(36) NOT NULL,
+  block_type_id VARCHAR(64) NOT NULL,
+  amount INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (player_uuid, block_type_id),
+  FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Persists block counts on the conveyor belt for reconnect restoration
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
+
+## mine_player_eggs
+Stores per-player egg inventory for the miner gacha system.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_player_eggs (
+  player_uuid VARCHAR(36) NOT NULL,
+  layer_id VARCHAR(64) NOT NULL,
+  count INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (player_uuid, layer_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Eggs are earned by mining blocks and can be hatched to obtain miners
+- `layer_id` corresponds to the mine zone layer where the egg was found
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
+
+## mine_player_miners_v2
+Stores per-player miner collection (gacha-based system, replaces legacy `mine_player_miners`).
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_player_miners_v2 (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  player_uuid VARCHAR(36) NOT NULL,
+  layer_id VARCHAR(64) NOT NULL,
+  rarity VARCHAR(16) NOT NULL,
+  speed_level INT NOT NULL DEFAULT 0,
+  INDEX idx_player (player_uuid)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Each row is a unique miner instance owned by a player
+- `rarity` values correspond to gacha rarity tiers (e.g., `COMMON`, `RARE`, etc.)
+- `layer_id` identifies the mine zone layer the miner originated from
+- Old miners from `mine_player_miners` are auto-migrated to v2 as COMMON on first startup
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
+
+## mine_player_slot_assignments
+Stores miner-to-slot assignments (which miner is deployed to which slot).
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_player_slot_assignments (
+  player_uuid VARCHAR(36) NOT NULL,
+  slot_index INT NOT NULL,
+  miner_id BIGINT NOT NULL,
+  PRIMARY KEY (player_uuid, slot_index)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `miner_id` references `mine_player_miners_v2.id`
+- One miner per slot per player
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
+
+## mine_layer_rarity_blocks
+Stores per-layer per-rarity block tables for miner output configuration.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_layer_rarity_blocks (
+  layer_id VARCHAR(64) NOT NULL,
+  rarity VARCHAR(16) NOT NULL,
+  block_table_json TEXT NOT NULL DEFAULT '{}',
+  PRIMARY KEY (layer_id, rarity)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `block_table_json` maps block type IDs to spawn weights (same format as `mine_zones.block_table_json`)
+- Admin-configured or auto-seeded from zone layer data
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
+
+## pickaxe_tier_recipes
+Stores block requirements for pickaxe tier upgrades.
+
+```sql
+CREATE TABLE IF NOT EXISTS pickaxe_tier_recipes (
+  tier INT NOT NULL,
+  block_type_id VARCHAR(64) NOT NULL,
+  amount INT NOT NULL DEFAULT 1,
+  PRIMARY KEY (tier, block_type_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Each tier upgrade requires collecting specific block types and amounts
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
+
+## pickaxe_enhance_costs
+Stores crystal costs for pickaxe enhancement per tier per level.
+
+```sql
+CREATE TABLE IF NOT EXISTS pickaxe_enhance_costs (
+  tier INT NOT NULL,
+  level INT NOT NULL,
+  crystal_cost BIGINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (tier, level)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Defines the crystal cost to enhance a pickaxe at a given tier and enhancement level
+- Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
 
 ---
 
@@ -1504,6 +1699,17 @@ CREATE TABLE IF NOT EXISTS runorfall_player_stats (
 ```
 
 Manager: `RunOrFallStatsStore` (in `hyvexa-runorfall`)
+
+## runorfall_migrations
+Tracks applied migration keys for RunOrFall mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS runorfall_migrations (
+  migration_key VARCHAR(64) NOT NULL PRIMARY KEY
+) ENGINE=InnoDB;
+```
+
+Manager: `RunOrFallDatabaseSetup` (in `hyvexa-runorfall`)
 
 ---
 

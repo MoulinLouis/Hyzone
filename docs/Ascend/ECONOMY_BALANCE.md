@@ -1,6 +1,7 @@
+<!-- Last verified against code: 2026-03-22 -->
 # Ascend Mode - Economy Balance Documentation
 
-Last updated: 2026-03-05
+Last updated: 2026-03-22
 
 This document provides a factual overview of the economy balancing in Ascend mode, including all costs, multipliers, and progression formulas.
 
@@ -26,9 +27,9 @@ This document provides a factual overview of the economy balancing in Ascend mod
 ## Multiplier System
 
 ### Manual Run Multiplier
-- **Gain per completion:** +0.1
+- **Gain per completion:** 5× the runner's multiplier increment for that map
 - **Applies to:** Manual completions only
-- **Not affected by:** Stars, map level
+- **Affected by:** Stars, Evolution Power, Summit bonuses (same as runner, then ×5)
 
 ### Runner Multiplier (Automatic)
 - **Base gain per completion:** +0.1
@@ -44,7 +45,7 @@ This document provides a factual overview of the economy balancing in Ascend mod
   - Example at level 10 (×4.00 bonus): 0★ = +0.40/run, 1★ = +1.20/run
 
 ### Multiplier Slots
-- **Total slots:** 5 (one per map; map 6 requires Transcendence Milestone 1, giving 6 total)
+- **Total slots:** 5 (first 5 maps by display order; Map 6 Gold has a runner but does not contribute to the multiplier product)
 - **Product formula:** Total multiplier = product of all active map multipliers
 
 ### Elevation Multiplier (Linear)
@@ -176,7 +177,7 @@ Smooth ~2× growth per level, no artificial boosts or jumps:
 - **No cost reset after evolution:** At 1★ Lv.0, the cost is what 0★ Lv.20 would have cost
 - **Smooth ~2× growth:** Each level roughly doubles the cost (consistent, predictable)
 - **No artificial boosts or jumps:** The formula is clean with no special cases
-- **Evolution value comes from multiplier gains:** Stars double the multiplier gain (0.1 → 0.2 → 0.4...) without affecting cost progression
+- **Evolution value comes from multiplier gains:** Each star multiplies the gain by Evolution Power (base ×3: 0.1 → 0.3 → 0.9 → 2.7...) without affecting cost progression
 
 ---
 
@@ -252,13 +253,12 @@ Elevation uses **accumulated volt** (total volt earned since last reset) instead
 
 **Actual reward formula:**
 ```
-reward = baseReward × digitsProduct × elevation × (1 + vexaFlowBonus)
+reward = baseReward × digitsProduct × elevation
 ```
 
 Where:
-- `digitsProduct` = Product of all 5 map multipliers
-- `elevation` = Current elevation multiplier
-- `vexaFlowBonus` = Summit/Ascension bonuses
+- `digitsProduct` = Product of first 5 map multipliers (includes C1/C7 permanent map base bonuses)
+- `elevation` = Current elevation multiplier (includes C8 reward x1.25 if earned)
 
 ### Map Unlock System
 
@@ -554,16 +554,16 @@ Ascension is the ultimate prestige. Requires 1 Decillion (1Dc = 10^33) volt. Res
 
 8 challenges, each granting +1 to the AP multiplier when completed. Sequential unlock (must complete 1-N before N+1).
 
-| Challenge | Malus | Color |
-|-----------|-------|-------|
-| 1 | Map 5 locked | Green |
-| 2 | Runner Speed /3 | Orange |
-| 3 | Multiplier Gain /4 | Blue |
-| 4 | Evolution Power /5 | Red |
-| 5 | Runner Speed /2 + Multiplier Gain /2 | Violet |
-| 6 | Runner Speed /4 + Multiplier Gain /4 | Pink |
-| 7 | All Summit bonuses /2 + Maps 4 & 5 locked | Orange |
-| 8 | No Elevation or Summit | Cyan |
+| Challenge | Malus | Permanent Reward | Color |
+|-----------|-------|------------------|-------|
+| 1 | Map 5 locked | Map 5 base multiplier x1.5 | Green |
+| 2 | Runner Speed /3 | Runner Speed x1.10 | Orange |
+| 3 | Multiplier Gain /4 | Multiplier Gain x1.10 | Blue |
+| 4 | Evolution Power /5 | Evolution Power +0.50 | Red |
+| 5 | Runner Speed /2 + Multiplier Gain /2 | Runner Speed x1.05 + Multiplier Gain x1.05 | Violet |
+| 6 | Runner Speed /4 + Multiplier Gain /4 | Runner Speed x1.05 + Multiplier Gain x1.05 + Evolution Power +0.25 | Pink |
+| 7 | All Summit bonuses /2 + Maps 4 & 5 locked | Maps 4 & 5 base multiplier x1.5 | Orange |
+| 8 | No Elevation or Summit | Elevation x1.25 + All Summit bonuses x1.25 | Cyan |
 
 **Break Ascension:** Unlocked after completing all 8 challenges. Suppresses auto-ascension at 1Dc.
 
@@ -673,12 +673,12 @@ Evolution provides a clear benefit with continuous cost progression.
 
 ## Transcendence System (4th Prestige)
 
-Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^100) volt with BREAK_ASCENSION active and all 7 challenges completed.
+Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^100) volt with BREAK_ASCENSION active and all 8 challenges completed.
 
 ### Trigger
 - **Manual opt-in** via Transcendence NPC or `/transcend` command
 - **Threshold:** 1e100 volt (1 Googol)
-- **Requirements:** BREAK_ASCENSION active + all challenge rewards completed
+- **Requirements:** BREAK_ASCENSION active + all 8 challenge rewards completed
 
 ### What Gets Reset
 - Volt, elevation, ascension count
@@ -752,15 +752,15 @@ Vexa is a **global cross-mode currency** stored in `hyvexa-core` and displayed o
 
 ### Overflow Protection
 
-- Elevation costs capped at `Long.MAX_VALUE`
-- Volt balances stored as `double` for high precision
-- All UI displays use abbreviated notation (K, M, B, T)
+- All large values (volt, costs, rewards) use `BigNumber` (mantissa + base-10 exponent), no overflow
+- Elevation costs computed in log10 space, capped at 10^(10^9) as practical limit
+- All UI displays use abbreviated notation (K, M, B, T, ...)
 
 ### Precision
 
 - Speed multipliers: `double` (floating-point)
-- Costs: `long` (64-bit integer)
-- Rewards: `double` (to handle large elevation multipliers)
+- Costs: `BigNumber` (arbitrary magnitude)
+- Rewards: `BigNumber` (handles large multiplier products × elevation)
 
 ### Formula Consistency
 
@@ -768,348 +768,11 @@ All formulas use consistent growth rates:
 - **Elevation multiplier:** level (direct linear multiplier)
 - **Elevation cost:** 1.15^(level^0.72) for level<=300, then 1.15^(300^0.72 + (level-300)^0.58) (soft cap at 300)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
-- **Evolution gain:** EP^stars, where EP = 3 + 0.10 × level (linear, no ceiling)
-- **Summit XP:** (accumulatedVexa / 1B)^power, calibrated for 1Dc = level 1000
+- **Evolution gain:** EP^stars, where EP = Summit Evolution Power bonus (same growth zones as other Summit bonuses)
+- **Summit XP:** (accumulatedVolt / 1B)^power, calibrated for 1Dc = level 1000
 - **Summit levels:** level^2 (manageable numbers at all levels)
-- **Summit bonuses:** linear (0-25), √ (25-500), ⁴√ (500+)
+- **Summit bonuses:** linear (0-25), √ (25-500), ⁴√ (500-1000), ^0.3 post-cap (1000+)
 - **Summit XP cost:** level^2 (below 1000), level^4/1M (above 1000, continuous at boundary)
 - **Summit XP storage:** `double` (no cap — unlimited progression)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
-
----
-
-## Version History
-
-- **2026-03-05 (mine v1):** Mine economy documentation
-  - Crystal currency, block prices, upgrades, mine unlocking, cross-progression bonuses
-
-- **2026-02-17 (v19):** Transcendence (4th Prestige) + Map 6 + Summit nerf
-  - 4th prestige layer: Transcendence at 1e100 volt with BREAK_ASCENSION + all challenges
-  - Full reset including skill tree + challenges; preserves best times, achievements, transcendence count
-  - Milestone 1 (first transcend) permanently unlocks Map 6 (Gold)
-  - Map 6: 2500 base reward, 68s base time, x4.7 cost multiplier, x3.5 early-level boost
-  - Summit XP storage: long -> double (removes ~136k level cap, unlimited progression)
-  - Summit XP curve: level^4/1M above 1000 (steeper than previous level^3/1000)
-  - **Summit volt->XP: piecewise formula** — unchanged below 1Dc, post-1Dc power 0.08 (1e100 = ~level 13K)
-  - **Summit bonus curve: ^0.7 -> ^0.3** — soft diminishing returns (lvl 10K: x33 mult gain vs old x90)
-
-- **2026-02-16 (v18):** Summit XP softcap at level 1000
-  - XP cost per level: level^2 (below 1000) -> level^3/1000 (above 1000, continuous)
-  - Same volt reaches fewer levels: old 5000 -> ~3591, old 10000 -> ~6042
-  - Summit level hard cap removed (was 1000, now unlimited)
-  - Bonus growth zones unchanged: linear (0-25), √ (25-500), ⁴√ (500+)
-
-- **2026-02-09 (v18):** Passive offline rate reduction
-  - Offline earnings rate: 25% → 10% (base rate)
-  - No Ascendancy Tree node boosts offline rate
-  - More balanced offline vs. active play incentives
-
-- **2026-02-15 (v18):** Summit XP recalibration for 1Dc = level 1000
-  - Volt→XP power: 3/7 (~0.4286) → ~0.3552 (derived from 1Dc target)
-  - 1 Decillion accumulated volt now reaches exactly level 1000 (max)
-  - Early/mid game slower: 1Qa gives ~135 XP (was 372), 1Qi gives ~1,571 XP (was ~7,196)
-  - Progression stretched to fill the full 1B → 1Dc range evenly
-
-- **2026-02-08 (v17):** Elevation accumulated volt system
-  - Elevation now uses accumulated volt (total earned since last reset) instead of current balance
-  - Spending volt on upgrades no longer reduces elevation potential
-  - Accumulated volt reset on: Elevation, Summit, Ascension
-  - Same pattern as Summit accumulated volt (parallel tracking)
-
-- **2026-02-16 (v17):** Ascend Verticality v1
-  - AP multiplier: `1 + completed_challenges` AP per ascension (max x8 with 7 challenges)
-  - 3 new challenges: mixed summit malus (5), all summit malus (6), maps 4+5 blocked (7)
-  - Old per-challenge permanent rewards removed (x1.5 map5, +10% speed, +20% multi, +1 evo power)
-  - Summit level cap removed (was 1000, now unlimited)
-  - 6 new skill tree nodes: Runner Speed IV (15 AP), Evolution Power III (15 AP), Momentum Mastery (25 AP), Multiplier Boost II (40 AP), Elevation Boost (40 AP), Runner Speed V (75 AP)
-
-- **2026-02-08 (v16):** Elevation cost reduction
-  - Cost curve exponent: 0.77 → 0.72 (early), 0.63 → 0.58 (late, above level 300)
-  - Level 1 cost unchanged (34.5K), progressively cheaper at higher levels
-  - Level 50: 514K → 311K (-40%), Level 100: 3.8M → 1.4M (-63%), Level 200: 116M → 17M (-85%)
-  - Same early game pacing, more accessible mid/late elevation
-
-- **2026-02-07 (v15):** Linear Summit formulas with soft cap
-  - All categories: linear up to level 25, then √(excess) growth — no ceiling, just slower
-  - Runner Speed: `1 + 0.45 × √level` → `1 + 0.15 × level` (+0.15/level, √ after 25)
-  - Multiplier Gain: `1 + 0.5 × level^0.8` → `1 + 0.30 × level` (+0.30/level, √ after 25)
-  - Evolution Power: `3 + 1.5 × level/(level+10)` → `3 + 0.10 × level` (+0.10/level, √ after 25)
-  - Normal play (level 0-25) fully linear: each level gives exactly the same bonus
-  - Past soft cap: growth continues but can't reach absurd values at extreme levels
-  - Categories much more balanced: marginal gains within ~25% of each other
-
-- **2026-02-06 (v14):** Summit XP number compression
-  - Level exponent: 2.5 → 2.0 (level 50: 17,678 → 2,500 XP per level)
-  - Volt→XP: sqrt → power 3/7 (compensates to preserve same volt→level mapping)
-  - Same volt still reach the same levels (within ~5%)
-  - DB migration: existing XP converted via `old_xp^(6/7)`
-
-- **2026-02-06 (v13):** Evolution Power asymptotic growth
-  - EP formula changed from `2 + 0.5 × level^0.8` to `2 + 1.5 × level / (level + 10)`
-  - Asymptotic growth toward ~3.5 (was unbounded, reached ×5.15 at level 10, ×21.5 at level 100)
-  - EP^stars kept clean (no star dampening) — player sees EP value, each evolution multiplies by it
-  - 5★ at Summit 10: ×152 (was ×3,627), at Summit 50: ×354 (was ×448K)
-
-- **2026-02-06 (v12):** Elevation soft cap at level 300
-  - Below 300: identical cost curve (1.15^(level^0.77))
-  - Above 300: flatter late-game curve (exponent 0.63 instead of 0.77)
-  - Removes glass ceiling at high elevation — 100T volt from level 600 gives +127 levels instead of +12
-
-- **2026-02-06 (v11):** Summit XP based on accumulated volt + reduced level cost
-  - Summit XP now based on volt accumulated since last Summit/Elevation, not current balance
-  - Runner upgrades no longer reduce Summit XP potential (only earning matters)
-  - Elevation resets the accumulator (strategic choice preserved)
-  - Summit level cost: `level^2.5` (was `level^4`) — reduces gap between levels
-
-- **2026-02-06 (v10):** Flattened elevation cost curve
-  - Elevation cost: `30000 × 1.15^(level^0.77)` (was `30000 × 1.15^level`)
-  - Cost curve exponent 0.77 (~1/1.3) makes high-level elevation proportionally cheaper
-  - Elevation stays attractive throughout the game (~30% gain per elevation consistently)
-  - Level = multiplier (1:1) unchanged — only the cost formula changed
-
-- **2026-02-06 (v9):** Summit and Ascension threshold rebalance
-  - Summit XP conversion: `sqrt(volt / 1B)` (was `sqrt(volt) / 1M`)
-  - Minimum volt for Summit: 1B (was 1T)
-  - Ascension threshold: 1Dc (was 10Q)
-
-- **2026-02-05 (v8):** Summit late-game rebalance
-  - Summit XP conversion: `sqrt(volt) / 1,000,000` (was `/ 100`)
-  - Minimum volt for Summit: 1T (was 10K)
-  - Summit is now a true late-game system (requires 1T volt for level 1)
-  - Summit now resets everything like elevation (multipliers, runners, map unlocks), keeps only best times
-
-- **2026-02-05 (v7):** Linear elevation multiplier
-  - Reverted elevation from exponential (`level × 1.02^level`) to linear (`level`)
-  - Level now equals multiplier directly (level 210 = ×210)
-
-- **2026-02-05 (v6):** Evolution and Summit XP rebalance
-  - Evolution now grants ×10 per-run multiplier gain (instead of one-time map multiplier boost)
-  - Removed Evolution Power one-shot bonus (category kept for future use)
-  - Summit XP conversion: `sqrt(volt) / 100` (diminishing returns, was linear)
-  - Summit XP per level: `level^4` (steep scaling, was `100 × level^1.5`)
-  - Minimum volt for Summit: 10,000 (for 1 XP)
-  - Late-game Summit scaling: 2T volt → ~9 levels (was ~1,500+ levels)
-
-- **2026-02-05 (v5):** XP-based Summit system
-  - Summit now uses XP instead of volt thresholds (1000 volt = 1 XP)
-  - XP per level: 100 × level^1.5 (gradual scaling)
-  - Replaced Volt Flow with Multiplier Gain (1 + 0.5 × level^0.8)
-  - Runner Speed: 1 + 0.45 × sqrt(level) (diminishing returns)
-  - Evolution Power: 2 + 0.5 × level^0.8 (applied on runner evolution, multiplies map multiplier)
-  - Summit no longer resets multipliers, runners, or map unlocks (only volt and elevation)
-
-- **2026-02-05 (v4):** Early-game unlock pacing
-  - Added decaying cost boost for levels 0-9 on maps 2+ (first evolution only)
-  - Boost scales by map: Orange ×1.5, Jaune ×2.0, Vert ×2.5, Bleu ×3.0
-  - Creates more time between early map unlocks without affecting late-game
-  - Smooth decay ensures costs always increase (no jarring price drops)
-
-- **2026-02-04 (v3):** Exponential elevation and Summit refactoring
-  - Elevation multiplier changed from `level` to `level × 1.02^level` *(reverted in v7)*
-  - Summit Volt Flow changed from additive (+20%/level) to multiplicative (×1.20/level)
-  - Summit Manual Mastery renamed to Evolution Power (+0.20 evolution base/level)
-  - Evolution Power affects runner multiplier gains via formula: `0.1 × (2 + bonus)^stars`
-  - Simplified upgrade cost formula to `5 × 2^level + level × 10` (smooth ~2× growth, no boosts)
-
-- **2026-02-04 (v2):** Continuous cost progression after evolution
-  - **Cost formula now uses total levels:** `totalLevel = stars × 20 + speedLevel`
-  - Costs no longer reset after evolution (1★ Lv.0 costs same as what 0★ Lv.20 would cost)
-  - Removed star multiplier (×2.2 per star) — progression is now inherent to total level
-  - Early-game boost (÷4) now only applies to first evolution cycle (0★ levels 0-4)
-  - Evolution is now always beneficial: double gains with no cost penalty
-
-- **2026-02-04 (v1):** Major economy rebalance
-  - Runner multiplier gains: 0.01 → 0.1 (×10)
-  - Elevation base cost: 5,000 → 30,000 (×6)
-  - Upgrade base formula: 60× → 20× (reduced from ×6 to ×2 inflation)
-  - Added map-specific speed multipliers (10-30% per level)
-  - Early-game boost: ÷4 for levels 0-4
-
-- **Previous:** Original balance (slower progression, smaller numbers)
-
----
-
-## Feathers (Parkour Currency)
-
-Feathers are a parkour-specific currency earned by beating medal time thresholds on maps.
-
-### Medal System
-- Each map can have **bronze**, **silver**, and **gold** medal time thresholds (set by admins)
-- Beating a threshold earns the medal for that map (once per tier per map)
-- All qualifying medals are awarded in a single run (e.g., gold time earns all 3)
-- Medal times are in seconds; gold < silver < bronze enforced
-
-### Feather Rewards
-- Configurable per category (Easy/Medium/Hard/Insane) via `/pk admin` -> Medal Rewards
-- Each medal tier has an independent feather reward amount
-- Rewards are granted once per medal per map (no repeats)
-
-### Storage
-- DB table: `player_feathers` (uuid, feathers)
-- DB table: `player_medals` (player_uuid, map_id, medal, earned_at)
-- DB table: `medal_rewards` (category, bronze_feathers, silver_feathers, gold_feathers)
-
-### Display
-- Feather balance shown on parkour HUD (below vexa, with feather icon)
-- Medal status shown on map selection cards (earned/unearned per tier)
-
----
-
-## Mine Economy
-
-The mine is a separate progression system within Ascend mode where players break blocks, sell them for crystals, and upgrade their mining capabilities.
-
-> **Note:** All mine economy values are provisional and subject to playtesting. Block prices and mine unlock costs are admin-configured, not hardcoded.
-
-### Crystal Currency
-
-- **Separate currency** from volt -- earned exclusively by selling mined blocks
-- **Storage:** `long` via `AtomicLong` in `MinePlayerProgress.crystals`
-- **Used for:** Mine upgrades, mine unlocking, miner purchases
-- **Floor:** Balance cannot go below 0
-- **Display:** Shown on the mine HUD alongside inventory count
-
-### Block Sell Prices
-
-Block prices are global (not per-mine), configured by admins in the Block Prices page.
-
-- **DB table:** `block_prices` (columns: `block_type_id`, `price_mantissa`, `price_exp10`)
-- **Price format:** `BigNumber` (mantissa + base-10 exponent), supporting arbitrarily large values
-- **Default price:** `BigNumber.ONE` (1 crystal) if a block type has no configured price
-- **Per-mine isolation:** The same block type can have different prices in different mines
-- **Sell formula:** `crystals earned = sum(block_price x block_count)` for each block type in inventory
-
-### Mine Upgrades
-
-Purchased with crystals. 9 upgrade types:
-
-| Upgrade | Max Level | Cost Formula | Effect per Level | Effect at Max |
-|---------|-----------|-------------|------------------|---------------|
-| **Bag Capacity** | 50 | `25 x 1.2^level` | +10 slots | 550 slots |
-| **Momentum** | 25 | `50 x 1.22^level` | +3 combo count | 80 combo |
-| **Fortune** | 25 | `60 x 1.22^level` | +2% double drop chance | 50% chance |
-| **Jackhammer** | 10 | `150 x 1.28^level` | +1 column depth | 10 depth |
-| **Stomp** | 15 | `200 x 1.30^level` | +1 radius per 5 levels | 4 radius |
-| **Blast** | 15 | `250 x 1.30^level` | +1 radius per 5 levels | 4 radius |
-| **Haste** | 20 | `40 x 1.20^level` | +5% mining speed | +100% speed |
-| **Conveyor Capacity** | 25 | `30 x 1.18^level` | +200 buffer blocks | 6000 blocks |
-| **Cashback** | 20 | `80 x 1.22^level` | +0.5% crystal return | 10% return |
-
-#### Bag Capacity
-
-- **Formula:** `capacity = 50 + level x 10`
-- **Effect:** Maximum number of blocks the player can hold before selling
-- **Level 0:** 50 slots
-- **Level 25:** 300 slots
-- **Level 50:** 550 slots
-
-#### Momentum
-
-- **Formula:** `maxCombo = 5 + level x 3`
-- **Effect:** Build a combo while mining to deal more damage
-
-#### Fortune
-
-- **Formula:** `doubleDropChance = level x 2%`
-- **Effect:** Chance to get bonus drops from mined blocks
-
-#### Jackhammer, Stomp, Blast (AoE)
-
-- **Proc chance:** Linear interpolation from ~0.33% at level 1 to ~8.33% at max level
-- **Jackhammer:** Breaks a column of blocks below the target (depth = level)
-- **Stomp:** Breaks a layer of blocks around feet on landing (radius = 1 + floor(level/5))
-- **Blast:** Breaks blocks in a sphere around target (radius = 1 + floor(level/5))
-
-#### Haste
-
-- **Formula:** `speedBonus = level x 5%`
-- **Effect:** Increases mining speed permanently
-
-#### Conveyor Capacity
-
-- **Formula:** `capacity = 1000 + level x 200`
-- **Effect:** Maximum number of blocks the conveyor chest can hold
-- **Level 0:** 1000 blocks
-- **Level 25:** 6000 blocks
-- **Note:** When full, miners stop working. In-flight conveyor items are counted toward capacity.
-
-#### Cashback
-
-- **Formula:** `cashbackPercent = level x 0.5`
-- **Effect:** Earn crystals equal to a percentage of each mined block's sell value
-- **Applies to:** Manual breaks and AoE breaks (Jackhammer, Stomp, Blast)
-- **Rounding:** Truncated to 2 decimal places (floor, not round)
-- **Level 0:** No cashback
-- **Level 1 (0.5%):** Block worth 1 crystal -> 0 cashback (too small). Block worth 10 crystals -> 0.05 cashback
-- **Level 20 (10%):** Block worth 1 crystal -> 0.10 cashback
-- **Note:** Crystals are stored as DECIMAL(20,2) in the database to support fractional amounts
-
-### Mine Unlocking
-
-- **First mine:** Free / unlocked by default
-- **Subsequent mines:** Require crystal payment, configured per-mine in the `mine_definitions` DB table
-- **Unlock cost format:** `BigNumber` (columns: `unlock_cost_mantissa`, `unlock_cost_exp10`)
-- **Unlock is permanent:** Once purchased, a mine stays unlocked
-- **Progression:** Mines are displayed sorted by `display_order`; admins set costs to create a natural progression curve
-
-### Cross-Progression Bonuses (Provisional)
-
-Mine progression provides permanent bonuses to the core Ascend parkour loop. With the single-mine system, multi-mine unlock bonuses are inactive.
-
-| Bonus | Source | Effect |
-|-------|--------|--------|
-| Multiplier Gain | All miner slots have miners | +20% |
-
-Runner Speed and Volt Gain bonuses (previously tied to mine 2/3/4 unlock) are always 1.0 in the single-mine system.
-
-**Design intent:** Reward mine investment without making it mandatory. Bonuses are meaningful but not dominant compared to core parkour systems.
-
-### Automated Miners
-
-Each mine can have one automated miner robot per player, unlocked per-mine.
-
-#### Miner State
-
-- **Tracked per-player, per-mine** in `MinePlayerProgress.MinerProgress`
-- **Properties:** `hasMiner` (unlocked), `speedLevel`, `stars`
-- **Persisted to DB** via `mine_player_miners` table
-
-#### Production Rate
-
-```
-base = 6.0 blocks/minute
-speedMultiplier = 1.0 + speedLevel x 0.10
-starMultiplier = 1.0 + stars x 0.50
-productionRate = base x speedMultiplier x starMultiplier
-```
-
-| Speed Level | Stars | Blocks/Minute | Interval |
-|-------------|-------|---------------|----------|
-| 0 | 0 | 6.0 | 10.0s |
-| 5 | 0 | 9.0 | 6.7s |
-| 10 | 0 | 12.0 | 5.0s |
-| 10 | 1 | 18.0 | 3.3s |
-| 10 | 3 | 30.0 | 2.0s |
-| 10 | 5 | 42.0 | 1.4s |
-
-#### Star Tiers
-
-Each star tier changes the miner's visual NPC type:
-
-| Stars | Entity Type | Star Multiplier |
-|-------|-------------|-----------------|
-| 0 | Kweebec Seedling | x1.0 |
-| 1 | Kweebec Sapling | x1.5 |
-| 2 | Kweebec Sproutling | x2.0 |
-| 3 | Kweebec Sapling Pink | x2.5 |
-| 4 | Kweebec Razorleaf | x3.0 |
-| 5+ | Kweebec Rootling | x3.5+ |
-
-#### Miner Behavior
-
-- Miners are spawned as frozen, invulnerable NPCs in the mine zone
-- Production runs on a server-side tick (50ms interval), checking each miner's production timer
-- Miners pick a random block from the zone's weighted block table each production cycle
-- The mined block goes into the player's inventory (skipped if bag is full)
-- Miners are spawned when the player joins and despawned when they leave

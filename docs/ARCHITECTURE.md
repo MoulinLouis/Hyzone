@@ -1,3 +1,4 @@
+<!-- Last verified against code: 2026-03-22 -->
 # Architecture
 
 Technical design documentation for the Hyvexa multi-module plugin suite.
@@ -55,7 +56,7 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - PlayerReady: if in Ascend world, clears inventory, gives Ascend dev items + hub selector, attaches Ascend HUD.
 - AddPlayerToWorld: re-ensures Ascend dev items + hub selector when entering the Ascend world (e.g., respawn).
 - PlayerDisconnect: clears HUD caches and cancels active run.
-- Schedules a 200ms tick that runs run tracking + HUD updates on the Ascend world thread.
+- Schedules a 50ms tick (with a full-update pass every 4th tick = 200ms) that runs run tracking + HUD updates on the Ascend world thread.
 
 Module boundaries:
 - All gameplay modules (Parkour/Ascend/Hub/Purge/RunOrFall/Wardrobe) depend on Core only
@@ -89,10 +90,12 @@ Module boundaries:
 | `BAG_CAPACITY` | 50 | +10 bag slots per level (base 50) |
 | `MOMENTUM` | 25 | Build a combo while mining to deal more damage |
 | `FORTUNE` | 25 | Chance to get bonus drops from mined blocks |
-| `JACKHAMMER` | 10 | Breaks a column of blocks below the one you mine |
-| `STOMP` | 15 | Breaks a layer of blocks around your feet on landing |
-| `BLAST` | 15 | Breaks blocks in a sphere around your target |
+| `JACKHAMMER` | 10 | Chance to break a column of blocks below |
+| `STOMP` | 15 | Chance to break a layer of blocks around you |
+| `BLAST` | 15 | Chance to break blocks in a sphere |
 | `HASTE` | 20 | +5% mining speed per level |
+| `CONVEYOR_CAPACITY` | 25 | +200 conveyor chest buffer per level (base 1000) |
+| `CASHBACK` | 20 | +0.5% crystal cashback per block per level |
 
 **Database tables** (owned by Ascend, created via `AscendDatabaseSetup`):
 
@@ -119,7 +122,7 @@ Module boundaries:
 ### Purge Plugin Lifecycle
 - Zombie survival PvE mode with wave-based combat
 - Entry point: `HyvexaPurgePlugin`
-- Key managers: `PurgeSessionManager` (game flow), `PurgeWaveManager` (wave spawning), `PurgeInstanceManager` (instance management), `PurgePartyManager` (party system), `PurgeUpgradeManager` (in-session upgrades), `PurgeWeaponConfigManager` (weapon config), `PurgeWaveConfigManager` (wave config), `PurgeVariantConfigManager` (zombie variants), `PurgeHudManager` (HUD)
+- Key managers: `PurgeSessionManager` (game flow), `PurgeWaveManager` (wave spawning), `PurgeInstanceManager` (instance management), `PurgePartyManager` (party system), `PurgeUpgradeManager` (in-session upgrades), `PurgeWeaponConfigManager` (weapon config), `PurgeWaveConfigManager` (wave config), `PurgeVariantConfigManager` (zombie variants), `PurgeHudManager` (HUD), `PurgeMissionManager` (daily missions), `PurgeClassManager` (class selection)
 - Economy: Scrap currency (`PurgeScrapStore`) for weapon upgrades (`PurgeWeaponUpgradeStore`), weapon skins (`PurgeSkinStore`)
 - Database tables: `purge_player_stats`, `purge_player_scrap`, `purge_weapon_upgrades`, `purge_weapon_xp`, `purge_daily_missions`, `purge_player_classes`, `purge_player_selected_class`, `purge_weapon_levels`, `purge_weapon_defaults`, `purge_weapon_skins`, `purge_waves`, `purge_settings`, `purge_migrations`, `purge_zombie_variants`, `purge_wave_variant_counts`
 
@@ -163,7 +166,7 @@ Module boundaries:
 - Mobstar capes are also integrated with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.mobstar.capes.*` for locked-by-default wardrobe display.
 - Cechoo Animal Cosmetics are integrated with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.cechoo.*`, including custom Wardrobe slots (`Horns`, `Tails`).
 - HayHays Animal Masks are integrated as Wardrobe `HeadAccessory` cosmetics with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.hayhay.headaccessories.*`.
-- `/shop` remains independent: purchasable wardrobe entries come only from `WardrobeBridge.COSMETICS` in core.
+- `/shop` remains independent: purchasable wardrobe entries come from `WardrobeBridge.cosmetics` (instance field populated on initialize) in core.
 - Shop system: `CosmeticShopConfigStore` (availability + pricing per cosmetic), `WardrobeBridge` (purchase flow — checks availability, deducts currency, records ownership, grants Hytale permission), `CurrencyBridge` (abstracts vexa/feather payments)
 - Login: `WardrobeBridge.regrantPermissions()` re-grants permissions for all owned cosmetics
 
@@ -351,8 +354,7 @@ Progress >= 100% -> despawnGhost() -> store.removeEntity(ref, REMOVE)
 | `AbstractGhostRecorder` | core | Sampling loop (50ms), max 12K samples |
 | `GhostRecording` | core | Container for samples + interpolation |
 | `GhostInterpolation` | core | Binary search + linear/angle interpolation |
-| `AbstractGhostStore` | core | GZIP serialization + MySQL persistence |
-| `GhostStore` | core | Concrete store (per-mode table name) |
+| `GhostStore` | core | GZIP serialization + MySQL persistence (per-mode table name) |
 | `GhostRecorder` | parkour/ascend | Module-specific player resolution |
 | `GhostNpcManager` | parkour | NPC spawn/despawn + tick playback |
 
@@ -667,14 +669,14 @@ Settings are stored in the `settings` table (single row, `id = 1`) and loaded by
 | `debug_mode` | boolean | Enable teleport debug logging |
 | `spawn_*` | doubles/floats | Optional spawn position/rotation override |
 
-### Runtime-only toggles
+### Additional DB-backed settings
 
-These are currently held in memory and reset on restart:
+These are persisted in the `settings` table alongside the core settings above:
 
 | Setting | Source | Description |
 |---------|--------|-------------|
 | `idleFallRespawnForOp` | `SettingsStore` | Whether OPs get idle fall respawn |
-| `categoryOrder` | `SettingsStore` | Category ordering hints for selection UI |
+| `categoryOrder` | `SettingsStore` | Category ordering hints for selection UI (JSON array) |
 
 ### ParkourConstants.java
 

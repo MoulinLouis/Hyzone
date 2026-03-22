@@ -45,9 +45,15 @@ Quick reference for AI agents working on this Hytale plugin project.
 ## Workflow Reminders
 
 1. **Update CHANGELOG.md** for significant changes only (new features, balance changes, bug fixes) - keep entries brief (1-2 lines), no implementation details
-2. **Update docs/Ascend/ECONOMY_BALANCE.md** when modifying game economy (costs, rewards, multipliers, formulas)
+2. **Update docs when you change code** — keep the source of truth accurate:
+   - Economy change (cost, reward, multiplier, formula) → `docs/Ascend/ECONOMY_BALANCE.md`
+   - Schema change (table/column add, remove, rename) → `docs/DATABASE.md`
+   - Architecture change (new module, changed boundary, new integration) → `docs/ARCHITECTURE.md`
+   - New manager/store/major class → relevant module README in `docs/<Module>/README.md`
+   - New or removed command → relevant module README
+   - See `docs/README.md` for the full source-of-truth matrix
 3. **Follow existing patterns** - check similar files before implementing
-4. **Reuse existing Managers** - Many Manager classes (~50) exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
+4. **Reuse existing Managers** - Many Manager classes exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
 5. **Run tests selectively** - only when explicitly asked or after large changes. Only pure-logic classes (zero Hytale imports) are testable.
 6. **No auto-memory for project knowledge** - Multiple agents work on this repo. Store discoveries in `docs/` not in Claude's auto-memory, so all agents benefit.
 7. **Plans go in `docs/plans/`** - Write implementation plans as `.md` files in the project, not only in Claude's internal plan file, so other agents can reference them.
