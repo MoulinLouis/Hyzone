@@ -101,6 +101,24 @@ public class MineHudManager {
 
     public void removePlayer(UUID playerId) {
         huds.remove(playerId);
+        // Detach from MultiHudBridge so the mine HUD doesn't linger in the composite
+        // after world switches (e.g. game selector -> parkour). No-op if player already gone.
+        try {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin == null) return;
+            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef == null) return;
+            var ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) return;
+            var store = ref.getStore();
+            if (store == null) return;
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                MultiHudBridge.hideCustomHud(player, playerRef, MultiHudBridge.KEY_MINE);
+            }
+        } catch (Exception ignored) {
+            // Best-effort — on disconnect the engine cleans up HUDs automatically
+        }
     }
 
     public boolean hasHud(UUID playerId) {

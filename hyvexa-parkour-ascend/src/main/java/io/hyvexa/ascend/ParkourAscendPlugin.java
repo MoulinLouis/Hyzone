@@ -936,14 +936,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> { if (passiveEarningsManager != null) passiveEarningsManager.onPlayerLeaveAscend(playerId); },
                 "Leave cleanup: passiveEarnings");
         runSafe(() -> AscendCommand.onPlayerDisconnect(playerId), "Leave cleanup: AscendCommand");
+        // HUD cleanup BEFORE removeTickPlayer — removePlayer needs playerRefCache to detach from MultiHudBridge
+        runSafe(() -> { if (mineHudManager != null) mineHudManager.removePlayer(playerId); },
+                "Leave cleanup: mineHudManager");
+        runSafe(() -> hudManager.removePlayer(playerId), "Leave cleanup: hudManager");
         runSafe(() -> removeTickPlayer(playerId), "Leave cleanup: playerRefCache");
         runSafe(() -> BaseAscendPage.removeCurrentPage(playerId), "Leave cleanup: removeCurrentPage");
         runSafe(() -> AscendLeaveInteraction.clearPendingLeave(playerId), "Leave cleanup: clearPendingLeave");
         runSafe(() -> AscendSettingsPage.clearPlayer(playerId), "Leave cleanup: AscendSettingsPage");
         runSafe(() -> AscendMusicPage.clearPlayer(playerId), "Leave cleanup: AscendMusicPage");
-        runSafe(() -> { if (mineHudManager != null) mineHudManager.removePlayer(playerId); },
-                "Leave cleanup: mineHudManager");
-        runSafe(() -> hudManager.removePlayer(playerId), "Leave cleanup: hudManager");
         runSafe(() -> { if (runTracker != null) runTracker.cancelRun(playerId); }, "Leave cleanup: runTracker");
         runSafe(() -> { if (robotManager != null) robotManager.onPlayerLeave(playerId); }, "Leave cleanup: robotManager");
         runSafe(() -> { if (mineRobotManager != null) mineRobotManager.onPlayerLeave(playerId); }, "Leave cleanup: mineRobotManager");
