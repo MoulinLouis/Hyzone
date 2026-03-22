@@ -14,8 +14,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -36,17 +36,24 @@ public class AscendSettingsPage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private final RobotManager robotManager;
+    private final AscendHudManager hudManager;
+    private final AscendMenuNavigator menuNavigator;
     private final boolean fromProfile;
 
-    public AscendSettingsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, RobotManager robotManager) {
-        this(playerRef, playerStore, robotManager, false);
+    public AscendSettingsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
+                              RobotManager robotManager, AscendHudManager hudManager,
+                              @Nonnull AscendMenuNavigator menuNavigator) {
+        this(playerRef, playerStore, robotManager, hudManager, menuNavigator, false);
     }
 
     public AscendSettingsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                              RobotManager robotManager, boolean fromProfile) {
+                              RobotManager robotManager, AscendHudManager hudManager,
+                              @Nonnull AscendMenuNavigator menuNavigator, boolean fromProfile) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.robotManager = robotManager;
+        this.hudManager = hudManager;
+        this.menuNavigator = menuNavigator;
         this.fromProfile = fromProfile;
     }
 
@@ -98,8 +105,7 @@ public class AscendSettingsPage extends BaseAscendPage {
                 Player p = store.getComponent(ref, Player.getComponentType());
                 PlayerRef pr = store.getComponent(ref, PlayerRef.getComponentType());
                 if (p != null && pr != null) {
-                    p.getPageManager().openCustomPage(ref, store,
-                            new AscendProfilePage(pr, playerStore, robotManager));
+                    p.getPageManager().openCustomPage(ref, store, menuNavigator.createProfilePage(pr));
                 } else {
                     this.close();
                 }
@@ -116,31 +122,26 @@ public class AscendSettingsPage extends BaseAscendPage {
         }
 
         if (BUTTON_MUSIC.equals(data.getButton())) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendMusicPage(playerRef, playerStore, robotManager));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createMusicPage(playerRef, fromProfile));
             return;
         }
 
         if (BUTTON_HIDE_HUD.equals(data.getButton())) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getHudManager() != null) {
-                plugin.getHudManager().hideHud(playerRef.getUuid());
+            if (hudManager != null) {
+                hudManager.hideHud(playerRef.getUuid());
                 playerStore.setHudHidden(playerRef.getUuid(), true);
                 player.sendMessage(Message.raw("HUD hidden."));
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
+                player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             }
             return;
         }
 
         if (BUTTON_SHOW_HUD.equals(data.getButton())) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getHudManager() != null) {
-                plugin.getHudManager().showHud(playerRef.getUuid());
+            if (hudManager != null) {
+                hudManager.showHud(playerRef.getUuid());
                 playerStore.setHudHidden(playerRef.getUuid(), false);
                 player.sendMessage(Message.raw("HUD shown."));
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
+                player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             }
             return;
         }
@@ -154,8 +155,7 @@ public class AscendSettingsPage extends BaseAscendPage {
             hideAllPlayers(playerRef);
             playerStore.setPlayersHidden(playerRef.getUuid(), true);
             player.sendMessage(Message.raw("All players hidden."));
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             return;
         }
 
@@ -163,8 +163,7 @@ public class AscendSettingsPage extends BaseAscendPage {
             showAllPlayers(playerRef);
             playerStore.setPlayersHidden(playerRef.getUuid(), false);
             player.sendMessage(Message.raw("All players shown."));
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             return;
         }
     }
@@ -188,15 +187,12 @@ public class AscendSettingsPage extends BaseAscendPage {
                     .color(SystemMessageUtils.SECONDARY));
         }
 
-        player.getPageManager().openCustomPage(ref, store,
-                new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
+        player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
     }
 
     private void applyIndicators(UICommandBuilder cmd, UUID playerId) {
         // HUD indicators
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        boolean hudHidden = plugin != null && plugin.getHudManager() != null
-                && plugin.getHudManager().isHudHidden(playerId);
+        boolean hudHidden = playerId != null && hudManager != null && hudManager.isHudHidden(playerId);
         cmd.set("#HideHudIndicator.Visible", hudHidden);
         cmd.set("#ShowHudIndicator.Visible", !hudHidden);
 

@@ -14,9 +14,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
@@ -50,13 +47,18 @@ public class AscendMusicPage extends BaseAscendPage {
     private static final ConcurrentHashMap<UUID, Boolean> CHECKPOINT_SFX_ENABLED = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> VICTORY_SFX_ENABLED = new ConcurrentHashMap<>();
 
-    private final AscendPlayerStore playerStore;
-    private final RobotManager robotManager;
+    private final AscendMenuNavigator menuNavigator;
+    private final boolean fromProfile;
 
-    public AscendMusicPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, RobotManager robotManager) {
+    public AscendMusicPage(@Nonnull PlayerRef playerRef, @Nonnull AscendMenuNavigator menuNavigator) {
+        this(playerRef, menuNavigator, false);
+    }
+
+    public AscendMusicPage(@Nonnull PlayerRef playerRef, @Nonnull AscendMenuNavigator menuNavigator,
+                           boolean fromProfile) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
-        this.playerStore = playerStore;
-        this.robotManager = robotManager;
+        this.menuNavigator = menuNavigator;
+        this.fromProfile = fromProfile;
     }
 
     @Override
@@ -104,8 +106,7 @@ public class AscendMusicPage extends BaseAscendPage {
         }
 
         if (BUTTON_BACK.equals(data.getButton())) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendSettingsPage(playerRef, playerStore, robotManager));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             return;
         }
         if (BUTTON_PLAY_ZELDA.equals(data.getButton())) {
@@ -126,14 +127,12 @@ public class AscendMusicPage extends BaseAscendPage {
         }
         if (BUTTON_TOGGLE_CHECKPOINT_SFX.equals(data.getButton())) {
             toggleCheckpointSfx(playerRef.getUuid());
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendMusicPage(playerRef, playerStore, robotManager));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createMusicPage(playerRef, fromProfile));
             return;
         }
         if (BUTTON_TOGGLE_VICTORY_SFX.equals(data.getButton())) {
             toggleVictorySfx(playerRef.getUuid());
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendMusicPage(playerRef, playerStore, robotManager));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createMusicPage(playerRef, fromProfile));
         }
     }
 
@@ -178,8 +177,7 @@ public class AscendMusicPage extends BaseAscendPage {
             storeMusicLabel(playerRef.getUuid(), label);
             storeMusicSelection(playerRef.getUuid(), selection);
             packetHandler.write(new UpdateEnvironmentMusic(musicIndex));
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendMusicPage(playerRef, playerStore, robotManager));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createMusicPage(playerRef, fromProfile));
             player.sendMessage(Message.raw("Now playing: " + label + "."));
         });
     }

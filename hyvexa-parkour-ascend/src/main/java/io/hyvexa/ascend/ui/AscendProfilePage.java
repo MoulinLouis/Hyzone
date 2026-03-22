@@ -10,9 +10,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
@@ -24,13 +21,11 @@ public class AscendProfilePage extends BaseAscendPage {
     private static final String BUTTON_ACHIEVEMENTS = "Achievements";
     private static final String BUTTON_SETTINGS = "Settings";
 
-    private final AscendPlayerStore playerStore;
-    private final RobotManager robotManager;
+    private final AscendMenuNavigator menuNavigator;
 
-    public AscendProfilePage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, RobotManager robotManager) {
+    public AscendProfilePage(@Nonnull PlayerRef playerRef, @Nonnull AscendMenuNavigator menuNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
-        this.playerStore = playerStore;
-        this.robotManager = robotManager;
+        this.menuNavigator = menuNavigator;
     }
 
     @Override
@@ -67,29 +62,21 @@ public class AscendProfilePage extends BaseAscendPage {
             return;
         }
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-
         if (BUTTON_STATS.equals(data.getButton())) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new StatsPage(playerRef, playerStore, plugin.getMapStore(),
-                        plugin.getGhostStore(), plugin.getRunnerSpeedCalculator(), true));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createStatsPage(playerRef, true));
             return;
         }
 
         if (BUTTON_ACHIEVEMENTS.equals(data.getButton())) {
-            if (plugin.getAchievementManager() != null) {
+            if (menuNavigator.canOpenAchievementPage()) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new AscendAchievementPage(playerRef, playerStore, plugin.getAchievementManager(), true));
+                    menuNavigator.createAchievementPage(playerRef, true));
             }
             return;
         }
 
         if (BUTTON_SETTINGS.equals(data.getButton())) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendSettingsPage(playerRef, playerStore, robotManager, true));
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, true));
         }
     }
 }

@@ -41,6 +41,7 @@ public class StatsPage extends BaseAscendPage {
     private final AscendMapStore mapStore;
     private final GhostStore ghostStore;
     private final RunnerSpeedCalculator speedCalculator;
+    private final AscendMenuNavigator menuNavigator;
     private final boolean fromProfile;
     private ScheduledFuture<?> refreshTask;
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
@@ -49,17 +50,25 @@ public class StatsPage extends BaseAscendPage {
     public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
                      AscendMapStore mapStore, GhostStore ghostStore,
                      RunnerSpeedCalculator speedCalculator) {
-        this(playerRef, playerStore, mapStore, ghostStore, speedCalculator, false);
+        this(playerRef, playerStore, mapStore, ghostStore, speedCalculator, null, false);
     }
 
     public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
                      AscendMapStore mapStore, GhostStore ghostStore,
                      RunnerSpeedCalculator speedCalculator, boolean fromProfile) {
+        this(playerRef, playerStore, mapStore, ghostStore, speedCalculator, null, fromProfile);
+    }
+
+    public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
+                     AscendMapStore mapStore, GhostStore ghostStore,
+                     RunnerSpeedCalculator speedCalculator, AscendMenuNavigator menuNavigator,
+                     boolean fromProfile) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.ghostStore = ghostStore;
         this.speedCalculator = speedCalculator;
+        this.menuNavigator = menuNavigator;
         this.fromProfile = fromProfile;
     }
 
@@ -108,7 +117,7 @@ public class StatsPage extends BaseAscendPage {
     }
 
     private void navigateBackToProfile(Ref<EntityStore> ref, Store<EntityStore> store) {
-        BaseAscendPage.navigateBackToProfile(ref, store, playerStore, this);
+        BaseAscendPage.navigateBackToProfile(ref, store, menuNavigator, this);
     }
 
     private void updateAllStats(UICommandBuilder commandBuilder, UUID playerId) {

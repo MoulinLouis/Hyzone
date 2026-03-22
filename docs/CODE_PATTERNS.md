@@ -46,6 +46,7 @@ Composition root rule:
 1. `Plugin.setup()` creates stores/managers/services and wires them together.
 2. Commands, interactions, and other framework-owned entry points may read dependencies from the plugin singleton once to bootstrap.
 3. Business logic classes, pages, and helper services should not call `Plugin.getInstance().getXxx()` internally.
+4. If a page needs to open sibling pages, inject a small page factory/navigator rather than re-reading the plugin singleton inside the page.
 
 ## UI Pages
 

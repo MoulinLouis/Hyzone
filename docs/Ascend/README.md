@@ -56,6 +56,7 @@ Composition root note:
 - `ParkourAscendPlugin.setup()` owns dependency wiring for pages, managers, and helper services.
 - Commands and interactions may bootstrap from the plugin singleton because Hytale instantiates them.
 - Page/business logic should prefer constructor-injected stores/managers instead of calling back into `ParkourAscendPlugin`.
+- `AscendMenuNavigator` is the focused page-construction helper for profile/settings/music/stats/achievement flows; page classes should use it instead of reaching back into the plugin singleton to open sibling pages.
 
 ## Commands
 

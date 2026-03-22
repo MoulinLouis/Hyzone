@@ -8,7 +8,7 @@ This plan is now partially implemented.
 
 | Phase | Status | Handoff note |
 |-------|--------|--------------|
-| Phase 1 — Ascend plugin decoupling | In progress | 8 concrete Ascend consumers migrated; **109** `ParkourAscendPlugin.getInstance()` calls still remain in `hyvexa-parkour-ascend/src/main/java` |
+| Phase 1 — Ascend plugin decoupling | In progress | 11 concrete Ascend consumers migrated; **104** `ParkourAscendPlugin.getInstance()` calls still remain in `hyvexa-parkour-ascend/src/main/java` across **43** files |
 | Phase 2 — core interfaces | Partially completed | `CurrencyStore`, `PlayerAnalytics`, and `ConnectionProvider` exist, but most consumers are not typed against them yet |
 | Phase 3 — store `DatabaseManager` migration | Not started | No broad `ConnectionProvider` propagation yet |
 | Phase 4 — other module singleton cleanup | Not started | Purge, RunOrFall, Hub, Parkour, and Wardrobe are untouched |
@@ -18,6 +18,7 @@ This plan is now partially implemented.
 
 - **Phase 1: partial**
   - `ParkourAscendPlugin.setup()` now wires a shared `RunnerSpeedCalculator` and passes explicit dependencies into several Ascend pages/services instead of letting them reach back into the plugin singleton.
+  - Added `AscendMenuNavigator` to keep profile/settings/music/stats/achievement page construction at the boundary instead of inside page classes.
   - The following classes no longer call `ParkourAscendPlugin.getInstance()`:
     - `AscendMapSelectPage`
     - `AscendAdminVoltPage`
@@ -27,6 +28,9 @@ This plan is now partially implemented.
     - `MineAchievementsPage`
     - `StatsPage`
     - `PassiveEarningsManager`
+    - `BaseAscendPage`
+    - `AscendProfilePage`
+    - `AscendSettingsPage`
   - Commands / interaction bootstrap points were updated to pass those dependencies in from the plugin boundary.
   - `ParkourAscendPlugin` getters used as service-locator accessors were marked `@Deprecated` to signal the transition.
 
@@ -45,14 +49,15 @@ This plan is now partially implemented.
 
 - **Phase 1 still in progress**
   - `ParkourAscendPlugin.getInstance()` calls remain in Ascend.
-  - Current count after this slice: **109** remaining calls under `hyvexa-parkour-ascend/src/main/java`.
+  - Current count after this slice: **104** remaining calls under `hyvexa-parkour-ascend/src/main/java` across **43** files.
   - The largest remaining service-locator consumers are still manager/store layer classes, especially:
     - `RobotManager`
     - `AscendRunTracker`
     - `SummitManager`
     - `AscendPlayerStore`
-    - `AscendSettingsPage`
-    - `BaseAscendPage` / `AscendProfilePage`
+    - `AscensionPage`
+    - `ElevationPage`
+    - `AscendAdminPanelPage`
 
 - **Phase 2 not fully propagated**
   - Consumers are not yet broadly typed against `CurrencyStore`, `PlayerAnalytics`, or `ConnectionProvider`.
@@ -70,7 +75,7 @@ This plan is now partially implemented.
 1. Finish **Phase 1 in Ascend manager layer**:
    - Inject remaining hidden dependencies into `RobotManager`
    - Inject remaining hidden dependencies into `AscendRunTracker`
-   - Remove `ParkourAscendPlugin.getInstance()` from `AscendSettingsPage`, `BaseAscendPage`, and `AscendProfilePage`
+   - Remove `ParkourAscendPlugin.getInstance()` from `AscensionPage`, `ElevationPage`, `SummitPage`, and `AscendAdminPanelPage`
 
 2. Start **Phase 3 store migration** with low-risk targets:
    - `RunOrFallStatsStore`
@@ -94,13 +99,18 @@ This plan is now partially implemented.
 - Main Ascend wiring / page refactors:
   - `ParkourAscendPlugin`
   - `AscendCommand`
+  - `AscendMenuNavigator`
+  - `BaseAscendPage`
   - `MineCommand`
   - `AscendMapSelectPage`
   - `AscendAdminVoltPage`
   - `AscendMapLeaderboardPage`
   - `AscendAdminPanelPage`
+  - `AscendAchievementPage`
+  - `AscendMusicPage`
   - `StatsPage`
   - `AscendProfilePage`
+  - `AscendSettingsPage`
   - `PassiveEarningsManager`
   - `MinePage`
   - `MineBagPage`

@@ -69,6 +69,7 @@ import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ui.AscendHelpPage;
 import io.hyvexa.ascend.ui.AscendLeaderboardPage;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
+import io.hyvexa.ascend.ui.AscendMenuNavigator;
 import io.hyvexa.ascend.ui.AscendMusicPage;
 import io.hyvexa.ascend.ui.AscendProfilePage;
 import io.hyvexa.ascend.ui.AutomationPage;
@@ -1052,8 +1053,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Silk -> AscendProfilePage
         registry.register("Ascend_Dev_Silk_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
-                (ref, store, playerRef, plugin) -> new AscendProfilePage(playerRef,
-                    plugin.getPlayerStore(), plugin.getRobotManager()),
+                (ref, store, playerRef, plugin) -> plugin.createMenuNavigator().createProfilePage(playerRef),
                 (plugin, player) -> {
                     if (plugin.getPlayerStore() == null || plugin.getRobotManager() == null) {
                         player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
@@ -1100,5 +1100,17 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     playerRef, plugin.getMineAchievementTracker()),
                 (plugin, player) -> plugin.getMineAchievementTracker() != null,
                 false, true)));
+    }
+
+    private AscendMenuNavigator createMenuNavigator() {
+        return new AscendMenuNavigator(
+            playerStore,
+            mapStore,
+            ghostStore,
+            runnerSpeedCalculator,
+            achievementManager,
+            robotManager,
+            hudManager
+        );
     }
 }

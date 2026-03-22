@@ -27,18 +27,26 @@ public class AscendAchievementPage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private final AchievementManager achievementManager;
+    private final AscendMenuNavigator menuNavigator;
     private final boolean fromProfile;
 
     public AscendAchievementPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                                  AchievementManager achievementManager) {
-        this(playerRef, playerStore, achievementManager, false);
+                                 AchievementManager achievementManager) {
+        this(playerRef, playerStore, achievementManager, null, false);
     }
 
     public AscendAchievementPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                                  AchievementManager achievementManager, boolean fromProfile) {
+                                 AchievementManager achievementManager, boolean fromProfile) {
+        this(playerRef, playerStore, achievementManager, null, fromProfile);
+    }
+
+    public AscendAchievementPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
+                                 AchievementManager achievementManager, AscendMenuNavigator menuNavigator,
+                                 boolean fromProfile) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.achievementManager = achievementManager;
+        this.menuNavigator = menuNavigator;
         this.fromProfile = fromProfile;
     }
 
@@ -145,6 +153,6 @@ public class AscendAchievementPage extends BaseAscendPage {
     }
 
     private void navigateBackToProfile(Ref<EntityStore> ref, Store<EntityStore> store) {
-        BaseAscendPage.navigateBackToProfile(ref, store, playerStore, this);
+        BaseAscendPage.navigateBackToProfile(ref, store, menuNavigator, this);
     }
 }

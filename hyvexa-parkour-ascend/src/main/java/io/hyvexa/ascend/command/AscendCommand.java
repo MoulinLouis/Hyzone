@@ -32,6 +32,7 @@ import io.hyvexa.ascend.ui.AscensionPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.ui.ElevationPage;
 import io.hyvexa.ascend.ui.AscendHelpPage;
+import io.hyvexa.ascend.ui.AscendMenuNavigator;
 import io.hyvexa.ascend.ui.AscendProfilePage;
 import io.hyvexa.ascend.ui.AscendSettingsPage;
 import io.hyvexa.ascend.ui.AutomationPage;
@@ -225,8 +226,7 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openStatsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null) return;
-        StatsPage page = new StatsPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore(),
-            plugin.getGhostStore(), plugin.getRunnerSpeedCalculator());
+        StatsPage page = createMenuNavigator(plugin).createStatsPage(playerRef);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
@@ -301,15 +301,27 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openProfilePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) return;
-        AscendProfilePage page = new AscendProfilePage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager());
+        AscendProfilePage page = createMenuNavigator(plugin).createProfilePage(playerRef);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openSettingsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) return;
-        AscendSettingsPage page = new AscendSettingsPage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager());
+        AscendSettingsPage page = createMenuNavigator(plugin).createSettingsPage(playerRef);
         openTrackedPage(player, playerRef, ref, store, page);
+    }
+
+    private AscendMenuNavigator createMenuNavigator(ParkourAscendPlugin plugin) {
+        return new AscendMenuNavigator(
+            plugin.getPlayerStore(),
+            plugin.getMapStore(),
+            plugin.getGhostStore(),
+            plugin.getRunnerSpeedCalculator(),
+            plugin.getAchievementManager(),
+            plugin.getRobotManager(),
+            plugin.getHudManager()
+        );
     }
 
     private void openChallengePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {

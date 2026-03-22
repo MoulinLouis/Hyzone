@@ -7,8 +7,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
@@ -71,13 +69,11 @@ public abstract class BaseAscendPage extends InteractiveCustomUIPage<ButtonEvent
      * Navigates back to the AscendProfilePage, or closes the given page as fallback.
      */
     protected static void navigateBackToProfile(Ref<EntityStore> ref, Store<EntityStore> store,
-                                                 AscendPlayerStore playerStore, BaseAscendPage fallbackPage) {
+                                                AscendMenuNavigator menuNavigator, BaseAscendPage fallbackPage) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (player != null && playerRef != null && plugin != null && plugin.getRobotManager() != null) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendProfilePage(playerRef, playerStore, plugin.getRobotManager()));
+        if (player != null && playerRef != null && menuNavigator != null) {
+            player.getPageManager().openCustomPage(ref, store, menuNavigator.createProfilePage(playerRef));
         } else {
             fallbackPage.close();
         }
