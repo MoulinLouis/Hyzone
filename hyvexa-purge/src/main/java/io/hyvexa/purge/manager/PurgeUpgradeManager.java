@@ -174,7 +174,7 @@ public class PurgeUpgradeManager {
         if (weapon == null || weapon.isEmpty()) return;
 
         String itemId = weapon.getItemId();
-        Integer defaultMax = com.thescar.hygunsplugin.GunRegistry.getDefaultMaxAmmo(itemId);
+        Integer defaultMax = com.thescar.hygunsplugin.core.registry.GunRegistry.getDefaultMaxAmmo(itemId);
         if (defaultMax == null) return;
 
         // Apply weapon XP ammo multiplier to base magazine size
@@ -185,8 +185,8 @@ public class PurgeUpgradeManager {
         }
         int newMax = effectiveBase + bonusAmmo;
 
-        weapon = com.thescar.hygunsplugin.ItemStackUtils.setCustomInt(weapon, "Hyguns_MaxAmmo", newMax);
-        weapon = com.thescar.hygunsplugin.ItemStackUtils.setCustomInt(weapon, "Hyguns_Ammo", newMax);
+        weapon = com.thescar.hygunsplugin.core.util.ItemStackUtils.setCustomInt(weapon, "Hyguns_MaxAmmo", newMax);
+        weapon = com.thescar.hygunsplugin.core.util.ItemStackUtils.setCustomInt(weapon, "Hyguns_Ammo", newMax);
 
         inventory.getHotbar().setItemStackForSlot(SLOT_WEAPON, weapon, false);
     }

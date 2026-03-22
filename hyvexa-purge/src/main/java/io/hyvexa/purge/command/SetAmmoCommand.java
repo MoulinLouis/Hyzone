@@ -65,10 +65,10 @@ public class SetAmmoCommand extends AbstractAsyncCommand {
 
         // Read current values
         String itemId = weapon.getItemId();
-        Integer oldMaxAmmo = com.thescar.hygunsplugin.ItemStackUtils.getCustomInt(weapon, "Hyguns_MaxAmmo");
-        Integer oldAmmo = com.thescar.hygunsplugin.ItemStackUtils.getCustomInt(weapon, "Hyguns_Ammo");
-        Integer registryMax = com.thescar.hygunsplugin.GunRegistry.getDefaultMaxAmmo(itemId);
-        boolean isGun = com.thescar.hygunsplugin.GunRegistry.isGunItem(itemId);
+        Integer oldMaxAmmo = com.thescar.hygunsplugin.core.util.ItemStackUtils.getCustomInt(weapon, "Hyguns_MaxAmmo");
+        Integer oldAmmo = com.thescar.hygunsplugin.core.util.ItemStackUtils.getCustomInt(weapon, "Hyguns_Ammo");
+        Integer registryMax = com.thescar.hygunsplugin.core.registry.GunRegistry.getDefaultMaxAmmo(itemId);
+        boolean isGun = com.thescar.hygunsplugin.core.registry.GunRegistry.getDefaultMaxAmmo(itemId) != null;
 
         player.sendMessage(Message.raw("[setammo] Item: " + itemId
                 + " | isGun: " + isGun
@@ -77,17 +77,17 @@ public class SetAmmoCommand extends AbstractAsyncCommand {
                 + " | meta Ammo: " + oldAmmo));
 
         // Set new values
-        ItemStack modified = com.thescar.hygunsplugin.ItemStackUtils.setCustomInt(weapon, "Hyguns_MaxAmmo", newMax);
-        modified = com.thescar.hygunsplugin.ItemStackUtils.setCustomInt(modified, "Hyguns_Ammo", newMax);
+        ItemStack modified = com.thescar.hygunsplugin.core.util.ItemStackUtils.setCustomInt(weapon, "Hyguns_MaxAmmo", newMax);
+        modified = com.thescar.hygunsplugin.core.util.ItemStackUtils.setCustomInt(modified, "Hyguns_Ammo", newMax);
 
         inventory.getHotbar().setItemStackForSlot(SLOT_WEAPON, modified, false);
 
         // Verify the write
         ItemStack verify = inventory.getHotbar().getItemStack(SLOT_WEAPON);
         Integer verifyMax = verify != null
-                ? com.thescar.hygunsplugin.ItemStackUtils.getCustomInt(verify, "Hyguns_MaxAmmo") : null;
+                ? com.thescar.hygunsplugin.core.util.ItemStackUtils.getCustomInt(verify, "Hyguns_MaxAmmo") : null;
         Integer verifyAmmo = verify != null
-                ? com.thescar.hygunsplugin.ItemStackUtils.getCustomInt(verify, "Hyguns_Ammo") : null;
+                ? com.thescar.hygunsplugin.core.util.ItemStackUtils.getCustomInt(verify, "Hyguns_Ammo") : null;
 
         player.sendMessage(Message.raw("[setammo] SET -> MaxAmmo=" + newMax
                 + " | VERIFY read-back: MaxAmmo=" + verifyMax + " Ammo=" + verifyAmmo));
