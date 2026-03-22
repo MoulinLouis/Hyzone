@@ -99,7 +99,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
         initStore("VexaStore", () -> VexaStore.getInstance().initialize());
         initStore("DiscordLinkStore", () -> DiscordLinkStore.getInstance().initialize());
         initStore("AnalyticsStore", () -> AnalyticsStore.getInstance().initialize());
-        router = new HubRouter();
+        router = new HubRouter(AnalyticsStore.getInstance());
         preloadWorlds();
 
         registerInteractionCodecs();

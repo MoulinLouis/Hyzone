@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.Message;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.WorldConstants;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.hub.ui.HubMenuPage;
 
 import java.util.UUID;
@@ -25,6 +26,12 @@ public class HubRouter {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Vector3d DEFAULT_SPAWN = new Vector3d(0, 64, 0);
+
+    private final PlayerAnalytics analytics;
+
+    public HubRouter(PlayerAnalytics analytics) {
+        this.analytics = analytics;
+    }
 
     public void openMenuOrRoute(Ref<EntityStore> ref, Store<EntityStore> store,
                                 PlayerRef playerRef, World world) {
@@ -68,7 +75,7 @@ public class HubRouter {
                 return;
             }
             try {
-                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(
+                analytics.logEvent(
                         playerRef.getUuid(), "mode_switch",
                         "{\"to\":\"" + targetWorldName + "\"}");
             } catch (Exception e) { /* silent */ }

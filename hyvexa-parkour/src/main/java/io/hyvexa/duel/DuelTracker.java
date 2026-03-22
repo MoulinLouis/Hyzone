@@ -32,6 +32,7 @@ import io.hyvexa.duel.data.DuelMatchStore;
 import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.duel.data.DuelPreferenceStore.DuelCategory;
 import io.hyvexa.duel.data.DuelStatsStore;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -54,6 +55,7 @@ public class DuelTracker {
     private final DuelStatsStore statsStore;
     private final DuelPreferenceStore preferenceStore;
     private final MapStore mapStore;
+    private final PlayerAnalytics analytics;
     private final ConcurrentHashMap<String, DuelMatch> activeMatches = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> matchByPlayer = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, DuelPlayerState> playerStates = new ConcurrentHashMap<>();
@@ -63,12 +65,13 @@ public class DuelTracker {
     private final Random random = new Random();
 
     public DuelTracker(DuelQueue duelQueue, DuelMatchStore matchStore, DuelStatsStore statsStore,
-                       DuelPreferenceStore preferenceStore, MapStore mapStore) {
+                       DuelPreferenceStore preferenceStore, MapStore mapStore, PlayerAnalytics analytics) {
         this.duelQueue = duelQueue;
         this.matchStore = matchStore;
         this.statsStore = statsStore;
         this.preferenceStore = preferenceStore;
         this.mapStore = mapStore;
+        this.analytics = analytics;
     }
 
     public boolean isInMatch(@Nullable UUID playerId) {
@@ -808,7 +811,7 @@ public class DuelTracker {
 
         try {
             if (winnerId != null) {
-                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(winnerId, "duel_finish",
+                analytics.logEvent(winnerId, "duel_finish",
                         "{\"winner\":\"" + winnerId + "\",\"loser\":\"" + loserId
                         + "\",\"map_id\":\"" + match.getMapId()
                         + "\",\"reason\":\"" + reason.name() + "\"}");

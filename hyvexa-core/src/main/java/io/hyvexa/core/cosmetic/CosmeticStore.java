@@ -1,7 +1,7 @@
 package io.hyvexa.core.cosmetic;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import io.hyvexa.core.analytics.AnalyticsStore;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.CurrencyBridge;
 
@@ -30,8 +30,13 @@ public class CosmeticStore {
     private final ConcurrentHashMap<UUID, String> equippedCache = new ConcurrentHashMap<>();
     /** Sentinel value meaning no cosmetic is equipped. Empty string rather than null for safe map operations. */
     private static final String NONE_EQUIPPED = "";
+    private volatile PlayerAnalytics analytics;
 
     private CosmeticStore() {
+    }
+
+    public void setAnalytics(PlayerAnalytics analytics) {
+        this.analytics = analytics;
     }
 
     public static CosmeticStore getInstance() {
@@ -132,7 +137,9 @@ public class CosmeticStore {
         }
 
         purchaseCosmetic(playerId, cosmeticId);
-        AnalyticsStore.getInstance().logPurchase(playerId, cosmeticId, price, currency, "effects");
+        if (analytics != null) {
+            analytics.logPurchase(playerId, cosmeticId, price, currency, "effects");
+        }
         return new PurchaseResult(true, "Purchased " + def.getDisplayName() + "!");
     }
 

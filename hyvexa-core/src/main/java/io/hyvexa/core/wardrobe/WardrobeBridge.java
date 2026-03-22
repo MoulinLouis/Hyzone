@@ -2,7 +2,7 @@ package io.hyvexa.core.wardrobe;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
-import io.hyvexa.core.analytics.AnalyticsStore;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.CurrencyBridge;
@@ -30,6 +30,7 @@ public class WardrobeBridge {
 
     /** All wardrobe cosmetics available for purchase. Populated by initialize(). */
     private volatile List<WardrobeCosmeticDef> cosmetics = List.of();
+    private volatile PlayerAnalytics analytics;
 
     /** Maps fine-grained categories to broad shop groups. */
     private static final Map<String, String> CATEGORY_GROUPS = Map.ofEntries(
@@ -60,6 +61,10 @@ public class WardrobeBridge {
 
     public static WardrobeBridge getInstance() {
         return INSTANCE;
+    }
+
+    public void setAnalytics(PlayerAnalytics analytics) {
+        this.analytics = analytics;
     }
 
     public void initialize() {
@@ -138,7 +143,9 @@ public class WardrobeBridge {
         CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
 
         grantPermission(playerId, def.permissionNode());
-        AnalyticsStore.getInstance().logPurchase(playerId, cosmeticId, price, currency, "wardrobe");
+        if (analytics != null) {
+            analytics.logPurchase(playerId, cosmeticId, price, currency, "wardrobe");
+        }
 
         LOGGER.atInfo().log("Player " + playerId + " purchased wardrobe cosmetic: " + cosmeticId);
         return success("Purchased " + def.displayName() + " for " + price + " "

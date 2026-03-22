@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
 
@@ -34,12 +35,17 @@ public class DiscordLinkStore {
 
     private final ConcurrentHashMap<UUID, DiscordLink> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> rewardCheckedThisSession = new ConcurrentHashMap<>();
+    private volatile PlayerAnalytics analytics;
 
     private DiscordLinkStore() {
     }
 
     public static DiscordLinkStore getInstance() {
         return INSTANCE;
+    }
+
+    public void setAnalytics(PlayerAnalytics analytics) {
+        this.analytics = analytics;
     }
 
     /**
@@ -261,7 +267,9 @@ public class DiscordLinkStore {
 
         LOGGER.atInfo().log("Awarded " + VEXA_REWARD + " vexa to " + playerId + " for Discord link");
         try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "discord_link", "{}");
+            if (analytics != null) {
+                analytics.logEvent(playerId, "discord_link", "{}");
+            }
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to log discord_link analytics event for " + playerId);
         }

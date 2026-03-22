@@ -20,9 +20,11 @@ import io.hyvexa.duel.interaction.DuelMenuInteraction;
 import io.hyvexa.duel.interaction.ForfeitInteraction;
 import io.hyvexa.core.bridge.GameModeBridge;
 import io.hyvexa.core.analytics.AnalyticsStore;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
+import io.hyvexa.core.wardrobe.WardrobeBridge;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.core.trail.TrailManager;
 
@@ -241,14 +243,19 @@ public class HyvexaPlugin extends JavaPlugin {
         this.mapStore.setOnChangeListener(this::onMapStoreChanged);
         this.settingsStore = new SettingsStore();
         this.settingsStore.syncLoad();
+        PlayerAnalytics analytics = AnalyticsStore.getInstance();
+        CosmeticStore.getInstance().setAnalytics(analytics);
+        DiscordLinkStore.getInstance().setAnalytics(analytics);
+        WardrobeBridge.getInstance().setAnalytics(analytics);
         this.progressStore = new ProgressStore();
+        this.progressStore.setAnalytics(analytics);
         this.progressStore.syncLoad();
         this.playerCountStore = new PlayerCountStore();
         this.playerCountStore.syncLoad();
         this.globalMessageStore = new GlobalMessageStore();
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore,
-                this.medalStore, this.medalRewardStore);
+                this.medalStore, this.medalRewardStore, analytics);
         this.runStateStore = new RunStateStore();
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
@@ -282,7 +289,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.duelPreferenceStore = new DuelPreferenceStore();
         this.duelPreferenceStore.syncLoad();
         this.duelQueue = new DuelQueue();
-        this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore);
+        this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, analytics);
         this.perksManager = new PlayerPerksManager(progressStore, mapStore);
         this.chatFormatter = new ChatFormatter(progressStore, mapStore, perksManager);
         this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager);

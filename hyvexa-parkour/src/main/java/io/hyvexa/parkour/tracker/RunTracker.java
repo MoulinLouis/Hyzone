@@ -35,6 +35,7 @@ import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.parkour.util.ParkourUtils;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -63,16 +64,18 @@ public class RunTracker {
     private final RunValidator validator;
     private final RunSessionTracker sessionTracker;
     private final RunTeleporter teleporter;
+    private final PlayerAnalytics analytics;
     private RunStateStore runStateStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore, MedalStore medalStore,
-                             MedalRewardStore medalRewardStore) {
+                             MedalRewardStore medalRewardStore, PlayerAnalytics analytics) {
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.settingsStore = settingsStore;
+        this.analytics = analytics;
         this.jumpTracker = new JumpTracker(progressStore);
         this.validator = new RunValidator(mapStore, progressStore, medalStore, medalRewardStore);
         this.sessionTracker = new RunSessionTracker(mapStore, progressStore);
@@ -113,7 +116,7 @@ public class RunTracker {
             ghostNpcManager.spawnGhost(playerId, mapId);
         }
         try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "map_start",
+            analytics.logEvent(playerId, "map_start",
                     "{\"map_id\":\"" + mapId + "\"}");
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to log map_start analytics event");

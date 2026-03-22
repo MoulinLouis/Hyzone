@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.HyvexaPlugin;
@@ -45,6 +46,11 @@ public class ProgressStore {
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private final AtomicLong cachedTotalXp = new AtomicLong(-1L);
+    private volatile PlayerAnalytics analytics;
+
+    public void setAnalytics(PlayerAnalytics analytics) {
+        this.analytics = analytics;
+    }
 
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
@@ -347,17 +353,19 @@ public class ProgressStore {
         }
         queueSave();
         persistCompletionAsync(completionPersistenceRequest, completionSavedCallback);
-        try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "map_complete",
-                    "{\"map_id\":\"" + mapId + "\",\"time_ms\":" + timeMs
-                    + ",\"is_pb\":" + result.newBest
-                    + ",\"first_completion\":" + result.firstCompletion + "}");
-            if (result.oldLevel != result.newLevel) {
-                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "level_up",
-                        "{\"old_level\":" + result.oldLevel
-                        + ",\"new_level\":" + result.newLevel + "}");
-            }
-        } catch (Exception e) { /* silent */ }
+        if (analytics != null) {
+            try {
+                analytics.logEvent(playerId, "map_complete",
+                        "{\"map_id\":\"" + mapId + "\",\"time_ms\":" + timeMs
+                        + ",\"is_pb\":" + result.newBest
+                        + ",\"first_completion\":" + result.firstCompletion + "}");
+                if (result.oldLevel != result.newLevel) {
+                    analytics.logEvent(playerId, "level_up",
+                            "{\"old_level\":" + result.oldLevel
+                            + ",\"new_level\":" + result.newLevel + "}");
+                }
+            } catch (Exception e) { /* silent */ }
+        }
         return result;
     }
 
