@@ -148,6 +148,7 @@ Player base HP in Hytale is **100** (not 20 like Minecraft). Don't add HP modifi
 4. **Inventory access** - Need `Player` component, not just `PlayerRef`
 5. **Event registration** - Use `getEventRegistry().registerGlobal(...)` in `setup()`
 6. **UI page lifecycle** - Override `onDismiss()` for cleanup, never call `close()` from it (see below)
+7. **Unicode in chat messages** - Hytale client displays many Unicode characters as `?`. Use ASCII alternatives: `->` instead of `→`, `x` instead of `×`, `-` instead of `–`/`—`
 
 ### UI Page Lifecycle
 

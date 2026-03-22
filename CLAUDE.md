@@ -48,17 +48,9 @@ Quick reference for AI agents working on this Hytale plugin project.
 2. **Update docs/Ascend/ECONOMY_BALANCE.md** when modifying game economy (costs, rewards, multipliers, formulas)
 3. **Follow existing patterns** - check similar files before implementing
 4. **Reuse existing Managers** - Many Manager classes (~50) exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
-5. **Run tests selectively** - only run tests when explicitly asked OR after large/significant changes (new features, multi-file refactors). Do NOT run tests after every small task. Only pure-logic classes with zero Hytale imports are testable — classes importing Hytale types (e.g. `Message`, `HytaleLogger`, `EntityRef`) cannot be tested without `HytaleServer.jar` on the test classpath (not yet configured).
-6. **UI paths** - Code uses `"Pages/X.ui"`, files go in `Common/UI/Custom/Pages/`
-7. **Check ref validity** - `if (ref == null || !ref.isValid()) return;`
-8. **World thread for entity ops** - use `world.execute(() -> ...)` or `CompletableFuture.runAsync(..., world)`
-9. **Entity removal** - use `store.removeEntity(ref, RemoveReason.REMOVE)`
-10. **Singleton components** - check for `INSTANCE` or `get()` (e.g., `Invulnerable.INSTANCE`)
-11. **Track online players** - only spawn per-player entities for connected players
-12. **Disable NPC AI** - use `Frozen` component to prevent autonomous movement
-13. **Avoid Unicode in chat messages** - Hytale client displays many Unicode characters as `?`. Use ASCII alternatives: `->` instead of `→`, `x` instead of `×`, `-` instead of `–`/`—`
-14. **No auto-memory for project knowledge** - Multiple agents work on this repo. Store discoveries in `docs/` not in Claude's auto-memory, so all agents benefit.
-15. **Plans go in `docs/plans/`** - Write implementation plans as `.md` files in the project, not only in Claude's internal plan file, so other agents can reference them.
+5. **Run tests selectively** - only when explicitly asked or after large changes. Only pure-logic classes (zero Hytale imports) are testable.
+6. **No auto-memory for project knowledge** - Multiple agents work on this repo. Store discoveries in `docs/` not in Claude's auto-memory, so all agents benefit.
+7. **Plans go in `docs/plans/`** - Write implementation plans as `.md` files in the project, not only in Claude's internal plan file, so other agents can reference them.
 
 ## UI Patterns
 - Never use dynamic Background property changes on UI elements — they don't work in Hytale's UI system
