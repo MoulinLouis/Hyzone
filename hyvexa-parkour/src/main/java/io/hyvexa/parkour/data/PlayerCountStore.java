@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -21,17 +22,23 @@ public class PlayerCountStore {
     public static final long DEFAULT_RETENTION_DAYS = 7L;
     private static final long DEFAULT_SAVE_INTERVAL_MS = TimeUnit.SECONDS.toMillis(DEFAULT_SAMPLE_INTERVAL_SECONDS);
 
+    private final ConnectionProvider db;
     private final List<Sample> samples = new ArrayList<>();
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private final long retentionMs;
     private long lastSavedAtMs;
 
     public PlayerCountStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public PlayerCountStore(ConnectionProvider db) {
+        this.db = db;
         this.retentionMs = TimeUnit.DAYS.toMillis(DEFAULT_RETENTION_DAYS);
     }
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PlayerCountStore will be empty");
             return;
         }
@@ -43,7 +50,7 @@ public class PlayerCountStore {
         try {
             samples.clear();
 
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (Connection conn = this.db.getConnection()) {
                 if (conn == null) {
                     LOGGER.atWarning().log("Failed to acquire database connection");
                     return;
@@ -75,12 +82,12 @@ public class PlayerCountStore {
     }
 
     private void pruneOldSamplesFromDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         long cutoff = System.currentTimeMillis() - retentionMs;
         String sql = "DELETE FROM player_count_samples WHERE timestamp_ms < ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -120,7 +127,7 @@ public class PlayerCountStore {
     }
 
     public void clearAll() {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         fileLock.writeLock().lock();
         try {
@@ -131,7 +138,7 @@ public class PlayerCountStore {
         }
 
         String sql = "DELETE FROM player_count_samples";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -146,11 +153,11 @@ public class PlayerCountStore {
     }
 
     private void saveSampleToDatabase(long timestampMs, int count) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = "INSERT INTO player_count_samples (timestamp_ms, count) VALUES (?, ?)";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;

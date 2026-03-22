@@ -1,6 +1,7 @@
 package io.hyvexa.duel.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import javax.annotation.Nonnull;
@@ -61,14 +62,23 @@ public class DuelPreferenceStore {
         )
         """;
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, EnumSet<DuelCategory>> enabledByPlayer = new ConcurrentHashMap<>();
+
+    public DuelPreferenceStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public DuelPreferenceStore(ConnectionProvider db) {
+        this.db = db;
+    }
 
     private static EnumSet<DuelCategory> defaultEnabled() {
         return EnumSet.of(DuelCategory.EASY, DuelCategory.MEDIUM);
     }
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, DuelPreferenceStore will be empty");
             return;
         }
@@ -77,7 +87,7 @@ public class DuelPreferenceStore {
             SELECT player_uuid, easy_enabled, medium_enabled, hard_enabled, insane_enabled
             FROM duel_category_prefs
             """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -114,7 +124,7 @@ public class DuelPreferenceStore {
     }
 
     private void ensureTable() {
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -182,7 +192,7 @@ public class DuelPreferenceStore {
     }
 
     private void save(@Nonnull UUID playerId, @Nonnull Set<DuelCategory> enabled) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = """
@@ -195,7 +205,7 @@ public class DuelPreferenceStore {
                 insane_enabled = VALUES(insane_enabled),
                 updated_at = VALUES(updated_at)
             """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;

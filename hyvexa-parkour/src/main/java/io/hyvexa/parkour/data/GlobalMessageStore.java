@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -26,15 +27,21 @@ public class GlobalMessageStore {
             "Any suggestion? Tell us on Discord! ({link})."
     );
 
+    private final ConnectionProvider db;
     private final List<String> messages = new ArrayList<>();
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private long intervalMinutes = DEFAULT_INTERVAL_MINUTES;
 
     public GlobalMessageStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public GlobalMessageStore(ConnectionProvider db) {
+        this.db = db;
     }
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, using defaults for GlobalMessageStore");
             applyDefaults();
             return;
@@ -60,7 +67,7 @@ public class GlobalMessageStore {
     private void loadSettings() {
         String sql = "SELECT interval_minutes FROM global_message_settings WHERE id = 1";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 intervalMinutes = DEFAULT_INTERVAL_MINUTES;
@@ -86,7 +93,7 @@ public class GlobalMessageStore {
     private void insertDefaultSettings() {
         String sql = "INSERT INTO global_message_settings (id, interval_minutes) VALUES (1, ?)";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -104,7 +111,7 @@ public class GlobalMessageStore {
     private void loadMessages() {
         String sql = "SELECT message FROM global_messages ORDER BY display_order, id";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -126,7 +133,7 @@ public class GlobalMessageStore {
     }
 
     private void saveAllToDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         // Save settings
         String settingsSql = """
@@ -134,7 +141,7 @@ public class GlobalMessageStore {
             ON DUPLICATE KEY UPDATE interval_minutes = VALUES(interval_minutes)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -152,7 +159,7 @@ public class GlobalMessageStore {
         String deleteSql = "DELETE FROM global_messages";
         String insertSql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
 
-        DatabaseManager.getInstance().withTransaction(conn -> {
+        this.db.withTransaction(conn -> {
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 DatabaseManager.applyQueryTimeout(deleteStmt);
@@ -200,11 +207,11 @@ public class GlobalMessageStore {
     }
 
     private void saveSettings() {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = "UPDATE global_message_settings SET interval_minutes = ? WHERE id = 1";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -239,11 +246,11 @@ public class GlobalMessageStore {
     }
 
     private void addMessageToDatabase(String message, int order) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;

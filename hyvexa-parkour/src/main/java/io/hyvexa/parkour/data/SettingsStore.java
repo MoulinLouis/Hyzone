@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -22,6 +23,7 @@ public class SettingsStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Gson GSON = new Gson();
     private static final Type CATEGORY_LIST_TYPE = new TypeToken<List<String>>() {}.getType();
+    private final ConnectionProvider db;
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
 
     private double fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
@@ -33,10 +35,15 @@ public class SettingsStore {
     private boolean teleportDebugEnabled = false;
 
     public SettingsStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public SettingsStore(ConnectionProvider db) {
+        this.db = db;
     }
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, using defaults for SettingsStore");
             return;
         }
@@ -48,7 +55,7 @@ public class SettingsStore {
             FROM settings WHERE id = 1
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -127,7 +134,7 @@ public class SettingsStore {
             VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -154,7 +161,7 @@ public class SettingsStore {
     }
 
     private void syncSave() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
@@ -196,7 +203,7 @@ public class SettingsStore {
             WHERE id = 1
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;

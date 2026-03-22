@@ -2,6 +2,7 @@ package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -22,12 +23,21 @@ import java.util.concurrent.CompletableFuture;
 public class RunStateStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private final ConnectionProvider db;
+
+    public RunStateStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public RunStateStore(ConnectionProvider db) {
+        this.db = db;
+    }
 
     public void ensureTable() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS saved_run_state (
@@ -69,7 +79,7 @@ public class RunStateStore {
                  checkpoint_times, map_updated_at, saved_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, mapId);
@@ -92,7 +102,7 @@ public class RunStateStore {
     private SavedRunState loadSync(UUID playerId) {
         String sql = "SELECT map_id, elapsed_ms, last_checkpoint, touched_checkpoints, " +
                 "checkpoint_times, map_updated_at, saved_at FROM saved_run_state WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
@@ -125,7 +135,7 @@ public class RunStateStore {
 
     private void deleteSync(UUID playerId) {
         String sql = "DELETE FROM saved_run_state WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.executeUpdate();

@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import javax.annotation.Nonnull;
@@ -65,21 +66,27 @@ public class PlayerSettingsPersistence {
         """;
 
     private static PlayerSettingsPersistence INSTANCE;
+    private final ConnectionProvider db;
 
     public static PlayerSettingsPersistence getInstance() {
         return INSTANCE;
     }
 
     public PlayerSettingsPersistence() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public PlayerSettingsPersistence(ConnectionProvider db) {
+        this.db = db;
         INSTANCE = this;
     }
 
     public void ensureTable() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, player_settings table will not be created");
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -95,10 +102,10 @@ public class PlayerSettingsPersistence {
 
     @Nonnull
     public PlayerSettings loadPlayer(@Nonnull UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return new PlayerSettings();
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 return new PlayerSettings();
             }
@@ -129,10 +136,10 @@ public class PlayerSettingsPersistence {
     }
 
     public void savePlayer(@Nonnull UUID playerId, @Nonnull PlayerSettings settings) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection for settings save");
                 return;

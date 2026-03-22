@@ -2,6 +2,7 @@ package io.hyvexa.duel.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.duel.DuelMatch;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import javax.annotation.Nonnull;
@@ -13,6 +14,16 @@ import java.sql.Timestamp;
 public class DuelMatchStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private final ConnectionProvider db;
+
+    public DuelMatchStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public DuelMatchStore(ConnectionProvider db) {
+        this.db = db;
+    }
+
     private static final String CREATE_TABLE_SQL = """
         CREATE TABLE IF NOT EXISTS duel_matches (
             id VARCHAR(36) PRIMARY KEY,
@@ -28,10 +39,10 @@ public class DuelMatchStore {
         """;
 
     public void ensureTable() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -46,7 +57,7 @@ public class DuelMatchStore {
     }
 
     public void saveMatch(@Nonnull DuelMatch match) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = """
@@ -54,7 +65,7 @@ public class DuelMatchStore {
                 player1_time_ms, player2_time_ms, finish_reason, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;

@@ -2,6 +2,7 @@ package io.hyvexa.duel.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.BasePlayerStore;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import javax.annotation.Nonnull;
@@ -16,6 +17,14 @@ import java.util.UUID;
 public class DuelStatsStore extends BasePlayerStore<DuelStats> {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+
+    public DuelStatsStore() {
+        super();
+    }
+
+    public DuelStatsStore(ConnectionProvider db) {
+        super(db);
+    }
     private static final String CREATE_TABLE_SQL = """
         CREATE TABLE IF NOT EXISTS duel_player_stats (
             player_uuid VARCHAR(36) PRIMARY KEY,
@@ -29,7 +38,7 @@ public class DuelStatsStore extends BasePlayerStore<DuelStats> {
         "SELECT player_uuid, player_name, wins, losses FROM duel_player_stats";
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!getConnectionProvider().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, DuelStatsStore will be empty");
             return;
         }
@@ -45,7 +54,7 @@ public class DuelStatsStore extends BasePlayerStore<DuelStats> {
     }
 
     private void ensureTable() {
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = getConnectionProvider().getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, CREATE_TABLE_SQL)) {
             stmt.executeUpdate();
         } catch (SQLException e) {
