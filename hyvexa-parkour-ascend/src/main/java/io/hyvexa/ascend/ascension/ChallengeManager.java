@@ -10,6 +10,7 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -37,14 +38,16 @@ public class ChallengeManager {
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
     private final AscendRunTracker runTracker;
+    private final PlayerAnalytics analytics;
 
     // In-memory cache of active challenges
     private final ConcurrentHashMap<UUID, ActiveChallenge> activeChallenges = new ConcurrentHashMap<>();
 
-    public ChallengeManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker) {
+    public ChallengeManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, PlayerAnalytics analytics) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.runTracker = Objects.requireNonNull(runTracker, "runTracker");
+        this.analytics = analytics;
     }
 
     /**
@@ -95,7 +98,7 @@ public class ChallengeManager {
 
         LOGGER.atInfo().log("[Challenge] Player " + playerId + " started challenge: " + challengeType.name());
         try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_challenge_start",
+            analytics.logEvent(playerId, "ascend_challenge_start",
                     "{\"type\":\"" + challengeType.name() + "\"}");
         } catch (Exception e) { /* silent */ }
         return mapsWithRunners;
@@ -138,7 +141,7 @@ public class ChallengeManager {
         LOGGER.atInfo().log("[Challenge] Player " + playerId + " completed " + active.challengeType().name()
             + " in " + elapsedMs + "ms");
         try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_challenge_complete",
+            analytics.logEvent(playerId, "ascend_challenge_complete",
                     "{\"type\":\"" + active.challengeType().name() + "\",\"time_ms\":" + elapsedMs + "}");
         } catch (Exception e) { /* silent */ }
         return elapsedMs;

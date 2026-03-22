@@ -399,7 +399,8 @@ public class AscendCommand extends AbstractAsyncCommand {
         AscendMapLeaderboardPage page = new AscendMapLeaderboardPage(playerRef, plugin.getPlayerStore(),
             plugin.getMapStore(), plugin.getRunTracker(), plugin.getRobotManager(), plugin.getGhostStore(),
             plugin.getAscensionManager(), plugin.getChallengeManager(), plugin.getSummitManager(), plugin.getTranscendenceManager(),
-            plugin.getAchievementManager(), plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator());
+            plugin.getAchievementManager(), plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator(),
+            plugin.getAnalytics());
         openUntrackedPage(player, playerRef, ref, store, page);
     }
 
@@ -438,7 +439,8 @@ public class AscendCommand extends AbstractAsyncCommand {
             robotManager, ghostStore, plugin.getAscensionManager(), plugin.getChallengeManager(),
             plugin.getSummitManager(),
             plugin.getTranscendenceManager(), plugin.getAchievementManager(),
-            plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator());
+            plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator(),
+            plugin.getAnalytics());
         openTrackedPage(player, playerRef, ref, store, page);
     }
 

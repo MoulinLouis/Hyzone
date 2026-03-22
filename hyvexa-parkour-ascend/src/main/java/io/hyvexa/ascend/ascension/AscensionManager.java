@@ -7,6 +7,7 @@ import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 
 import java.util.Set;
 import java.util.UUID;
@@ -21,10 +22,12 @@ public class AscensionManager {
 
     private final AscendPlayerStore playerStore;
     private final AscendRunTracker runTracker;
+    private final PlayerAnalytics analytics;
 
-    public AscensionManager(AscendPlayerStore playerStore, AscendRunTracker runTracker) {
+    public AscensionManager(AscendPlayerStore playerStore, AscendRunTracker runTracker, PlayerAnalytics analytics) {
         this.playerStore = playerStore;
         this.runTracker = runTracker;
+        this.analytics = analytics;
     }
 
     /**
@@ -93,7 +96,7 @@ public class AscensionManager {
             + ", AP gained: " + apGained + ", total AP: " + newPoints);
 
         try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_ascension",
+            analytics.logEvent(playerId, "ascend_ascension",
                     "{\"count\":" + newAscensionCount + "}");
         } catch (Exception e) { /* silent */ }
 

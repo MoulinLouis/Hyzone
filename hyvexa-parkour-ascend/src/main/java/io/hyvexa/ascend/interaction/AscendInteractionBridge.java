@@ -21,6 +21,7 @@ import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.ui.AscendMenuNavigator;
 import io.hyvexa.common.ghost.GhostStore;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 
 /**
  * Narrow static bootstrap for codec-instantiated interactions.
@@ -66,6 +67,7 @@ public final class AscendInteractionBridge {
         MineAchievementTracker mineAchievementTracker,
         MineRobotManager mineRobotManager,
         MineGateChecker mineGateChecker,
-        AscendMenuNavigator menuNavigator
+        AscendMenuNavigator menuNavigator,
+        PlayerAnalytics analytics
     ) {}
 }

@@ -23,6 +23,7 @@ import io.hyvexa.ascend.command.SummitCommand;
 import io.hyvexa.ascend.command.TranscendCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.analytics.AnalyticsStore;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.VexaStore;
@@ -123,6 +124,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AchievementManager achievementManager;
     private PassiveEarningsManager passiveEarningsManager;
     private TutorialTriggerService tutorialTriggerService;
+    private PlayerAnalytics analytics;
     private RunnerSpeedCalculator runnerSpeedCalculator;
     private MineConfigStore mineConfigStore;
     private MineBonusCalculator mineBonusCalculator;
@@ -263,6 +265,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         // Pass ghost dependencies to managers
+        analytics = AnalyticsStore.getInstance();
+        playerStore.setAnalytics(analytics);
         runTracker = new AscendRunTracker(
             mapStore,
             playerStore,
@@ -270,20 +274,20 @@ public class ParkourAscendPlugin extends JavaPlugin {
             settingsStore,
             mineBonusCalculator,
             minePlayerStore,
-            AnalyticsStore.getInstance()
+            analytics
         );
         mapStore.setOnChangeListener(runTracker::onMapStoreChanged);
-        ascensionManager = new AscensionManager(playerStore, runTracker);
-        transcendenceManager = new TranscendenceManager(playerStore, runTracker);
-        challengeManager = new ChallengeManager(playerStore, mapStore, runTracker);
+        ascensionManager = new AscensionManager(playerStore, runTracker, analytics);
+        transcendenceManager = new TranscendenceManager(playerStore, runTracker, analytics);
+        challengeManager = new ChallengeManager(playerStore, mapStore, runTracker, analytics);
         summitManager = new SummitManager(
             playerStore,
             mapStore,
             challengeManager,
             ascensionManager,
-            AnalyticsStore.getInstance()
+            analytics
         );
-        achievementManager = new AchievementManager(playerStore);
+        achievementManager = new AchievementManager(playerStore, analytics);
         tutorialTriggerService = new TutorialTriggerService(playerStore, runTracker, this::getPlayerRef);
         runTracker.setPrestigeServices(
             achievementManager,
@@ -408,7 +412,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineAchievementTracker,
             mineRobotManager,
             mineGateChecker,
-            createMenuNavigator()
+            createMenuNavigator(),
+            analytics
         ));
         registerInteractionCodecs();
 
@@ -770,6 +775,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
     }
 
     @Deprecated
+    public PlayerAnalytics getAnalytics() {
+        return analytics;
+    }
+
+    @Deprecated
     public AscendWhitelistManager getWhitelistManager() {
         return whitelistManager;
     }
@@ -1106,7 +1116,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     services.robotManager(), services.ghostStore(),
                     services.ascensionManager(), services.challengeManager(), services.summitManager(),
                     services.transcendenceManager(), services.achievementManager(),
-                    services.tutorialTriggerService(), services.runnerSpeedCalculator()),
+                    services.tutorialTriggerService(), services.runnerSpeedCalculator(),
+                    services.analytics()),
                 (services, player) -> {
                     if (services.mapStore() == null || services.playerStore() == null
                             || services.runTracker() == null || services.ghostStore() == null) {

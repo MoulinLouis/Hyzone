@@ -6,6 +6,7 @@ import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 
 import java.util.UUID;
 
@@ -20,10 +21,12 @@ public class TranscendenceManager {
 
     private final AscendPlayerStore playerStore;
     private final AscendRunTracker runTracker;
+    private final PlayerAnalytics analytics;
 
-    public TranscendenceManager(AscendPlayerStore playerStore, AscendRunTracker runTracker) {
+    public TranscendenceManager(AscendPlayerStore playerStore, AscendRunTracker runTracker, PlayerAnalytics analytics) {
         this.playerStore = playerStore;
         this.runTracker = runTracker;
+        this.analytics = analytics;
     }
 
     /**
@@ -105,7 +108,7 @@ public class TranscendenceManager {
         LOGGER.atInfo().log("[Transcendence] Player " + playerId + " transcended! Count: " + newCount);
 
         try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_transcendence",
+            analytics.logEvent(playerId, "ascend_transcendence",
                     "{\"count\":" + newCount + "}");
         } catch (Exception e) { /* silent */ }
 

@@ -9,6 +9,7 @@ import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,9 +24,11 @@ public class AchievementManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final AscendPlayerStore playerStore;
+    private final PlayerAnalytics analytics;
 
-    public AchievementManager(AscendPlayerStore playerStore) {
+    public AchievementManager(AscendPlayerStore playerStore, PlayerAnalytics analytics) {
         this.playerStore = playerStore;
+        this.analytics = analytics;
     }
 
     /**
@@ -55,7 +58,7 @@ public class AchievementManager {
                 }
 
                 try {
-                    io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_achievement",
+                    analytics.logEvent(playerId, "ascend_achievement",
                             "{\"achievement_id\":\"" + achievement.name() + "\"}");
                 } catch (Exception e) { /* silent */ }
 

@@ -16,6 +16,7 @@ import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -51,9 +52,14 @@ public class AscendPlayerStore {
     private volatile AscendMapStore runtimeMapStore;
     private volatile GhostStore ghostStore;
     private volatile Function<UUID, PlayerRef> playerRefLookup;
+    private volatile PlayerAnalytics analytics;
 
     public AscendPlayerStore() {
         this.persistence = new AscendPlayerPersistence(players, playerNames, resetPendingPlayers);
+    }
+
+    public void setAnalytics(PlayerAnalytics analytics) {
+        this.analytics = analytics;
     }
 
     public void setRuntimeServices(ChallengeManager challengeManager,
@@ -271,10 +277,12 @@ public class AscendPlayerStore {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         int value = progress.addElevationMultiplier(amount);
         markDirty(playerId);
-        try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_elevation_up",
-                    "{\"new_level\":" + value + "}");
-        } catch (Exception e) { /* silent */ }
+        if (analytics != null) {
+            try {
+                analytics.logEvent(playerId, "ascend_elevation_up",
+                        "{\"new_level\":" + value + "}");
+            } catch (Exception e) { /* silent */ }
+        }
         return value;
     }
 

@@ -52,6 +52,7 @@ import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 
 public class AscendMapSelectPage extends BaseAscendPage {
 
@@ -86,6 +87,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final AchievementManager achievementManager;
     private final TutorialTriggerService tutorialTriggerService;
     private final RunnerSpeedCalculator speedCalculator;
+    private final PlayerAnalytics analytics;
     private ScheduledFuture<?> refreshTask;
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
     private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
@@ -102,7 +104,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
                                TranscendenceManager transcendenceManager,
                                AchievementManager achievementManager,
                                TutorialTriggerService tutorialTriggerService,
-                               RunnerSpeedCalculator speedCalculator) {
+                               RunnerSpeedCalculator speedCalculator,
+                               PlayerAnalytics analytics) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.playerStore = playerStore;
@@ -114,6 +117,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         this.summitManager = summitManager;
         this.transcendenceManager = transcendenceManager;
         this.achievementManager = achievementManager;
+        this.analytics = analytics;
         this.tutorialTriggerService = tutorialTriggerService;
         this.speedCalculator = speedCalculator;
     }
@@ -621,7 +625,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
             AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.SUCCESS, "Runner purchased!");
             try {
-                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerRef.getUuid(), "ascend_runner_buy",
+                analytics.logEvent(playerRef.getUuid(), "ascend_runner_buy",
                         "{\"map_id\":\"" + mapId + "\"}");
             } catch (Exception e) { /* silent */ }
             updateRobotRow(ref, store, mapId);
@@ -646,7 +650,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     tutorialTriggerService.checkEvolution(playerRef.getUuid(), ref);
                 }
                 try {
-                    io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerRef.getUuid(), "ascend_runner_evolve",
+                    analytics.logEvent(playerRef.getUuid(), "ascend_runner_evolve",
                             "{\"map_id\":\"" + mapId + "\",\"new_stars\":" + newStars + "}");
                 } catch (Exception e) { /* silent */ }
                 // Check achievements
@@ -1191,7 +1195,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         player.getPageManager().openCustomPage(ref, store,
             new AscendMapLeaderboardPage(playerRef, playerStore, mapStore, runTracker, robotManager, ghostStore,
                 ascensionManager, challengeManager, summitManager, transcendenceManager,
-                achievementManager, tutorialTriggerService, speedCalculator));
+                achievementManager, tutorialTriggerService, speedCalculator, analytics));
     }
 
     private void handleOpenChallenge(Ref<EntityStore> ref, Store<EntityStore> store) {
