@@ -148,7 +148,8 @@ public class MinePage extends BaseAscendPage {
                 String.format("%.1f", assigned.getProductionRate()) + " b/m");
 
             cmd.set(sel + " #AssignText.Text", "Remove");
-            cmd.set(sel + " #AssignBtnBg.Background", "#ef4444(0.85)");
+            cmd.set(sel + " #AssignBtnBg.Visible", false);
+            cmd.set(sel + " #RemoveBtnBg.Visible", true);
             evt.addEventBinding(CustomUIEventBindingType.Activating,
                 sel + " #AssignButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_REMOVE_SLOT_PREFIX + slotIndex), false);

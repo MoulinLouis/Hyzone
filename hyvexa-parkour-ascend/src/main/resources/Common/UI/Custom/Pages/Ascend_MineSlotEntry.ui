@@ -58,6 +58,12 @@ Group {
         Background: #3b82f6(0.85);
       }
 
+      Group #RemoveBtnBg {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #ef4444(0.85);
+        Visible: false;
+      }
+
       Button #AssignButton {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
         Background: #00000000;
