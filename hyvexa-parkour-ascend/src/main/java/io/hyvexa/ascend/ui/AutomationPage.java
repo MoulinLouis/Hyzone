@@ -231,11 +231,13 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
             // Toggle state
             if (catConfig.isEnabled()) {
-                commandBuilder.set("#SumCatBorder" + i + ".Background", COLOR_ON);
+                commandBuilder.set("#SumCatBorder" + i + " #BorderOn.Visible", true);
+                commandBuilder.set("#SumCatBorder" + i + " #BorderOff.Visible", false);
                 commandBuilder.set("#SumCatToggleText" + i + ".Text", "ON");
                 commandBuilder.set("#SumCatToggleText" + i + ".Style.TextColor", COLOR_ON);
             } else {
-                commandBuilder.set("#SumCatBorder" + i + ".Background", COLOR_LOCKED_BORDER);
+                commandBuilder.set("#SumCatBorder" + i + " #BorderOn.Visible", false);
+                commandBuilder.set("#SumCatBorder" + i + " #BorderOff.Visible", true);
                 commandBuilder.set("#SumCatToggleText" + i + ".Text", "OFF");
                 commandBuilder.set("#SumCatToggleText" + i + ".Style.TextColor", COLOR_OFF);
             }
@@ -484,13 +486,15 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             commandBuilder.set("#" + contentPrefix + "LockedOverlay.Visible", false);
 
             if (isEnabled) {
-                commandBuilder.set("#" + togglePrefix + "ToggleBorder.Background", COLOR_ON);
+                commandBuilder.set("#" + togglePrefix + "ToggleBorder #BorderOn.Visible", true);
+                commandBuilder.set("#" + togglePrefix + "ToggleBorder #BorderOff.Visible", false);
                 commandBuilder.set("#" + togglePrefix + "ToggleText.Text", "Disable");
                 commandBuilder.set("#" + togglePrefix + "ToggleText.Style.TextColor", COLOR_ON);
                 commandBuilder.set("#" + togglePrefix + "StatusLabel.Text", "Status: ON");
                 commandBuilder.set("#" + togglePrefix + "StatusLabel.Style.TextColor", COLOR_ON);
             } else {
-                commandBuilder.set("#" + togglePrefix + "ToggleBorder.Background", COLOR_ACCENT);
+                commandBuilder.set("#" + togglePrefix + "ToggleBorder #BorderOn.Visible", false);
+                commandBuilder.set("#" + togglePrefix + "ToggleBorder #BorderOff.Visible", true);
                 commandBuilder.set("#" + togglePrefix + "ToggleText.Text", "Enable");
                 commandBuilder.set("#" + togglePrefix + "ToggleText.Style.TextColor", COLOR_ACCENT);
                 commandBuilder.set("#" + togglePrefix + "StatusLabel.Text", "Status: OFF");

@@ -7,7 +7,11 @@ Group {
 
   Group #AccentBar {
     Anchor: (Width: 8, Top: 0, Bottom: 0);
-    Background: #9fb0ba;
+
+    Group #AccentGold { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ffd700; Visible: false; }
+    Group #AccentSilver { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #c0c0c0; Visible: false; }
+    Group #AccentBronze { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #cd7f32; Visible: false; }
+    Group #AccentDefault { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #9fb0ba; Visible: true; }
   }
 
   Group #ContentRow {

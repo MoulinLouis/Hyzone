@@ -193,8 +193,7 @@ public class MineBlockHpPage extends InteractiveCustomUIPage<MineBlockHpPage.Con
 
                 boolean isSelected = block.blockTypeId.equals(selectedBlockId);
                 if (isSelected) {
-                    cmd.set(sel + ".Background", "#2d3f50");
-                    cmd.set(sel + ".Style.Default.Background", "#2d3f50");
+                    cmd.set(sel + " #SelectedOverlay.Visible", true);
                 }
 
                 evt.addEventBinding(CustomUIEventBindingType.Activating, sel,

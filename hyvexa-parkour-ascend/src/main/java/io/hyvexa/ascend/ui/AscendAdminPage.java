@@ -475,8 +475,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             boolean isSelected = map.getId().equals(selectedMapId);
             if (isSelected) {
                 mapNameLabel = ">> " + mapNameLabel;
-                commandBuilder.set(entrySelector + ".Background", "#253742");
-                commandBuilder.set(entrySelector + ".Style.Default.Background", "#253742");
+                commandBuilder.set(entrySelector + " #SelectedOverlay.Visible", true);
             }
             commandBuilder.set(entrySelector + " #MapName.Text", "[" + levelColor + "] " + mapNameLabel);
             boolean hasStart = map.getStartX() != 0 || map.getStartY() != 0 || map.getStartZ() != 0;

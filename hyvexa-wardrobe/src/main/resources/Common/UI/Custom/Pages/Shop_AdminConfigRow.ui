@@ -10,7 +10,9 @@ Group {
   // Status dot (green = available, red = unavailable)
   Group #StatusDot {
     Anchor: (Left: 12, Top: 18, Width: 12, Height: 12);
-    Background: #ef4444;
+
+    Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: true; }
+    Group #AccentLime { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #22c55e; Visible: false; }
   }
 
   // Cosmetic icon

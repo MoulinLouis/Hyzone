@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants.ChallengeType;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.ascension.ChallengeManager.ChallengeLeaderboardEntry;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -132,10 +133,15 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
         int tabCount = Math.min(challengeTypes.length, MAX_TABS);
         for (int i = 0; i < tabCount; i++) {
             boolean active = (i == currentTabIndex);
-            commandBuilder.set("#Tab" + i + "Wrap.Background",
-                    active ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
-            commandBuilder.set("#Tab" + i + "Accent.Background",
-                    active ? challengeTypes[i].getAccentColor() : COLOR_TAB_INACTIVE);
+            commandBuilder.set("#Tab" + i + "Wrap #TabActive.Visible", active);
+            if (active) {
+                AccentOverlayUtils.applyAccent(commandBuilder, "#Tab" + i + "Accent",
+                        challengeTypes[i].getAccentColor(), AccentOverlayUtils.TAB_ACCENTS);
+            } else {
+                for (String id : AccentOverlayUtils.TAB_ACCENTS) {
+                    commandBuilder.set("#Tab" + i + "Accent #" + id + ".Visible", false);
+                }
+            }
             commandBuilder.set("#Tab" + i + "Label.Style.TextColor",
                     active ? "#f0f4f8" : "#9fb0ba");
         }
@@ -190,7 +196,8 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
             int rank = i + 1;
             commandBuilder.append("#LeaderboardCards", "Pages/Ascend_LeaderboardEntry.ui");
             String accentColor = AscendUIUtils.getRankAccentColor(rank);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #AccentBar.Background", accentColor);
+            AccentOverlayUtils.applyAccent(commandBuilder, "#LeaderboardCards[" + index + "] #AccentBar",
+                    accentColor, AccentOverlayUtils.RANK_ACCENTS);
             commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", "#" + rank);
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text",
                     entry.playerName() != null ? entry.playerName() : "Unknown");

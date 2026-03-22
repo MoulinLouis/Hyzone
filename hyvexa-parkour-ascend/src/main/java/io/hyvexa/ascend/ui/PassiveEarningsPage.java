@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.passive.PassiveEarningsManager;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 
@@ -93,7 +94,8 @@ public class PassiveEarningsPage extends BaseAscendPage {
 
             // Accent bar color
             String color = MAP_COLORS[index % MAP_COLORS.length];
-            commandBuilder.set(selector + " #AccentBar.Background", color);
+            AccentOverlayUtils.applyAccent(commandBuilder, selector + " #AccentBar",
+                    color, AccentOverlayUtils.CATEGORY_ACCENTS);
 
             // Map name
             commandBuilder.set(selector + " #MapName.Text", earnings.mapName());

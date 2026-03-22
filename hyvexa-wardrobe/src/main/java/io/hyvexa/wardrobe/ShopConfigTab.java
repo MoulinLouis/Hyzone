@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.wardrobe.CosmeticShopConfigStore;
@@ -101,7 +102,8 @@ public class ShopConfigTab implements ShopTab {
             String root = "#TabContent[" + (2 + rowIndex) + "] ";
 
             if (available) {
-                cmd.set(root + "#StatusDot.Background", "#22c55e");
+                AccentOverlayUtils.applyAccent(cmd, root + "#StatusDot",
+                        "#22c55e", AccentOverlayUtils.STATUS_DOT);
             }
 
             WardrobeShopUiUtils.setIcon(cmd, root, "#ConfigIcon", def.iconPath());

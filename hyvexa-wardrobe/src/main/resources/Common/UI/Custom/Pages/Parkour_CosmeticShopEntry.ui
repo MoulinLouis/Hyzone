@@ -7,10 +7,18 @@ Group {
   OutlineColor: #ffffff(0.04);
   OutlineSize: 1;
 
-  // Accent bar (color set dynamically)
+  // Accent bar (color set via overlay visibility)
   Group #EntryAccent {
     Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
-    Background: #6366f1;
+
+    Group #AccentGold { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ffd700; Visible: false; }
+    Group #AccentPurple { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #a855f7; Visible: false; }
+    Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+    Group #AccentLime { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #22c55e; Visible: false; }
+    Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
+    Group #AccentStone { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #888c8d; Visible: false; }
+    Group #AccentRose { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f472b6; Visible: false; }
+    Group #AccentDefault { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #9fb0ba; Visible: true; }
   }
 
   // Cosmetic name

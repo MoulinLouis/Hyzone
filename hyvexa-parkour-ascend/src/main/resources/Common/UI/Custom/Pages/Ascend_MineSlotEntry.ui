@@ -8,17 +8,12 @@ Group {
   Group #AccentBar {
     Anchor: (Width: 8, Top: 0, Bottom: 0);
 
-    Group #AccentEmpty {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Background: #4a5568;
-      Visible: true;
-    }
-
-    Group #AccentFilled {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Background: #10b981;
-      Visible: false;
-    }
+    Group #AccentEmpty { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4a5568; Visible: true; }
+    Group #AccentGray { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #aaaaaa; Visible: false; }
+    Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+    Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+    Group #AccentPurple { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #a855f7; Visible: false; }
+    Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
   }
 
   Group #ContentZone {

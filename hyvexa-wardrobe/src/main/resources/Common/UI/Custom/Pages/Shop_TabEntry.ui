@@ -7,8 +7,12 @@ Group {
   // Active accent bar (left edge, hidden by default)
   Group #TabAccent {
     Anchor: (Left: 0, Top: 4, Bottom: 4, Width: 3);
-    Background: #6366f1;
     Visible: false;
+
+    Group #AccentFuchsia { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #e879f9; Visible: false; }
+    Group #AccentIndigo { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #6366f1; Visible: false; }
+    Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+    Group #AccentDefault { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #9fb0ba; Visible: false; }
   }
 
   // Tab label (left-aligned)

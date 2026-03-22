@@ -22,6 +22,7 @@ import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -97,7 +98,8 @@ public class SummitPage extends BaseAscendPage {
             String accentColor = resolveCategoryAccentColor(i);
 
             // Apply accent color to accent bar and XP segments
-            commandBuilder.set("#CategoryCards[" + i + "] #AccentBar.Background", accentColor);
+            AccentOverlayUtils.applyAccent(commandBuilder, "#CategoryCards[" + i + "] #AccentBar",
+                    accentColor, AccentOverlayUtils.CATEGORY_ACCENTS);
             for (int seg = 1; seg <= 20; seg++) {
                 commandBuilder.set("#CategoryCards[" + i + "] #XpSeg" + seg + ".Background", accentColor);
             }

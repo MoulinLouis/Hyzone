@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.runorfall.data.RunOrFallPlayerStats;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
@@ -109,7 +110,8 @@ public class RunOrFallAchievementsPage extends InteractiveCustomUIPage<ButtonEve
                     achievement.progressText(Math.max(0L, currentValue), requiredValue));
 
             if (unlocked) {
-                commandBuilder.set(prefix + "#AccentBar.Background", COLOR_UNLOCKED);
+                AccentOverlayUtils.applyAccent(commandBuilder, prefix + "#AccentBar",
+                        COLOR_UNLOCKED, AccentOverlayUtils.BINARY_ACCENTS);
                 commandBuilder.set(prefix + "#UnlockedTint.Visible", true);
                 commandBuilder.set(prefix + "#UnlockedIcon.Visible", true);
                 commandBuilder.set(prefix + "#LockIcon.Visible", false);
@@ -117,7 +119,8 @@ public class RunOrFallAchievementsPage extends InteractiveCustomUIPage<ButtonEve
                 commandBuilder.set(prefix + "#Description.Style.TextColor", "#cfd7dc");
                 commandBuilder.set(prefix + "#Progress.Style.TextColor", "#9fe8c9");
             } else {
-                commandBuilder.set(prefix + "#AccentBar.Background", COLOR_LOCKED);
+                AccentOverlayUtils.applyAccent(commandBuilder, prefix + "#AccentBar",
+                        COLOR_LOCKED, AccentOverlayUtils.BINARY_ACCENTS);
                 commandBuilder.set(prefix + "#UnlockedTint.Visible", false);
                 commandBuilder.set(prefix + "#UnlockedIcon.Visible", false);
                 commandBuilder.set(prefix + "#LockIcon.Visible", true);

@@ -4,11 +4,13 @@ Group {
   Anchor: (Width: 70, Height: 28, Left: 12);
   LayoutMode: Full;
 
-  // Checkbox box (unchecked default: outline only)
+  // Checkbox box (unchecked default: outline only, green fill when active)
   Group #FreeBox {
     Anchor: (Left: 8, Top: 6, Width: 16, Height: 16);
     OutlineColor: #ffffff(0.2);
     OutlineSize: 1;
+
+    Group #FreeBoxFill { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #22c55e; Visible: false; }
   }
 
   // "Free" label

@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants.AchievementCategory;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.ascend.achievement.AchievementManager.AchievementProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -104,14 +105,16 @@ public class AscendAchievementPage extends BaseAscendPage {
                 unlockedCount++;
 
                 // Unlocked styling: show golem icon, hide lock
-                commandBuilder.set(prefix + "#AccentBar.Background", "#10b981");
+                AccentOverlayUtils.applyAccent(commandBuilder, prefix + "#AccentBar",
+                        "#10b981", AccentOverlayUtils.BINARY_ACCENTS);
                 commandBuilder.set(prefix + "#UnlockedTint.Visible", true);
                 commandBuilder.set(prefix + "#UnlockedIcon.Visible", true);
                 commandBuilder.set(prefix + "#LockIcon.Visible", false);
                 commandBuilder.set(prefix + "#Name.Style.TextColor", "#f0f4f8");
             } else {
                 // Locked styling: show lock icon, hide golem
-                commandBuilder.set(prefix + "#AccentBar.Background", "#4b5563");
+                AccentOverlayUtils.applyAccent(commandBuilder, prefix + "#AccentBar",
+                        "#4b5563", AccentOverlayUtils.BINARY_ACCENTS);
                 commandBuilder.set(prefix + "#UnlockedTint.Visible", false);
                 commandBuilder.set(prefix + "#UnlockedIcon.Visible", false);
                 commandBuilder.set(prefix + "#LockIcon.Visible", true);

@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.Map;
@@ -105,7 +106,8 @@ public class CategorySelectPage extends BaseParkourPage {
             commandBuilder.set("#CategoryCards[" + index + "] #CategoryProgress.Text",
                     completed + "/" + total + " Completed");
             String accentColor = UIColorUtils.getCategoryAccentColor(category);
-            commandBuilder.set("#CategoryCards[" + index + "] #AccentBar.Background", accentColor);
+            AccentOverlayUtils.applyAccent(commandBuilder, "#CategoryCards[" + index + "] #AccentBar",
+                    accentColor, AccentOverlayUtils.CATEGORY_ACCENTS);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#CategoryCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + category), false);

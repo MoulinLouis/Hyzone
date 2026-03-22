@@ -27,6 +27,7 @@ import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.ui.BaseAscendPage;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
 
@@ -134,8 +135,8 @@ public class MinePage extends BaseAscendPage {
         CollectedMiner assigned = mineProgress.getAssignedMiner(slotIndex);
         if (assigned != null) {
             cmd.set(sel + " #AccentEmpty.Visible", false);
-            cmd.set(sel + " #AccentFilled.Visible", true);
-            cmd.set(sel + " #AccentFilled.Background", assigned.getRarity().getColor());
+            AccentOverlayUtils.applyAccent(cmd, sel + " #AccentBar",
+                    assigned.getRarity().getColor(), AccentOverlayUtils.RARITY_ACCENTS);
 
             MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
             MineZoneLayer layer = configStore != null ? configStore.getLayerById(assigned.getLayerId()) : null;
@@ -186,7 +187,8 @@ public class MinePage extends BaseAscendPage {
             cmd.append("#CollectionEntries", "Pages/Ascend_MineCollectionEntry.ui");
             String sel = "#CollectionEntries[" + i + "]";
 
-            cmd.set(sel + " #RarityBar.Background", miner.getRarity().getColor());
+            AccentOverlayUtils.applyAccent(cmd, sel + " #RarityBar",
+                    miner.getRarity().getColor(), AccentOverlayUtils.RARITY_ACCENTS);
             cmd.set(sel + " #RarityLabel.Text", miner.getRarity().getDisplayName());
             cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
 
@@ -229,7 +231,8 @@ public class MinePage extends BaseAscendPage {
             cmd.append("#PickerEntries", "Pages/Ascend_MineMinerPicker.ui");
             String sel = "#PickerEntries[" + i + "]";
 
-            cmd.set(sel + " #RarityBar.Background", miner.getRarity().getColor());
+            AccentOverlayUtils.applyAccent(cmd, sel + " #RarityBar",
+                    miner.getRarity().getColor(), AccentOverlayUtils.RARITY_ACCENTS);
             cmd.set(sel + " #RarityLabel.Text", miner.getRarity().getDisplayName());
             cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
 

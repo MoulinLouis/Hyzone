@@ -10,7 +10,13 @@ Group {
   // Left accent bar
   Group #AccentBar {
     Anchor: (Width: 4, Top: 0, Bottom: 0, Left: 0);
-    Background: #10b981;
+
+    Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+    Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+    Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+    Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+    Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+    Group #AccentDefault { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #9fb0ba; Visible: true; }
   }
 
   // Colored background overlays (shown when summit is available)

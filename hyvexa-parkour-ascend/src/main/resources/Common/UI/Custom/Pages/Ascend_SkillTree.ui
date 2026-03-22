@@ -183,7 +183,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderAutoRunners { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderAutoRunners { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedAutoRunners {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
@@ -209,7 +209,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderAutoEvolution { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderAutoEvolution { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedAutoEvolution {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -235,7 +235,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderRunnerSpeed { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderRunnerSpeed { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedRunnerSpeed {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -261,7 +261,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderEvolutionPower { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderEvolutionPower { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedEvolutionPower {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -287,7 +287,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderRunnerSpeed2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderRunnerSpeed2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedRunnerSpeed2 {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -313,7 +313,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderAscensionChallenges { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderAscensionChallenges { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedAscensionChallenges {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -339,7 +339,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderMomentumSurge { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderMomentumSurge { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedMomentumSurge {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -365,7 +365,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderAutoSummit { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderAutoSummit { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedAutoSummit {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -391,7 +391,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderAutoElevation { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderAutoElevation { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedAutoElevation {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -417,7 +417,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderMultiplierBoost { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderMultiplierBoost { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedMultiplierBoost {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -443,7 +443,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderRunnerSpeed3 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderRunnerSpeed3 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedRunnerSpeed3 {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -469,7 +469,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderEvolutionPower2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderEvolutionPower2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedEvolutionPower2 {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -495,7 +495,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderMomentumEndurance { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderMomentumEndurance { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedMomentumEndurance {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -546,7 +546,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderRunnerSpeed4 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderRunnerSpeed4 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedRunnerSpeed4 {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -572,7 +572,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderEvolutionPower3 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderEvolutionPower3 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedEvolutionPower3 {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -598,7 +598,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderMomentumMastery { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderMomentumMastery { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedMomentumMastery {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -624,7 +624,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderMultiplierBoost2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderMultiplierBoost2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedMultiplierBoost2 {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -650,7 +650,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderAutoAscend { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderAutoAscend { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedAutoAscend {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
@@ -676,7 +676,7 @@ $C.@PageOverlay {
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderRunnerSpeed5 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #BorderRunnerSpeed5 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Group #BorderAccent { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; } Group #BorderLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
             Group #RevealedRunnerSpeed5 {
               Visible: false;
               Anchor: (Left: 0, Right: 0);

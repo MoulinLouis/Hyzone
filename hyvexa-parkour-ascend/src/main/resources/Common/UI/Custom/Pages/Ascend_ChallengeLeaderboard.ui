@@ -79,13 +79,22 @@ $C.@PageOverlay {
 
         Group #Tab0Wrap {
           Anchor: (Width: 60, Height: 34);
-          Background: #2d3f50;
+          Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabActive { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: true; }
+
           Group #Tab0Accent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
-            Background: #10b981;
+            Background: #142029;
+            Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+            Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+            Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+            Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+            Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+            Group #AccentPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ec4899; Visible: false; }
+            Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
           }
 
           Label #Tab0Label {
@@ -114,9 +123,18 @@ $C.@PageOverlay {
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabActive { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
           Group #Tab1Accent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #142029;
+            Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+            Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+            Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+            Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+            Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+            Group #AccentPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ec4899; Visible: false; }
+            Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
           }
 
           Label #Tab1Label {
@@ -145,9 +163,18 @@ $C.@PageOverlay {
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabActive { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
           Group #Tab2Accent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #142029;
+            Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+            Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+            Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+            Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+            Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+            Group #AccentPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ec4899; Visible: false; }
+            Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
           }
 
           Label #Tab2Label {
@@ -176,9 +203,18 @@ $C.@PageOverlay {
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabActive { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
           Group #Tab3Accent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #142029;
+            Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+            Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+            Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+            Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+            Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+            Group #AccentPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ec4899; Visible: false; }
+            Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
           }
 
           Label #Tab3Label {
@@ -207,9 +243,18 @@ $C.@PageOverlay {
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabActive { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
           Group #Tab4Accent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #142029;
+            Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+            Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+            Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+            Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+            Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+            Group #AccentPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ec4899; Visible: false; }
+            Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
           }
 
           Label #Tab4Label {
@@ -238,9 +283,18 @@ $C.@PageOverlay {
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabActive { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
           Group #Tab5Accent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #142029;
+            Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+            Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+            Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+            Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+            Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+            Group #AccentPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ec4899; Visible: false; }
+            Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
           }
 
           Label #Tab5Label {
@@ -269,9 +323,18 @@ $C.@PageOverlay {
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabActive { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
           Group #Tab6Accent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #142029;
+            Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+            Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+            Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+            Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+            Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+            Group #AccentPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ec4899; Visible: false; }
+            Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
           }
 
           Label #Tab6Label {
@@ -300,9 +363,18 @@ $C.@PageOverlay {
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabActive { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
           Group #Tab7Accent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #142029;
+            Group #AccentRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+            Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
+            Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+            Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+            Group #AccentViolet { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #8b5cf6; Visible: false; }
+            Group #AccentPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #ec4899; Visible: false; }
+            Group #AccentCyan { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
           }
 
           Label #Tab7Label {

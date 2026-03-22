@@ -667,8 +667,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
 
             boolean isSelected = zone.getId().equals(selectedZoneId);
             if (isSelected) {
-                commandBuilder.set(entrySelector + ".Background", "#2d3f50");
-                commandBuilder.set(entrySelector + ".Style.Default.Background", "#2d3f50");
+                commandBuilder.set(entrySelector + " #SelectedOverlay.Visible", true);
                 commandBuilder.set(entrySelector + " #AccentBar.Visible", true);
             }
             commandBuilder.set(entrySelector + " #ZoneName.Text", zone.getId());
@@ -766,8 +765,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
 
             boolean isSelected = layer.getId().equals(selectedLayerId);
             if (isSelected) {
-                commandBuilder.set(sel + ".Background", "#2d3f50");
-                commandBuilder.set(sel + ".Style.Default.Background", "#2d3f50");
+                commandBuilder.set(sel + " #SelectedOverlay.Visible", true);
                 commandBuilder.set(sel + " #AccentBar.Visible", true);
             }
 

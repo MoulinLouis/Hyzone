@@ -503,8 +503,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             String nameLabel = mine.getName() != null && !mine.getName().isBlank() ? mine.getName() : mine.getId();
             boolean isSelected = mine.getId().equals(selectedMineId);
             if (isSelected) {
-                commandBuilder.set(entrySelector + ".Background", "#2d3f50");
-                commandBuilder.set(entrySelector + ".Style.Default.Background", "#2d3f50");
+                commandBuilder.set(entrySelector + " #SelectedOverlay.Visible", true);
                 commandBuilder.set(entrySelector + " #AccentBar.Visible", true);
             }
             commandBuilder.set(entrySelector + " #MineName.Text", nameLabel);

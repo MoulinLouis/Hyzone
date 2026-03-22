@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.cosmetic.CosmeticDefinition;
@@ -174,7 +175,8 @@ public class EffectsShopTab implements ShopTab {
         cmd.append("#TabContent", "Pages/Parkour_CosmeticShopEntry.ui");
         String root = "#TabContent[" + index + "] ";
 
-        cmd.set(root + "#EntryAccent.Background", def.getHexColor());
+        AccentOverlayUtils.applyAccent(cmd, root + "#EntryAccent",
+                def.getHexColor(), AccentOverlayUtils.COSMETIC_ACCENTS);
         cmd.set(root + "#EntryName.Text", def.getDisplayName());
         String currency = def.getKind() == CosmeticDefinition.Kind.TRAIL ? "Feathers" : "Vexa";
         cmd.set(root + "#EntryPrice.Text", def.getPrice() + " " + currency);

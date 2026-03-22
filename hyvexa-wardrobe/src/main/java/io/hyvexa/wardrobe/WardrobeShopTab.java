@@ -67,7 +67,7 @@ public class WardrobeShopTab implements ShopTab {
         cmd.append("#PillBar", "Pages/Shop_WardrobeFreeToggle.ui");
         String freeRoot = "#PillBar[" + pillIndex + "] ";
         if (isFreeOnly) {
-            cmd.set(freeRoot + "#FreeBox.Background", "#22c55e");
+            cmd.set(freeRoot + "#FreeBox #FreeBoxFill.Visible", true);
             cmd.set(freeRoot + "#FreeLabel.Style.TextColor", "#22c55e");
         }
         evt.addEventBinding(CustomUIEventBindingType.Activating, freeRoot + "#FreeToggleBtn",

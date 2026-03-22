@@ -15,7 +15,9 @@ Group {
 
   Group #AccentBar {
     Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
-    Background: #4b5563;
+
+    Group #AccentLocked { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; }
+    Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
   }
 
   Group {

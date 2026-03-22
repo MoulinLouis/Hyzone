@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
@@ -121,7 +122,8 @@ public class MapLeaderboardPage extends AbstractSearchablePaginatedPage {
             LeaderboardRow row = filtered.get(i);
             commandBuilder.append("#LeaderboardCards", "Pages/Parkour_MapLeaderboardEntry.ui");
             String accentColor = UIColorUtils.getRankAccentColor(row.rank);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #AccentBar.Background", accentColor);
+            AccentOverlayUtils.applyAccent(commandBuilder, "#LeaderboardCards[" + index + "] #AccentBar",
+                    accentColor, AccentOverlayUtils.RANK_ACCENTS);
             commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", String.valueOf(row.rank));
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text", row.name);
             commandBuilder.set("#LeaderboardCards[" + index + "] #Time.Text",

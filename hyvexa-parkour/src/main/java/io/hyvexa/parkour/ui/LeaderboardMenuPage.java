@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.Map;
@@ -82,7 +83,8 @@ public class LeaderboardMenuPage extends BaseParkourPage {
         commandBuilder.clear("#MenuCards");
         commandBuilder.append("#MenuCards", "Pages/Parkour_LeaderboardMenuEntry.ui");
         commandBuilder.set("#MenuCards[0] #EntryName.Text", "Global");
-        commandBuilder.set("#MenuCards[0] #AccentBar.Background", UIColorUtils.COLOR_GLOBAL);
+        AccentOverlayUtils.applyAccent(commandBuilder, "#MenuCards[0] #AccentBar",
+                UIColorUtils.COLOR_GLOBAL, AccentOverlayUtils.CATEGORY_ACCENTS);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 "#MenuCards[0] #SelectButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_GLOBAL), false);
@@ -97,8 +99,8 @@ public class LeaderboardMenuPage extends BaseParkourPage {
         for (String category : orderedCategories) {
             commandBuilder.append("#MenuCards", "Pages/Parkour_LeaderboardMenuEntry.ui");
             commandBuilder.set("#MenuCards[" + index + "] #EntryName.Text", category);
-            commandBuilder.set("#MenuCards[" + index + "] #AccentBar.Background",
-                    UIColorUtils.getCategoryAccentColor(category));
+            AccentOverlayUtils.applyAccent(commandBuilder, "#MenuCards[" + index + "] #AccentBar",
+                    UIColorUtils.getCategoryAccentColor(category), AccentOverlayUtils.CATEGORY_ACCENTS);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MenuCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_PREFIX + category), false);

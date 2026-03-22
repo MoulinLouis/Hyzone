@@ -14,6 +14,8 @@ Button {
     Sounds: $C.@ButtonSounds,
   );
 
+  Group #SelectedOverlay { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
   Group #AccentBar {
     Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
     Background: #8b5cf6;

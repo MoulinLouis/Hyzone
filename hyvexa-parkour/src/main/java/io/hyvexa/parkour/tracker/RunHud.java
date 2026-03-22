@@ -5,8 +5,16 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import java.util.List;
+import java.util.Map;
 
 public class RunHud extends CustomUIHud {
+
+    private static final Map<String, String> SPLIT_OVERLAY_MAP = Map.of(
+        "#1E4A7A", "SplitFast",
+        "#6A1E1E", "SplitSlow",
+        "#000000", "SplitTie"
+    );
+    private static final String[] SPLIT_IDS = {"SplitFast", "SplitSlow", "SplitTie"};
 
     private String lastTimeText;
     private String lastCheckpointText;
@@ -69,7 +77,10 @@ public class RunHud extends CustomUIHud {
         lastCheckpointSplitVisible = visible;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#CheckpointSplitHud.Visible", visible);
-        commandBuilder.set("#CheckpointSplitHud.Background", safeColor);
+        String targetOverlay = SPLIT_OVERLAY_MAP.getOrDefault(safeColor, "SplitTie");
+        for (String id : SPLIT_IDS) {
+            commandBuilder.set("#CheckpointSplitHud #" + id + ".Visible", id.equals(targetOverlay));
+        }
         commandBuilder.set("#CheckpointSplitText.Text", safeText);
         commandBuilder.set("#CheckpointSplitText.Style.TextColor", "#FFFFFF");
         update(false, commandBuilder);

@@ -11,6 +11,8 @@ Button {
     Sounds: $C.@ButtonSounds,
   );
 
+  Group #SelectedOverlay { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #2d3f50; Visible: false; }
+
   ItemIcon #BlockIcon {
     Anchor: (Width: 28, Height: 28);
     ShowItemTooltip: true;

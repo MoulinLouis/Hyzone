@@ -11,6 +11,11 @@ $C.@PageOverlay {
       Padding: (Left: 10, Right: 10, Top: 2, Bottom: 2);
       Visible: false;
 
+      // Split color overlays
+      Group #SplitFast { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #1E4A7A; Visible: false; }
+      Group #SplitSlow { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #6A1E1E; Visible: false; }
+      Group #SplitTie { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #000000; Visible: false; }
+
       Label #CheckpointSplitText {
         Anchor: (Left: 0, Right: 0);
         Style: (

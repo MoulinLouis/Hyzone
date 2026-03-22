@@ -127,7 +127,9 @@ public class SkillTreePage extends BaseAscendPage {
             // Border color (locked nodes stay gray)
             String borderColor = !prereqsMet ? COLOR_LOCKED
                 : (isUnlocked || canUnlock) ? COLOR_ACCENT : COLOR_LOCKED;
-            commandBuilder.set("#Border" + pascalName + ".Background", borderColor);
+            boolean accentActive = COLOR_ACCENT.equals(borderColor);
+            commandBuilder.set("#Border" + pascalName + " #BorderAccent.Visible", accentActive);
+            commandBuilder.set("#Border" + pascalName + " #BorderLocked.Visible", !accentActive);
 
             // Status text and color (only meaningful when revealed)
             if (prereqsMet) {

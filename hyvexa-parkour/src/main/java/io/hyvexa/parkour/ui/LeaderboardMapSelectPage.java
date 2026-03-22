@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.Map;
@@ -87,7 +88,8 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
                 continue;
             }
             commandBuilder.append("#MapCards", "Pages/Parkour_LeaderboardMapEntry.ui");
-            commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
+            AccentOverlayUtils.applyAccent(commandBuilder, "#MapCards[" + index + "] #AccentBar",
+                    accentColor, AccentOverlayUtils.CATEGORY_ACCENTS);
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", ParkourUtils.formatMapName(map));
             boolean completed = progressStore.isMapCompleted(playerRef.getUuid(), map.getId());
             if (completed) {

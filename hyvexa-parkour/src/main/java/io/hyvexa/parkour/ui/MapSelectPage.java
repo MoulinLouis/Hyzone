@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.util.InventoryUtils;
@@ -159,7 +160,8 @@ public class MapSelectPage extends BaseParkourPage {
                 continue;
             }
             commandBuilder.append("#MapCards", "Pages/Parkour_MapSelectEntry.ui");
-            commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
+            AccentOverlayUtils.applyAccent(commandBuilder, "#MapCards[" + index + "] #AccentBar",
+                    accentColor, AccentOverlayUtils.CATEGORY_ACCENTS);
             Long bestTime = progressStore.getBestTimeMs(playerRef.getUuid(), map.getId());
             String status = completed ? "Completed" : "Not completed";
             if (bestTime != null) {

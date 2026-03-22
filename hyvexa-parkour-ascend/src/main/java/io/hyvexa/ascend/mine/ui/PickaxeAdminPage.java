@@ -231,8 +231,7 @@ public class PickaxeAdminPage extends InteractiveCustomUIPage<PickaxeAdminPage.P
                 cmd.set(sel + " #BlockName.Text", block.displayName);
 
                 if (block.blockTypeId.equals(selectedBlockId)) {
-                    cmd.set(sel + ".Background", "#2d3f50");
-                    cmd.set(sel + ".Style.Default.Background", "#2d3f50");
+                    cmd.set(sel + " #SelectedOverlay.Visible", true);
                 }
                 index++;
             }

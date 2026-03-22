@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabRegistry;
 import io.hyvexa.common.shop.ShopTabResult;
+import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.core.economy.VexaStore;
@@ -281,7 +282,8 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
                 cmd.set(root + "#TabLabel.Style.TextColor", "#f0f4f8");
                 cmd.set(root + "#TabLabel.Style.RenderBold", true);
                 cmd.set(root + "#TabAccent.Visible", true);
-                cmd.set(root + "#TabAccent.Background", tab.getAccentColor());
+                AccentOverlayUtils.applyAccent(cmd, root + "#TabAccent",
+                        tab.getAccentColor(), AccentOverlayUtils.SHOP_TAB_ACCENTS);
             }
 
             evt.addEventBinding(CustomUIEventBindingType.Activating,

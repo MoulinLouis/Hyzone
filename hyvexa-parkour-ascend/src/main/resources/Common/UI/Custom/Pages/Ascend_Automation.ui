@@ -136,7 +136,7 @@ $C.@PageOverlay {
                     Sounds: $C.@ButtonSounds,
                   );
                   LayoutMode: Top;
-                  Group #ToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Group #ToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Group #BorderOn { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4ade80; Visible: false; } Group #BorderOff { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: true; } }
                   Label #ToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
                 }
               }
@@ -209,7 +209,7 @@ $C.@PageOverlay {
                     Sounds: $C.@ButtonSounds,
                   );
                   LayoutMode: Top;
-                  Group #EvoToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Group #EvoToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Group #BorderOn { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4ade80; Visible: false; } Group #BorderOff { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: true; } }
                   Label #EvoToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
                 }
               }
@@ -282,7 +282,7 @@ $C.@PageOverlay {
                     Sounds: $C.@ButtonSounds,
                   );
                   LayoutMode: Top;
-                  Group #AscToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Group #AscToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Group #BorderOn { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4ade80; Visible: false; } Group #BorderOff { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: true; } }
                   Label #AscToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
                 }
               }
@@ -364,7 +364,7 @@ $C.@PageOverlay {
                     Sounds: $C.@ButtonSounds,
                   );
                   LayoutMode: Top;
-                  Group #ElevToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Group #ElevToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Group #BorderOn { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4ade80; Visible: false; } Group #BorderOff { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: true; } }
                   Label #ElevToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
                 }
               }
@@ -591,7 +591,7 @@ $C.@PageOverlay {
                     Sounds: $C.@ButtonSounds,
                   );
                   LayoutMode: Top;
-                  Group #SumToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Group #SumToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Group #BorderOn { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4ade80; Visible: false; } Group #BorderOff { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: true; } }
                   Label #SumToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
                 }
               }
@@ -666,7 +666,7 @@ $C.@PageOverlay {
                     Sounds: $C.@ButtonSounds,
                   );
                   LayoutMode: Top;
-                  Group #SumCatBorder0 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Background: #4b5563; }
+                  Group #SumCatBorder0 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Group #BorderOn { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4ade80; Visible: false; } Group #BorderOff { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
                   Label #SumCatToggleText0 { Anchor: (Top: 5); Style: (FontSize: 10, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "OFF"; }
                 }
 
@@ -719,7 +719,7 @@ $C.@PageOverlay {
                     Sounds: $C.@ButtonSounds,
                   );
                   LayoutMode: Top;
-                  Group #SumCatBorder1 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Background: #4b5563; }
+                  Group #SumCatBorder1 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Group #BorderOn { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4ade80; Visible: false; } Group #BorderOff { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
                   Label #SumCatToggleText1 { Anchor: (Top: 5); Style: (FontSize: 10, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "OFF"; }
                 }
 
@@ -772,7 +772,7 @@ $C.@PageOverlay {
                     Sounds: $C.@ButtonSounds,
                   );
                   LayoutMode: Top;
-                  Group #SumCatBorder2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Background: #4b5563; }
+                  Group #SumCatBorder2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Group #BorderOn { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4ade80; Visible: false; } Group #BorderOff { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4b5563; Visible: true; } }
                   Label #SumCatToggleText2 { Anchor: (Top: 5); Style: (FontSize: 10, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "OFF"; }
                 }
 
