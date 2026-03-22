@@ -5,9 +5,11 @@ Quick reference for AI agents working on this Hytale plugin project.
 ## Quick Commands
 
 ```bash
-# Do NOT run builds - owner handles builds
+# Do NOT run builds proactively. Only run a build when the user explicitly asks for it
+# (for example, to reproduce/inspect/fix build errors).
 # ./gradlew stagePlugins - copy jars to run/mods
 # ./gradlew collectPlugins - copy jars to build/libs
+# cmd.exe /c "gradlew.bat build" (only when explicitly requested by the user)
 # cmd.exe /c "gradlew.bat test"  (use cmd.exe — WSL2 has I/O issues with gradlew)
 ```
 
@@ -57,6 +59,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 5. **Run tests selectively** - only when explicitly asked or after large changes. Only pure-logic classes (zero Hytale imports) are testable.
 6. **No auto-memory for project knowledge** - Multiple agents work on this repo. Store discoveries in `docs/` not in Claude's auto-memory, so all agents benefit.
 7. **Plans go in `docs/plans/`** - Write implementation plans as `.md` files in the project, not only in Claude's internal plan file, so other agents can reference them.
+8. **Builds require explicit user request** - Never run builds on your own initiative. If the user explicitly asks you to run a build to diagnose or verify an error, do it and use the output to fix the issue.
 
 ## UI Patterns
 - Never use dynamic Background property changes on UI elements — they don't work in Hytale's UI system
