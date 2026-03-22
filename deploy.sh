@@ -55,6 +55,7 @@ success "Credentials OK (host: $SFTP_HOST:$SFTP_PORT)"
 # ─── Step 1: Build ───
 step "Step 1/4 - Building plugins (collectPlugins)"
 cd "$SCRIPT_DIR"
+rm -f "$BUILD_DIR"/${JAR_PREFIX}*.jar 2>/dev/null || true
 cmd.exe /c "gradlew.bat collectPlugins" 2>&1 | tail -5
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     error "Gradle build failed!"
