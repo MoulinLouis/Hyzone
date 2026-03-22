@@ -152,7 +152,7 @@ public class DuelLeaderboardPage extends InteractiveCustomUIPage<DuelLeaderboard
             commandBuilder.append("#LeaderboardCards", "Pages/Parkour_LeaderboardEntry.ui");
             commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", String.valueOf(row.rank));
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text", row.name);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Completion.Text",
+            commandBuilder.set("#LeaderboardCards[" + index + "] #TotalScore.Text",
                     row.wins + "W/" + row.losses + "L");
             index++;
         }
