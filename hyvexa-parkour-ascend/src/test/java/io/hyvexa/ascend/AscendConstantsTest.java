@@ -43,6 +43,11 @@ class AscendConstantsTest {
     }
 
     @Test
+    void earlyLevelBoostNearThresholdUsesLinearDecay() {
+        assertEquals(1.1, AscendConstants.calculateEarlyLevelBoost(9, 2, 0), 1e-9);
+    }
+
+    @Test
     void earlyLevelBoostWithStars() {
         // Stars > 0 means no boost
         assertEquals(1.0, AscendConstants.calculateEarlyLevelBoost(0, 2, 1), 1e-9);
@@ -52,6 +57,18 @@ class AscendConstantsTest {
     void earlyLevelBoostMapZeroNoBoost() {
         // Map 0 has boost = 1.0, so result = 1.0
         assertEquals(1.0, AscendConstants.calculateEarlyLevelBoost(0, 0, 0), 1e-9);
+    }
+
+    @Test
+    void mapUpgradeOffsetNegativeUsesLastConfiguredEntry() {
+        assertEquals(AscendConstants.MAP_UPGRADE_OFFSET[AscendConstants.MAP_UPGRADE_OFFSET.length - 1],
+            AscendConstants.getMapUpgradeOffset(-1));
+    }
+
+    @Test
+    void mapUpgradeMultiplierOutOfBoundsUsesLastConfiguredEntry() {
+        assertEquals(AscendConstants.MAP_UPGRADE_MULTIPLIER[AscendConstants.MAP_UPGRADE_MULTIPLIER.length - 1],
+            AscendConstants.getMapUpgradeMultiplier(99), 1e-9);
     }
 
     // --- Runner multiplier increment ---
@@ -70,11 +87,28 @@ class AscendConstantsTest {
     }
 
     @Test
+    void runnerMultiplierIncrementUsesConfiguredBonuses() {
+        BigNumber result = AscendConstants.getRunnerMultiplierIncrement(2, 1.5, 4.0, 0.25);
+        assertEquals(8.4, result.toDouble(), 1e-9);
+    }
+
+    @Test
     void runnerMultiplierIncrementOverflowCapped() {
         // Very high stars should not produce NaN/Infinity
         BigNumber result = AscendConstants.getRunnerMultiplierIncrement(1000);
         assertFalse(Double.isNaN(result.toDouble()));
         assertFalse(Double.isInfinite(result.toDouble()));
+    }
+
+    @Test
+    void runnerMultiplierIncrementGuardsAgainstNaNAndInfinityInputs() {
+        BigNumber infinitePower = AscendConstants.getRunnerMultiplierIncrement(2, 1.0, Double.POSITIVE_INFINITY, 0.0);
+        BigNumber nanBonus = AscendConstants.getRunnerMultiplierIncrement(0, Double.NaN, 3.0, 0.0);
+
+        assertFalse(Double.isNaN(infinitePower.toDouble()));
+        assertFalse(Double.isInfinite(infinitePower.toDouble()));
+        assertTrue(infinitePower.toDouble() > 1e306);
+        assertEquals(Double.MAX_VALUE, nanBonus.toDouble());
     }
 
     // --- Runner upgrade cost ---
@@ -98,6 +132,25 @@ class AscendConstantsTest {
         BigNumber costMap0 = AscendConstants.getRunnerUpgradeCost(0, 0, 0);
         BigNumber costMap3 = AscendConstants.getRunnerUpgradeCost(0, 3, 0);
         assertTrue(costMap3.gt(costMap0));
+    }
+
+    @Test
+    void runnerUpgradeCostHigherStarsCostsMore() {
+        BigNumber base = AscendConstants.getRunnerUpgradeCost(0, 0, 0);
+        BigNumber withStars = AscendConstants.getRunnerUpgradeCost(0, 0, 1);
+        assertTrue(withStars.gt(base));
+    }
+
+    @Test
+    void runnerUpgradeCostMatchesFormulaWithEarlyBoost() {
+        BigNumber cost = AscendConstants.getRunnerUpgradeCost(0, 2, 0);
+        assertEquals(152.0, cost.toDouble(), 1e-6);
+    }
+
+    @Test
+    void runnerUpgradeCostMatchesFormulaAcrossEvolutionCycles() {
+        BigNumber cost = AscendConstants.getRunnerUpgradeCost(0, 0, 1);
+        assertEquals(5_243_080.0, cost.toDouble(), 1e-3);
     }
 
     // --- Elevation cost ---
