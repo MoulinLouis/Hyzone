@@ -9,6 +9,7 @@ Quick reference for AI agents. Find the right doc, know when to update it.
 | Project overview & modules | `../README.md` | Module added/removed, project description changes |
 | Agent workflow & rules | `../CLAUDE.md` | Workflow or tooling changes |
 | Architecture & module boundaries | `ARCHITECTURE.md` | Module added, major class/package restructured, new integration |
+| Architecture visual diagrams | `ARCHITECTURE_DIAGRAMS.md` | Keep in sync with `ARCHITECTURE.md` |
 | Database schema | `DATABASE.md` | Table/column added, removed, or renamed |
 | Economy & balance (Ascend) | `Ascend/ECONOMY_BALANCE.md` | Cost, reward, multiplier, formula, or progression change |
 | Code patterns & conventions | `CODE_PATTERNS.md` | New reusable pattern established |

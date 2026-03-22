@@ -86,6 +86,7 @@ Node.js bot for Discord account linking + rank sync. See `docs/DiscordBot/README
 | Hytale API gotchas | `docs/HYTALE_API.md` |
 | **Hytale Custom UI** | `docs/hytale-custom-ui/` — **consult BEFORE writing .ui files** |
 | Architecture | `docs/ARCHITECTURE.md` |
+| Architecture diagrams | `docs/ARCHITECTURE_DIAGRAMS.md` |
 | Database schema | `docs/DATABASE.md` |
 | grepai reference | `docs/GREPAI.md` — primary code search tool, falls back to Grep/Glob |
 | Economy balance | `docs/Ascend/ECONOMY_BALANCE.md` |
