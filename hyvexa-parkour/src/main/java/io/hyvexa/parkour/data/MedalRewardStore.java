@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -17,19 +18,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MedalRewardStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final MedalRewardStore INSTANCE = new MedalRewardStore();
 
+    private final ConnectionProvider connectionProvider;
     private final ConcurrentHashMap<String, MedalRewards> rewards = new ConcurrentHashMap<>();
 
-    private MedalRewardStore() {
+    public MedalRewardStore() {
+        this(DatabaseManager.getInstance());
     }
 
-    public static MedalRewardStore getInstance() {
-        return INSTANCE;
+    public MedalRewardStore(ConnectionProvider connectionProvider) {
+        this.connectionProvider = connectionProvider;
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, MedalRewardStore will use in-memory mode");
             return;
         }
@@ -40,7 +42,7 @@ public class MedalRewardStore {
                 + "gold_feathers INT NOT NULL DEFAULT 0, "
                 + "emerald_feathers INT NOT NULL DEFAULT 0"
                 + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
@@ -105,11 +107,11 @@ public class MedalRewardStore {
     }
 
     private void loadAll() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return;
         }
         String sql = "SELECT category, bronze_feathers, silver_feathers, gold_feathers, emerald_feathers, insane_feathers FROM medal_rewards";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -129,13 +131,13 @@ public class MedalRewardStore {
     }
 
     private void persistToDatabase(String category, int bronze, int silver, int gold, int emerald, int insane) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return;
         }
         String sql = "INSERT INTO medal_rewards (category, bronze_feathers, silver_feathers, gold_feathers, emerald_feathers, insane_feathers) "
                 + "VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE "
                 + "bronze_feathers = ?, silver_feathers = ?, gold_feathers = ?, emerald_feathers = ?, insane_feathers = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, category);

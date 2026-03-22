@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
@@ -29,6 +30,7 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
     private final ProgressStore progressStore;
     private final SettingsStore settingsStore;
     private final PlayerCountStore playerCountStore;
+    private final MedalRewardStore medalRewardStore;
     private static final String BUTTON_MAPS = "Maps";
     private static final String BUTTON_PROGRESS = "Progress";
     private static final String BUTTON_SETTINGS = "Settings";
@@ -46,17 +48,20 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 ? HyvexaPlugin.getInstance().getSettingsStore()
                 : null, HyvexaPlugin.getInstance() != null
                 ? HyvexaPlugin.getInstance().getPlayerCountStore()
+                : null, HyvexaPlugin.getInstance() != null
+                ? HyvexaPlugin.getInstance().getMedalRewardStore()
                 : null);
     }
 
     public AdminIndexPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
                                  ProgressStore progressStore, SettingsStore settingsStore,
-                                 PlayerCountStore playerCountStore) {
+                                 PlayerCountStore playerCountStore, MedalRewardStore medalRewardStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, AdminIndexData.CODEC);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.settingsStore = settingsStore;
         this.playerCountStore = playerCountStore;
+        this.medalRewardStore = medalRewardStore;
     }
 
     @Override
@@ -114,7 +119,7 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
         }
         if (BUTTON_MEDAL_REWARDS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new MedalRewardAdminPage(playerRef, mapStore, progressStore));
+                    new MedalRewardAdminPage(playerRef, mapStore, progressStore, medalRewardStore));
             return;
         }
         if (BUTTON_GLOBAL_MESSAGES.equals(data.button)) {

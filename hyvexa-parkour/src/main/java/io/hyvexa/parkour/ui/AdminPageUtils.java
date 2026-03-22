@@ -30,6 +30,7 @@ public final class AdminPageUtils {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new AdminIndexPage(playerRef, plugin.getMapStore(), plugin.getProgressStore(),
-                        plugin.getSettingsStore(), plugin.getPlayerCountStore()));
+                        plugin.getSettingsStore(), plugin.getPlayerCountStore(),
+                        plugin.getMedalRewardStore()));
     }
 }

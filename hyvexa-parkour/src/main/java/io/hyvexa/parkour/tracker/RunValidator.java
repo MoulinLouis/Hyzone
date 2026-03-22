@@ -46,12 +46,17 @@ class RunValidator {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
+    private final MedalStore medalStore;
+    private final MedalRewardStore medalRewardStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
 
-    RunValidator(MapStore mapStore, ProgressStore progressStore) {
+    RunValidator(MapStore mapStore, ProgressStore progressStore,
+                 MedalStore medalStore, MedalRewardStore medalRewardStore) {
         this.mapStore = mapStore;
         this.progressStore = progressStore;
+        this.medalStore = medalStore;
+        this.medalRewardStore = medalRewardStore;
     }
 
     void setGhostRecorder(GhostRecorder ghostRecorder) {
@@ -493,8 +498,6 @@ class RunValidator {
     private record MedalAwardResult(Medal medal, int featherReward) {}
 
     private MedalAwardResult awardMedals(UUID playerId, Map map, long durationMs, Player player) {
-        MedalStore medalStore = MedalStore.getInstance();
-        MedalRewardStore rewardStore = MedalRewardStore.getInstance();
         FeatherStore featherStore = FeatherStore.getInstance();
         String category = map.getCategory();
         Medal highestEarned = null;
@@ -512,7 +515,7 @@ class RunValidator {
                 continue;
             }
             medalStore.awardMedal(playerId, map.getId(), medal);
-            int featherReward = rewardStore.getReward(category, medal);
+            int featherReward = medalRewardStore.getReward(category, medal);
             if (featherReward > 0) {
                 featherStore.addFeathers(playerId, featherReward);
                 player.sendMessage(SystemMessageUtils.parkourSuccess(
@@ -528,7 +531,7 @@ class RunValidator {
         if (category != null && category.trim().equalsIgnoreCase("insane")
                 && !medalStore.hasEarnedMedal(playerId, map.getId(), Medal.INSANE)) {
             medalStore.awardMedal(playerId, map.getId(), Medal.INSANE);
-            int featherReward = rewardStore.getReward(category, Medal.INSANE);
+            int featherReward = medalRewardStore.getReward(category, Medal.INSANE);
             if (featherReward > 0) {
                 featherStore.addFeathers(playerId, featherReward);
                 player.sendMessage(SystemMessageUtils.parkourSuccess(

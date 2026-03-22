@@ -26,6 +26,8 @@ import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalRewardStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.RunStateStore;
 import io.hyvexa.parkour.data.SettingsStore;
@@ -66,12 +68,13 @@ public class RunTracker {
     private GhostNpcManager ghostNpcManager;
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
-                             SettingsStore settingsStore) {
+                             SettingsStore settingsStore, MedalStore medalStore,
+                             MedalRewardStore medalRewardStore) {
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.settingsStore = settingsStore;
         this.jumpTracker = new JumpTracker(progressStore);
-        this.validator = new RunValidator(mapStore, progressStore);
+        this.validator = new RunValidator(mapStore, progressStore, medalStore, medalRewardStore);
         this.sessionTracker = new RunSessionTracker(mapStore, progressStore);
         this.teleporter = new RunTeleporter(mapStore, activeRuns);
     }

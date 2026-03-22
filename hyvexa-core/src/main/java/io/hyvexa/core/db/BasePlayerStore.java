@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -14,6 +15,15 @@ import java.util.function.Function;
 public abstract class BasePlayerStore<V> {
 
     private final ConcurrentHashMap<UUID, V> cache = new ConcurrentHashMap<>();
+    private final ConnectionProvider connectionProvider;
+
+    protected BasePlayerStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    protected BasePlayerStore(ConnectionProvider connectionProvider) {
+        this.connectionProvider = Objects.requireNonNull(connectionProvider, "connectionProvider");
+    }
 
     // --- Template methods (subclasses implement) ---
 
@@ -60,11 +70,15 @@ public abstract class BasePlayerStore<V> {
         return cache.values();
     }
 
+    protected final ConnectionProvider getConnectionProvider() {
+        return connectionProvider;
+    }
+
     /** Bulk-load all rows for subclasses that need it (leaderboards). */
     protected void loadAll(String loadAllSql, Function<ResultSet, UUID> keyExtractor) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!connectionProvider.isInitialized()) return;
         int skipped = 0;
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, loadAllSql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
@@ -93,10 +107,10 @@ public abstract class BasePlayerStore<V> {
     }
 
     private V loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return defaultValue();
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, loadSql())) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
@@ -111,10 +125,10 @@ public abstract class BasePlayerStore<V> {
     }
 
     private void persistToDatabase(UUID playerId, V value) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, upsertSql())) {
             bindUpsertParams(stmt, playerId, value);
             stmt.executeUpdate();

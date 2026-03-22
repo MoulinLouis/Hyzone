@@ -15,6 +15,7 @@ import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.ParkourUtils;
 
@@ -29,16 +30,18 @@ public class MapLeaderboardPage extends AbstractSearchablePaginatedPage {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
+    private final MedalStore medalStore;
     private final String mapId;
     private final String category;
     private static final String BUTTON_BACK = "Back";
 
     public MapLeaderboardPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                     ProgressStore progressStore,
+                                     ProgressStore progressStore, MedalStore medalStore,
                                      String mapId, String category) {
         super(playerRef, 50);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
+        this.medalStore = medalStore;
         this.mapId = mapId;
         this.category = category;
     }
@@ -66,7 +69,7 @@ public class MapLeaderboardPage extends AbstractSearchablePaginatedPage {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new LeaderboardMapSelectPage(playerRef, mapStore, progressStore, category));
+                        new LeaderboardMapSelectPage(playerRef, mapStore, progressStore, medalStore, category));
             }
         }
     }

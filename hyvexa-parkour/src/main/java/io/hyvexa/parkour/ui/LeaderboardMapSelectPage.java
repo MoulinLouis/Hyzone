@@ -15,6 +15,7 @@ import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.ParkourUtils;
 
@@ -26,16 +27,18 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
+    private final MedalStore medalStore;
     private final String category;
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
 
     public LeaderboardMapSelectPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                           ProgressStore progressStore,
+                                           ProgressStore progressStore, MedalStore medalStore,
                                            String category) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
+        this.medalStore = medalStore;
         this.category = category;
     }
 
@@ -62,13 +65,13 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
         }
         if (BUTTON_BACK.equals(data.getButton())) {
             player.getPageManager().openCustomPage(ref, store,
-                    new LeaderboardMenuPage(playerRef, mapStore, progressStore));
+                    new LeaderboardMenuPage(playerRef, mapStore, progressStore, medalStore));
             return;
         }
         if (data.getButton().startsWith(BUTTON_SELECT_PREFIX)) {
             String mapId = data.getButton().substring(BUTTON_SELECT_PREFIX.length());
             player.getPageManager().openCustomPage(ref, store,
-                    new MapLeaderboardPage(playerRef, mapStore, progressStore, mapId, category));
+                    new MapLeaderboardPage(playerRef, mapStore, progressStore, medalStore, mapId, category));
         }
     }
 

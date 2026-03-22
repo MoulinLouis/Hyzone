@@ -52,6 +52,7 @@ public class VoteManager {
     private HttpClient httpClient;
     private volatile ExecutorService ioExecutor;
     private volatile ExecutorService rewardExecutor;
+    private VoteStore voteStore;
     private final Map<UUID, String> onlinePlayers = new ConcurrentHashMap<>();
     private final AtomicBoolean pollInProgress = new AtomicBoolean(false);
     private final AtomicInteger consecutiveBackendFailures = new AtomicInteger();
@@ -65,8 +66,15 @@ public class VoteManager {
     }
 
     public synchronized void initialize(VoteConfig config) {
+        VoteStore defaultVoteStore = new VoteStore();
+        defaultVoteStore.initialize();
+        initialize(config, defaultVoteStore);
+    }
+
+    public synchronized void initialize(VoteConfig config, VoteStore voteStore) {
         shutdownExecutors();
         this.config = config;
+        this.voteStore = voteStore;
         this.ioExecutor = Executors.newFixedThreadPool(IO_THREAD_COUNT, runnable -> {
             Thread t = new Thread(runnable, "VoteIO-" + IO_THREAD_ID.getAndIncrement());
             t.setDaemon(true);
@@ -97,6 +105,7 @@ public class VoteManager {
         consecutiveBackendFailures.set(0);
         pollBackoffUntilMs = 0L;
         httpClient = null;
+        voteStore = null;
         shutdownExecutors();
     }
 
@@ -181,8 +190,8 @@ public class VoteManager {
             }
             claimedCountFuture = claimedCountFuture.thenCompose(claimedCount ->
                     claimVoteAsync(voteId).thenApply(claimed -> {
-                        if (claimed) {
-                            VoteStore.getInstance().recordVote(playerId, username, "hytale.game");
+                        if (claimed && voteStore != null) {
+                            voteStore.recordVote(playerId, username, "hytale.game");
                         }
                         return claimed ? claimedCount + 1 : claimedCount;
                     }));

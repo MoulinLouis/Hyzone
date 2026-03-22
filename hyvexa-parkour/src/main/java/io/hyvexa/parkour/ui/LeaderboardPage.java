@@ -26,13 +26,15 @@ public class LeaderboardPage extends AbstractSearchablePaginatedPage {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
+    private final MedalStore medalStore;
     private static final String BUTTON_BACK = "Back";
 
     public LeaderboardPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                  ProgressStore progressStore) {
+                                  ProgressStore progressStore, MedalStore medalStore) {
         super(playerRef, 50);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
+        this.medalStore = medalStore;
     }
 
     @Override
@@ -58,7 +60,7 @@ public class LeaderboardPage extends AbstractSearchablePaginatedPage {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new LeaderboardMenuPage(playerRef, mapStore, progressStore));
+                        new LeaderboardMenuPage(playerRef, mapStore, progressStore, medalStore));
             }
         }
     }
@@ -67,7 +69,7 @@ public class LeaderboardPage extends AbstractSearchablePaginatedPage {
     protected void buildContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#LeaderboardCards");
         commandBuilder.set("#LeaderboardSearchField.Value", getSearchText());
-        List<MedalStore.MedalScoreEntry> snapshot = MedalStore.getInstance().getLeaderboardSnapshot();
+        List<MedalStore.MedalScoreEntry> snapshot = medalStore.getLeaderboardSnapshot();
         if (snapshot.isEmpty()) {
             commandBuilder.set("#EmptyText.Text", "No medals earned yet.");
             commandBuilder.set("#PageLabel.Text", "");

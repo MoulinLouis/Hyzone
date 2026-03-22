@@ -116,7 +116,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         RunOrFallDatabaseSetup.ensureTables();
 
         configStore = new RunOrFallConfigStore(new File(folder, "config.json"));
-        statsStore = new RunOrFallStatsStore();
+        statsStore = new RunOrFallStatsStore(DatabaseManager.getInstance());
         gameManager = new RunOrFallGameManager(configStore, statsStore);
 
         runOrFallCommand = new RunOrFallCommand(configStore, gameManager);

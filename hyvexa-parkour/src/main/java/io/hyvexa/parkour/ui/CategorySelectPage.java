@@ -15,6 +15,7 @@ import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.ParkourUtils;
@@ -34,17 +35,20 @@ public class CategorySelectPage extends BaseParkourPage {
     private final MapStore mapStore;
     private final ProgressStore progressStore;
     private final RunTracker runTracker;
+    private final MedalStore medalStore;
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
 
     public CategorySelectPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                     ProgressStore progressStore, RunTracker runTracker) {
+                                     ProgressStore progressStore, RunTracker runTracker,
+                                     MedalStore medalStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.runTracker = runTracker;
+        this.medalStore = medalStore;
     }
 
     @Override
@@ -78,7 +82,7 @@ public class CategorySelectPage extends BaseParkourPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new MapSelectPage(playerRef, mapStore, progressStore, runTracker, category));
+                new MapSelectPage(playerRef, mapStore, progressStore, runTracker, medalStore, category));
     }
 
     private void buildCategoryList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {

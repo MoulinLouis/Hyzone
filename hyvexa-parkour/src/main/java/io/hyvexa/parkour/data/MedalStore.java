@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -26,22 +27,23 @@ import java.util.concurrent.atomic.AtomicReference;
 public class MedalStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final MedalStore INSTANCE = new MedalStore();
     private static final int MEDAL_COUNT = Medal.values().length;
 
+    private final ConnectionProvider connectionProvider;
     // player -> mapId -> set of earned medal names
     private final ConcurrentHashMap<UUID, java.util.Map<String, Set<Medal>>> cache = new ConcurrentHashMap<>();
     private final AtomicReference<List<MedalScoreEntry>> leaderboardSnapshot = new AtomicReference<>(List.of());
 
-    private MedalStore() {
+    public MedalStore() {
+        this(DatabaseManager.getInstance());
     }
 
-    public static MedalStore getInstance() {
-        return INSTANCE;
+    public MedalStore(ConnectionProvider connectionProvider) {
+        this.connectionProvider = connectionProvider;
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, MedalStore will use in-memory mode");
             return;
         }
@@ -52,7 +54,7 @@ public class MedalStore {
                 + "earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
                 + "PRIMARY KEY (player_uuid, map_id, medal)"
                 + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
@@ -118,11 +120,11 @@ public class MedalStore {
 
     private java.util.Map<String, Set<Medal>> loadFromDatabase(UUID playerId) {
         java.util.Map<String, Set<Medal>> result = new ConcurrentHashMap<>();
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return result;
         }
         String sql = "SELECT map_id, medal FROM player_medals WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
@@ -145,11 +147,11 @@ public class MedalStore {
     }
 
     private void persistMedal(UUID playerId, String mapId, Medal medal) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return;
         }
         String sql = "INSERT IGNORE INTO player_medals (player_uuid, map_id, medal) VALUES (?, ?, ?)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
@@ -166,12 +168,12 @@ public class MedalStore {
     }
 
     private void loadLeaderboardSnapshot() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return;
         }
         String sql = "SELECT player_uuid, medal, COUNT(*) as cnt FROM player_medals GROUP BY player_uuid, medal";
         java.util.Map<UUID, int[]> aggregated = new HashMap<>();
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {

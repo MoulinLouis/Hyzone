@@ -2,6 +2,7 @@ package io.hyvexa.runorfall.manager;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.BasePlayerStore;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.runorfall.data.RunOrFallPlayerStats;
 
@@ -39,13 +40,19 @@ public class RunOrFallStatsStore extends BasePlayerStore<RunOrFallPlayerStats> {
             """;
 
     public RunOrFallStatsStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public RunOrFallStatsStore(ConnectionProvider connectionProvider) {
+        super(connectionProvider);
         ensureTable();
         syncLoad();
     }
 
     public void syncLoad() {
         clearCache();
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        ConnectionProvider connectionProvider = getConnectionProvider();
+        if (!connectionProvider.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, RunOrFallStatsStore will stay in-memory only.");
             return;
         }
@@ -113,10 +120,11 @@ public class RunOrFallStatsStore extends BasePlayerStore<RunOrFallPlayerStats> {
     }
 
     private void ensureTable() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        ConnectionProvider connectionProvider = getConnectionProvider();
+        if (!connectionProvider.isInitialized()) {
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(CREATE_TABLE_SQL);
         } catch (SQLException e) {

@@ -151,6 +151,9 @@ public class HyvexaPlugin extends JavaPlugin {
     private SettingsStore settingsStore;
     private PlayerCountStore playerCountStore;
     private GlobalMessageStore globalMessageStore;
+    private VoteStore voteStore;
+    private MedalStore medalStore;
+    private MedalRewardStore medalRewardStore;
     private DuelQueue duelQueue;
     private DuelTracker duelTracker;
     private DuelStatsStore duelStatsStore;
@@ -214,12 +217,15 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
+        this.voteStore = new VoteStore(DatabaseManager.getInstance());
+        this.medalRewardStore = new MedalRewardStore(DatabaseManager.getInstance());
+        this.medalStore = new MedalStore(DatabaseManager.getInstance());
         initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
         initSafe("DiscordLinkStore", () -> DiscordLinkStore.getInstance().initialize());
         initSafe("FeatherStore", () -> FeatherStore.getInstance().initialize());
-        initSafe("VoteStore", () -> VoteStore.getInstance().initialize());
-        initSafe("MedalRewardStore", () -> MedalRewardStore.getInstance().initialize());
-        initSafe("MedalStore", () -> MedalStore.getInstance().initialize());
+        initSafe("VoteStore", () -> voteStore.initialize());
+        initSafe("MedalRewardStore", () -> medalRewardStore.initialize());
+        initSafe("MedalStore", () -> medalStore.initialize());
         initSafe("CosmeticStore", () -> CosmeticStore.getInstance().initialize());
         initSafe("AnalyticsStore", () -> {
             AnalyticsStore.getInstance().initialize();
@@ -227,7 +233,7 @@ public class HyvexaPlugin extends JavaPlugin {
         });
         initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
-            VoteManager.getInstance().initialize(voteConfig);
+            VoteManager.getInstance().initialize(voteConfig, voteStore);
         });
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
@@ -241,7 +247,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.playerCountStore.syncLoad();
         this.globalMessageStore = new GlobalMessageStore();
         this.globalMessageStore.syncLoad();
-        this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore);
+        this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore,
+                this.medalStore, this.medalRewardStore);
         this.runStateStore = new RunStateStore();
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
@@ -284,7 +291,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.playtimeManager = new PlaytimeManager(progressStore, playerCountStore);
         this.cleanupManager = new PlayerCleanupManager(hudManager, announcementManager, perksManager, playtimeManager,
                 runTracker);
-        this.leaderboardHologramManager = new LeaderboardHologramManager(progressStore, mapStore, PARKOUR_WORLD_NAME);
+        this.leaderboardHologramManager = new LeaderboardHologramManager(progressStore, mapStore,
+                PARKOUR_WORLD_NAME, medalStore);
         this.inventorySyncManager = new InventorySyncManager(mapStore, progressStore, runTracker,
                 this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
         this.worldMapManager = new WorldMapManager(true);
@@ -324,7 +332,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DiscordCommand());
         this.getCommandRegistry().registerCommand(new RulesCommand());
         this.getCommandRegistry().registerCommand(new ParkourCommand(this.mapStore, this.progressStore, this.settingsStore,
-                this.playerCountStore, this.runTracker));
+                this.playerCountStore, this.runTracker, this.medalStore, this.medalRewardStore));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
         this.getCommandRegistry().registerCommand(new StoreCommand());
@@ -525,7 +533,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { FeatherStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: FeatherStore"); }
 
-                try { MedalStore.getInstance().evictPlayer(playerId); }
+                try { if (medalStore != null) { medalStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MedalStore"); }
 
                 try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
@@ -543,7 +551,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { VoteManager.getInstance().unregisterPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteManager"); }
 
-                try { VoteStore.getInstance().evictPlayer(playerId); }
+                try { if (voteStore != null) { voteStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteStore"); }
 
                 try { removeHudPlayer(playerId); }
@@ -603,6 +611,14 @@ public class HyvexaPlugin extends JavaPlugin {
 
     public GlobalMessageStore getGlobalMessageStore() {
         return globalMessageStore;
+    }
+
+    public MedalStore getMedalStore() {
+        return medalStore;
+    }
+
+    public MedalRewardStore getMedalRewardStore() {
+        return medalRewardStore;
     }
 
     /**
@@ -914,7 +930,9 @@ public class HyvexaPlugin extends JavaPlugin {
                             resolvedId = progressStore.getPlayerIdByName(username);
                         }
                         if (resolvedId != null) {
-                            VoteStore.getInstance().recordVote(resolvedId, username, "votifier");
+                            if (voteStore != null) {
+                                voteStore.recordVote(resolvedId, username, "votifier");
+                            }
                         } else {
                             LOGGER.atFine().log("VoteEvent for unknown player: " + username);
                         }

@@ -21,6 +21,8 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalRewardStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
@@ -48,9 +50,12 @@ public class ParkourCommand extends AbstractAsyncCommand {
     private final SettingsStore settingsStore;
     private final PlayerCountStore playerCountStore;
     private final RunTracker runTracker;
+    private final MedalStore medalStore;
+    private final MedalRewardStore medalRewardStore;
 
     public ParkourCommand(MapStore mapStore, ProgressStore progressStore, SettingsStore settingsStore,
-                          PlayerCountStore playerCountStore, RunTracker runTracker) {
+                          PlayerCountStore playerCountStore, RunTracker runTracker,
+                          MedalStore medalStore, MedalRewardStore medalRewardStore) {
         super("pk", "Open the parkour map list.");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -59,6 +64,8 @@ public class ParkourCommand extends AbstractAsyncCommand {
         this.settingsStore = settingsStore;
         this.playerCountStore = playerCountStore;
         this.runTracker = runTracker;
+        this.medalStore = medalStore;
+        this.medalRewardStore = medalRewardStore;
     }
 
     @Override
@@ -114,7 +121,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
         if (tokens.length == 0 || tokens[0].equalsIgnoreCase("ui")) {
             if (playerRefComponent != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new CategorySelectPage(playerRefComponent, mapStore, progressStore, runTracker));
+                        new CategorySelectPage(playerRefComponent, mapStore, progressStore, runTracker, medalStore));
             }
             return;
         }
@@ -161,7 +168,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new LeaderboardMenuPage(playerRef, mapStore, progressStore));
+                new LeaderboardMenuPage(playerRef, mapStore, progressStore, medalStore));
     }
 
     private void showStats(Player player, Store<EntityStore> store, Ref<EntityStore> ref) {
@@ -182,7 +189,8 @@ public class ParkourCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, settingsStore, playerCountStore));
+                new AdminIndexPage(playerRef, mapStore, progressStore, settingsStore, playerCountStore,
+                        medalRewardStore));
     }
 
     private record ResolvedPlayer(UUID playerId, String name) {}

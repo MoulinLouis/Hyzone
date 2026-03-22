@@ -39,6 +39,7 @@ public class MapSelectPage extends BaseParkourPage {
     private final MapStore mapStore;
     private final ProgressStore progressStore;
     private final RunTracker runTracker;
+    private final MedalStore medalStore;
     private final String category;
     private final boolean hideCompleted;
     private static final String BUTTON_BACK = "Back";
@@ -48,17 +49,19 @@ public class MapSelectPage extends BaseParkourPage {
     private static final String HIDE_COMPLETED_CHECK_SELECTOR = "#HideCompletedCheckboxMark";
 
     public MapSelectPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                   ProgressStore progressStore, RunTracker runTracker, String category) {
-        this(playerRef, mapStore, progressStore, runTracker, category, false);
+                                   ProgressStore progressStore, RunTracker runTracker,
+                                   MedalStore medalStore, String category) {
+        this(playerRef, mapStore, progressStore, runTracker, medalStore, category, false);
     }
 
     public MapSelectPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                   ProgressStore progressStore, RunTracker runTracker, String category,
-                                   boolean hideCompleted) {
+                                   ProgressStore progressStore, RunTracker runTracker,
+                                   MedalStore medalStore, String category, boolean hideCompleted) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.runTracker = runTracker;
+        this.medalStore = medalStore;
         this.category = category;
         this.hideCompleted = hideCompleted;
     }
@@ -87,7 +90,7 @@ public class MapSelectPage extends BaseParkourPage {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new CategorySelectPage(playerRef, mapStore, progressStore, runTracker));
+                        new CategorySelectPage(playerRef, mapStore, progressStore, runTracker, medalStore));
             }
             return;
         }
@@ -96,7 +99,8 @@ public class MapSelectPage extends BaseParkourPage {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new MapSelectPage(playerRef, mapStore, progressStore, runTracker, category, !hideCompleted));
+                        new MapSelectPage(playerRef, mapStore, progressStore, runTracker,
+                                medalStore, category, !hideCompleted));
             }
             return;
         }
@@ -176,7 +180,7 @@ public class MapSelectPage extends BaseParkourPage {
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
             // Medal display
             String prefix = "#MapCards[" + index + "] ";
-            Set<Medal> earned = MedalStore.getInstance().getEarnedMedals(playerRef.getUuid(), map.getId());
+            Set<Medal> earned = medalStore.getEarnedMedals(playerRef.getUuid(), map.getId());
             boolean hasMedalTimes = map.getBronzeTimeMs() != null || map.getSilverTimeMs() != null
                     || map.getGoldTimeMs() != null || map.getEmeraldTimeMs() != null;
             if (hasMedalTimes) {

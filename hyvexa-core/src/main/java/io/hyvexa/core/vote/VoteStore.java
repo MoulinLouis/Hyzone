@@ -1,6 +1,7 @@
 package io.hyvexa.core.vote;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -19,23 +20,24 @@ import java.util.concurrent.ConcurrentHashMap;
 public class VoteStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final VoteStore INSTANCE = new VoteStore();
 
+    private final ConnectionProvider connectionProvider;
     private final ConcurrentHashMap<UUID, Integer> countCache = new ConcurrentHashMap<>();
 
-    private VoteStore() {
+    public VoteStore() {
+        this(DatabaseManager.getInstance());
     }
 
-    public static VoteStore getInstance() {
-        return INSTANCE;
+    public VoteStore(ConnectionProvider connectionProvider) {
+        this.connectionProvider = connectionProvider;
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, VoteStore will not persist");
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = connectionProvider.getConnection()) {
             try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                     "CREATE TABLE IF NOT EXISTS player_votes ("
                     + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
@@ -71,10 +73,10 @@ public class VoteStore {
         if (playerId == null || username == null || source == null) {
             return;
         }
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return;
         }
-        boolean committed = DatabaseManager.getInstance().withTransaction(conn -> {
+        boolean committed = connectionProvider.withTransaction(conn -> {
             try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                     "INSERT INTO player_votes (player_uuid, player_name, source) VALUES (?, ?, ?)")) {
                 stmt.setString(1, playerId.toString());
@@ -126,10 +128,10 @@ public class VoteStore {
      */
     public List<VoterEntry> getTopVotersForPeriod(int limit, long sinceMs) {
         List<VoterEntry> result = new ArrayList<>();
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return result;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn,
                      "SELECT player_uuid, player_name, COUNT(*) AS vote_count FROM player_votes "
                      + "WHERE voted_at >= FROM_UNIXTIME(? / 1000) "
@@ -159,10 +161,10 @@ public class VoteStore {
     // ── Internal ─────────────────────────────────────────────────────────
 
     private int loadVoteCount(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return 0;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn,
                      "SELECT total_votes FROM player_vote_counts WHERE player_uuid = ?")) {
             stmt.setString(1, playerId.toString());
@@ -179,10 +181,10 @@ public class VoteStore {
 
     private List<VoterEntry> queryTopVoters(String sql, int limit) {
         List<VoterEntry> result = new ArrayList<>();
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!connectionProvider.isInitialized()) {
             return result;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = connectionProvider.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setInt(1, limit);
             try (ResultSet rs = stmt.executeQuery()) {

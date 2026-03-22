@@ -28,23 +28,27 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
+    private final MedalRewardStore medalRewardStore;
 
     // 4 categories x 4 tiers (bronze/silver/gold/emerald)
     private final String[][] values = new String[4][4];
     // Separate insane completion reward (only for insane category)
     private String insaneRewardValue = "0";
 
-    public MedalRewardAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore, ProgressStore progressStore) {
+    public MedalRewardAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
+                                ProgressStore progressStore, MedalRewardStore medalRewardStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, RewardData.CODEC);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
+        this.medalRewardStore = medalRewardStore;
         loadCurrentValues();
     }
 
     private void loadCurrentValues() {
-        MedalRewardStore store = MedalRewardStore.getInstance();
         for (int i = 0; i < CATEGORIES.length; i++) {
-            MedalRewardStore.MedalRewards r = store.getRewards(CATEGORIES[i]);
+            MedalRewardStore.MedalRewards r = medalRewardStore != null
+                    ? medalRewardStore.getRewards(CATEGORIES[i])
+                    : null;
             if (r != null) {
                 values[i][0] = String.valueOf(r.bronze);
                 values[i][1] = String.valueOf(r.silver);
@@ -102,7 +106,10 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
     }
 
     private void handleSave(Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
-        MedalRewardStore rewardStore = MedalRewardStore.getInstance();
+        if (medalRewardStore == null) {
+            player.sendMessage(Message.raw("Medal reward store unavailable."));
+            return;
+        }
         int insaneReward = parseNonNegative(insaneRewardValue);
         if (insaneReward < 0) {
             player.sendMessage(Message.raw("Insane completion reward must be a non-negative integer."));
@@ -119,7 +126,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             }
             // Only the insane category gets the insane completion reward
             int insane = CATEGORIES[i].equals("insane") ? insaneReward : 0;
-            rewardStore.setRewards(CATEGORIES[i], bronze, silver, gold, emerald, insane);
+            medalRewardStore.setRewards(CATEGORIES[i], bronze, silver, gold, emerald, insane);
         }
         player.sendMessage(Message.raw("Medal rewards saved."));
         UICommandBuilder commandBuilder = new UICommandBuilder();

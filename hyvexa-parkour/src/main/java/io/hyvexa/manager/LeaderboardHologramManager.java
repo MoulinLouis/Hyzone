@@ -27,15 +27,18 @@ public class LeaderboardHologramManager {
 
     private final ProgressStore progressStore;
     private final MapStore mapStore;
+    private final MedalStore medalStore;
     private String parkourWorldName;
 
-    public LeaderboardHologramManager(ProgressStore progressStore, MapStore mapStore) {
-        this(progressStore, mapStore, "Parkour");
+    public LeaderboardHologramManager(ProgressStore progressStore, MapStore mapStore, MedalStore medalStore) {
+        this(progressStore, mapStore, "Parkour", medalStore);
     }
 
-    public LeaderboardHologramManager(ProgressStore progressStore, MapStore mapStore, String parkourWorldName) {
+    public LeaderboardHologramManager(ProgressStore progressStore, MapStore mapStore,
+                                      String parkourWorldName, MedalStore medalStore) {
         this.progressStore = progressStore;
         this.mapStore = mapStore;
+        this.medalStore = medalStore;
         this.parkourWorldName = parkourWorldName != null ? parkourWorldName : "Parkour";
     }
 
@@ -134,7 +137,7 @@ public class LeaderboardHologramManager {
     private List<String> buildLeaderboardHologramLines() {
         List<String> lines = new ArrayList<>();
         lines.add(formatLeaderboardHeader());
-        List<MedalStore.MedalScoreEntry> snapshot = MedalStore.getInstance().getLeaderboardSnapshot();
+        List<MedalStore.MedalScoreEntry> snapshot = medalStore.getLeaderboardSnapshot();
         if (snapshot.isEmpty()) {
             return lines;
         }

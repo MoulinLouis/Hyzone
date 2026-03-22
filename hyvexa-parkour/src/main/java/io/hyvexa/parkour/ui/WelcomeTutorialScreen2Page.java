@@ -59,15 +59,16 @@ public class WelcomeTutorialScreen2Page extends BaseParkourPage {
         MapStore mapStore = plugin.getMapStore();
         ProgressStore progressStore = plugin.getProgressStore();
         RunTracker runTracker = plugin.getRunTracker();
+        var medalStore = plugin.getMedalStore();
 
-        if (mapStore == null || progressStore == null || runTracker == null) {
+        if (mapStore == null || progressStore == null || runTracker == null || medalStore == null) {
             return;
         }
 
         if (BUTTON_SHOW_MAPS.equals(data.getButton())) {
             progressStore.markWelcomeShown(playerRef.getUuid(), playerRef.getUsername());
             player.getPageManager().openCustomPage(ref, store,
-                    new CategorySelectPage(playerRef, mapStore, progressStore, runTracker));
+                    new CategorySelectPage(playerRef, mapStore, progressStore, runTracker, medalStore));
         } else if (BUTTON_BACK.equals(data.getButton())) {
             player.getPageManager().openCustomPage(ref, store,
                     new WelcomeTutorialScreen1Page(playerRef));

@@ -458,7 +458,7 @@ CREATE TABLE IF NOT EXISTS medal_rewards (
 Notes:
 - Column was renamed from `author_feathers` to `emerald_feathers` via migration
 - `insane_feathers` added via migration for the Insane difficulty category
-- Manager: `MedalRewardStore` (singleton in `hyvexa-parkour`) -- loaded into memory on startup, edited via `/pk admin` -> Medal Rewards.
+- Manager: `MedalRewardStore` (wired by `HyvexaPlugin` in `hyvexa-parkour`) -- loaded into memory on startup, edited via `/pk admin` -> Medal Rewards.
 
 ## player_medals
 Tracks which medal tiers each player has earned per map. Medals are earned once per map per tier.
@@ -474,7 +474,7 @@ CREATE TABLE IF NOT EXISTS player_medals (
 ```
 
 - `medal` values: `BRONZE`, `SILVER`, `GOLD`, `EMERALD`, `INSANE`
-- Manager: `MedalStore` (singleton in `hyvexa-parkour`) -- lazy-loads per player, evicts on disconnect.
+- Manager: `MedalStore` (wired by `HyvexaPlugin` in `hyvexa-parkour`) -- lazy-loads per player, evicts on disconnect.
 
 ## saved_run_state
 Persists in-progress parkour run state so players can resume after disconnect or server restart.

@@ -32,6 +32,7 @@ public class MenuInteraction extends SimpleInteraction {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new CategorySelectPage(playerRef, plugin.getMapStore(), plugin.getProgressStore(), plugin.getRunTracker()));
+                new CategorySelectPage(playerRef, plugin.getMapStore(), plugin.getProgressStore(),
+                        plugin.getRunTracker(), plugin.getMedalStore()));
     }
 }

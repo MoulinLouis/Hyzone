@@ -11,7 +11,7 @@ Quick reference for `hyvexa-core`.
 
 ### Database (`core/db/`)
 - `DatabaseManager` -- singleton HikariCP connection pool to MySQL. Config loaded from `mods/Parkour/database.json`. First module to call `initialize()` creates the pool; subsequent calls are no-ops.
-- `ConnectionProvider` -- minimal interface for classes that need pooled SQL connections without depending on the concrete singleton.
+- `ConnectionProvider` -- small database contract (`getConnection()`, `isInitialized()`, transaction helpers) so stores can depend on an interface instead of the concrete singleton.
 - `DatabaseConfig` -- reads JSON config.
 - `DatabaseRetry` -- retry helper for transient failures.
 - Helper methods: `columnExists`, `addColumnIfMissing`, `renameColumnIfExists`, `applyQueryTimeout`, `logSlowQuery`.

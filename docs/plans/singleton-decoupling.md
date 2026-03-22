@@ -1,6 +1,6 @@
 # Singleton Decoupling — Progressive Refactor Plan
 
-## Status Update — 2026-03-22
+## Status Update — 2026-03-23
 
 This plan is now partially implemented.
 
@@ -10,8 +10,8 @@ This plan is now partially implemented.
 |-------|--------|--------------|
 | Phase 1 — Ascend plugin decoupling | Completed | Ascend no longer calls `ParkourAscendPlugin.getInstance()` anywhere in `hyvexa-parkour-ascend/src/main/java`; the codec-instantiated interaction boundary now goes through a narrow `AscendInteractionBridge` instead |
 | Phase 2 — core interfaces | Partially completed | `CurrencyStore`, `PlayerAnalytics`, and `ConnectionProvider` exist; `AscendRunTracker` now consumes `PlayerAnalytics`, but broader adoption is still incomplete |
-| Phase 3 — store `DatabaseManager` migration | Not started | No broad `ConnectionProvider` propagation yet |
-| Phase 4 — other module singleton cleanup | Not started | Purge, RunOrFall, Hub, Parkour, and Wardrobe are untouched |
+| Phase 3 — store `DatabaseManager` migration | Partially completed | `BasePlayerStore`, `RunOrFallStatsStore`, `VoteStore`, `MedalStore`, and `MedalRewardStore` now support injected `ConnectionProvider`; broad migration still remains |
+| Phase 4 — other module singleton cleanup | Partially completed | Parkour now composes `VoteStore`, `MedalStore`, and `MedalRewardStore` at the plugin boundary instead of using static store singletons, but most non-Ascend modules are still untouched |
 | Phase 5 — docs | Partially completed | Architecture/pattern docs updated for the completed slices; remaining docs cleanup is mostly progress/status refreshes as more stores move off singletons |
 
 ### Completed so far
@@ -90,6 +90,40 @@ This plan is now partially implemented.
   - `AnalyticsStore` now implements `PlayerAnalytics`
   - `AscendRunTracker` now depends on `PlayerAnalytics` instead of `AnalyticsStore.getInstance()`
 
+- **Phase 3: first `ConnectionProvider` migrations completed**
+  - `ConnectionProvider` now provides transaction helper defaults so stores can use the interface without falling back to `DatabaseManager`.
+  - `BasePlayerStore` now accepts an injected `ConnectionProvider` while keeping a backwards-compatible no-arg constructor for incremental adoption.
+  - `RunOrFallStatsStore`, `VoteStore`, `MedalStore`, and `MedalRewardStore` now accept `ConnectionProvider` via constructor injection and no longer reach directly into `DatabaseManager` during normal runtime paths.
+  - `HyvexaRunOrFallPlugin` now constructs `RunOrFallStatsStore` with an explicit `ConnectionProvider` at the composition root.
+
+- **Phase 4: parkour store singleton cleanup started**
+  - `VoteStore`, `MedalStore`, and `MedalRewardStore` no longer have any `getInstance()` call sites in `hyvexa-*`.
+  - `HyvexaPlugin.setup()` now composes those stores explicitly and passes them into:
+    - `VoteManager`
+    - `RunTracker` / `RunValidator`
+    - `LeaderboardHologramManager`
+    - `ParkourCommand`
+    - parkour leaderboard / map-select / admin page chains
+    - parkour interaction and tutorial entry points that open those pages
+  - The following classes no longer call `VoteStore.getInstance()`, `MedalStore.getInstance()`, or `MedalRewardStore.getInstance()`:
+    - `VoteManager`
+    - `HyvexaPlugin`
+    - `RunValidator`
+    - `LeaderboardHologramManager`
+    - `ParkourCommand`
+    - `MenuInteraction`
+    - `LeaderboardInteraction`
+    - `CategorySelectPage`
+    - `MapSelectPage`
+    - `LeaderboardMenuPage`
+    - `LeaderboardMapSelectPage`
+    - `LeaderboardPage`
+    - `MapLeaderboardPage`
+    - `AdminIndexPage`
+    - `AdminPageUtils`
+    - `MedalRewardAdminPage`
+    - `WelcomeTutorialScreen2Page`
+
 - **Phase 5: partial**
   - `docs/CODE_PATTERNS.md`, `docs/ARCHITECTURE.md`, `docs/Ascend/README.md`, and `docs/Core/README.md` now document the composition-root / constructor-injection rule.
 
@@ -99,35 +133,64 @@ This plan is now partially implemented.
   - Consumers are not yet broadly typed against `CurrencyStore`, `PlayerAnalytics`, or `ConnectionProvider`.
   - The interfaces exist, but most store consumers still use concrete singleton-backed classes.
 
-- **Phase 3 not started in earnest**
-  - Direct `DatabaseManager.getInstance()` usage still exists across core/module stores.
-  - No store-by-store `ConnectionProvider` migration has been completed yet.
+- **Phase 3 still incomplete**
+  - Direct `DatabaseManager.getInstance()` usage is still widespread across core/module stores.
+  - Current count from a quick `rg` pass: `DatabaseManager.getInstance()` still appears 366 times across `hyvexa-*`.
+  - Only the first low-risk store slice is migrated so far: `RunOrFallStatsStore`, `VoteStore`, `MedalStore`, `MedalRewardStore`, and the shared `BasePlayerStore` path.
 
-- **Phase 4 not started**
-  - No equivalent singleton cleanup has been applied yet to Purge, RunOrFall, Hub, Parkour, or Wardrobe.
+- **Phase 4 still incomplete**
+  - Parkour is only partially started; several entry points still use `HyvexaPlugin.getInstance()` as a service locator.
+  - Purge, Hub, and Wardrobe have not had equivalent singleton cleanup yet.
 
 ### Recommended next tasks for another agent
 
-1. Reduce the **codec-instantiated interaction** static boundary further:
-   - Revisit `AscendInteractionBridge`
-   - If Hytale codec constraints still force no-arg handlers, keep the bridge narrow and consider splitting it into smaller purpose-specific bridges if interaction needs continue diverging
-
-2. Continue **Phase 2 propagation** on low-risk gameplay consumers:
+1. Continue **Phase 2 propagation** on low-risk gameplay consumers:
    - Replace direct `AnalyticsStore.getInstance()` usage outside Ascend with `PlayerAnalytics`
    - Replace remaining concrete currency store injections with `CurrencyStore`
 
-3. Start **Phase 3 store migration** with low-risk targets:
-   - `RunOrFallStatsStore`
-   - `VoteStore`
-   - `MedalStore`
-   - `MedalRewardStore`
+2. Continue **Phase 3 store migration** with the next low-risk stores:
+   - `CosmeticShopConfigStore`
+   - `GhostStore`
+   - `WeaponXpStore`
+   - `PurgeMissionStore`
 
-4. After the next `ConnectionProvider` migrations, update this plan with:
+3. Continue **Phase 4 parkour cleanup** after the store slice:
+   - Replace remaining `HyvexaPlugin.getInstance()` UI/bootstrap lookups with narrower injected navigators or bridges
+   - Keep codec-instantiated handlers on the narrowest possible static boundary only where Hytale construction rules force it
+
+4. After the next migrations, update this plan with:
    - exact classes completed
    - remaining call counts
    - any constructor cycles that require setter injection or small helper services
 
 ### Files changed in this slice
+
+- Latest store migration / parkour cleanup slice completed on 2026-03-23:
+  - `hyvexa-core/src/main/java/io/hyvexa/core/db/ConnectionProvider.java`
+  - `hyvexa-core/src/main/java/io/hyvexa/core/db/BasePlayerStore.java`
+  - `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/manager/RunOrFallStatsStore.java`
+  - `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/HyvexaRunOrFallPlugin.java`
+  - `hyvexa-core/src/main/java/io/hyvexa/core/vote/VoteStore.java`
+  - `hyvexa-core/src/main/java/io/hyvexa/core/vote/VoteManager.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/HyvexaPlugin.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/data/MedalStore.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/data/MedalRewardStore.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/command/ParkourCommand.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/interaction/MenuInteraction.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/interaction/LeaderboardInteraction.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/tracker/RunTracker.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/tracker/RunValidator.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/manager/LeaderboardHologramManager.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/CategorySelectPage.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/MapSelectPage.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/LeaderboardMenuPage.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/LeaderboardMapSelectPage.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/LeaderboardPage.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/MapLeaderboardPage.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/AdminIndexPage.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/AdminPageUtils.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/MedalRewardAdminPage.java`
+  - `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ui/WelcomeTutorialScreen2Page.java`
 
 - Core abstractions:
   - `hyvexa-core/src/main/java/io/hyvexa/core/db/ConnectionProvider.java`
@@ -224,6 +287,8 @@ This plan is now partially implemented.
   - `MineEggChestInteraction`
 
 ## Audit Summary
+
+This section is the original baseline audit snapshot from before the completed slices above. Use the phase/status sections as the current source of truth; the raw counts/examples below are directionally useful but no longer exact after the 2026-03-22 and 2026-03-23 migrations.
 
 ### Inventory
 
