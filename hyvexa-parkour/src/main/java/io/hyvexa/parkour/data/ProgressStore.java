@@ -2,6 +2,7 @@ package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.analytics.PlayerAnalytics;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.HyvexaPlugin;
@@ -37,6 +38,7 @@ public class ProgressStore {
     private static final long SAVE_DEBOUNCE_MS = 5000L;
     private static final int MAX_PLAYER_NAME_LENGTH = 32;
 
+    private final ConnectionProvider db;
     private final java.util.Map<UUID, PlayerProgress> progress = new ConcurrentHashMap<>();
     private final java.util.Map<UUID, String> lastKnownNames = new ConcurrentHashMap<>();
     private final java.util.Map<String, LeaderboardCache> leaderboardCache = new ConcurrentHashMap<>();
@@ -48,12 +50,20 @@ public class ProgressStore {
     private final AtomicLong cachedTotalXp = new AtomicLong(-1L);
     private volatile PlayerAnalytics analytics;
 
+    public ProgressStore(ConnectionProvider db) {
+        this.db = db;
+    }
+
+    public ProgressStore() {
+        this(DatabaseManager.getInstance());
+    }
+
     public void setAnalytics(PlayerAnalytics analytics) {
         this.analytics = analytics;
     }
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, ProgressStore will be empty");
             return;
         }
@@ -67,7 +77,7 @@ public class ProgressStore {
             dirtyPlayerVersions.clear();
 
             long totalStart = System.nanoTime();
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (Connection conn = this.db.getConnection()) {
                 long start = System.nanoTime();
                 loadPlayers(conn);
                 DatabaseManager.logSlowQuery("ProgressStore.loadPlayers", start);
@@ -341,7 +351,7 @@ public class ProgressStore {
                     ? List.copyOf(checkpointTimes)
                     : List.of();
             completionPersistenceRequest = new CompletionPersistenceRequest(playerId, mapId, timeMs, checkpointSnapshot);
-            boolean completionSaveQueued = DatabaseManager.getInstance().isInitialized();
+            boolean completionSaveQueued = this.db.isInitialized();
 
             result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, xpAwarded,
                     oldLevel, playerProgress.level, completionSaveQueued);
@@ -383,7 +393,7 @@ public class ProgressStore {
     }
 
     private boolean persistCompletion(CompletionPersistenceRequest request) {
-        if (request == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (request == null || !this.db.isInitialized()) {
             return false;
         }
 
@@ -398,7 +408,7 @@ public class ProgressStore {
             VALUES (?, ?, ?, ?)
             """;
 
-        return DatabaseManager.getInstance().withTransaction(conn -> {
+        return this.db.withTransaction(conn -> {
             try (PreparedStatement completionStmt = conn.prepareStatement(completionSql)) {
                 DatabaseManager.applyQueryTimeout(completionStmt);
                 completionStmt.setString(1, request.playerId.toString());
@@ -604,13 +614,13 @@ public class ProgressStore {
     }
 
     private void deletePlayerFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String deleteCheckpoints = "DELETE FROM player_checkpoint_times WHERE player_uuid = ?";
         // CASCADE will delete completions
         String sql = "DELETE FROM players WHERE uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -710,12 +720,12 @@ public class ProgressStore {
     }
 
     private void deletePlayerMapCompletion(UUID playerId, String mapId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String deleteCheckpoints = "DELETE FROM player_checkpoint_times WHERE player_uuid = ? AND map_id = ?";
         String sql = "DELETE FROM player_completions WHERE player_uuid = ? AND map_id = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -738,12 +748,12 @@ public class ProgressStore {
     }
 
     private void purgeMapFromDatabase(String mapId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String deleteCheckpoints = "DELETE FROM player_checkpoint_times WHERE map_id = ?";
         String sql = "DELETE FROM player_completions WHERE map_id = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -926,7 +936,7 @@ public class ProgressStore {
                 saveFuture.set(null);
                 saveQueued.set(false);
                 if (!dirtyPlayerVersions.isEmpty()) {
-                    long followUpDelay = DatabaseManager.getInstance().isInitialized() ? 0L : SAVE_DEBOUNCE_MS;
+                    long followUpDelay = db.isInitialized() ? 0L : SAVE_DEBOUNCE_MS;
                     queueSave(followUpDelay);
                 }
             }
@@ -937,7 +947,7 @@ public class ProgressStore {
     private void syncSave() {
         java.util.Map<UUID, Long> toSave = java.util.Map.copyOf(dirtyPlayerVersions);
         if (toSave.isEmpty()) return;
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
         java.util.Map<UUID, Long> skippedIds = new HashMap<>();
         List<UUID> batchedIds = new ArrayList<>();
 
@@ -951,7 +961,7 @@ public class ProgressStore {
                 jump_count = VALUES(jump_count)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;

@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.parkour.ParkourConstants;
 
@@ -25,16 +26,22 @@ public class MapStore {
     private static final Pattern MAP_ID_RE = Pattern.compile(MAP_ID_PATTERN);
     private static final double MAX_COORDINATE = 30000000.0;
 
+    private final ConnectionProvider db;
     private final java.util.Map<String, Map> maps = new LinkedHashMap<>();
     private final java.util.Map<String, List<Map>> activeStartTriggerMapsByWorld = new HashMap<>();
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private volatile Runnable onChangeListener;
 
+    public MapStore(ConnectionProvider db) {
+        this.db = db;
+    }
+
     public MapStore() {
+        this(DatabaseManager.getInstance());
     }
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, MapStore will be empty");
             return;
         }
@@ -63,7 +70,7 @@ public class MapStore {
             maps.clear();
             activeStartTriggerMapsByWorld.clear();
 
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (Connection conn = this.db.getConnection()) {
                 if (conn == null) {
                     LOGGER.atWarning().log("Failed to acquire database connection");
                     return;
@@ -346,7 +353,7 @@ public class MapStore {
     }
 
     private void saveMapToDatabase(Map map) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
@@ -392,7 +399,7 @@ public class MapStore {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
-        DatabaseManager.getInstance().withTransaction(conn -> {
+        this.db.withTransaction(conn -> {
             try (PreparedStatement mapStmt = conn.prepareStatement(mapSql);
                  PreparedStatement deleteStmt = conn.prepareStatement(deleteCheckpointsSql);
                  PreparedStatement cpStmt = conn.prepareStatement(insertCheckpointSql)) {
@@ -483,14 +490,14 @@ public class MapStore {
     }
 
     private void deleteMapFromDatabase(String mapId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
         // Checkpoints will be deleted by CASCADE
         String sql = "DELETE FROM maps WHERE id = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;

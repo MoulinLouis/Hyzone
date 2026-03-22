@@ -18,6 +18,7 @@ public class VexaStore extends CachedCurrencyStore {
     private static final VexaStore INSTANCE = new VexaStore();
 
     private VexaStore() {
+        super();
     }
 
     public static VexaStore getInstance() {

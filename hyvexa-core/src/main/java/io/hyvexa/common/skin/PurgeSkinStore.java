@@ -1,6 +1,7 @@
 package io.hyvexa.common.skin;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
 
@@ -30,14 +31,18 @@ public class PurgeSkinStore {
         NOT_ENOUGH_VEXA
     }
 
-    private PurgeSkinStore() {}
+    private final ConnectionProvider db;
+
+    private PurgeSkinStore() {
+        this.db = DatabaseManager.getInstance();
+    }
 
     public static PurgeSkinStore getInstance() {
         return INSTANCE;
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgeSkinStore will use in-memory mode");
             return;
         }
@@ -48,7 +53,7 @@ public class PurgeSkinStore {
                 + "selected BOOLEAN NOT NULL DEFAULT FALSE, "
                 + "PRIMARY KEY (uuid, weapon_id, skin_id)"
                 + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.executeUpdate();
             LOGGER.atInfo().log("PurgeSkinStore initialized (purge_weapon_skins table ensured)");
@@ -152,11 +157,11 @@ public class PurgeSkinStore {
         }
         ownedCache.remove(playerId);
         selectedCache.remove(playerId);
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "DELETE FROM purge_weapon_skins WHERE uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.executeUpdate();
@@ -173,11 +178,11 @@ public class PurgeSkinStore {
     }
 
     private void loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "SELECT weapon_id, skin_id, selected FROM purge_weapon_skins WHERE uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
@@ -201,11 +206,11 @@ public class PurgeSkinStore {
     }
 
     private void persistPurchase(UUID playerId, String weaponId, String skinId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "INSERT IGNORE INTO purge_weapon_skins (uuid, weapon_id, skin_id, selected) VALUES (?, ?, ?, FALSE)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, weaponId);
@@ -217,13 +222,13 @@ public class PurgeSkinStore {
     }
 
     private void persistSelection(UUID playerId, String weaponId, String skinId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         // Deselect all skins for this weapon, then select the chosen one
         String deselectSql = "UPDATE purge_weapon_skins SET selected = FALSE WHERE uuid = ? AND weapon_id = ?";
         String selectSql = "UPDATE purge_weapon_skins SET selected = TRUE WHERE uuid = ? AND weapon_id = ? AND skin_id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             try (PreparedStatement stmt = DatabaseManager.prepare(conn, deselectSql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.setString(2, weaponId);
@@ -241,11 +246,11 @@ public class PurgeSkinStore {
     }
 
     private void persistDeselection(UUID playerId, String weaponId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "UPDATE purge_weapon_skins SET selected = FALSE WHERE uuid = ? AND weapon_id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, weaponId);

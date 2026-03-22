@@ -13,6 +13,7 @@ public class FeatherStore extends CachedCurrencyStore {
     private static final FeatherStore INSTANCE = new FeatherStore();
 
     private FeatherStore() {
+        super();
     }
 
     public static FeatherStore getInstance() {

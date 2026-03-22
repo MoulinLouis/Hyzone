@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import io.hyvexa.core.analytics.PlayerAnalytics;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
 
@@ -35,9 +36,11 @@ public class DiscordLinkStore {
 
     private final ConcurrentHashMap<UUID, DiscordLink> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> rewardCheckedThisSession = new ConcurrentHashMap<>();
+    private final ConnectionProvider db;
     private volatile PlayerAnalytics analytics;
 
     private DiscordLinkStore() {
+        this.db = DatabaseManager.getInstance();
     }
 
     public static DiscordLinkStore getInstance() {
@@ -53,7 +56,7 @@ public class DiscordLinkStore {
      * Also cleans up expired codes. Safe to call multiple times (idempotent).
      */
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, DiscordLinkStore will not function");
             return;
         }
@@ -74,7 +77,7 @@ public class DiscordLinkStore {
                 + "last_synced_rank VARCHAR(20) DEFAULT NULL"
                 + ") ENGINE=InnoDB";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             try (PreparedStatement stmt = DatabaseManager.prepare(conn, createCodes)) {
                 stmt.executeUpdate();
             }
@@ -97,7 +100,7 @@ public class DiscordLinkStore {
      * Format: XXX-XXX (e.g., X7K-9M2)
      */
     public String generateCode(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return null;
         }
 
@@ -115,7 +118,7 @@ public class DiscordLinkStore {
         String deleteSql = "DELETE FROM discord_link_codes WHERE player_uuid = ?";
         String insertSql = "INSERT INTO discord_link_codes (code, player_uuid, expires_at) VALUES (?, ?, ?)";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             try (PreparedStatement stmt = DatabaseManager.prepare(conn, deleteSql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.executeUpdate();
@@ -153,11 +156,11 @@ public class DiscordLinkStore {
      * Format: XXX-XXX
      */
     public String getActiveCode(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return null;
         }
         String sql = "SELECT code FROM discord_link_codes WHERE player_uuid = ? AND expires_at > NOW()";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
@@ -188,7 +191,7 @@ public class DiscordLinkStore {
     }
 
     public CompletableFuture<Boolean> checkAndRewardVexaAsync(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return CompletableFuture.completedFuture(false);
         }
         return CompletableFuture.supplyAsync(() -> claimAndRewardVexa(playerId), HytaleServer.SCHEDULED_EXECUTOR);
@@ -199,7 +202,7 @@ public class DiscordLinkStore {
      * Mode transfers should use this instead of the raw async claim path.
      */
     public CompletableFuture<Boolean> checkAndRewardVexaOnLoginAsync(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return CompletableFuture.completedFuture(false);
         }
         if (rewardCheckedThisSession.putIfAbsent(playerId, Boolean.TRUE) != null) {
@@ -209,7 +212,7 @@ public class DiscordLinkStore {
     }
 
     public CompletableFuture<Boolean> updateRankIfLinkedAsync(UUID playerId, String rankName) {
-        if (playerId == null || rankName == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || rankName == null || !this.db.isInitialized()) {
             return CompletableFuture.completedFuture(false);
         }
         return CompletableFuture.supplyAsync(() -> {
@@ -233,7 +236,7 @@ public class DiscordLinkStore {
     }
 
     private boolean claimAndRewardVexa(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return false;
         }
         // Atomic: claim flag + vexa grant in one transaction so neither can succeed alone
@@ -241,7 +244,7 @@ public class DiscordLinkStore {
         String awardSql = "INSERT INTO player_vexa (uuid, vexa) VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE vexa = vexa + ?";
 
-        Boolean claimed = DatabaseManager.getInstance().withTransaction(conn -> {
+        Boolean claimed = this.db.withTransaction(conn -> {
             try (PreparedStatement claimStmt = DatabaseManager.prepare(conn, claimSql);
                  PreparedStatement awardStmt = DatabaseManager.prepare(conn, awardSql)) {
 
@@ -281,11 +284,11 @@ public class DiscordLinkStore {
      * Only updates if the player has a linked Discord account.
      */
     public void updateRank(UUID playerId, String rankName) {
-        if (playerId == null || rankName == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || rankName == null || !this.db.isInitialized()) {
             return;
         }
         String sql = "UPDATE discord_links SET current_rank = ? WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, rankName);
             stmt.setString(2, playerId.toString());
@@ -344,13 +347,13 @@ public class DiscordLinkStore {
      * Returns true if a link was deleted.
      */
     public boolean unlinkPlayer(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return false;
         }
         cache.remove(playerId);
         rewardCheckedThisSession.remove(playerId);
         boolean deleted = false;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                     "DELETE FROM discord_links WHERE player_uuid = ?")) {
                 stmt.setString(1, playerId.toString());
@@ -381,11 +384,11 @@ public class DiscordLinkStore {
      * Delete expired codes from the database.
      */
     private void cleanExpiredCodes() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "DELETE FROM discord_link_codes WHERE expires_at < NOW()";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             int deleted = stmt.executeUpdate();
             if (deleted > 0) {
@@ -397,7 +400,7 @@ public class DiscordLinkStore {
     }
 
     private DiscordLink loadLink(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return null;
         }
         DiscordLink cached = cache.get(playerId);
@@ -405,7 +408,7 @@ public class DiscordLinkStore {
             return cached;
         }
         String sql = "SELECT discord_id, linked_at, vexa_rewarded FROM discord_links WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {

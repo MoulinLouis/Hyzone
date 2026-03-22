@@ -1,6 +1,7 @@
 package io.hyvexa.core.wardrobe;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -20,16 +21,19 @@ public class CosmeticShopConfigStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final CosmeticShopConfigStore INSTANCE = new CosmeticShopConfigStore();
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<String, CosmeticConfig> configs = new ConcurrentHashMap<>();
 
-    private CosmeticShopConfigStore() {}
+    private CosmeticShopConfigStore() {
+        this.db = DatabaseManager.getInstance();
+    }
 
     public static CosmeticShopConfigStore getInstance() {
         return INSTANCE;
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, CosmeticShopConfigStore will use in-memory mode");
             return;
         }
@@ -39,7 +43,7 @@ public class CosmeticShopConfigStore {
                 + "price INT NOT NULL DEFAULT 0, "
                 + "currency VARCHAR(16) NOT NULL DEFAULT 'vexa'"
                 + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn,createSql)) {
             stmt.executeUpdate();
             LOGGER.atInfo().log("CosmeticShopConfigStore initialized (cosmetic_shop_config table ensured)");
@@ -50,11 +54,11 @@ public class CosmeticShopConfigStore {
     }
 
     private void loadAll() {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
         // Clear stale entries so removed DB rows don't linger in cache
         configs.clear();
         String sql = "SELECT cosmetic_id, available, price, currency FROM cosmetic_shop_config";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn,sql)) {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -129,10 +133,10 @@ public class CosmeticShopConfigStore {
     }
 
     private void persistConfig(CosmeticConfig cfg) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
         String sql = "INSERT INTO cosmetic_shop_config (cosmetic_id, available, price, currency) VALUES (?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE available = ?, price = ?, currency = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn,sql)) {
             stmt.setString(1, cfg.cosmeticId);
             stmt.setBoolean(2, cfg.available);

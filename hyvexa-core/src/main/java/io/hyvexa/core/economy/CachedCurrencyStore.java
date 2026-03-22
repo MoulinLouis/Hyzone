@@ -1,6 +1,7 @@
 package io.hyvexa.core.economy;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -29,8 +30,17 @@ abstract class CachedCurrencyStore implements CurrencyStore {
         return t;
     });
 
+    protected final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, CachedBalance> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> refreshInFlight = new ConcurrentHashMap<>();
+
+    protected CachedCurrencyStore(ConnectionProvider db) {
+        this.db = db;
+    }
+
+    protected CachedCurrencyStore() {
+        this(DatabaseManager.getInstance());
+    }
 
     protected abstract HytaleLogger logger();
 
@@ -58,7 +68,7 @@ abstract class CachedCurrencyStore implements CurrencyStore {
     // ── Public API ───────────────────────────────────────────────────────
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             logger().atWarning().log("Database not initialized, " + currencyLabel() + " store will use in-memory mode");
             return;
         }
@@ -66,7 +76,7 @@ abstract class CachedCurrencyStore implements CurrencyStore {
                 + "uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
                 + columnName() + " BIGINT NOT NULL DEFAULT 0"
                 + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             preMigrate(conn);
             try (PreparedStatement stmt = DatabaseManager.prepare(conn, createSql)) {
                 stmt.executeUpdate();
@@ -195,11 +205,11 @@ abstract class CachedCurrencyStore implements CurrencyStore {
     }
 
     long loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return 0;
         }
         String sql = "SELECT " + columnName() + " FROM " + tableName() + " WHERE uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
@@ -214,12 +224,12 @@ abstract class CachedCurrencyStore implements CurrencyStore {
     }
 
     private boolean persistToDatabase(UUID playerId, long amount) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return false;
         }
         String sql = "INSERT INTO " + tableName() + " (uuid, " + columnName() + ") VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE " + columnName() + " = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setLong(2, amount);

@@ -2,6 +2,7 @@ package io.hyvexa.core.cosmetic;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.analytics.PlayerAnalytics;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.CurrencyBridge;
 
@@ -30,9 +31,11 @@ public class CosmeticStore {
     private final ConcurrentHashMap<UUID, String> equippedCache = new ConcurrentHashMap<>();
     /** Sentinel value meaning no cosmetic is equipped. Empty string rather than null for safe map operations. */
     private static final String NONE_EQUIPPED = "";
+    private final ConnectionProvider db;
     private volatile PlayerAnalytics analytics;
 
     private CosmeticStore() {
+        this.db = DatabaseManager.getInstance();
     }
 
     public void setAnalytics(PlayerAnalytics analytics) {
@@ -47,7 +50,7 @@ public class CosmeticStore {
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, CosmeticStore will use in-memory mode");
             return;
         }
@@ -57,7 +60,7 @@ public class CosmeticStore {
                 + "equipped BOOLEAN NOT NULL DEFAULT FALSE, "
                 + "PRIMARY KEY (player_uuid, cosmetic_id)"
                 + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.executeUpdate();
             LOGGER.atInfo().log("CosmeticStore initialized (player_cosmetics table ensured)");
@@ -176,9 +179,9 @@ public class CosmeticStore {
         if (playerId == null) return;
         ownedCache.put(playerId, Collections.synchronizedList(new ArrayList<>()));
         equippedCache.put(playerId, NONE_EQUIPPED);
-        if (DatabaseManager.getInstance().isInitialized()) {
+        if (this.db.isInitialized()) {
             String sql = "DELETE FROM player_cosmetics WHERE player_uuid = ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.executeUpdate();
@@ -200,9 +203,9 @@ public class CosmeticStore {
         List<String> owned = Collections.synchronizedList(new ArrayList<>());
         String equipped = NONE_EQUIPPED;
 
-        if (DatabaseManager.getInstance().isInitialized()) {
+        if (this.db.isInitialized()) {
             String sql = "SELECT cosmetic_id, equipped FROM player_cosmetics WHERE player_uuid = ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
                 stmt.setString(1, playerId.toString());
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -224,9 +227,9 @@ public class CosmeticStore {
     }
 
     private void persistPurchase(UUID playerId, String cosmeticId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
         String sql = "INSERT IGNORE INTO player_cosmetics (player_uuid, cosmetic_id, equipped) VALUES (?, ?, FALSE)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, cosmeticId);
@@ -237,9 +240,9 @@ public class CosmeticStore {
     }
 
     private void persistEquipped(UUID playerId, String cosmeticId, boolean equipped) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
         String sql = "UPDATE player_cosmetics SET equipped = ? WHERE player_uuid = ? AND cosmetic_id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setBoolean(1, equipped);
             stmt.setString(2, playerId.toString());
