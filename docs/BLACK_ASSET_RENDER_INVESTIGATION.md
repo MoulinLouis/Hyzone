@@ -8,11 +8,7 @@ This report focuses on causes that are visible from this repository and the loca
 
 ## Production Log Confirmation
 
-I re-checked three real production logs:
-
-- `docs/prod_logs/2026-03-18_19-38-11_server.log`
-- `docs/prod_logs/2026-03-20_12-29-28_server.log`
-- `docs/prod_logs/2026-03-22_14-20-29_server.log`
+I re-checked three production log captures retained outside this repository.
 
 Important distinction:
 
@@ -22,11 +18,9 @@ Important distinction:
 
 Most important production finding:
 
-- Three real player crashes in production were caused by:
+- Representative player crashes in production were caused by:
   - `Selected element in CustomUI command was not found. Selector: #LeaderboardCards[0] #Completion.Text`
-- Seen at:
-  - `docs/prod_logs/2026-03-18_19-38-11_server.log`
-  - `docs/prod_logs/2026-03-20_12-29-28_server.log`
+- Seen in two of the reviewed production captures.
 
 This maps to a concrete code bug:
 
@@ -38,7 +32,7 @@ This maps to a concrete code bug:
 
 That exact bug is unrelated to the "all assets are black" symptom by itself, but it proves that production currently has real UI document mismatch bugs, so plugin-side UI issues are not theoretical.
 
-Latest production observation for the still-affected player `Onakar` (`32727072-beb0-428f-8798-c9b3d3cb2544`):
+Latest production observation for one still-affected player:
 
 - The `1.1.0` deployment is definitely live:
   - `HyvexaParkour-1.1.0.jar`
@@ -48,19 +42,19 @@ Latest production observation for the still-affected player `Onakar` (`32727072-
   - `HyvexaWardrobe-1.1.0.jar`
   - `HyvexaParkourAscend-1.1.0.jar`
   - `HyvexaPurge-1.1.0.jar`
-- Onakar successfully completes setup and receives assets:
+- The affected player successfully completes setup and receives assets:
   - `Request Assets took 441ms`
   - `Send Common Assets took 582ms`
   - `Send Config Assets took 85ms`
   - `Player Options took 8sec 787ms`
-- Onakar joins `Parkour`, stays connected, and leaves normally:
+- The affected player joins `Parkour`, stays connected, and leaves normally:
   - `Disconnect - Player leave`
 - There is no server-side crash, no `CustomUI` selector failure, and no missing document error for that session.
 
 What this changes:
 
 - The Hyvexa `1.1.0` version bump did deploy correctly.
-- A stale Hyvexa client asset cache is therefore less convincing as the sole remaining explanation for Onakar specifically.
+- A stale Hyvexa client asset cache is therefore less convincing as the sole remaining explanation for that session specifically.
 - The server does not currently see a concrete UI/document failure for his session.
 - The remaining stronger suspects become:
   - third-party asset packs that were not version-bumped and still target older server versions
@@ -69,12 +63,12 @@ What this changes:
 
 One weak but interesting signal:
 
-- In `docs/prod_logs/2026-03-22_14-20-29_server.log`, Onakar has the slowest `Player Options took ...` time in that short sample, and also the slowest `Send Common Assets took ...` time.
+- In the latest reviewed production capture, that affected session has the slowest `Player Options took ...` time in that short sample, and also the slowest `Send Common Assets took ...` time.
 - That does not prove the black-render issue, but it suggests his client may be slower than others at processing the login/setup phase.
 
 One thing that does **not** look useful as a differentiator:
 
-- `Added future for ClientReady packet?` and the paired `ClientReady@9da7` / `ClientReady@9da1` sequence appear for many players in production, not just Onakar.
+- `Added future for ClientReady packet?` and the paired `ClientReady@9da7` / `ClientReady@9da1` sequence appear for many players in production, not just that affected session.
 - Based on the logs available so far, that looks like a noisy global pattern rather than a player-specific clue.
 
 ## Most Likely Causes
@@ -121,7 +115,7 @@ Concrete evidence:
 Assessment:
 
 - High confidence that stale client-side asset/UI caches were a real risk before the `1.1.0` bump.
-- Lower confidence that this is the sole remaining cause for Onakar after the latest production deployment.
+- Lower confidence that this is the sole remaining cause after the latest production deployment.
 
 ### 2. `MultipleHUD` conflict or asset-sync failure
 
@@ -140,9 +134,7 @@ Relevant files:
 Why it is suspicious:
 
 - Hyvexa attaches custom HUDs in multiple modules and depends on `MultipleHUD` to append/composite them.
-- Production logs confirm `MultipleHUD` is enabled on the real server and also targeting a different server version:
-  - `docs/prod_logs/2026-03-18_19-38-11_server.log`
-  - `docs/prod_logs/2026-03-20_12-29-28_server.log`
+- Production logs confirm `MultipleHUD` is enabled on the real server and also targeting a different server version.
 - A real log entry shows a client crashing because the `MultipleHUD` UI document could not be found:
   - `run/logs/2026-03-20_16-41-06_server.log`
   - `Crash - Could not find document HUD/MultipleHUD.ui for Custom UI Append command`
@@ -191,11 +183,8 @@ There is at least one confirmed production bug where Hyvexa sends updates to a s
 
 Concrete evidence:
 
-- Production crashes:
-  - `docs/prod_logs/2026-03-18_19-38-11_server.log`
-  - `docs/prod_logs/2026-03-20_12-29-28_server.log`
-  - all show:
-    - `Selected element in CustomUI command was not found. Selector: #LeaderboardCards[0] #Completion.Text`
+- Production crashes from two reviewed captures show:
+  - `Selected element in CustomUI command was not found. Selector: #LeaderboardCards[0] #Completion.Text`
 - Source bug:
   - `hyvexa-parkour/src/main/java/io/hyvexa/duel/ui/DuelLeaderboardPage.java`
     - appends `Pages/Parkour_LeaderboardEntry.ui`
@@ -308,7 +297,7 @@ The production logs show repeated asset-request/setup activity and many QUIC pro
 
 Concrete evidence:
 
-- `docs/prod_logs/2026-03-20_12-29-28_server.log`
+- One reviewed production capture shows:
   - many `Request Assets took ...`
   - many `Send Common Assets took ...`
   - many `Send Config Assets took ...`
@@ -324,7 +313,7 @@ Assessment:
 
 - Low to medium confidence.
 - Better treated as a contributing condition than a root cause.
-- For Onakar specifically, this remains only a weak signal because his session completed successfully.
+- For that affected session specifically, this remains only a weak signal because the session completed successfully.
 
 ## What I Did Not Find
 
@@ -355,7 +344,7 @@ After the `1.1.0` rollout, the unresolved cases look different:
 2. third-party packs that still target older versions (`MultipleHUD`, `Wardrobe`, `Hyguns`) become relatively more suspicious
 3. the remaining issue may now be primarily client-side and invisible to server logs
 
-The next high-value test is not another log scrape. It is a controlled reproduction with Onakar on a staging server where third-party asset-pack mods are removed in batches, starting with:
+The next high-value test is not another log scrape. It is a controlled reproduction with an affected player on a staging server where third-party asset-pack mods are removed in batches, starting with:
 
 1. `MultipleHUD`
 2. `Wardrobe`
