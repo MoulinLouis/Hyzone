@@ -406,9 +406,9 @@ Do not switch repository visibility to public until the fresh-clone validation i
 [x] Rewrite Git history to purge logs and Hytale classes
 [x] Rewrite personal commit emails to `noreply`
 [x] Audit the cleaned repository and history
-[ ] Validate from a fresh clone
-[ ] Force-push the rewritten history
-[ ] Make the GitHub repository public
+[x] Validate from a fresh clone
+[x] Force-push the rewritten history
+[x] Make the GitHub repository public
 
 ---
 
@@ -446,8 +446,15 @@ Do not switch repository visibility to public until the fresh-clone validation i
 - `git log --all -- com/hypixel/hytale` -> no results
 - `git rev-list --objects --all | rg 'prod_logs|server\\.log|com/hypixel/hytale/.+\\.class'` -> no results
 - `git log --all --format='%an <%ae>' | sort -u` -> only `users.noreply.github.com` identities remain
+- Fresh clone validation passed from `/tmp/hyvexa-public-release-fresh-clone-20260322-180118-r2`
+
+### Remote Publication Completed
+
+- Rewritten `main` force-pushed to `origin` at `19e1ba33afdf60137e2e5013df24ecef7ed21cf8`
+- GitHub repository visibility changed from `PRIVATE` to `PUBLIC`
+- Public repository URL: `https://github.com/MoulinLouis/Hyzone`
 
 ### Final Audit Adjustment
 
 - `docs/BLACK_ASSET_RENDER_INVESTIGATION.md` was sanitized during the audit to remove player-specific production identifiers and broken references to the purged production log files
-- Push-freeze communication and repository visibility change still require an explicit remote-side operator step
+- Push-freeze communication still requires an explicit collaborator-facing operator step outside the repository
