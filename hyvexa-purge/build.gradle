@@ -4,9 +4,13 @@ plugins {
 
 dependencies {
     implementation project(':hyvexa-core')
-    compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
-    compileOnly files("${rootProject.projectDir}/run/mods/HygunsPlugin-3.6.1.jar")
-    runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    compileOnly hytaleServerJar
+    runtimeOnly hytaleServerJar
+
+    // Hyguns - soft dependency, only available locally (run/mods/) or in libs/.
+    def hygunsLocal = file("${rootProject.projectDir}/run/mods/HygunsPlugin-3.6.1.jar")
+    def hyguns = hygunsLocal.exists() ? files(hygunsLocal) : files("${rootProject.projectDir}/libs/HygunsPlugin-3.6.1.jar")
+    compileOnly hyguns
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

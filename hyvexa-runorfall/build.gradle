@@ -4,8 +4,8 @@ plugins {
 
 dependencies {
     implementation project(':hyvexa-core')
-    compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
-    runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    compileOnly hytaleServerJar
+    runtimeOnly hytaleServerJar
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

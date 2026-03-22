@@ -7,8 +7,10 @@ repositories {
 }
 
 dependencies {
-    compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
-    runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    compileOnly hytaleServerJar
+    runtimeOnly hytaleServerJar
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // TaleMessage - MiniMessage-style formatting for Hytale
     implementation 'com.github.InsiderAnh:TaleMessage:1.0.2'
@@ -34,6 +36,10 @@ tasks.register('updatePluginManifest') {
 
 tasks.named('processResources') {
     dependsOn 'updatePluginManifest'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
 
 tasks.named('jar') {

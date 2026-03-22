@@ -6,8 +6,8 @@ plugins {
 
 dependencies {
     // Launch-only module: provides HytaleServer on classpath for IntelliJ run configs.
-    compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
-    runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    compileOnly hytaleServerJar
+    runtimeOnly hytaleServerJar
 }
 
 def serverRunDir = rootProject.file("run")

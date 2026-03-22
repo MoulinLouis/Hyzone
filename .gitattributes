@@ -15,6 +15,9 @@
 
 # Binary files
 *.jar binary
+
+# Track large JARs in libs/ with Git LFS
+libs/*.jar filter=lfs diff=lfs merge=lfs -text
 *.png binary
 *.jpg binary
 *.gif binary

@@ -4,6 +4,11 @@ plugins {
 
 ext {
     hytaleHome = "${System.getProperty("user.home")}/AppData/Roaming/Hytale"
+
+    // Resolve HytaleServer.jar: prefer local Hytale install, fall back to libs/ for CI.
+    def localJar = file("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    def ciJar = file("$rootDir/libs/HytaleServer.jar")
+    hytaleServerJar = localJar.exists() ? files(localJar) : files(ciJar)
 }
 
 allprojects {
