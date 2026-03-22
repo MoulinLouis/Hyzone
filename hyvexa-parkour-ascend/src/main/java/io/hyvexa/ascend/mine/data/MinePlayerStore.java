@@ -2,6 +2,7 @@ package io.hyvexa.ascend.mine.data;
 
 import com.google.common.flogger.FluentLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -20,9 +21,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MinePlayerStore {
     private static final FluentLogger LOGGER = FluentLogger.forEnclosingClass();
 
+    private final ConnectionProvider db;
     private final Map<UUID, MinePlayerProgress> players = new ConcurrentHashMap<>();
     private final Map<UUID, Long> dirtyVersions = new ConcurrentHashMap<>();
     private final AtomicBoolean saveScheduled = new AtomicBoolean(false);
+
+    public MinePlayerStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public MinePlayerStore(ConnectionProvider db) {
+        this.db = db;
+    }
 
     public MinePlayerProgress getPlayer(UUID playerId) {
         return players.get(playerId);
@@ -70,8 +80,8 @@ public class MinePlayerStore {
     }
 
     private MinePlayerProgress loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return null;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        if (!this.db.isInitialized()) return null;
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return null;
 
             // Load player crystals + upgrades
@@ -179,8 +189,8 @@ public class MinePlayerStore {
     }
 
     private void ensurePlayerRow(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        if (!this.db.isInitialized()) return;
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT IGNORE INTO mine_players (uuid) VALUES (?)")) {
@@ -208,8 +218,8 @@ public class MinePlayerStore {
      * Called immediately when opening an egg (not batched).
      */
     public long insertMiner(UUID playerId, CollectedMiner miner) {
-        if (!DatabaseManager.getInstance().isInitialized()) return -1;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        if (!this.db.isInitialized()) return -1;
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return -1;
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO mine_player_miners_v2 (player_uuid, layer_id, rarity, speed_level) VALUES (?, ?, ?, ?)",
@@ -232,11 +242,11 @@ public class MinePlayerStore {
     private boolean savePlayerSync(UUID playerId) {
         MinePlayerProgress progress = players.get(playerId);
         if (progress == null) return true;
-        if (!DatabaseManager.getInstance().isInitialized()) return true;
+        if (!this.db.isInitialized()) return true;
 
         MinePlayerProgress.PlayerSaveSnapshot snapshot = progress.createSaveSnapshot();
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return false;
 
             conn.setAutoCommit(false);

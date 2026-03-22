@@ -11,6 +11,7 @@ import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.core.analytics.PlayerAnalytics;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -39,15 +40,21 @@ public class ChallengeManager {
     private final AscendMapStore mapStore;
     private final AscendRunTracker runTracker;
     private final PlayerAnalytics analytics;
+    private final ConnectionProvider db;
 
     // In-memory cache of active challenges
     private final ConcurrentHashMap<UUID, ActiveChallenge> activeChallenges = new ConcurrentHashMap<>();
 
     public ChallengeManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, PlayerAnalytics analytics) {
+        this(playerStore, mapStore, runTracker, analytics, DatabaseManager.getInstance());
+    }
+
+    public ChallengeManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, PlayerAnalytics analytics, ConnectionProvider db) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.runTracker = Objects.requireNonNull(runTracker, "runTracker");
         this.analytics = analytics;
+        this.db = db;
     }
 
     /**
@@ -387,13 +394,13 @@ public class ChallengeManager {
      * Also loads permanent challenge rewards from ascend_challenge_records.
      */
     public void onPlayerConnect(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
         // Load active challenge (crash recovery)
         String sql = "SELECT challenge_type_id, started_at_ms, snapshot_json FROM ascend_challenges WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -493,7 +500,7 @@ public class ChallengeManager {
         }
 
         String sql = "SELECT challenge_type_id FROM ascend_challenge_records WHERE player_uuid = ? AND completions > 0";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -527,12 +534,12 @@ public class ChallengeManager {
      * Get challenge record (best time + completions) for a player and challenge type.
      */
     public ChallengeRecord getChallengeRecord(UUID playerId, ChallengeType challengeType) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return new ChallengeRecord(null, 0);
         }
 
         String sql = "SELECT best_time_ms, completions FROM ascend_challenge_records WHERE player_uuid = ? AND challenge_type_id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return new ChallengeRecord(null, 0);
@@ -561,7 +568,7 @@ public class ChallengeManager {
     // ========================================
 
     private void persistActiveChallenge(UUID playerId, ChallengeType type, long startedAtMs, String snapshotJson) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
@@ -572,7 +579,7 @@ public class ChallengeManager {
                 started_at_ms = VALUES(started_at_ms), snapshot_json = VALUES(snapshot_json)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -591,12 +598,12 @@ public class ChallengeManager {
     }
 
     private void deleteActiveChallenge(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
         String sql = "DELETE FROM ascend_challenges WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -612,7 +619,7 @@ public class ChallengeManager {
     }
 
     private void recordChallengeCompletion(UUID playerId, ChallengeType type, long elapsedMs) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
@@ -625,7 +632,7 @@ public class ChallengeManager {
                 completions = completions + 1
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -666,7 +673,7 @@ public class ChallengeManager {
      */
     public List<ChallengeLeaderboardEntry> getChallengeLeaderboard(ChallengeType challengeType) {
         List<ChallengeLeaderboardEntry> entries = new ArrayList<>();
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return entries;
         }
 
@@ -678,7 +685,7 @@ public class ChallengeManager {
             ORDER BY cr.best_time_ms ASC
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return entries;

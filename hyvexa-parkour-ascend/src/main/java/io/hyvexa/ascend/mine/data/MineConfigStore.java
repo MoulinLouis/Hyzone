@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -22,6 +23,16 @@ public class MineConfigStore {
     private static final Gson GSON = new Gson();
     private static final int GATE_ENTRY = 1;
     private static final int GATE_EXIT = 2;
+
+    private final ConnectionProvider db;
+
+    public MineConfigStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public MineConfigStore(ConnectionProvider db) {
+        this.db = db;
+    }
 
     private record GateConfig(
         double minX, double minY, double minZ,
@@ -63,7 +74,7 @@ public class MineConfigStore {
     private volatile GateConfig exitGate;
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, MineConfigStore will be empty");
             return;
         }
@@ -73,7 +84,7 @@ public class MineConfigStore {
             mines.clear();
             invalidateSortedCache();
 
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (Connection conn = this.db.getConnection()) {
                 if (conn == null) {
                     LOGGER.atWarning().log("Failed to acquire database connection for mine config");
                     return;
@@ -436,7 +447,7 @@ public class MineConfigStore {
     }
 
     private void saveMineToDatabase(Mine mine) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO mine_definitions (id, name, display_order, unlock_cost_mantissa, unlock_cost_exp10,
@@ -450,7 +461,7 @@ public class MineConfigStore {
                 spawn_rot_x = VALUES(spawn_rot_x), spawn_rot_y = VALUES(spawn_rot_y), spawn_rot_z = VALUES(spawn_rot_z)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -491,9 +502,9 @@ public class MineConfigStore {
     }
 
     private void deleteMineFromDatabase(String id) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM mine_definitions WHERE id = ?")) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -525,7 +536,7 @@ public class MineConfigStore {
     }
 
     private void saveZoneToDatabase(MineZone zone) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO mine_zones (id, mine_id, min_x, min_y, min_z, max_x, max_y, max_z,
@@ -538,7 +549,7 @@ public class MineConfigStore {
                 regen_cooldown_seconds = VALUES(regen_cooldown_seconds)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -581,9 +592,9 @@ public class MineConfigStore {
     }
 
     private void deleteZoneFromDatabase(String zoneId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM mine_zones WHERE id = ?")) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -623,7 +634,7 @@ public class MineConfigStore {
                                     double maxX, double maxY, double maxZ,
                                     double destX, double destY, double destZ,
                                     float destRotX, float destRotY, float destRotZ) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO mine_gate (id, min_x, min_y, min_z, max_x, max_y, max_z,
@@ -637,7 +648,7 @@ public class MineConfigStore {
                 fallback_rot_z = VALUES(fallback_rot_z)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -726,7 +737,7 @@ public class MineConfigStore {
             blockPrices.put(blockTypeId, price);
         }
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         if (price <= 1) {
             removeBlockPriceFromDatabase(blockTypeId);
@@ -739,7 +750,7 @@ public class MineConfigStore {
             ON DUPLICATE KEY UPDATE price = VALUES(price)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -759,9 +770,9 @@ public class MineConfigStore {
     }
 
     private void removeBlockPriceFromDatabase(String blockTypeId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(
                     "DELETE FROM block_prices WHERE block_type_id = ?")) {
@@ -806,7 +817,7 @@ public class MineConfigStore {
             blockHpMap.put(blockTypeId, hp);
         }
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         if (hp <= 1) {
             removeBlockHpFromDatabase(blockTypeId);
@@ -819,7 +830,7 @@ public class MineConfigStore {
             ON DUPLICATE KEY UPDATE hp = VALUES(hp)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -839,9 +850,9 @@ public class MineConfigStore {
     }
 
     private void removeBlockHpFromDatabase(String blockTypeId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(
                     "DELETE FROM block_hp WHERE block_type_id = ?")) {
@@ -936,7 +947,7 @@ public class MineConfigStore {
         slots.add(slot);
         slots.sort(Comparator.comparingInt(MinerSlot::getSlotIndex));
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO mine_miner_slots (mine_id, slot_index, npc_x, npc_y, npc_z, npc_yaw,
@@ -948,7 +959,7 @@ public class MineConfigStore {
                 interval_seconds = VALUES(interval_seconds), conveyor_speed = VALUES(conveyor_speed)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -1001,10 +1012,10 @@ public class MineConfigStore {
         int order = wps.size();
         wps.add(new double[]{x, y, z});
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = "INSERT INTO mine_conveyor_waypoints (mine_id, slot_index, waypoint_order, x, y, z) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -1027,10 +1038,10 @@ public class MineConfigStore {
             mineWps.remove(slotIndex);
         }
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = "DELETE FROM mine_conveyor_waypoints WHERE mine_id = ? AND slot_index = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -1068,7 +1079,7 @@ public class MineConfigStore {
     }
 
     private void saveLayerToDatabase(MineZoneLayer layer) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json)
@@ -1078,7 +1089,7 @@ public class MineConfigStore {
                 block_table_json = VALUES(block_table_json)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -1119,9 +1130,9 @@ public class MineConfigStore {
     }
 
     private void deleteLayerFromDatabase(String layerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM mine_zone_layers WHERE id = ?")) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -1158,7 +1169,7 @@ public class MineConfigStore {
         tierRecipes.computeIfAbsent(targetTier, k -> new ConcurrentHashMap<>())
             .put(blockTypeId, amount);
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO pickaxe_tier_recipes (tier, block_type_id, amount)
@@ -1166,7 +1177,7 @@ public class MineConfigStore {
             ON DUPLICATE KEY UPDATE amount = VALUES(amount)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -1189,9 +1200,9 @@ public class MineConfigStore {
             if (recipe.isEmpty()) tierRecipes.remove(targetTier);
         }
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(
                     "DELETE FROM pickaxe_tier_recipes WHERE tier = ? AND block_type_id = ?")) {
@@ -1235,7 +1246,7 @@ public class MineConfigStore {
         enhanceCosts.computeIfAbsent(tier, k -> new ConcurrentHashMap<>())
             .put(level, cost);
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO pickaxe_enhance_costs (tier, level, crystal_cost)
@@ -1243,7 +1254,7 @@ public class MineConfigStore {
             ON DUPLICATE KEY UPDATE crystal_cost = VALUES(crystal_cost)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -1264,9 +1275,9 @@ public class MineConfigStore {
             if (costs.isEmpty()) enhanceCosts.remove(tier);
         }
 
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (!this.db.isInitialized()) return;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement stmt = conn.prepareStatement(
                     "DELETE FROM pickaxe_enhance_costs WHERE tier = ? AND level = ?")) {

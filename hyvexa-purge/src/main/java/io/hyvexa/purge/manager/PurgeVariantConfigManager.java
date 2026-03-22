@@ -1,6 +1,7 @@
 package io.hyvexa.purge.manager;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.purge.data.PurgeVariantConfig;
 
@@ -17,9 +18,15 @@ public class PurgeVariantConfigManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<String, PurgeVariantConfig> variants = new ConcurrentHashMap<>();
 
     public PurgeVariantConfigManager() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public PurgeVariantConfigManager(ConnectionProvider db) {
+        this.db = db;
         loadAll();
         seedDefaults();
     }
@@ -39,7 +46,7 @@ public class PurgeVariantConfigManager {
     }
 
     public boolean isPersistenceAvailable() {
-        return DatabaseManager.getInstance().isInitialized();
+        return this.db.isInitialized();
     }
 
     public boolean addVariant(String key, String label, int hp, float dmg, double speed) {
@@ -60,7 +67,7 @@ public class PurgeVariantConfigManager {
         String safeNpcType = (npcType != null && !npcType.isBlank()) ? npcType.trim() : "Zombie";
 
         String sql = "INSERT INTO purge_zombie_variants (variant_key, label, base_health, base_damage, speed_multiplier, npc_type, scrap_reward) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, safeKey);
@@ -90,7 +97,7 @@ public class PurgeVariantConfigManager {
             return false;
         }
         String sql = "DELETE FROM purge_zombie_variants WHERE variant_key = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, key);
@@ -136,7 +143,7 @@ public class PurgeVariantConfigManager {
         }
         double newVal = Math.max(0.1, Math.round((config.speedMultiplier() + delta) * 10.0) / 10.0);
         String sql = "UPDATE purge_zombie_variants SET speed_multiplier = ? WHERE variant_key = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setDouble(1, newVal);
@@ -174,7 +181,7 @@ public class PurgeVariantConfigManager {
             newVal = updated.baseDamage();
         }
         String sql = "UPDATE purge_zombie_variants SET " + column + " = ? WHERE variant_key = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             if (newVal instanceof Integer) {
@@ -204,7 +211,7 @@ public class PurgeVariantConfigManager {
         }
         String safeType = (npcType != null && !npcType.isBlank()) ? npcType.trim() : "Zombie";
         String sql = "UPDATE purge_zombie_variants SET npc_type = ? WHERE variant_key = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, safeType);
@@ -234,7 +241,7 @@ public class PurgeVariantConfigManager {
             return false;
         }
         String sql = "UPDATE purge_zombie_variants SET label = ? WHERE variant_key = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, safeLabel);
@@ -252,11 +259,11 @@ public class PurgeVariantConfigManager {
     }
 
     private void loadAll() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "SELECT variant_key, label, base_health, base_damage, speed_multiplier, npc_type, scrap_reward FROM purge_zombie_variants ORDER BY variant_key ASC";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {

@@ -1,6 +1,7 @@
 package io.hyvexa.purge.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -17,6 +18,7 @@ public class PurgeClassStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final PurgeClassStore INSTANCE = new PurgeClassStore();
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, Set<PurgeClass>> unlockedCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeClass> selectedCache = new ConcurrentHashMap<>();
     // Track which players we've loaded selected class for (to distinguish "loaded null" from "not loaded")
@@ -29,6 +31,7 @@ public class PurgeClassStore {
     }
 
     private PurgeClassStore() {
+        this.db = DatabaseManager.getInstance();
     }
 
     public static PurgeClassStore getInstance() {
@@ -36,7 +39,7 @@ public class PurgeClassStore {
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgeClassStore will use in-memory mode");
         }
     }
@@ -96,7 +99,7 @@ public class PurgeClassStore {
         }
         long cost = purgeClass.getUnlockCost();
 
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             // In-memory fallback (dev/testing)
             long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
             if (scrap < cost) {
@@ -109,7 +112,7 @@ public class PurgeClassStore {
 
         PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
         long[] scrapSnapshot = new long[1]; // [currentScrap]
-        PurchaseResult result = DatabaseManager.getInstance().withTransaction(conn -> {
+        PurchaseResult result = this.db.withTransaction(conn -> {
             long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
             if (currentScrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
@@ -135,11 +138,11 @@ public class PurgeClassStore {
     }
 
     private void loadUnlockedFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "SELECT class_id FROM purge_player_classes WHERE uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
@@ -159,12 +162,12 @@ public class PurgeClassStore {
     }
 
     private void loadSelectedFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             selectedLoaded.put(playerId, Boolean.TRUE);
             return;
         }
         String sql = "SELECT selected_class FROM purge_player_selected_class WHERE uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
@@ -196,11 +199,11 @@ public class PurgeClassStore {
     }
 
     private void persistUnlock(UUID playerId, PurgeClass purgeClass) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "INSERT IGNORE INTO purge_player_classes (uuid, class_id) VALUES (?, ?)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
@@ -212,12 +215,12 @@ public class PurgeClassStore {
     }
 
     private void persistSelected(UUID playerId, PurgeClass purgeClass) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "INSERT INTO purge_player_selected_class (uuid, selected_class) VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE selected_class = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());

@@ -1,6 +1,7 @@
 package io.hyvexa.purge.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -17,9 +18,11 @@ public class WeaponXpStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final WeaponXpStore INSTANCE = new WeaponXpStore();
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, int[]>> cache = new ConcurrentHashMap<>();
 
     private WeaponXpStore() {
+        this.db = DatabaseManager.getInstance();
     }
 
     public static WeaponXpStore getInstance() {
@@ -27,7 +30,7 @@ public class WeaponXpStore {
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, WeaponXpStore will use in-memory mode");
         }
     }
@@ -76,11 +79,11 @@ public class WeaponXpStore {
     }
 
     private void loadFromDatabase(UUID playerId, String weaponId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "SELECT xp, level FROM purge_weapon_xp WHERE uuid = ? AND weapon_id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
@@ -99,12 +102,12 @@ public class WeaponXpStore {
     }
 
     private void persistToDatabase(UUID playerId, String weaponId, int xp, int level) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "INSERT INTO purge_weapon_xp (uuid, weapon_id, xp, level) VALUES (?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE xp = ?, level = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());

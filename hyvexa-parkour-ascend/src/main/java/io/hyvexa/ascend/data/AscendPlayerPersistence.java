@@ -7,6 +7,7 @@ import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -39,6 +40,7 @@ class AscendPlayerPersistence {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long LEADERBOARD_CACHE_TTL_MS = 30_000;
 
+    private final ConnectionProvider db;
     private final Map<UUID, AscendPlayerProgress> players;
     private final Map<UUID, String> playerNames;
     private final Set<UUID> resetPendingPlayers;
@@ -59,6 +61,14 @@ class AscendPlayerPersistence {
     AscendPlayerPersistence(Map<UUID, AscendPlayerProgress> players,
                             Map<UUID, String> playerNames,
                             Set<UUID> resetPendingPlayers) {
+        this(DatabaseManager.getInstance(), players, playerNames, resetPendingPlayers);
+    }
+
+    AscendPlayerPersistence(ConnectionProvider db,
+                            Map<UUID, AscendPlayerProgress> players,
+                            Map<UUID, String> playerNames,
+                            Set<UUID> resetPendingPlayers) {
+        this.db = db;
         this.players = players;
         this.playerNames = playerNames;
         this.resetPendingPlayers = resetPendingPlayers;
@@ -126,7 +136,7 @@ class AscendPlayerPersistence {
                 saveFuture.set(null);
                 saveQueued.set(false);
                 if (!dirtyPlayerVersions.isEmpty()) {
-                    long followUpDelay = DatabaseManager.getInstance().isInitialized()
+                    long followUpDelay = this.db.isInitialized()
                             ? 0L
                             : AscendConstants.SAVE_DEBOUNCE_MS;
                     queueSave(followUpDelay);
@@ -202,7 +212,7 @@ class AscendPlayerPersistence {
      * where we need confirmation before proceeding.
      */
     boolean savePlayerSync(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return false;
         }
         Long dirtyVersion = dirtyPlayerVersions.get(playerId);
@@ -232,7 +242,7 @@ class AscendPlayerPersistence {
     }
 
     private void syncSave(Map<UUID, Long> toSave, Map<UUID, AscendPlayerProgress> progressOverrides) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         if (toSave == null || toSave.isEmpty()) {
@@ -334,7 +344,7 @@ class AscendPlayerPersistence {
 
         String deleteChildSql = "DELETE FROM %s WHERE player_uuid = ?";
 
-        SaveResult result = DatabaseManager.getInstance().withTransaction(conn -> {
+        SaveResult result = this.db.withTransaction(conn -> {
             try (PreparedStatement playerStmt = conn.prepareStatement(playerSql);
                  PreparedStatement mapStmt = conn.prepareStatement(mapSql);
                  PreparedStatement summitStmt = conn.prepareStatement(summitSql);
@@ -573,7 +583,7 @@ class AscendPlayerPersistence {
     }
 
     Long loadBestTimeFromDatabase(UUID playerId, String mapId) {
-        if (playerId == null || mapId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || mapId == null || !this.db.isInitialized()) {
             return null;
         }
 
@@ -584,7 +594,7 @@ class AscendPlayerPersistence {
             LIMIT 1
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return null;
@@ -615,7 +625,7 @@ class AscendPlayerPersistence {
      * Returns null if player doesn't exist in database.
      */
     AscendPlayerProgress loadPlayerFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return null;
         }
 
@@ -647,7 +657,7 @@ class AscendPlayerPersistence {
             WHERE uuid = ?
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return null;
@@ -874,7 +884,7 @@ class AscendPlayerPersistence {
     // ========================================
 
     void deletePlayerDataFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
@@ -890,7 +900,7 @@ class AscendPlayerPersistence {
             "ascend_challenge_records"
         };
 
-        DatabaseManager.getInstance().withTransaction(conn -> {
+        this.db.withTransaction(conn -> {
             for (String table : tables) {
                 try (PreparedStatement stmt = conn.prepareStatement(
                     "DELETE FROM " + table + " WHERE player_uuid = ?")) {
@@ -944,7 +954,7 @@ class AscendPlayerPersistence {
     }
 
     private List<AscendPlayerStore.LeaderboardEntry> fetchLeaderboardFromDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return List.of();
         }
 
@@ -958,7 +968,7 @@ class AscendPlayerPersistence {
             """;
 
         List<AscendPlayerStore.LeaderboardEntry> entries = new ArrayList<>();
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return null;
@@ -1051,7 +1061,7 @@ class AscendPlayerPersistence {
     }
 
     private List<AscendPlayerStore.MapLeaderboardEntry> fetchMapLeaderboardFromDatabase(String mapId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return List.of();
         }
 
@@ -1064,7 +1074,7 @@ class AscendPlayerPersistence {
             """;
 
         List<AscendPlayerStore.MapLeaderboardEntry> entries = new ArrayList<>();
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return null;

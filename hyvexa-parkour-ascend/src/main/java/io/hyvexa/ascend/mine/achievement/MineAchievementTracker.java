@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -36,6 +37,7 @@ public class MineAchievementTracker {
 
     private static final long LEADERBOARD_CACHE_TTL_MS = 30_000;
 
+    private final ConnectionProvider db;
     private final Map<UUID, PlayerAchievementState> states = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyStats = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean saveScheduled = new AtomicBoolean(false);
@@ -51,6 +53,12 @@ public class MineAchievementTracker {
 
     public MineAchievementTracker(MinePlayerStore minePlayerStore, AscendPlayerStore playerStore,
                                   Function<UUID, PlayerRef> playerRefLookup) {
+        this(minePlayerStore, playerStore, playerRefLookup, DatabaseManager.getInstance());
+    }
+
+    public MineAchievementTracker(MinePlayerStore minePlayerStore, AscendPlayerStore playerStore,
+                                  Function<UUID, PlayerRef> playerRefLookup, ConnectionProvider db) {
+        this.db = db;
         this.minePlayerStore = minePlayerStore;
         this.playerStore = playerStore;
         this.playerRefLookup = playerRefLookup;
@@ -246,7 +254,7 @@ public class MineAchievementTracker {
     }
 
     private List<MineLeaderboardEntry> fetchLeaderboardFromDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) return List.of();
+        if (!this.db.isInitialized()) return List.of();
         String sql = """
             SELECT s.player_uuid, p.player_name, s.total_crystals_earned, s.manual_blocks_mined
             FROM mine_player_stats s
@@ -254,7 +262,7 @@ public class MineAchievementTracker {
             WHERE s.total_crystals_earned > 0 OR s.manual_blocks_mined > 0
             """;
         List<MineLeaderboardEntry> entries = new ArrayList<>();
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return null;
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 try (ResultSet rs = ps.executeQuery()) {
@@ -289,8 +297,8 @@ public class MineAchievementTracker {
     }
 
     private PlayerAchievementState loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return null;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        if (!this.db.isInitialized()) return null;
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return null;
 
             PlayerAchievementState state = new PlayerAchievementState();
@@ -331,8 +339,8 @@ public class MineAchievementTracker {
     }
 
     private void saveAchievementCompletionSync(UUID playerId, String achievementId) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        if (!this.db.isInitialized()) return;
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT IGNORE INTO mine_achievements (player_uuid, achievement_id) VALUES (?, ?)")) {
@@ -362,8 +370,8 @@ public class MineAchievementTracker {
     }
 
     private void saveStatsSync(UUID playerId, PlayerAchievementState state) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        if (!this.db.isInitialized()) return;
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) return;
             try (PreparedStatement ps = conn.prepareStatement("""
                     INSERT INTO mine_player_stats (player_uuid, total_blocks_mined, total_crystals_earned, manual_blocks_mined)

@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -20,6 +21,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class AscendMapStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private final ConnectionProvider db;
+
+    public AscendMapStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public AscendMapStore(ConnectionProvider db) {
+        this.db = db;
+    }
     // Legacy constants: kept solely for DB compatibility writes to ascend_maps columns
     // that existing schemas/tools may still read. Not used by runtime game logic.
     private static final long LEGACY_ROBOT_TIME_REDUCTION_MS = 0L;
@@ -31,7 +41,7 @@ public class AscendMapStore {
     private volatile List<AscendMap> sortedMapsCache;
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, AscendMapStore will be empty");
             return;
         }
@@ -48,7 +58,7 @@ public class AscendMapStore {
         try {
             maps.clear();
             invalidateSortedCache();
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (Connection conn = this.db.getConnection()) {
                 if (conn == null) {
                     LOGGER.atWarning().log("Failed to acquire database connection");
                     return;
@@ -156,7 +166,7 @@ public class AscendMapStore {
     }
 
     private void saveMapToDatabase(AscendMap map) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
@@ -179,7 +189,7 @@ public class AscendMapStore {
                 display_order = VALUES(display_order)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -233,11 +243,11 @@ public class AscendMapStore {
     }
 
     private void deleteMapFromDatabase(String id) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;

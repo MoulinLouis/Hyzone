@@ -17,6 +17,7 @@ import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.core.analytics.PlayerAnalytics;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -42,6 +43,7 @@ public class AscendPlayerStore {
     private final Set<UUID> resetPendingPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> ascensionCinematicActive = ConcurrentHashMap.newKeySet();
 
+    private final ConnectionProvider db;
     private final AscendPlayerPersistence persistence;
     private volatile ChallengeManager challengeManager;
     private volatile TutorialTriggerService tutorialTriggerService;
@@ -55,7 +57,12 @@ public class AscendPlayerStore {
     private volatile PlayerAnalytics analytics;
 
     public AscendPlayerStore() {
-        this.persistence = new AscendPlayerPersistence(players, playerNames, resetPendingPlayers);
+        this(DatabaseManager.getInstance());
+    }
+
+    public AscendPlayerStore(ConnectionProvider db) {
+        this.db = db;
+        this.persistence = new AscendPlayerPersistence(db, players, playerNames, resetPendingPlayers);
     }
 
     public void setAnalytics(PlayerAnalytics analytics) {
@@ -97,7 +104,7 @@ public class AscendPlayerStore {
      * Players are loaded on-demand when they connect.
      */
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, AscendPlayerStore will use in-memory mode");
             return;
         }
@@ -1295,7 +1302,7 @@ public class AscendPlayerStore {
         // Wipe DB FIRST — if we clear in-memory caches first, another thread
         // (passive earnings, run tracker) can call getOrCreatePlayer() which
         // re-loads old data from the not-yet-wiped DB back into memory.
-        if (DatabaseManager.getInstance().isInitialized()) {
+        if (this.db.isInitialized()) {
             String[] tables = {
                 "ascend_player_maps",
                 "ascend_player_summit",
@@ -1308,7 +1315,7 @@ public class AscendPlayerStore {
                 "ascend_players"
             };
 
-            boolean wiped = DatabaseManager.getInstance().withTransaction(conn -> {
+            boolean wiped = this.db.withTransaction(conn -> {
                 for (String table : tables) {
                     try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + table)) {
                         DatabaseManager.applyQueryTimeout(stmt);

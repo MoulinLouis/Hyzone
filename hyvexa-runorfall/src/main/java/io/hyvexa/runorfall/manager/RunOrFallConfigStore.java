@@ -2,6 +2,7 @@ package io.hyvexa.runorfall.manager;
 
 import com.google.gson.Gson;
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
@@ -142,10 +143,16 @@ public class RunOrFallConfigStore {
               active_map_id = VALUES(active_map_id)
             """;
 
+    private final ConnectionProvider db;
     private final File legacyConfigFile;
     private RunOrFallConfig config;
 
     public RunOrFallConfigStore(File legacyConfigFile) {
+        this(DatabaseManager.getInstance(), legacyConfigFile);
+    }
+
+    public RunOrFallConfigStore(ConnectionProvider db, File legacyConfigFile) {
+        this.db = db;
         this.legacyConfigFile = legacyConfigFile;
         this.config = createDefaultConfig();
         initializeTables();
@@ -427,11 +434,11 @@ public class RunOrFallConfigStore {
     }
 
     private synchronized void initializeTables() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, RunOrFall config will stay in-memory only.");
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.executeUpdate(CREATE_SETTINGS_TABLE);
                 stmt.executeUpdate(CREATE_MAPS_TABLE);
@@ -469,7 +476,7 @@ public class RunOrFallConfigStore {
     }
 
     private synchronized void loadFromDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             config = createDefaultConfig();
             return;
         }
@@ -489,7 +496,7 @@ public class RunOrFallConfigStore {
         loaded.feathersForWin = DEFAULT_FEATHERS_FOR_WIN;
         loaded.selectedMapId = "";
         loaded.maps = new ArrayList<>();
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             loadSettings(conn, loaded);
             loadMaps(conn, loaded);
             loadMapSpawns(conn, loaded);
@@ -727,10 +734,10 @@ public class RunOrFallConfigStore {
         }
     }
     private synchronized void saveSettingsToDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(UPSERT_SETTINGS_SQL)) {
             DatabaseManager.applyQueryTimeout(stmt);
             RunOrFallMapConfig selectedMap = getSelectedMapInternal();
@@ -773,7 +780,7 @@ public class RunOrFallConfigStore {
     }
 
     private synchronized void saveMapsToDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String deleteSql = "DELETE FROM runorfall_maps";
@@ -782,7 +789,7 @@ public class RunOrFallConfigStore {
                 (map_id, min_players, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        DatabaseManager.getInstance().withTransaction(conn -> {
+        this.db.withTransaction(conn -> {
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 DatabaseManager.applyQueryTimeout(deleteStmt);
@@ -818,7 +825,7 @@ public class RunOrFallConfigStore {
     }
 
     private synchronized void saveSpawnsToDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String deleteSql = "DELETE FROM runorfall_map_spawns";
@@ -826,7 +833,7 @@ public class RunOrFallConfigStore {
                 INSERT INTO runorfall_map_spawns (map_id, spawn_order, x, y, z, rot_x, rot_y, rot_z)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        DatabaseManager.getInstance().withTransaction(conn -> {
+        this.db.withTransaction(conn -> {
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 DatabaseManager.applyQueryTimeout(deleteStmt);
@@ -859,7 +866,7 @@ public class RunOrFallConfigStore {
     }
 
     private synchronized void savePlatformsToDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String deleteSql = "DELETE FROM runorfall_map_platforms";
@@ -868,7 +875,7 @@ public class RunOrFallConfigStore {
                 (map_id, platform_order, min_x, min_y, min_z, max_x, max_y, max_z, target_block_item_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        DatabaseManager.getInstance().withTransaction(conn -> {
+        this.db.withTransaction(conn -> {
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 DatabaseManager.applyQueryTimeout(deleteStmt);
@@ -919,7 +926,7 @@ public class RunOrFallConfigStore {
         if (legacyConfigFile == null || !legacyConfigFile.exists()) {
             return;
         }
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         if (!isDatabaseConfigEmpty(config)) {

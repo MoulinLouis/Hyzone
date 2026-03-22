@@ -1,6 +1,7 @@
 package io.hyvexa.purge.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
@@ -18,6 +19,7 @@ public class PurgeWeaponUpgradeStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final PurgeWeaponUpgradeStore INSTANCE = new PurgeWeaponUpgradeStore();
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, Integer>> cache = new ConcurrentHashMap<>();
 
     public enum UpgradeResult {
@@ -34,6 +36,7 @@ public class PurgeWeaponUpgradeStore {
     }
 
     private PurgeWeaponUpgradeStore() {
+        this.db = DatabaseManager.getInstance();
     }
 
     public static PurgeWeaponUpgradeStore getInstance() {
@@ -41,7 +44,7 @@ public class PurgeWeaponUpgradeStore {
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgeWeaponUpgradeStore will use in-memory mode");
         }
     }
@@ -113,7 +116,7 @@ public class PurgeWeaponUpgradeStore {
             return UpgradeResult.SUCCESS;
         }
 
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
             if (scrap < cost) {
                 return UpgradeResult.NOT_ENOUGH_SCRAP;
@@ -125,7 +128,7 @@ public class PurgeWeaponUpgradeStore {
 
         PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
         long[] scrapSnapshot = new long[1]; // [currentScrap]
-        UpgradeResult result = DatabaseManager.getInstance().withTransaction(conn -> {
+        UpgradeResult result = this.db.withTransaction(conn -> {
             long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
             if (currentScrap < cost) {
                 return UpgradeResult.NOT_ENOUGH_SCRAP;
@@ -152,7 +155,7 @@ public class PurgeWeaponUpgradeStore {
             return PurchaseResult.SUCCESS;
         }
 
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
             if (scrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
@@ -164,7 +167,7 @@ public class PurgeWeaponUpgradeStore {
 
         PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
         long[] scrapSnapshot = new long[1]; // [currentScrap]
-        PurchaseResult result = DatabaseManager.getInstance().withTransaction(conn -> {
+        PurchaseResult result = this.db.withTransaction(conn -> {
             long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
             if (currentScrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
@@ -197,9 +200,9 @@ public class PurgeWeaponUpgradeStore {
             return;
         }
         cache.remove(playerId);
-        if (DatabaseManager.getInstance().isInitialized()) {
+        if (this.db.isInitialized()) {
             String sql = "DELETE FROM purge_weapon_upgrades WHERE uuid = ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setString(1, playerId.toString());
@@ -220,11 +223,11 @@ public class PurgeWeaponUpgradeStore {
     }
 
     private void loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "SELECT weapon_id, level FROM purge_weapon_upgrades WHERE uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
@@ -254,12 +257,12 @@ public class PurgeWeaponUpgradeStore {
     }
 
     private void persistToDatabase(UUID playerId, String weaponId, int level) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "INSERT INTO purge_weapon_upgrades (uuid, weapon_id, level) VALUES (?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE level = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());

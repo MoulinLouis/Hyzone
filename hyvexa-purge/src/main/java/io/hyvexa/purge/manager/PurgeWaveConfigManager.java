@@ -1,6 +1,7 @@
 package io.hyvexa.purge.manager;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.purge.data.PurgeWaveDefinition;
 
@@ -23,10 +24,16 @@ public class PurgeWaveConfigManager {
     private static final String PERSISTENCE_DISABLED_MESSAGE =
             "Database is unavailable. Purge wave settings require database connectivity.";
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<Integer, PurgeWaveDefinition> waves = new ConcurrentHashMap<>();
     private final PurgeVariantConfigManager variantConfigManager;
 
     public PurgeWaveConfigManager(PurgeVariantConfigManager variantConfigManager) {
+        this(DatabaseManager.getInstance(), variantConfigManager);
+    }
+
+    public PurgeWaveConfigManager(ConnectionProvider db, PurgeVariantConfigManager variantConfigManager) {
+        this.db = db;
         this.variantConfigManager = variantConfigManager;
         loadAll();
     }
@@ -50,7 +57,7 @@ public class PurgeWaveConfigManager {
     }
 
     public boolean isPersistenceAvailable() {
-        return DatabaseManager.getInstance().isInitialized();
+        return this.db.isInitialized();
     }
 
     public String getPersistenceDisabledMessage() {
@@ -64,7 +71,7 @@ public class PurgeWaveConfigManager {
         synchronized (waves) {
             int waveNumber = waves.keySet().stream().max(Integer::compareTo).orElse(0) + 1;
             String sql = "INSERT INTO purge_waves (wave_number, spawn_delay_ms, spawn_batch_size) VALUES (?, ?, ?)";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setInt(1, waveNumber);
@@ -93,7 +100,7 @@ public class PurgeWaveConfigManager {
             String deleteSql = "DELETE FROM purge_waves WHERE wave_number = ?";
             String shiftCountsSql = "UPDATE purge_wave_variant_counts SET wave_number = wave_number - 1 WHERE wave_number > ?";
             String shiftSql = "UPDATE purge_waves SET wave_number = wave_number - 1 WHERE wave_number > ?";
-            boolean committed = DatabaseManager.getInstance().withTransaction(conn -> {
+            boolean committed = this.db.withTransaction(conn -> {
                 try (PreparedStatement deleteCountsStmt = conn.prepareStatement(deleteCountsSql);
                      PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                      PreparedStatement shiftCountsStmt = conn.prepareStatement(shiftCountsSql);
@@ -129,7 +136,7 @@ public class PurgeWaveConfigManager {
         if (!isPersistenceAvailable()) {
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM purge_wave_variant_counts")) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
@@ -198,7 +205,7 @@ public class PurgeWaveConfigManager {
             return false;
         }
         String sql = "UPDATE purge_waves SET " + column + " = ? WHERE wave_number = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setInt(1, value);
@@ -227,7 +234,7 @@ public class PurgeWaveConfigManager {
 
         if (safeCount == 0) {
             String sql = "DELETE FROM purge_wave_variant_counts WHERE wave_number = ? AND variant_key = ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setInt(1, waveNumber);
@@ -240,7 +247,7 @@ public class PurgeWaveConfigManager {
         } else {
             String sql = "INSERT INTO purge_wave_variant_counts (wave_number, variant_key, count) VALUES (?, ?, ?) "
                     + "ON DUPLICATE KEY UPDATE count = ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setInt(1, waveNumber);
@@ -279,13 +286,13 @@ public class PurgeWaveConfigManager {
     }
 
     private void loadAll() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         // Load wave base data
         String waveSql = "SELECT wave_number, spawn_delay_ms, spawn_batch_size FROM purge_waves ORDER BY wave_number ASC";
         Map<Integer, int[]> waveBaseData = new HashMap<>();
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(waveSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -305,7 +312,7 @@ public class PurgeWaveConfigManager {
         // Load variant counts
         Map<Integer, Map<String, Integer>> variantCountsMap = new HashMap<>();
         String countsSql = "SELECT wave_number, variant_key, count FROM purge_wave_variant_counts";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(countsSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {

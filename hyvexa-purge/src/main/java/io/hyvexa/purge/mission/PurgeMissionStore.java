@@ -1,6 +1,7 @@
 package io.hyvexa.purge.mission;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -17,16 +18,19 @@ public class PurgeMissionStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final PurgeMissionStore INSTANCE = new PurgeMissionStore();
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, DailyMissionProgress> cache = new ConcurrentHashMap<>();
 
-    private PurgeMissionStore() {}
+    private PurgeMissionStore() {
+        this.db = DatabaseManager.getInstance();
+    }
 
     public static PurgeMissionStore getInstance() {
         return INSTANCE;
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgeMissionStore will use in-memory mode");
         }
     }
@@ -84,13 +88,13 @@ public class PurgeMissionStore {
     }
 
     private void loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         LocalDate today = todayUtc();
         String sql = "SELECT total_kills, best_wave, best_combo, claimed_wave, claimed_kill, claimed_combo "
                 + "FROM purge_daily_missions WHERE uuid = ? AND mission_date = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
@@ -113,7 +117,7 @@ public class PurgeMissionStore {
     }
 
     private void persistToDatabase(UUID playerId, DailyMissionProgress progress) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "INSERT INTO purge_daily_missions "
@@ -122,7 +126,7 @@ public class PurgeMissionStore {
                 + "ON DUPLICATE KEY UPDATE "
                 + "total_kills = VALUES(total_kills), best_wave = VALUES(best_wave), best_combo = VALUES(best_combo), "
                 + "claimed_wave = VALUES(claimed_wave), claimed_kill = VALUES(claimed_kill), claimed_combo = VALUES(claimed_combo)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());

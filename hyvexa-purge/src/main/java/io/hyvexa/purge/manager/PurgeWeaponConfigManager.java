@@ -1,6 +1,7 @@
 package io.hyvexa.purge.manager;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
 
@@ -27,6 +28,7 @@ public class PurgeWeaponConfigManager {
             0L, 50L, 100L, 175L, 275L, 400L, 550L, 750L, 1000L, 1300L, 1700L
     };
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<String, List<WeaponLevelEntry>> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Map<Integer, WeaponLevelEntry>> cacheByLevel = new ConcurrentHashMap<>();
 
@@ -70,6 +72,11 @@ public class PurgeWeaponConfigManager {
     private static final Map<String, WeaponDefaults> DEFAULT_WEAPONS = buildDefaultWeapons();
 
     public PurgeWeaponConfigManager() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public PurgeWeaponConfigManager(ConnectionProvider db) {
+        this.db = db;
         seedDefaults();
         seedWeaponDefaults();
         loadAll();
@@ -167,7 +174,7 @@ public class PurgeWeaponConfigManager {
         }
         if (isPersistenceAvailable()) {
             String sql = "UPDATE purge_weapon_defaults SET default_unlocked = ? WHERE weapon_id = ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setBoolean(1, val);
@@ -192,7 +199,7 @@ public class PurgeWeaponConfigManager {
         unlockCosts.put(weaponId, newCost);
         if (isPersistenceAvailable()) {
             String sql = "UPDATE purge_weapon_defaults SET unlock_cost = ? WHERE weapon_id = ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setLong(1, newCost);
@@ -215,7 +222,7 @@ public class PurgeWeaponConfigManager {
         String previousId = this.sessionWeaponId;
         this.sessionWeaponId = weaponId;
         if (isPersistenceAvailable()) {
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (Connection conn = this.db.getConnection()) {
                 // Unset previous
                 if (previousId != null && !previousId.equals(weaponId)) {
                     try (PreparedStatement stmt = conn.prepareStatement(
@@ -321,7 +328,7 @@ public class PurgeWeaponConfigManager {
         }
         synchronized (cache) {
             String sql = "REPLACE INTO purge_weapon_levels (weapon_id, level, damage, cost) VALUES (?, ?, ?, ?)";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 for (WeaponLevelEntry row : defaults.levels()) {
@@ -346,7 +353,7 @@ public class PurgeWeaponConfigManager {
         }
         synchronized (cache) {
             String sql = "UPDATE purge_weapon_levels SET " + column + " = ? WHERE weapon_id = ? AND level = ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
+            try (Connection conn = this.db.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 if ("damage".equals(column)) {
@@ -386,7 +393,7 @@ public class PurgeWeaponConfigManager {
     }
 
     private boolean isPersistenceAvailable() {
-        return DatabaseManager.getInstance().isInitialized();
+        return this.db.isInitialized();
     }
 
     private void seedDefaults() {
@@ -396,7 +403,7 @@ public class PurgeWeaponConfigManager {
 
         // Insert only missing rows so existing admin-tuned values are preserved.
         String insertSql = "INSERT IGNORE INTO purge_weapon_levels (weapon_id, level, damage, cost) VALUES (?, ?, ?, ?)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(insertSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             for (Map.Entry<String, WeaponDefaults> weapon : DEFAULT_WEAPONS.entrySet()) {
@@ -422,7 +429,7 @@ public class PurgeWeaponConfigManager {
             return;
         }
         String sql = "SELECT weapon_id, level, damage, cost FROM purge_weapon_levels ORDER BY weapon_id, level ASC";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -541,7 +548,7 @@ public class PurgeWeaponConfigManager {
         }
         // Seed all weapons with defaults, then ensure AK47/WoodSword session defaults exist.
         String insertSql = "INSERT IGNORE INTO purge_weapon_defaults (weapon_id, default_unlocked, unlock_cost, session_weapon) VALUES (?, FALSE, 500, FALSE)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(insertSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             for (String weaponId : DEFAULT_WEAPONS.keySet()) {
@@ -555,7 +562,7 @@ public class PurgeWeaponConfigManager {
         }
         // Ensure AK47 is default unlocked and session weapon (only if no session weapon set).
         // Ensure WoodSword is default unlocked and a session melee default exists.
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             // Check if any session weapon is already set
             try (PreparedStatement check = conn.prepareStatement(
                     "SELECT COUNT(*) FROM purge_weapon_defaults WHERE session_weapon = TRUE")) {
@@ -603,7 +610,7 @@ public class PurgeWeaponConfigManager {
         }
 
         String sql = "SELECT weapon_id, default_unlocked, unlock_cost, session_weapon FROM purge_weapon_defaults";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -632,7 +639,7 @@ public class PurgeWeaponConfigManager {
         }
         int skinPricesLoaded = 0;
         String sql = "SELECT setting_key, setting_value FROM purge_settings";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -677,7 +684,7 @@ public class PurgeWeaponConfigManager {
         }
         String sql = "INSERT INTO purge_settings (setting_key, setting_value) VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE setting_value = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
+        try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, key);

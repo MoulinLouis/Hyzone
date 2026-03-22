@@ -1,6 +1,7 @@
 package io.hyvexa.purge.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -24,6 +25,7 @@ public class PurgeScrapStore {
     private static final long FLUSH_INTERVAL_MS = 2_000L;
     private static final long SLOW_FLUSH_WARNING_MS = 1_000L;
 
+    private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, ScrapBalance> balanceCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, ScrapBalance> dirtyBalances = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
@@ -33,6 +35,7 @@ public class PurgeScrapStore {
     private volatile ScheduledExecutorService flushExecutor;
 
     private PurgeScrapStore() {
+        this.db = DatabaseManager.getInstance();
     }
 
     public static PurgeScrapStore getInstance() {
@@ -40,7 +43,7 @@ public class PurgeScrapStore {
     }
 
     public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgeScrapStore will use in-memory mode");
             return;
         }
@@ -190,7 +193,7 @@ public class PurgeScrapStore {
     }
 
     public void flushPlayerAsync(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return;
         }
         ScheduledExecutorService executor = flushExecutor;
@@ -230,7 +233,7 @@ public class PurgeScrapStore {
     }
 
     private void startFlushLoop() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         synchronized (this) {
@@ -256,7 +259,7 @@ public class PurgeScrapStore {
     }
 
     private void flushDirtyPlayers() {
-        if (!DatabaseManager.getInstance().isInitialized() || dirtyBalances.isEmpty()) {
+        if (!this.db.isInitialized() || dirtyBalances.isEmpty()) {
             return;
         }
         long startedAt = System.currentTimeMillis();
@@ -281,7 +284,7 @@ public class PurgeScrapStore {
     }
 
     private boolean flushPlayer(UUID playerId) {
-        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || !this.db.isInitialized()) {
             return false;
         }
         synchronized (lockFor(playerId)) {
@@ -294,7 +297,7 @@ public class PurgeScrapStore {
         if (dirty == null) {
             return true;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             persistToDatabase(conn, playerId, dirty);
             dirtyBalances.remove(playerId, dirty);
             return true;
@@ -325,10 +328,10 @@ public class PurgeScrapStore {
     }
 
     private ScrapBalance loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return ScrapBalance.ZERO;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             return loadFromDatabase(conn, playerId, false);
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to load scrap for " + playerId);
@@ -365,7 +368,7 @@ public class PurgeScrapStore {
     }
 
     private void persistToDatabase(Connection conn, UUID playerId, ScrapBalance balance) throws SQLException {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
         String sql = "INSERT INTO purge_player_scrap (uuid, scrap, lifetime_scrap_earned) VALUES (?, ?, ?) "

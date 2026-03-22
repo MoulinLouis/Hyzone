@@ -3,6 +3,7 @@ package io.hyvexa.ascend.data;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -19,6 +20,16 @@ public class AscendSettingsStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final int SETTINGS_ID = 1;
+
+    private final ConnectionProvider db;
+
+    public AscendSettingsStore() {
+        this(DatabaseManager.getInstance());
+    }
+
+    public AscendSettingsStore(ConnectionProvider db) {
+        this.db = db;
+    }
 
     // Spawn position
     private double spawnX;
@@ -40,7 +51,7 @@ public class AscendSettingsStore {
     private Double voidYThreshold;
 
     public void syncLoad() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, AscendSettingsStore will use defaults");
             return;
         }
@@ -52,7 +63,7 @@ public class AscendSettingsStore {
             FROM ascend_settings WHERE id = ?
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -89,7 +100,7 @@ public class AscendSettingsStore {
     }
 
     private void insertDefault() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
@@ -100,7 +111,7 @@ public class AscendSettingsStore {
             ON DUPLICATE KEY UPDATE id = id
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
@@ -136,7 +147,7 @@ public class AscendSettingsStore {
     }
 
     private void saveToDatabase() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!this.db.isInitialized()) {
             return;
         }
 
@@ -152,7 +163,7 @@ public class AscendSettingsStore {
                 void_y_threshold = VALUES(void_y_threshold)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = this.db.getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
