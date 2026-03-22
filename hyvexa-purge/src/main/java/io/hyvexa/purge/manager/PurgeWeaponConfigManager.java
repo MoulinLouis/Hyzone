@@ -43,6 +43,24 @@ public class PurgeWeaponConfigManager {
 
     private record WeaponDefaults(String displayName, List<WeaponLevelEntry> levels) {}
 
+    private static final Map<String, String> WEAPON_AMMO_MAP = Map.ofEntries(
+            Map.entry("AK47", "Bullet_Rifle"),
+            Map.entry("M4A1s", "Bullet_Rifle"),
+            Map.entry("Barret50", "Bullet_Rifle"),
+            Map.entry("AWP", "Bullet_Rifle"),
+            Map.entry("Glock18", "Bullet"),
+            Map.entry("ColtRevolver", "Bullet"),
+            Map.entry("DesertEagle", "Bullet"),
+            Map.entry("FiveSeven", "Bullet"),
+            Map.entry("USPS", "Bullet"),
+            Map.entry("MP9", "Bullet"),
+            Map.entry("Mac10", "Bullet"),
+            Map.entry("Thompson", "Bullet"),
+            Map.entry("P90", "Bullet"),
+            Map.entry("DoubleBarrel", "Bullet_Shotgun"),
+            Map.entry("Flamethrower", "Fuel_Tank")
+    );
+
     private static final Map<String, String> MELEE_WEAPON_TO_ITEM = Map.of(
             "WoodSword", "Purge_WoodSword",
             "Katana", "Purge_Katana",
@@ -108,6 +126,10 @@ public class PurgeWeaponConfigManager {
         }
         String weaponId = MELEE_ITEM_TO_WEAPON.get(itemId);
         return weaponId != null ? weaponId : (MELEE_WEAPON_TO_ITEM.containsKey(itemId) ? itemId : null);
+    }
+
+    public String getAmmoItemId(String weaponId) {
+        return WEAPON_AMMO_MAP.getOrDefault(weaponId, "Bullet_Rifle");
     }
 
     public String getDisplayName(String weaponId) {

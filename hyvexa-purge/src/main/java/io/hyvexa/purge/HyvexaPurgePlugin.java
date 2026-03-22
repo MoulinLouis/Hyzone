@@ -70,7 +70,6 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private static final String ITEM_ORB_BLUE = "Purge_Orb_Blue";
     private static final String ITEM_ORB_ORANGE = "Purge_Orb_Orange";
     private static final String ITEM_ORB_RED = "Purge_Orb_Red";
-    private static final String ITEM_BULLET = "Bullet";
     private static final String ITEM_LOOTBOX = "Purge_Lootbox";
     private static final int STARTING_BULLET_COUNT = 120;
     private static final short SLOT_ORB_BLUE = 0;
@@ -334,7 +333,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         InventoryUtils.clearAllContainers(player);
         giveStartingWeapon(player, state);
         giveStartingMeleeWeapon(player, state);
-        giveStartingAmmo(player);
+        giveStartingAmmo(player, state);
         giveQuitOrb(player);
         // Apply weapon XP ammo multiplier to starting weapon
         if (state != null) {
@@ -353,11 +352,22 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     }
 
     public void switchWeapon(Player player, PurgeSessionPlayerState state, String newWeaponId) {
+        String oldWeaponId = state.getCurrentWeaponId();
         state.setCurrentWeaponId(newWeaponId);
         String itemId = resolveWeaponItemId(state.getPlayerId(), newWeaponId);
         Inventory inventory = player.getInventory();
         if (inventory != null && inventory.getHotbar() != null) {
             inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(itemId, 1), false);
+            // Swap ammo if weapon class changed
+            String oldAmmo = weaponConfigManager.getAmmoItemId(oldWeaponId);
+            String newAmmo = weaponConfigManager.getAmmoItemId(newWeaponId);
+            if (!newAmmo.equals(oldAmmo)) {
+                ItemStack oldAmmoStack = inventory.getHotbar().getItemStack(SLOT_PRIMARY_AMMO);
+                int ammoCount = (oldAmmoStack != null && !oldAmmoStack.isEmpty())
+                        ? oldAmmoStack.getQuantity() : STARTING_BULLET_COUNT;
+                inventory.getHotbar().setItemStackForSlot(
+                        SLOT_PRIMARY_AMMO, new ItemStack(newAmmo, ammoCount), false);
+            }
         }
         // Re-apply ammo upgrade to the new weapon ItemStack
         reapplyAmmoUpgrade(state.getPlayerId(), player);
@@ -470,14 +480,18 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         return weaponId;
     }
 
-    private void giveStartingAmmo(Player player) {
+    private void giveStartingAmmo(Player player, PurgeSessionPlayerState state) {
         Inventory inventory = player.getInventory();
         if (inventory == null || inventory.getHotbar() == null) {
             return;
         }
+        String weaponId = (state != null && state.getCurrentWeaponId() != null)
+                ? state.getCurrentWeaponId()
+                : weaponConfigManager.getSessionWeaponId();
+        String ammoId = weaponConfigManager.getAmmoItemId(weaponId);
         inventory.getHotbar().setItemStackForSlot(
                 SLOT_PRIMARY_AMMO,
-                new ItemStack(ITEM_BULLET, STARTING_BULLET_COUNT),
+                new ItemStack(ammoId, STARTING_BULLET_COUNT),
                 false
         );
     }
