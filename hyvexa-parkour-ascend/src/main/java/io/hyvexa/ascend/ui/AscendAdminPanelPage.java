@@ -11,9 +11,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.data.AscendMapStore;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.ui.MineAdminPage;
 import io.hyvexa.ascend.mine.ui.PickaxeAdminPage;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -28,9 +25,11 @@ public class AscendAdminPanelPage extends BaseAscendPage {
     private static final String BUTTON_MINES = "Mines";
     private static final String BUTTON_PICKAXE = "Pickaxe";
     private static final String BUTTON_CLOSE = "Close";
+    private final AscendAdminNavigator adminNavigator;
 
-    public AscendAdminPanelPage(@Nonnull PlayerRef playerRef) {
+    public AscendAdminPanelPage(@Nonnull PlayerRef playerRef, AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
+        this.adminNavigator = adminNavigator;
     }
 
     @Override
@@ -71,84 +70,65 @@ public class AscendAdminPanelPage extends BaseAscendPage {
     }
 
     private void openMaps(Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        AscendMapStore mapStore = plugin.getMapStore();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (mapStore == null || playerRef == null) {
+        AscendAdminPage page = playerRef != null ? adminNavigator.createMapAdminPage(playerRef) : null;
+        if (page == null) {
             if (player != null) {
                 player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             }
             return;
         }
         if (player != null) {
-            player.getPageManager().openCustomPage(ref, store, new AscendAdminPage(playerRef, mapStore));
+            player.getPageManager().openCustomPage(ref, store, page);
         }
     }
 
     private void openAdminPanel(Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         if (playerRef == null || player == null) {
             return;
         }
-        player.getPageManager().openCustomPage(ref, store, new AscendAdminVoltPage(playerRef,
-            plugin.getPlayerStore(), plugin.getMapStore(), plugin.getSettingsStore(),
-            plugin.getAscensionManager(), plugin.getChallengeManager()));
+        player.getPageManager().openCustomPage(ref, store, adminNavigator.createVoltPage(playerRef));
     }
 
     private void openMines(Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        MineConfigStore mineConfigStore = plugin.getMineConfigStore();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (mineConfigStore == null || playerRef == null) {
+        MineAdminPage page = playerRef != null ? adminNavigator.createMineAdminPage(playerRef) : null;
+        if (page == null) {
             if (player != null) {
                 player.sendMessage(Message.raw("[Ascend] Mine systems are still loading."));
             }
             return;
         }
         if (player != null) {
-            player.getPageManager().openCustomPage(ref, store, new MineAdminPage(playerRef, mineConfigStore));
+            player.getPageManager().openCustomPage(ref, store, page);
         }
     }
 
     private void openPickaxe(Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        MineConfigStore mineConfigStore = plugin.getMineConfigStore();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (mineConfigStore == null || playerRef == null) {
+        PickaxeAdminPage page = playerRef != null ? adminNavigator.createPickaxeAdminPage(playerRef) : null;
+        if (page == null) {
             if (player != null) {
                 player.sendMessage(Message.raw("[Ascend] Mine systems are still loading."));
             }
             return;
         }
         if (player != null) {
-            player.getPageManager().openCustomPage(ref, store, new PickaxeAdminPage(playerRef, mineConfigStore));
+            player.getPageManager().openCustomPage(ref, store, page);
         }
     }
 
     private void openWhitelist(Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         if (playerRef == null || player == null) {
             return;
         }
-        player.getPageManager().openCustomPage(ref, store,
-            new AscendWhitelistPage(playerRef, plugin.getWhitelistManager()));
+        player.getPageManager().openCustomPage(ref, store, adminNavigator.createWhitelistPage(playerRef));
     }
 }

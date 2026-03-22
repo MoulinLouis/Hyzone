@@ -12,7 +12,9 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.math.BigNumber;
@@ -30,12 +32,17 @@ public class TranscendencePage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private final TranscendenceManager transcendenceManager;
+    private final RobotManager robotManager;
+    private final AchievementManager achievementManager;
 
     public TranscendencePage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                             TranscendenceManager transcendenceManager) {
+                             TranscendenceManager transcendenceManager, RobotManager robotManager,
+                             AchievementManager achievementManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.transcendenceManager = transcendenceManager;
+        this.robotManager = robotManager;
+        this.achievementManager = achievementManager;
     }
 
     @Override
@@ -87,7 +94,7 @@ public class TranscendencePage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        PrestigeHelper.despawnRobots(playerId);
+        PrestigeHelper.despawnRobots(playerId, robotManager);
 
         int newCount = transcendenceManager.performTranscendence(playerId);
         if (newCount < 0) {
@@ -107,7 +114,7 @@ public class TranscendencePage extends BaseAscendPage {
         }
 
         // Check achievements
-        PrestigeHelper.checkAchievements(playerId, player);
+        PrestigeHelper.checkAchievements(playerId, player, achievementManager);
 
         // Refresh display
         UICommandBuilder updateBuilder = new UICommandBuilder();

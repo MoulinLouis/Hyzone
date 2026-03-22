@@ -14,6 +14,7 @@ import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.ascension.ChallengeManager.ChallengeLeaderboardEntry;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
@@ -35,14 +36,16 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
 
     private final AscendPlayerStore playerStore;
     private final ChallengeManager challengeManager;
+    private final RobotManager robotManager;
     private final ChallengeType[] challengeTypes;
     private int currentTabIndex = 0;
 
     public ChallengeLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                                     ChallengeManager challengeManager) {
+                                    ChallengeManager challengeManager, RobotManager robotManager) {
         super(playerRef, 50);
         this.playerStore = playerStore;
         this.challengeManager = challengeManager;
+        this.robotManager = robotManager;
         this.challengeTypes = ChallengeType.values();
     }
 
@@ -111,7 +114,7 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (pRef != null && player != null) {
             player.getPageManager().openCustomPage(ref, store,
-                new AscendChallengePage(pRef, playerStore, challengeManager));
+                new AscendChallengePage(pRef, playerStore, challengeManager, robotManager));
             return;
         }
         this.close();

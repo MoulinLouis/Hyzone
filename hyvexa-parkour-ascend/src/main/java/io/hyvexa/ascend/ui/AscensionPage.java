@@ -12,10 +12,11 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
+import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.ascend.util.PrestigeHelper;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -31,11 +32,22 @@ public class AscensionPage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private final AscensionManager ascensionManager;
+    private final ChallengeManager challengeManager;
+    private final RobotManager robotManager;
+    private final AchievementManager achievementManager;
 
-    public AscensionPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscensionManager ascensionManager) {
+    public AscensionPage(@Nonnull PlayerRef playerRef,
+                         AscendPlayerStore playerStore,
+                         AscensionManager ascensionManager,
+                         ChallengeManager challengeManager,
+                         RobotManager robotManager,
+                         AchievementManager achievementManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.ascensionManager = ascensionManager;
+        this.challengeManager = challengeManager;
+        this.robotManager = robotManager;
+        this.achievementManager = achievementManager;
     }
 
     @Override
@@ -87,15 +99,15 @@ public class AscensionPage extends BaseAscendPage {
         }
 
         // Check if player is in a challenge — route to challenge completion instead
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null
-                && plugin.getChallengeManager().isInChallenge(playerId)) {
-            handleChallengeCompletion(playerId, player, plugin);
+        if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
+            handleChallengeCompletion(playerId, player);
             return;
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        PrestigeHelper.despawnRobots(playerId);
+        if (robotManager != null) {
+            robotManager.despawnRobotsForPlayer(playerId);
+        }
 
         int newCount = ascensionManager.performAscension(playerId);
         if (newCount < 0) {
@@ -112,7 +124,9 @@ public class AscensionPage extends BaseAscendPage {
             .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements
-        PrestigeHelper.checkAchievements(playerId, player);
+        if (achievementManager != null) {
+            achievementManager.checkAndUnlockAchievements(playerId, player);
+        }
 
         // Refresh display
         UICommandBuilder updateBuilder = new UICommandBuilder();
@@ -120,8 +134,7 @@ public class AscensionPage extends BaseAscendPage {
         sendUpdate(updateBuilder, null, false);
     }
 
-    private void handleChallengeCompletion(UUID playerId, Player player, ParkourAscendPlugin plugin) {
-        io.hyvexa.ascend.ascension.ChallengeManager challengeManager = plugin.getChallengeManager();
+    private void handleChallengeCompletion(UUID playerId, Player player) {
         AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
 
         long elapsedMs = challengeManager.completeChallenge(playerId);

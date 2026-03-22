@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
@@ -26,6 +27,7 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
@@ -45,19 +47,28 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
     private final AscendSettingsStore settingsStore;
     private final AscensionManager ascensionManager;
     private final ChallengeManager challengeManager;
+    private final RobotManager robotManager;
+    private final AchievementManager achievementManager;
+    private final AscendAdminNavigator adminNavigator;
 
     public AscendAdminVoltPage(@Nonnull PlayerRef playerRef,
                                AscendPlayerStore playerStore,
                                AscendMapStore mapStore,
                                AscendSettingsStore settingsStore,
                                AscensionManager ascensionManager,
-                               ChallengeManager challengeManager) {
+                               ChallengeManager challengeManager,
+                               RobotManager robotManager,
+                               AchievementManager achievementManager,
+                               AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, VoltData.CODEC);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.settingsStore = settingsStore;
         this.ascensionManager = ascensionManager;
         this.challengeManager = challengeManager;
+        this.robotManager = robotManager;
+        this.achievementManager = achievementManager;
+        this.adminNavigator = adminNavigator;
     }
 
     @Override
@@ -90,7 +101,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         }
         switch (data.button) {
             case VoltData.BUTTON_CLOSE -> this.close();
-            case VoltData.BUTTON_BACK -> player.getPageManager().openCustomPage(ref, store, new AscendAdminPanelPage(playerRef));
+            case VoltData.BUTTON_BACK -> player.getPageManager().openCustomPage(ref, store, adminNavigator.createPanelPage(playerRef));
             case VoltData.BUTTON_ADD -> applyVolt(player, playerRef, store, true);
             case VoltData.BUTTON_REMOVE -> applyVolt(player, playerRef, store, false);
             case VoltData.BUTTON_RESET_PROGRESS -> resetProgress(player, playerRef, store);
@@ -217,7 +228,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        PrestigeHelper.despawnRobots(playerId);
+        PrestigeHelper.despawnRobots(playerId, robotManager);
 
         // Complete active challenge if in one (same routing as normal ascension)
         if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
@@ -248,7 +259,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         player.sendMessage(Message.raw("[Ascend] Ascension simulated! (x" + newCount + ")")
             .color(SystemMessageUtils.SUCCESS));
 
-        PrestigeHelper.checkAchievements(playerId, player);
+        PrestigeHelper.checkAchievements(playerId, player, achievementManager);
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#CurrentVoltValue.Text", "0");

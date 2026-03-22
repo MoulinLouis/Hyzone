@@ -12,8 +12,8 @@ import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -33,14 +33,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlockEvent> {
     private final MineManager mineManager;
     private final MinePlayerStore minePlayerStore;
+    private final MineConfigStore configStore;
+    private final MineHudManager mineHudManager;
+    private final MineAchievementTracker mineAchievementTracker;
     private final BlockDamageTracker damageTracker = new BlockDamageTracker();
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
 
-    public MineDamageSystem(MineManager mineManager, MinePlayerStore minePlayerStore) {
+    public MineDamageSystem(MineManager mineManager, MinePlayerStore minePlayerStore,
+                            MineConfigStore configStore, MineHudManager mineHudManager,
+                            MineAchievementTracker mineAchievementTracker) {
         super(DamageBlockEvent.class);
         this.mineManager = mineManager;
         this.minePlayerStore = minePlayerStore;
+        this.configStore = configStore;
+        this.mineHudManager = mineHudManager;
+        this.mineAchievementTracker = mineAchievementTracker;
     }
 
     @Override
@@ -81,14 +89,10 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (blockTypeName == null) return;
 
         // Multi-HP: record hit with pickaxe damage * Momentum bonus
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        MineConfigStore configStore = plugin.getMineConfigStore();
         int blockHp = configStore.getBlockHp(blockTypeName);
         int pickaxeDamage = mineProgress.getPickaxeDamage();
         double totalDamage = pickaxeDamage * mineProgress.getMomentumMultiplier();
         BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(playerId, bx, by, bz, blockTypeName, blockHp, totalDamage);
-
-        MineHudManager mineHudManager = plugin.getMineHudManager();
 
         if (!hitResult.shouldBreak()) {
             // Block still has HP — update the health bar HUD
@@ -122,20 +126,21 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
 
         // Reward
         boolean bagFull = MineRewardHelper.rewardBlock(playerId, mineProgress, blockTypeName, blocksGained,
-                zone.getMineId(), mineManager, minePlayerStore);
+                zone.getMineId(), mineManager, minePlayerStore, mineHudManager, mineAchievementTracker);
         if (bagFull) {
             MineRewardHelper.sendBagFullMessageIfNeeded(playerId, player, lastBagFullMessage);
         }
 
         // Momentum combo
-        MineRewardHelper.handleMomentumCombo(playerId, mineProgress);
+        MineRewardHelper.handleMomentumCombo(playerId, mineProgress, mineHudManager);
 
         // Egg drop chance
         EggDropHelper.tryDropEgg(playerId, player, zone, by, mineProgress, minePlayerStore);
 
         // AoE upgrades (Jackhammer, Stomp, Blast)
         if (world != null) {
-            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager);
+            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager,
+                mineHudManager, mineAchievementTracker, minePlayerStore);
         }
     }
 

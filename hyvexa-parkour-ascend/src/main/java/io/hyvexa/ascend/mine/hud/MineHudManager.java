@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
@@ -25,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 public class MineHudManager {
 
@@ -34,12 +34,15 @@ public class MineHudManager {
     private final MinePlayerStore playerStore;
     private final MineManager mineManager;
     private final MineConfigStore configStore;
+    private final Function<UUID, PlayerRef> playerRefLookup;
     private final ConcurrentHashMap<UUID, MineHudState> huds = new ConcurrentHashMap<>();
 
-    public MineHudManager(MinePlayerStore playerStore, MineManager mineManager, MineConfigStore configStore) {
+    public MineHudManager(MinePlayerStore playerStore, MineManager mineManager, MineConfigStore configStore,
+                          Function<UUID, PlayerRef> playerRefLookup) {
         this.playerStore = playerStore;
         this.mineManager = mineManager;
         this.configStore = configStore;
+        this.playerRefLookup = playerRefLookup;
     }
 
     public void attachHud(PlayerRef playerRef, Player player) {
@@ -104,9 +107,7 @@ public class MineHudManager {
         // Detach from MultiHudBridge so the mine HUD doesn't linger in the composite
         // after world switches (e.g. game selector -> parkour). No-op if player already gone.
         try {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null) return;
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            PlayerRef playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
             if (playerRef == null) return;
             var ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) return;
@@ -214,11 +215,7 @@ public class MineHudManager {
     }
 
     private MineZone findCurrentZone(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return null;
-        }
-        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        PlayerRef playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
         if (playerRef == null) {
             return null;
         }

@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendTutorialPage;
@@ -24,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class TutorialTriggerService {
 
@@ -41,13 +41,16 @@ public class TutorialTriggerService {
 
     private final AscendPlayerStore playerStore;
     private final AscendRunTracker runTracker;
+    private final Function<UUID, PlayerRef> playerRefLookup;
 
     // Pending tutorials deferred because the player was in a run
     private final ConcurrentHashMap<UUID, ConcurrentLinkedQueue<TutorialOpener>> pendingTutorials = new ConcurrentHashMap<>();
 
-    public TutorialTriggerService(AscendPlayerStore playerStore, AscendRunTracker runTracker) {
+    public TutorialTriggerService(AscendPlayerStore playerStore, AscendRunTracker runTracker,
+                                  Function<UUID, PlayerRef> playerRefLookup) {
         this.playerStore = playerStore;
         this.runTracker = runTracker;
+        this.playerRefLookup = playerRefLookup;
     }
 
     public void checkWelcome(UUID playerId, Ref<EntityStore> entityRef) {
@@ -116,9 +119,7 @@ public class TutorialTriggerService {
             TutorialOpener deferredOpener = drained.get(i);
             long delay = TRIGGER_DELAY_MS + (i * 300L);
             HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                if (plugin == null) return;
-                PlayerRef playerRef = plugin.getPlayerRef(playerId);
+                PlayerRef playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
                 if (playerRef == null) return;
                 Ref<EntityStore> ref = playerRef.getReference();
                 if (ref == null || !ref.isValid()) return;
@@ -174,11 +175,7 @@ public class TutorialTriggerService {
 
     private void scheduleOpener(UUID playerId, TutorialOpener opener) {
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null) {
-                return;
-            }
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            PlayerRef playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
             if (playerRef == null) {
                 return;
             }

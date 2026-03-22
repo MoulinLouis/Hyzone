@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineBlockRegistry;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.ui.AscendAdminNavigator;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -28,13 +29,17 @@ import java.util.Map;
 public class MineBlockHpPage extends InteractiveCustomUIPage<MineBlockHpPage.ConfigData> {
 
     private final MineConfigStore mineConfigStore;
+    private final AscendAdminNavigator adminNavigator;
     private String selectedBlockId = "";
     private String hpValue = "";
     private String priceValue = "";
 
-    public MineBlockHpPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore) {
+    public MineBlockHpPage(@Nonnull PlayerRef playerRef,
+                           MineConfigStore mineConfigStore,
+                           AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ConfigData.CODEC);
         this.mineConfigStore = mineConfigStore;
+        this.adminNavigator = adminNavigator;
     }
 
     public void setSelectedBlockId(String blockId) {
@@ -131,7 +136,7 @@ public class MineBlockHpPage extends InteractiveCustomUIPage<MineBlockHpPage.Con
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || pRef == null) return;
-        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(pRef, mineConfigStore));
+        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(pRef, mineConfigStore, adminNavigator));
     }
 
     private void bindEvents(UIEventBuilder eventBuilder) {

@@ -3,11 +3,13 @@ package io.hyvexa.ascend.summit;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,10 +25,20 @@ public class SummitManager {
 
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
+    private final ChallengeManager challengeManager;
+    private final AscensionManager ascensionManager;
+    private final PlayerAnalytics analytics;
 
-    public SummitManager(AscendPlayerStore playerStore, AscendMapStore mapStore) {
+    public SummitManager(AscendPlayerStore playerStore,
+                         AscendMapStore mapStore,
+                         ChallengeManager challengeManager,
+                         AscensionManager ascensionManager,
+                         PlayerAnalytics analytics) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
+        this.challengeManager = challengeManager;
+        this.ascensionManager = ascensionManager;
+        this.analytics = analytics;
     }
 
     /**
@@ -83,10 +95,8 @@ public class SummitManager {
      * @return SummitResult containing the new level, list of maps with runners (for despawn), and XP gained
      */
     public SummitResult performSummit(UUID playerId, SummitCategory category) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         // Block summiting in categories locked by an active challenge
-        if (plugin != null && plugin.getChallengeManager() != null
-                && plugin.getChallengeManager().isSummitBlocked(playerId, category)) {
+        if (challengeManager != null && challengeManager.isSummitBlocked(playerId, category)) {
             return new SummitResult(-1, List.of(), 0.0);
         }
 
@@ -126,8 +136,10 @@ public class SummitManager {
             + " +" + xpToGain + " XP, Lv." + previousLevel + " -> Lv." + newLevel);
 
         try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_summit_up",
+            if (analytics != null) {
+                analytics.logEvent(playerId, "ascend_summit_up",
                     "{\"category\":\"" + category.name() + "\",\"new_level\":" + newLevel + "}");
+            }
         } catch (Exception e) { /* silent */ }
 
         return new SummitResult(newLevel, mapsWithRunners, xpToGain);
@@ -151,16 +163,15 @@ public class SummitManager {
     public double getRunnerSpeedBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.RUNNER_SPEED);
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null) {
-            double divisor = plugin.getChallengeManager().getSpeedDivisor(playerId);
+        if (challengeManager != null) {
+            double divisor = challengeManager.getSpeedDivisor(playerId);
             if (divisor > 1.0) {
                 fullBonus /= divisor;
             }
             // Challenge reward: permanent speed bonus from completed challenges
-            fullBonus *= plugin.getChallengeManager().getChallengeSpeedMultiplier(playerId);
+            fullBonus *= challengeManager.getChallengeSpeedMultiplier(playerId);
             // C8 reward: permanent summit bonus
-            fullBonus *= plugin.getChallengeManager().getChallengeSummitBonus(playerId);
+            fullBonus *= challengeManager.getChallengeSummitBonus(playerId);
         }
 
         return fullBonus;
@@ -175,16 +186,15 @@ public class SummitManager {
     public double getMultiplierGainBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null) {
-            double divisor = plugin.getChallengeManager().getMultiplierGainDivisor(playerId);
+        if (challengeManager != null) {
+            double divisor = challengeManager.getMultiplierGainDivisor(playerId);
             if (divisor > 1.0) {
                 fullBonus /= divisor;
             }
             // Challenge reward: permanent mult gain bonus from completed challenges
-            fullBonus *= plugin.getChallengeManager().getChallengeMultiplierGainBonus(playerId);
+            fullBonus *= challengeManager.getChallengeMultiplierGainBonus(playerId);
             // C8 reward: permanent summit bonus
-            fullBonus *= plugin.getChallengeManager().getChallengeSummitBonus(playerId);
+            fullBonus *= challengeManager.getChallengeSummitBonus(playerId);
         }
 
         return fullBonus;
@@ -196,13 +206,11 @@ public class SummitManager {
      */
     public double getBaseMultiplierBonus(UUID playerId) {
         double bonus = 0.0;
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        var am = plugin != null ? plugin.getAscensionManager() : null;
-        if (am != null) {
-            if (am.hasMultiplierBoost(playerId)) {
+        if (ascensionManager != null) {
+            if (ascensionManager.hasMultiplierBoost(playerId)) {
                 bonus += 0.10;
             }
-            if (am.hasMultiplierBoost2(playerId)) {
+            if (ascensionManager.hasMultiplierBoost2(playerId)) {
                 bonus += 0.25;
             }
         }
@@ -219,35 +227,31 @@ public class SummitManager {
     public double getEvolutionPowerBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        var cm = plugin != null ? plugin.getChallengeManager() : null;
-        var am = plugin != null ? plugin.getAscensionManager() : null;
-
         // Challenge malus: divide full value by evolution power divisor
-        if (cm != null) {
-            double divisor = cm.getEvolutionPowerDivisor(playerId);
+        if (challengeManager != null) {
+            double divisor = challengeManager.getEvolutionPowerDivisor(playerId);
             if (divisor > 1.0) {
                 fullBonus /= divisor;
             }
         }
 
         // Skill tree: Evolution Power+ adds +1.0 to base evolution power
-        if (am != null && am.hasEvolutionPowerBoost(playerId)) {
+        if (ascensionManager != null && ascensionManager.hasEvolutionPowerBoost(playerId)) {
             fullBonus += 1.0;
         }
         // Skill tree: Evolution Power II adds +1.0 to base evolution power
-        if (am != null && am.hasEvolutionPowerBoost2(playerId)) {
+        if (ascensionManager != null && ascensionManager.hasEvolutionPowerBoost2(playerId)) {
             fullBonus += 1.0;
         }
         // Skill tree: Evolution Power III adds +2.0 to base evolution power
-        if (am != null && am.hasEvolutionPowerBoost3(playerId)) {
+        if (ascensionManager != null && ascensionManager.hasEvolutionPowerBoost3(playerId)) {
             fullBonus += 2.0;
         }
         // Challenge reward: permanent evo power bonus from completed challenges
-        if (cm != null) {
-            fullBonus += cm.getChallengeEvolutionPowerBonus(playerId);
+        if (challengeManager != null) {
+            fullBonus += challengeManager.getChallengeEvolutionPowerBonus(playerId);
             // C8 reward: permanent summit bonus (multiplicative on final value)
-            fullBonus *= cm.getChallengeSummitBonus(playerId);
+            fullBonus *= challengeManager.getChallengeSummitBonus(playerId);
         }
         return fullBonus;
     }
@@ -260,17 +264,6 @@ public class SummitManager {
             getEvolutionPowerBonus(playerId),
             getBaseMultiplierBonus(playerId)
         );
-    }
-
-    public static BonusTriplet getSafeBonuses(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            SummitManager sm = plugin.getSummitManager();
-            if (sm != null && playerId != null) {
-                return sm.getAllBonuses(playerId);
-            }
-        }
-        return new BonusTriplet(1.0, 3.0, 0.0);
     }
 
     /**

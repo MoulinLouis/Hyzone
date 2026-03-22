@@ -19,6 +19,7 @@ import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
@@ -57,6 +58,7 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
     private final GhostStore ghostStore;
     private final AscensionManager ascensionManager;
     private final ChallengeManager challengeManager;
+    private final SummitManager summitManager;
     private final TranscendenceManager transcendenceManager;
     private final AchievementManager achievementManager;
     private final TutorialTriggerService tutorialTriggerService;
@@ -65,12 +67,13 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
     private int currentTabIndex = 0;
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore) {
-        this(playerRef, playerStore, mapStore, null, null, null, null, null, null, null, null, null);
+        this(playerRef, playerStore, mapStore, null, null, null, null, null, null, null, null, null, null);
     }
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore,
                                     AscendRunTracker runTracker, RobotManager robotManager, GhostStore ghostStore,
                                     AscensionManager ascensionManager, ChallengeManager challengeManager,
+                                    SummitManager summitManager,
                                     TranscendenceManager transcendenceManager, AchievementManager achievementManager,
                                     TutorialTriggerService tutorialTriggerService,
                                     RunnerSpeedCalculator speedCalculator) {
@@ -82,6 +85,7 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
         this.ghostStore = ghostStore;
         this.ascensionManager = ascensionManager;
         this.challengeManager = challengeManager;
+        this.summitManager = summitManager;
         this.transcendenceManager = transcendenceManager;
         this.achievementManager = achievementManager;
         this.tutorialTriggerService = tutorialTriggerService;
@@ -156,7 +160,7 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
             if (pRef != null && player != null) {
                 player.getPageManager().openCustomPage(ref, store,
                     new AscendMapSelectPage(pRef, mapStore, playerStore, runTracker, robotManager, ghostStore,
-                        ascensionManager, challengeManager, transcendenceManager,
+                        ascensionManager, challengeManager, summitManager, transcendenceManager,
                         achievementManager, tutorialTriggerService, speedCalculator));
                 return;
             }

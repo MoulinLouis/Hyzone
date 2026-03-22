@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -30,6 +29,7 @@ public class AscendHudManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long ECONOMY_CACHE_TTL_MS = 1000L;
     private static final long RUNNER_BAR_CACHE_TTL_MS = 150L;
+    private static volatile AscendHudManager toastHudManager;
 
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
@@ -44,12 +44,14 @@ public class AscendHudManager {
     private final ConcurrentHashMap<UUID, CachedEconomyData> economyCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, RunnerBarCache> runnerBarCache = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> mineModeActive = ConcurrentHashMap.newKeySet();
+    private volatile RobotManager robotManager;
 
     public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
         this.summitManager = summitManager;
+        toastHudManager = this;
     }
 
     public void updateFull(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
@@ -153,8 +155,7 @@ public class AscendHudManager {
                 hud.updateRunnerBars(cachedBars.bars);
                 return;
             }
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            RobotManager robotManager = plugin != null ? plugin.getRobotManager() : null;
+            RobotManager robotManager = this.robotManager;
             if (robotManager == null) {
                 return;
             }
@@ -309,13 +310,14 @@ public class AscendHudManager {
     }
 
     public static void showToastSafe(UUID playerId, ToastType type, String message) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            AscendHudManager hm = plugin.getHudManager();
-            if (hm != null) {
-                hm.showToast(playerId, type, message);
-            }
+        AscendHudManager hudManager = toastHudManager;
+        if (hudManager != null) {
+            hudManager.showToast(playerId, type, message);
         }
+    }
+
+    public void setRobotManager(RobotManager robotManager) {
+        this.robotManager = robotManager;
     }
 
     public void showToast(UUID playerId, ToastType type, String message) {

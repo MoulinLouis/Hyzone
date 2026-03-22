@@ -59,6 +59,12 @@ public class AscendTranscendenceInteraction extends AbstractAscendPageInteractio
     @Override
     protected InteractiveCustomUIPage<?> createPage(Ref<EntityStore> ref, Store<EntityStore> store,
                                                     PlayerRef playerRef, ParkourAscendPlugin plugin) {
-        return new TranscendencePage(playerRef, plugin.getPlayerStore(), plugin.getTranscendenceManager());
+        return new TranscendencePage(
+            playerRef,
+            plugin.getPlayerStore(),
+            plugin.getTranscendenceManager(),
+            plugin.getRobotManager(),
+            plugin.getAchievementManager()
+        );
     }
 }

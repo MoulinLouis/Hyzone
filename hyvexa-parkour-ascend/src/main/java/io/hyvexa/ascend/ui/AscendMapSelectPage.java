@@ -81,6 +81,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final GhostStore ghostStore;
     private final AscensionManager ascensionManager;
     private final ChallengeManager challengeManager;
+    private final SummitManager summitManager;
     private final TranscendenceManager transcendenceManager;
     private final AchievementManager achievementManager;
     private final TutorialTriggerService tutorialTriggerService;
@@ -97,6 +98,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                                AscendPlayerStore playerStore, AscendRunTracker runTracker,
                                RobotManager robotManager, GhostStore ghostStore,
                                AscensionManager ascensionManager, ChallengeManager challengeManager,
+                               SummitManager summitManager,
                                TranscendenceManager transcendenceManager,
                                AchievementManager achievementManager,
                                TutorialTriggerService tutorialTriggerService,
@@ -109,6 +111,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         this.ghostStore = ghostStore;
         this.ascensionManager = ascensionManager;
         this.challengeManager = challengeManager;
+        this.summitManager = summitManager;
         this.transcendenceManager = transcendenceManager;
         this.achievementManager = achievementManager;
         this.tutorialTriggerService = tutorialTriggerService;
@@ -545,7 +548,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private String formatMultiplierGain(int stars, java.util.UUID playerId) {
-        SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
+        SummitManager.BonusTriplet bonuses = summitManager != null
+            ? summitManager.getAllBonuses(playerId)
+            : new SummitManager.BonusTriplet(1.0, 3.0, 0.0);
         BigNumber increment = AscendConstants.getRunnerMultiplierIncrement(stars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
         return "+" + FormatUtils.formatBigNumber(increment) + "x";
     }
@@ -555,7 +560,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
      * Shows current → next multiplier increment per run.
      */
     private String formatEvolveGain(int stars, java.util.UUID playerId) {
-        SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
+        SummitManager.BonusTriplet bonuses = summitManager != null
+            ? summitManager.getAllBonuses(playerId)
+            : new SummitManager.BonusTriplet(1.0, 3.0, 0.0);
         BigNumber nextIncrement = AscendConstants.getRunnerMultiplierIncrement(stars + 1, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
         double val = nextIncrement.toDouble();
         String formatted;
@@ -1183,7 +1190,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         player.getPageManager().openCustomPage(ref, store,
             new AscendMapLeaderboardPage(playerRef, playerStore, mapStore, runTracker, robotManager, ghostStore,
-                ascensionManager, challengeManager, transcendenceManager,
+                ascensionManager, challengeManager, summitManager, transcendenceManager,
                 achievementManager, tutorialTriggerService, speedCalculator));
     }
 
@@ -1205,7 +1212,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new AscendChallengePage(playerRef, playerStore, challengeManager));
+            new AscendChallengePage(playerRef, playerStore, challengeManager, robotManager));
     }
 
     private void handleOpenTranscendence(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -1226,7 +1233,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new TranscendencePage(playerRef, playerStore, transcendenceManager));
+            new TranscendencePage(playerRef, playerStore, transcendenceManager, robotManager, achievementManager));
     }
 
     /**

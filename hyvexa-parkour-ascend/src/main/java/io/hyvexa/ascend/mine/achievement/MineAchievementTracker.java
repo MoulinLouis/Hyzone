@@ -5,7 +5,7 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.core.db.DatabaseManager;
@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  * Tracks mining achievements and stats per player.
@@ -38,12 +39,22 @@ public class MineAchievementTracker {
     private final Map<UUID, PlayerAchievementState> states = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyStats = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean saveScheduled = new AtomicBoolean(false);
+    private final MinePlayerStore minePlayerStore;
+    private final AscendPlayerStore playerStore;
+    private final Function<UUID, PlayerRef> playerRefLookup;
 
     private volatile List<MineLeaderboardEntry> leaderboardCache = List.of();
     private volatile long leaderboardCacheTimestamp;
 
     public record MineLeaderboardEntry(UUID playerId, String playerName,
                                        long totalCrystalsEarned, long manualBlocksMined) {}
+
+    public MineAchievementTracker(MinePlayerStore minePlayerStore, AscendPlayerStore playerStore,
+                                  Function<UUID, PlayerRef> playerRefLookup) {
+        this.minePlayerStore = minePlayerStore;
+        this.playerStore = playerStore;
+        this.playerRefLookup = playerRefLookup;
+    }
 
     // ── State class ──────────────────────────────────────────────────────
 
@@ -170,15 +181,11 @@ public class MineAchievementTracker {
         if (!state.completed.add(achievement.getId())) return;
 
         // Grant crystal reward
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            MinePlayerStore mineStore = plugin.getMinePlayerStore();
-            if (mineStore != null) {
-                MinePlayerProgress progress = mineStore.getPlayer(playerId);
-                if (progress != null) {
-                    progress.addCrystals(achievement.getCrystalReward());
-                    mineStore.markDirty(playerId);
-                }
+        if (minePlayerStore != null) {
+            MinePlayerProgress progress = minePlayerStore.getPlayer(playerId);
+            if (progress != null) {
+                progress.addCrystals(achievement.getCrystalReward());
+                minePlayerStore.markDirty(playerId);
             }
         }
 
@@ -190,9 +197,7 @@ public class MineAchievementTracker {
     }
 
     private void sendAchievementMessage(UUID playerId, MineAchievement achievement) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        PlayerRef playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
         if (playerRef == null) return;
         var ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) return;
@@ -233,11 +238,9 @@ public class MineAchievementTracker {
     }
 
     private String resolvePlayerName(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return null;
-        String name = plugin.getPlayerStore().getPlayerName(playerId);
+        String name = playerStore != null ? playerStore.getPlayerName(playerId) : null;
         if (name != null) return name;
-        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        PlayerRef playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
         if (playerRef != null) return playerRef.getUsername();
         return null;
     }

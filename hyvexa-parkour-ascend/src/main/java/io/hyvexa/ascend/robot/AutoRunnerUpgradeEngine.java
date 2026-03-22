@@ -3,7 +3,6 @@ package io.hyvexa.ascend.robot;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.command.AscendCommand;
@@ -34,9 +33,7 @@ class AutoRunnerUpgradeEngine {
     // Auto Runner Upgrades (Skill Tree)
 
     void performAutoRunnerUpgrades() {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        AscensionManager ascensionManager = plugin.getAscensionManager();
+        AscensionManager ascensionManager = manager.getAscensionManager();
         if (ascensionManager == null) return;
 
         for (UUID playerId : manager.getOnlinePlayers()) {
@@ -69,8 +66,7 @@ class AutoRunnerUpgradeEngine {
         // Runs before speed upgrades so a map at max level evolves immediately,
         // even while other maps still have affordable speed upgrades.
         if (progress.isAutoEvolutionEnabled()) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            AscensionManager am = plugin != null ? plugin.getAscensionManager() : null;
+            AscensionManager am = manager.getAscensionManager();
             if (am != null && am.hasAutoEvolution(playerId)) {
                 boolean anyEvolved = false;
                 for (AscendMap map : maps) {
@@ -83,8 +79,8 @@ class AutoRunnerUpgradeEngine {
                         anyEvolved = true;
                     }
                 }
-                if (anyEvolved && plugin.getAchievementManager() != null) {
-                    plugin.getAchievementManager().checkAndUnlockAchievements(playerId, null);
+                if (anyEvolved && manager.getAchievementManager() != null) {
+                    manager.getAchievementManager().checkAndUnlockAchievements(playerId, null);
                 }
             }
         }
@@ -120,10 +116,9 @@ class AutoRunnerUpgradeEngine {
     // Auto-Elevation
 
     void performAutoElevation(long now) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
-        AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
-        ChallengeManager challengeMgr = plugin != null ? plugin.getChallengeManager() : null;
+        AscensionManager ascensionMgr = manager.getAscensionManager();
+        AscendRunTracker runTracker = manager.getRunTracker();
+        ChallengeManager challengeMgr = manager.getChallengeManager();
         for (UUID playerId : manager.getOnlinePlayers()) {
             if (ascensionMgr == null || !ascensionMgr.hasAutoElevation(playerId)) continue;
             // Skip if player is actively playing a map — don't reset progress mid-run
@@ -192,14 +187,11 @@ class AutoRunnerUpgradeEngine {
         manager.despawnRobotsForPlayer(playerId);
 
         // Send chat message
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef != null) {
-                playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                    "[Auto-Elevation] Elevated to x" + newMultiplier)
-                    .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-            }
+        PlayerRef playerRef = manager.getPlayerRef(playerId);
+        if (playerRef != null) {
+            playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                "[Auto-Elevation] Elevated to x" + newMultiplier)
+                .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
         }
 
         // Advance targetIndex past all surpassed targets
@@ -219,10 +211,9 @@ class AutoRunnerUpgradeEngine {
     // Auto-Summit
 
     void performAutoSummit(long now) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
-        AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
-        ChallengeManager challengeMgr = plugin != null ? plugin.getChallengeManager() : null;
+        AscensionManager ascensionMgr = manager.getAscensionManager();
+        AscendRunTracker runTracker = manager.getRunTracker();
+        ChallengeManager challengeMgr = manager.getChallengeManager();
         for (UUID playerId : manager.getOnlinePlayers()) {
             if (ascensionMgr == null || !ascensionMgr.hasAutoSummit(playerId)) continue;
             // Skip if player is actively playing a map — don't reset progress mid-run
@@ -242,9 +233,7 @@ class AutoRunnerUpgradeEngine {
         if (progress == null) return;
         if (!progress.isAutoSummitEnabled()) return;
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        SummitManager summitManager = plugin.getSummitManager();
+        SummitManager summitManager = manager.getSummitManager();
         if (summitManager == null) return;
 
         if (!summitManager.canSummit(playerId)) return;
@@ -292,7 +281,7 @@ class AutoRunnerUpgradeEngine {
             manager.despawnRobotsForPlayer(playerId);
 
             // Send chat message
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            PlayerRef playerRef = manager.getPlayerRef(playerId);
             if (playerRef != null) {
                 playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
                     "[Auto-Summit] " + category.getDisplayName() + " Lv " + result.newLevel())

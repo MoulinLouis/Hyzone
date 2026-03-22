@@ -15,10 +15,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.holo.AscendHologramManager;
+import io.hyvexa.ascend.ui.AscendAdminNavigator;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.HylogramsBridge;
@@ -38,14 +38,26 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
 
     public static final Map<UUID, int[]> minePos1 = new ConcurrentHashMap<>();
     public static final Map<UUID, int[]> minePos2 = new ConcurrentHashMap<>();
+    private final AscendAdminNavigator adminNavigator;
+    private final AscendMapStore mapStore;
+    private final AscendWhitelistManager whitelistManager;
+    private final MineConfigStore mineConfigStore;
+    private final AscendHologramManager hologramManager;
 
     public static void clearPlayer(UUID playerId) {
         minePos1.remove(playerId);
         minePos2.remove(playerId);
     }
 
-    public AscendAdminCommand() {
+    public AscendAdminCommand(AscendAdminNavigator adminNavigator, AscendMapStore mapStore,
+                              AscendWhitelistManager whitelistManager, MineConfigStore mineConfigStore,
+                              AscendHologramManager hologramManager) {
         super("as", "Ascend admin tools");
+        this.adminNavigator = adminNavigator;
+        this.mapStore = mapStore;
+        this.whitelistManager = whitelistManager;
+        this.mineConfigStore = mineConfigStore;
+        this.hologramManager = hologramManager;
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -85,7 +97,9 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         if (args.length == 1) {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef != null) {
-                player.getPageManager().openCustomPage(ref, store, new io.hyvexa.ascend.ui.AscendAdminPanelPage(playerRef));
+                if (adminNavigator != null) {
+                    player.getPageManager().openCustomPage(ref, store, adminNavigator.createPanelPage(playerRef));
+                }
             }
             return;
         }
@@ -94,26 +108,20 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("Unknown admin category. Use: /as admin map ..., /as admin holo ..., /as admin whitelist ..., or /as admin mine ..."));
             return;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            player.sendMessage(Message.raw("[Ascend] Plugin not loaded yet."));
-            return;
-        }
         if ("mine".equals(category)) {
             handleMine(args, player, ref, store);
             return;
         }
         if ("whitelist".equals(category)) {
-            handleWhitelistCommand(player, plugin.getWhitelistManager(), args);
+            handleWhitelistCommand(player, whitelistManager, args);
             return;
         }
-        AscendMapStore mapStore = plugin.getMapStore();
         if (mapStore == null) {
             player.sendMessage(Message.raw("[Ascend] Plugin not loaded yet."));
             return;
         }
         if ("holo".equals(category)) {
-            handleHoloCommand(player, ref, store, mapStore, args);
+            handleHoloCommand(player, ref, store, mapStore, hologramManager, args);
             return;
         }
         if (args.length < 3) {
@@ -350,13 +358,11 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     }
 
     private void handleHoloCommand(Player player, Ref<EntityStore> ref, Store<EntityStore> store,
-                                   AscendMapStore mapStore, String[] args) {
+                                   AscendMapStore mapStore, AscendHologramManager manager, String[] args) {
         if (!HylogramsBridge.isAvailable()) {
             player.sendMessage(Message.raw("Hylograms plugin not available."));
             return;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendHologramManager manager = plugin != null ? plugin.getHologramManager() : null;
         if (manager == null) {
             player.sendMessage(Message.raw("Hologram manager not available."));
             return;
@@ -475,16 +481,11 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     }
 
     private void handleMineList(Player player) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        MineConfigStore mineStore = plugin.getMineConfigStore();
-        if (mineStore == null) {
+        if (mineConfigStore == null) {
             player.sendMessage(Message.raw("[Mine] Mine config store not available."));
             return;
         }
-        List<Mine> mines = mineStore.listMinesSorted();
+        List<Mine> mines = mineConfigStore.listMinesSorted();
         if (mines.isEmpty()) {
             player.sendMessage(Message.raw("[Mine] No mines created yet."));
             return;

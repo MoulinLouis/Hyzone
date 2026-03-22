@@ -18,11 +18,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
-import io.hyvexa.ascend.mine.MineBonusCalculator;
-import io.hyvexa.ascend.mine.data.MinePlayerProgress;
-import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.data.AscendMap;
@@ -50,6 +47,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class RobotManager {
 
@@ -85,6 +83,12 @@ public class RobotManager {
     private final AscendPlayerStore playerStore;
     private final GhostStore ghostStore;
     private final RunnerSpeedCalculator speedCalculator;
+    private final AscendRunTracker runTracker;
+    private final AscensionManager ascensionManager;
+    private final ChallengeManager challengeManager;
+    private final SummitManager summitManager;
+    private final AchievementManager achievementManager;
+    private final Function<UUID, PlayerRef> playerRefResolver;
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> activeEntityUuids = ConcurrentHashMap.newKeySet();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
@@ -107,11 +111,20 @@ public class RobotManager {
     private volatile boolean viewerContextRefreshPending = false;
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore,
-                        RunnerSpeedCalculator speedCalculator) {
+                        RunnerSpeedCalculator speedCalculator, AscendRunTracker runTracker,
+                        AscensionManager ascensionManager, ChallengeManager challengeManager,
+                        SummitManager summitManager, AchievementManager achievementManager,
+                        Function<UUID, PlayerRef> playerRefResolver) {
         this.mapStore = mapStore;
         this.playerStore = playerStore;
         this.ghostStore = ghostStore;
         this.speedCalculator = speedCalculator;
+        this.runTracker = runTracker;
+        this.ascensionManager = ascensionManager;
+        this.challengeManager = challengeManager;
+        this.summitManager = summitManager;
+        this.achievementManager = achievementManager;
+        this.playerRefResolver = playerRefResolver;
         this.orphanCleanup = new OrphanedEntityCleanup(LOGGER,
                 Path.of("mods", "Parkour", RUNNER_UUIDS_FILE));
     }
@@ -802,12 +815,6 @@ public class RobotManager {
         if (mapStore == null || onlinePlayers.isEmpty()) {
             return ViewerContext.empty();
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return ViewerContext.empty();
-        }
-
-        AscendRunTracker runTracker = plugin.getRunTracker();
         List<AscendMap> maps = mapStore.listMapsSorted();
         Set<String> relevantMapIds = new HashSet<>();
         Set<String> highFrequencyMapIds = new HashSet<>();
@@ -815,7 +822,7 @@ public class RobotManager {
         double fastDistanceSq = FAST_MAP_DISTANCE * FAST_MAP_DISTANCE;
 
         for (UUID playerId : onlinePlayers) {
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            PlayerRef playerRef = resolvePlayerRef(playerId);
             if (playerRef == null) {
                 continue;
             }
@@ -1008,14 +1015,13 @@ public class RobotManager {
         int stars = robot.getStars();
 
         // Get Summit bonuses (Multiplier Gain + Evolution Power)
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         double multiplierGainBonus = 1.0;
         double evolutionPowerBonus = 3.0;
         double baseMultiplierBonus = 0.0;
-        if (plugin != null && plugin.getSummitManager() != null) {
-            multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(ownerId);
-            evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(ownerId);
-            baseMultiplierBonus = plugin.getSummitManager().getBaseMultiplierBonus(ownerId);
+        if (summitManager != null) {
+            multiplierGainBonus = summitManager.getMultiplierGainBonus(ownerId);
+            evolutionPowerBonus = summitManager.getEvolutionPowerBonus(ownerId);
+            baseMultiplierBonus = summitManager.getBaseMultiplierBonus(ownerId);
         }
         BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
 
@@ -1053,9 +1059,6 @@ public class RobotManager {
     // Auto Runner Upgrades (Skill Tree)
 
     private void performAutoRunnerUpgrades() {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        AscensionManager ascensionManager = plugin.getAscensionManager();
         if (ascensionManager == null) return;
 
         for (UUID playerId : onlinePlayers) {
@@ -1088,9 +1091,7 @@ public class RobotManager {
         // Runs before speed upgrades so a map at max level evolves immediately,
         // even while other maps still have affordable speed upgrades.
         if (progress.isAutoEvolutionEnabled()) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            AscensionManager am = plugin != null ? plugin.getAscensionManager() : null;
-            if (am != null && am.hasAutoEvolution(playerId)) {
+            if (ascensionManager != null && ascensionManager.hasAutoEvolution(playerId)) {
                 boolean anyEvolved = false;
                 for (AscendMap map : maps) {
                     AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
@@ -1102,8 +1103,8 @@ public class RobotManager {
                         anyEvolved = true;
                     }
                 }
-                if (anyEvolved && plugin.getAchievementManager() != null) {
-                    plugin.getAchievementManager().checkAndUnlockAchievements(playerId, null);
+                if (anyEvolved && achievementManager != null) {
+                    achievementManager.checkAndUnlockAchievements(playerId, null);
                 }
             }
         }
@@ -1139,16 +1140,12 @@ public class RobotManager {
     // Auto-Elevation
 
     private void performAutoElevation(long now) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
-        AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
-        ChallengeManager challengeMgr = plugin != null ? plugin.getChallengeManager() : null;
         for (UUID playerId : onlinePlayers) {
-            if (ascensionMgr == null || !ascensionMgr.hasAutoElevation(playerId)) continue;
+            if (ascensionManager == null || !ascensionManager.hasAutoElevation(playerId)) continue;
             // Skip if player is actively playing a map — don't reset progress mid-run
             if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
             // Skip if elevation is blocked by active challenge
-            if (challengeMgr != null && challengeMgr.isElevationBlocked(playerId)) continue;
+            if (challengeManager != null && challengeManager.isElevationBlocked(playerId)) continue;
             try {
                 autoElevatePlayer(playerId, now);
             } catch (Exception e) {
@@ -1211,14 +1208,11 @@ public class RobotManager {
         despawnRobotsForPlayer(playerId);
 
         // Send chat message
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef != null) {
-                playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                    "[Auto-Elevation] Elevated to x" + newMultiplier)
-                    .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-            }
+        PlayerRef playerRef = resolvePlayerRef(playerId);
+        if (playerRef != null) {
+            playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                "[Auto-Elevation] Elevated to x" + newMultiplier)
+                .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
         }
 
         // Advance targetIndex past all surpassed targets
@@ -1238,16 +1232,12 @@ public class RobotManager {
     // Auto-Summit
 
     private void performAutoSummit(long now) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
-        AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
-        ChallengeManager challengeMgr = plugin != null ? plugin.getChallengeManager() : null;
         for (UUID playerId : onlinePlayers) {
-            if (ascensionMgr == null || !ascensionMgr.hasAutoSummit(playerId)) continue;
+            if (ascensionManager == null || !ascensionManager.hasAutoSummit(playerId)) continue;
             // Skip if player is actively playing a map — don't reset progress mid-run
             if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
             // Skip if all summit is blocked by active challenge
-            if (challengeMgr != null && challengeMgr.isAllSummitBlocked(playerId)) continue;
+            if (challengeManager != null && challengeManager.isAllSummitBlocked(playerId)) continue;
             try {
                 autoSummitPlayer(playerId, now);
             } catch (Exception e) {
@@ -1261,9 +1251,6 @@ public class RobotManager {
         if (progress == null) return;
         if (!progress.isAutoSummitEnabled()) return;
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        SummitManager summitManager = plugin.getSummitManager();
         if (summitManager == null) return;
 
         if (!summitManager.canSummit(playerId)) return;
@@ -1311,7 +1298,7 @@ public class RobotManager {
             despawnRobotsForPlayer(playerId);
 
             // Send chat message
-            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            PlayerRef playerRef = resolvePlayerRef(playerId);
             if (playerRef != null) {
                 playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
                     "[Auto-Summit] " + category.getDisplayName() + " Lv " + result.newLevel())
@@ -1330,78 +1317,13 @@ public class RobotManager {
     /**
      * Calculate speed multiplier for a runner (public for passive earnings)
      */
-    public static double calculateSpeedMultiplier(AscendMap map, int speedLevel, UUID ownerId) {
-        // Base speed multiplier from upgrades + additive skill tree bonuses
-        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
-
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            // Summit runner speed is a multiplier (×1.0 at level 0, ×1.45 at level 1, etc.)
-            SummitManager summitManager = plugin.getSummitManager();
-            if (summitManager != null) {
-                speedMultiplier *= summitManager.getRunnerSpeedBonus(ownerId);
-            }
-
-            // Skill tree: Runner Speed Boost (×1.1 global runner speed)
-            AscensionManager ascensionManager = plugin.getAscensionManager();
-            if (ascensionManager != null) {
-                if (ascensionManager.hasRunnerSpeedBoost(ownerId)) {
-                    speedMultiplier *= 1.1;
-                }
-                // Skill tree: Runner Speed II (×1.2 global runner speed)
-                if (ascensionManager.hasRunnerSpeedBoost2(ownerId)) {
-                    speedMultiplier *= 1.2;
-                }
-                // Skill tree: Runner Speed III (×1.3 global runner speed)
-                if (ascensionManager.hasRunnerSpeedBoost3(ownerId)) {
-                    speedMultiplier *= 1.3;
-                }
-                // Skill tree: Runner Speed IV (×1.5 global runner speed)
-                if (ascensionManager.hasRunnerSpeedBoost4(ownerId)) {
-                    speedMultiplier *= 1.5;
-                }
-                // Skill tree: Runner Speed V (×2.0 global runner speed)
-                if (ascensionManager.hasRunnerSpeedBoost5(ownerId)) {
-                    speedMultiplier *= 2.0;
-                }
-            }
-
-            // Momentum: temporary speed boost from manual run (per-map)
-            // Base: x2.0, with Momentum Surge skill: x2.5
-            AscendPlayerStore ps = plugin.getPlayerStore();
-            if (ps != null) {
-                AscendPlayerProgress progress = ps.getPlayer(ownerId);
-                if (progress != null) {
-                    AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(map.getId());
-                    if (mapProgress != null && mapProgress.isMomentumActive()) {
-                        double momentumMultiplier;
-                        if (ascensionManager != null && ascensionManager.hasMomentumMastery(ownerId)) {
-                            momentumMultiplier = AscendConstants.MOMENTUM_MASTERY_MULTIPLIER;
-                        } else if (ascensionManager != null && ascensionManager.hasMomentumSurge(ownerId)) {
-                            momentumMultiplier = AscendConstants.MOMENTUM_SURGE_MULTIPLIER;
-                        } else {
-                            momentumMultiplier = AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
-                        }
-                        speedMultiplier *= momentumMultiplier;
-                    }
-
-                }
-            }
-
-            // Mine cross-progression bonus
-            MineBonusCalculator mineBonusCalc = plugin.getMineBonusCalculator();
-            if (mineBonusCalc != null) {
-                MinePlayerStore mps = plugin.getMinePlayerStore();
-                if (mps != null) {
-                    MinePlayerProgress mineProgress = mps.getPlayer(ownerId);
-                    if (mineProgress != null) {
-                        speedMultiplier *= mineBonusCalc.getRunnerSpeedMultiplier(mineProgress);
-                    }
-                }
-            }
+    public double calculateSpeedMultiplier(AscendMap map, int speedLevel, UUID ownerId) {
+        if (map == null) {
+            return 1.0;
         }
-
-        return speedMultiplier;
+        return speedCalculator != null
+            ? speedCalculator.calculateSpeedMultiplier(map, speedLevel, ownerId)
+            : 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
     }
 
     /**
@@ -1475,11 +1397,6 @@ public class RobotManager {
      * Skips the runner's owner so they can still see their own runner while playing.
      */
     private void hideFromActiveRunners(String mapId, UUID runnerUuid) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        AscendRunTracker runTracker = plugin.getRunTracker();
         if (runTracker == null) {
             return;
         }
@@ -1520,11 +1437,7 @@ public class RobotManager {
         if (playerId == null) {
             return false;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return false;
-        }
-        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        PlayerRef playerRef = resolvePlayerRef(playerId);
         if (playerRef == null) {
             return false;
         }
@@ -1544,11 +1457,7 @@ public class RobotManager {
         if (playerId == null || map == null) {
             return false;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return false;
-        }
-        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        PlayerRef playerRef = resolvePlayerRef(playerId);
         if (playerRef == null) {
             return false;
         }
@@ -1573,6 +1482,13 @@ public class RobotManager {
         double pz = pos.getZ();
         double distSq = (px - mapX) * (px - mapX) + (py - mapY) * (py - mapY) + (pz - mapZ) * (pz - mapZ);
         return distSq <= CHUNK_LOAD_DISTANCE * CHUNK_LOAD_DISTANCE;
+    }
+
+    private PlayerRef resolvePlayerRef(UUID playerId) {
+        if (playerId == null || playerRefResolver == null) {
+            return null;
+        }
+        return playerRefResolver.apply(playerId);
     }
 
     private record PendingTeleport(RobotState robot, Ref<EntityStore> entityRef,
@@ -1684,6 +1600,12 @@ public class RobotManager {
     AscendPlayerStore getPlayerStore() { return playerStore; }
     AscendMapStore getMapStore() { return mapStore; }
     GhostStore getGhostStore() { return ghostStore; }
+    AscendRunTracker getRunTracker() { return runTracker; }
+    AscensionManager getAscensionManager() { return ascensionManager; }
+    ChallengeManager getChallengeManager() { return challengeManager; }
+    SummitManager getSummitManager() { return summitManager; }
+    AchievementManager getAchievementManager() { return achievementManager; }
+    PlayerRef getPlayerRef(UUID playerId) { return resolvePlayerRef(playerId); }
     Map<String, RobotState> getRobots() { return robots; }
     OrphanedEntityCleanup getOrphanCleanup() { return orphanCleanup; }
     RobotSpawner getSpawner() { return spawner; }

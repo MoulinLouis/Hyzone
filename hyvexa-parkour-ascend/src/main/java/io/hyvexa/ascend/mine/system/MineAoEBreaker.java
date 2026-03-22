@@ -4,7 +4,6 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.World;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.util.MinePositionUtils;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
@@ -34,7 +33,8 @@ public final class MineAoEBreaker {
 
     public static void triggerAoE(UUID playerId, MinePlayerProgress progress, MineZone zone,
                                    World world, int centerX, int centerY, int centerZ,
-                                   MineManager mineManager) {
+                                   MineManager mineManager, MineHudManager mineHudManager,
+                                   MineAchievementTracker achievementTracker, MinePlayerStore minePlayerStore) {
         int fortuneLevel = progress.getUpgradeLevel(MineUpgradeType.FORTUNE);
 
         // Collect all AoE positions (deduplicated)
@@ -73,11 +73,14 @@ public final class MineAoEBreaker {
 
         if (allPositions.isEmpty()) return;
 
-        breakBlocksAt(allPositions, zone, progress, playerId, world, mineManager, fortuneLevel);
+        breakBlocksAt(allPositions, zone, progress, playerId, world, mineManager, fortuneLevel,
+            mineHudManager, achievementTracker, minePlayerStore);
     }
 
     private static int breakBlocksAt(List<Vector3i> positions, MineZone zone, MinePlayerProgress progress,
-                                      UUID playerId, World world, MineManager mineManager, int fortuneLevel) {
+                                      UUID playerId, World world, MineManager mineManager, int fortuneLevel,
+                                      MineHudManager mineHudManager, MineAchievementTracker achievementTracker,
+                                      MinePlayerStore minePlayerStore) {
         int totalBroken = 0;
         MineConfigStore configStore = mineManager.getConfigStore();
         int cashbackLevel = progress.getUpgradeLevel(MineUpgradeType.CASHBACK);
@@ -144,25 +147,17 @@ public final class MineAoEBreaker {
 
         // Show toast for total AoE blocks
         if (totalBroken > 0) {
-            MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
             if (mineHudManager != null) {
                 mineHudManager.showMineToast(playerId, "AoE", totalBroken);
             }
 
-            // Track achievements
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null) {
-                MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-                if (tracker != null) {
-                    tracker.incrementBlocksMined(playerId, totalBroken);
-                    tracker.incrementManualBlocksMined(playerId, totalBroken);
-                }
+            if (achievementTracker != null) {
+                achievementTracker.incrementBlocksMined(playerId, totalBroken);
+                achievementTracker.incrementManualBlocksMined(playerId, totalBroken);
             }
 
-            // Mark dirty for save
-            MinePlayerStore store = ParkourAscendPlugin.getInstance().getMinePlayerStore();
-            if (store != null) {
-                store.markDirty(playerId);
+            if (minePlayerStore != null) {
+                minePlayerStore.markDirty(playerId);
             }
         }
 

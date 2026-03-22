@@ -8,39 +8,67 @@ This plan is now partially implemented.
 
 | Phase | Status | Handoff note |
 |-------|--------|--------------|
-| Phase 1 — Ascend plugin decoupling | In progress | 11 concrete Ascend consumers migrated; **104** `ParkourAscendPlugin.getInstance()` calls still remain in `hyvexa-parkour-ascend/src/main/java` across **43** files |
-| Phase 2 — core interfaces | Partially completed | `CurrencyStore`, `PlayerAnalytics`, and `ConnectionProvider` exist, but most consumers are not typed against them yet |
+| Phase 1 — Ascend plugin decoupling | In progress | Multiple page/manager/helper/command consumers migrated; **30** `ParkourAscendPlugin.getInstance()` calls still remain in `hyvexa-parkour-ascend/src/main/java` across **21** files |
+| Phase 2 — core interfaces | Partially completed | `CurrencyStore`, `PlayerAnalytics`, and `ConnectionProvider` exist; `AscendRunTracker` now consumes `PlayerAnalytics`, but broader adoption is still incomplete |
 | Phase 3 — store `DatabaseManager` migration | Not started | No broad `ConnectionProvider` propagation yet |
 | Phase 4 — other module singleton cleanup | Not started | Purge, RunOrFall, Hub, Parkour, and Wardrobe are untouched |
-| Phase 5 — docs | Partially completed | Architecture/pattern docs updated for the completed slice |
+| Phase 5 — docs | Partially completed | Architecture/pattern docs updated for the completed slices; remaining docs cleanup is mostly progress/status refreshes as more stores move off singletons |
 
-### Completed in this slice
+### Completed so far
 
 - **Phase 1: partial**
-  - `ParkourAscendPlugin.setup()` now wires a shared `RunnerSpeedCalculator` and passes explicit dependencies into several Ascend pages/services instead of letting them reach back into the plugin singleton.
+  - `ParkourAscendPlugin.setup()` now wires a shared `RunnerSpeedCalculator`, injects explicit dependencies into `AscendRunTracker`, `RobotManager`, `SummitManager`, mine managers/helpers, tutorial scheduling, and command/page boundary classes, and closes the tracker/robot and HUD/robot ordering gaps with explicit setter injection instead of plugin lookups.
   - Added `AscendMenuNavigator` to keep profile/settings/music/stats/achievement page construction at the boundary instead of inside page classes.
+  - Added `AscendAdminNavigator` to keep admin/whitelist/mine admin page construction and back-navigation at the boundary instead of inside admin pages.
   - The following classes no longer call `ParkourAscendPlugin.getInstance()`:
     - `AscendMapSelectPage`
+    - `AscendMapLeaderboardPage`
+    - `AscendCommand`
+    - `AscendAdminCommand`
     - `AscendAdminVoltPage`
+    - `AscendAdminPage`
+    - `AscendAdminPanelPage`
+    - `AscendWhitelistPage`
+    - `AscendHudManager`
     - `MinePage`
     - `MineBagPage`
     - `MineSellPage`
     - `MineAchievementsPage`
+    - `MineAchievementTracker`
+    - `MineHudManager`
+    - `MineRewardHelper`
+    - `MineAoEBreaker`
+    - `MineDamageSystem`
+    - `MineRobotManager`
     - `StatsPage`
     - `PassiveEarningsManager`
     - `BaseAscendPage`
     - `AscendProfilePage`
     - `AscendSettingsPage`
+    - `AscensionPage`
+    - `ElevationPage`
+    - `SummitPage`
+    - `AscendRunTracker`
+    - `RobotManager`
+    - `SummitManager`
+    - `MineGateChecker`
+    - `AutoRunnerUpgradeEngine`
+    - `TutorialTriggerService`
+    - `PrestigeHelper`
   - Commands / interaction bootstrap points were updated to pass those dependencies in from the plugin boundary.
+  - Mine admin sub-pages now carry the injected admin navigator through their back-navigation flow instead of reconstructing admin pages ad hoc.
+  - Mine reward / achievement / HUD flows now receive `MineHudManager`, `MineAchievementTracker`, `MinePlayerStore`, `MineConfigStore`, and player lookup callbacks explicitly instead of reaching back into the plugin singleton at runtime.
+  - Prestige reset flows now receive `RobotManager` and `AchievementManager` explicitly through page constructors instead of using a static helper fallback to the plugin singleton.
   - `ParkourAscendPlugin` getters used as service-locator accessors were marked `@Deprecated` to signal the transition.
 
-- **Phase 2: foundational work completed**
+- **Phase 2: partial propagation completed**
   - Added `CurrencyStore`
   - Added `PlayerAnalytics`
   - Added `ConnectionProvider`
   - `CurrencyBridge` now uses `CurrencyStore`
   - `DatabaseManager` now implements `ConnectionProvider`
   - `AnalyticsStore` now implements `PlayerAnalytics`
+  - `AscendRunTracker` now depends on `PlayerAnalytics` instead of `AnalyticsStore.getInstance()`
 
 - **Phase 5: partial**
   - `docs/CODE_PATTERNS.md`, `docs/ARCHITECTURE.md`, `docs/Ascend/README.md`, and `docs/Core/README.md` now document the composition-root / constructor-injection rule.
@@ -49,15 +77,13 @@ This plan is now partially implemented.
 
 - **Phase 1 still in progress**
   - `ParkourAscendPlugin.getInstance()` calls remain in Ascend.
-  - Current count after this slice: **104** remaining calls under `hyvexa-parkour-ascend/src/main/java` across **43** files.
-  - The largest remaining service-locator consumers are still manager/store layer classes, especially:
-    - `RobotManager`
-    - `AscendRunTracker`
-    - `SummitManager`
+  - Current count after this slice: **30** remaining calls under `hyvexa-parkour-ascend/src/main/java` across **21** files.
+  - The largest remaining service-locator consumers are now:
     - `AscendPlayerStore`
-    - `AscensionPage`
-    - `ElevationPage`
-    - `AscendAdminPanelPage`
+    - `AbstractAscendPageInteraction`
+    - `MapUnlockHelper`
+    - one-off command wrappers (`ElevateCommand`, `SummitCommand`, `SkillCommand`, `TranscendCommand`, `HudPreviewCommand`)
+    - one-off interaction / helper classes (`AscendAscensionExplainerPage`, `AscendLeaveInteraction`, `AscendResetInteraction`, `MineEggChestInteraction`, `MineZoneAdminPage`, `EggDropHelper`, `EggOpenService`, `MineCommand`, `MineManager`, `RobotSpawner`, `RobotRefreshSystem`, `GhostRecorder`)
 
 - **Phase 2 not fully propagated**
   - Consumers are not yet broadly typed against `CurrencyStore`, `PlayerAnalytics`, or `ConnectionProvider`.
@@ -72,18 +98,26 @@ This plan is now partially implemented.
 
 ### Recommended next tasks for another agent
 
-1. Finish **Phase 1 in Ascend manager layer**:
-   - Inject remaining hidden dependencies into `RobotManager`
-   - Inject remaining hidden dependencies into `AscendRunTracker`
-   - Remove `ParkourAscendPlugin.getInstance()` from `AscensionPage`, `ElevationPage`, `SummitPage`, and `AscendAdminPanelPage`
+1. Finish **Phase 1 in Ascend manager/store layer**:
+   - Inject remaining hidden dependencies into `AscendPlayerStore`
+   - Remove the `MapUnlockHelper` challenge lookup fallback by threading `ChallengeManager` explicitly
+   - Convert one-off command wrappers and helper pages to constructor-injected command/page factories where practical
 
-2. Start **Phase 3 store migration** with low-risk targets:
+2. Reduce the **codec-instantiated interaction** singleton boundary:
+   - Revisit `AbstractAscendPageInteraction`
+   - If Hytale codec constraints still force no-arg handlers, isolate the remaining access behind a narrower injected/factory-style bridge instead of the full plugin singleton
+
+3. Continue **Phase 2 propagation** on low-risk gameplay consumers:
+   - Replace direct `AnalyticsStore.getInstance()` usage outside Ascend with `PlayerAnalytics`
+   - Replace remaining concrete currency store injections with `CurrencyStore`
+
+4. Start **Phase 3 store migration** with low-risk targets:
    - `RunOrFallStatsStore`
    - `VoteStore`
    - `MedalStore`
    - `MedalRewardStore`
 
-3. After the first `ConnectionProvider` migrations, update this plan with:
+5. After the next `ConnectionProvider` migrations, update this plan with:
    - exact classes completed
    - remaining call counts
    - any constructor cycles that require setter injection or small helper services
@@ -116,6 +150,43 @@ This plan is now partially implemented.
   - `MineBagPage`
   - `MineSellPage`
   - `MineAchievementsPage`
+- Latest Ascend singleton-decoupling slice:
+  - `ParkourAscendPlugin`
+  - `AscendCommand`
+  - `AscendAdminCommand`
+  - `AscendAdminNavigator`
+  - `AscensionPage`
+  - `ElevationPage`
+  - `SummitPage`
+  - `AscendAdminPanelPage`
+  - `AscendWhitelistPage`
+  - `AscendRunTracker`
+  - `RobotManager`
+  - `MineAdminPage`
+  - `MineZoneAdminPage`
+  - `MineBlockPickerPage`
+  - `MineBlockHpPage`
+  - `MineGateAdminPage`
+- Additional Ascend singleton-decoupling slices completed on 2026-03-22:
+  - `SummitManager`
+  - `PassiveEarningsManager`
+  - `AscendMapLeaderboardPage`
+  - `MineGateChecker`
+  - `AutoRunnerUpgradeEngine`
+  - `MineAchievementTracker`
+  - `MineHudManager`
+  - `MineRewardHelper`
+  - `MineAoEBreaker`
+  - `MineBreakSystem`
+  - `MineDamageSystem`
+  - `MineRobotManager`
+  - `TutorialTriggerService`
+  - `AscendAdminPage`
+  - `AscendHudManager`
+  - `PrestigeHelper`
+  - `TranscendencePage`
+  - `AscendChallengePage`
+  - `ChallengeLeaderboardPage`
 
 ## Audit Summary
 

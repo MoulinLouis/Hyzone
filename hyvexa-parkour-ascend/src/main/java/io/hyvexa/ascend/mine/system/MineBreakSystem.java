@@ -13,10 +13,12 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.common.util.PermissionUtils;
 
 import java.util.Map;
@@ -26,13 +28,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEvent> {
     private final MineManager mineManager;
     private final MinePlayerStore minePlayerStore;
+    private final MineHudManager mineHudManager;
+    private final MineAchievementTracker mineAchievementTracker;
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
 
-    public MineBreakSystem(MineManager mineManager, MinePlayerStore minePlayerStore) {
+    public MineBreakSystem(MineManager mineManager, MinePlayerStore minePlayerStore,
+                           MineHudManager mineHudManager, MineAchievementTracker mineAchievementTracker) {
         super(BreakBlockEvent.class);
         this.mineManager = mineManager;
         this.minePlayerStore = minePlayerStore;
+        this.mineHudManager = mineHudManager;
+        this.mineAchievementTracker = mineAchievementTracker;
     }
 
     @Override
@@ -110,20 +117,21 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         int blocksGained = MineRewardHelper.rollFortune(fortuneLevel);
 
         boolean bagFull = MineRewardHelper.rewardBlock(playerId, mineProgress, blockTypeName, blocksGained,
-                zone.getMineId(), mineManager, minePlayerStore);
+                zone.getMineId(), mineManager, minePlayerStore, mineHudManager, mineAchievementTracker);
         if (bagFull) {
             MineRewardHelper.sendBagFullMessageIfNeeded(playerId, player, lastBagFullMessage);
         }
 
         // Momentum combo
-        MineRewardHelper.handleMomentumCombo(playerId, mineProgress);
+        MineRewardHelper.handleMomentumCombo(playerId, mineProgress, mineHudManager);
 
         // Egg drop chance
         EggDropHelper.tryDropEgg(playerId, player, zone, by, mineProgress, minePlayerStore);
 
         // AoE upgrades (Jackhammer, Stomp, Blast)
         if (world != null) {
-            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager);
+            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager,
+                mineHudManager, mineAchievementTracker, minePlayerStore);
         }
     }
 

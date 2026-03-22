@@ -17,6 +17,7 @@ import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -51,13 +52,15 @@ public class AscendChallengePage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private final ChallengeManager challengeManager;
+    private final RobotManager robotManager;
     private ScheduledFuture<?> timerTask;
 
     public AscendChallengePage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                               ChallengeManager challengeManager) {
+                               ChallengeManager challengeManager, RobotManager robotManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.challengeManager = challengeManager;
+        this.robotManager = robotManager;
     }
 
     @Override
@@ -220,7 +223,7 @@ public class AscendChallengePage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        PrestigeHelper.despawnRobots(playerId);
+        PrestigeHelper.despawnRobots(playerId, robotManager);
 
         List<String> mapsWithRunners = challengeManager.startChallenge(playerId, type);
         if (mapsWithRunners == null) {
@@ -245,7 +248,7 @@ public class AscendChallengePage extends BaseAscendPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new ChallengeLeaderboardPage(playerRef, playerStore, challengeManager));
+            new ChallengeLeaderboardPage(playerRef, playerStore, challengeManager, robotManager));
     }
 
     private void handleQuit(Ref<EntityStore> ref, Store<EntityStore> store) {

@@ -20,7 +20,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.holo.AscendHologramManager;
@@ -36,15 +35,18 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
     private static final String[] LEVEL_COLORS = {"Rouge", "Orange", "Jaune", "Vert", "Bleu"};
 
     private final AscendMapStore mapStore;
+    private final AscendHologramManager hologramManager;
     private String mapId = "";
     private String mapName = "";
     private String mapOrder = "0";
     private String mapSearch = "";
     private String selectedMapId = "";
 
-    public AscendAdminPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore) {
+    public AscendAdminPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
+                           AscendHologramManager hologramManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MapData.CODEC);
         this.mapStore = mapStore;
+        this.hologramManager = hologramManager;
     }
 
     @Override
@@ -544,8 +546,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             }
             return null;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendHologramManager manager = plugin != null ? plugin.getHologramManager() : null;
+        AscendHologramManager manager = hologramManager;
         if (manager == null && player != null) {
             player.sendMessage(Message.raw("Hologram manager not available."));
         }
@@ -572,10 +573,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         if (!HylogramsBridge.isAvailable()) {
             return;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendHologramManager manager = plugin != null ? plugin.getHologramManager() : null;
-        if (manager != null) {
-            manager.refreshMapHolosIfPresent(map, store);
+        if (hologramManager != null) {
+            hologramManager.refreshMapHolosIfPresent(map, store);
         }
     }
 }

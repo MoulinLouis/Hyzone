@@ -15,10 +15,12 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.mine.MineBonusCalculator;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
+import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 
 import io.hyvexa.ascend.hud.AscendHudManager;
@@ -37,6 +39,7 @@ import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,16 +60,52 @@ public class AscendRunTracker {
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final GhostRecorder ghostRecorder;
+    private final AscendSettingsStore settingsStore;
+    private final MineBonusCalculator mineBonusCalculator;
+    private final MinePlayerStore minePlayerStore;
+    private final PlayerAnalytics analytics;
     private final Map<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
     private final Map<UUID, PendingRun> pendingRuns = new ConcurrentHashMap<>();
     private final Map<UUID, FreezeData> frozenPlayers = new ConcurrentHashMap<>();
     private volatile List<StartMapEntry> startMapEntries = List.of();
+    private volatile AchievementManager achievementManager;
+    private volatile AscensionManager ascensionManager;
+    private volatile ChallengeManager challengeManager;
+    private volatile SummitManager summitManager;
+    private volatile TutorialTriggerService tutorialTriggerService;
+    private volatile RobotManager robotManager;
 
-    public AscendRunTracker(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostRecorder ghostRecorder) {
+    public AscendRunTracker(AscendMapStore mapStore,
+                            AscendPlayerStore playerStore,
+                            GhostRecorder ghostRecorder,
+                            AscendSettingsStore settingsStore,
+                            MineBonusCalculator mineBonusCalculator,
+                            MinePlayerStore minePlayerStore,
+                            PlayerAnalytics analytics) {
         this.mapStore = mapStore;
         this.playerStore = playerStore;
         this.ghostRecorder = ghostRecorder;
+        this.settingsStore = settingsStore;
+        this.mineBonusCalculator = mineBonusCalculator;
+        this.minePlayerStore = minePlayerStore;
+        this.analytics = analytics;
         rebuildStartMapCache();
+    }
+
+    public void setPrestigeServices(AchievementManager achievementManager,
+                                    AscensionManager ascensionManager,
+                                    ChallengeManager challengeManager,
+                                    SummitManager summitManager,
+                                    TutorialTriggerService tutorialTriggerService) {
+        this.achievementManager = achievementManager;
+        this.ascensionManager = ascensionManager;
+        this.challengeManager = challengeManager;
+        this.summitManager = summitManager;
+        this.tutorialTriggerService = tutorialTriggerService;
+    }
+
+    public void setRobotManager(RobotManager robotManager) {
+        this.robotManager = robotManager;
     }
 
     public void onMapStoreChanged() {
@@ -125,9 +164,8 @@ public class AscendRunTracker {
         frozenPlayers.remove(playerId);
 
         // Flush deferred tutorials now that the player is out of the run loop
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getTutorialTriggerService() != null) {
-            plugin.getTutorialTriggerService().flushPendingTutorials(playerId);
+        if (tutorialTriggerService != null) {
+            tutorialTriggerService.flushPendingTutorials(playerId);
         }
 
         // Show runners from the cancelled run's map
@@ -275,20 +313,20 @@ public class AscendRunTracker {
         mapProgress.setUnlocked(true);
         playerStore.markDirty(playerId);
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-
         // Manual multiplier increment = runner's multiplier increment for this map × 5
         int runnerStars = playerStore.getRobotStars(playerId, run.mapId);
-        SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
+        SummitManager.BonusTriplet bonuses = summitManager != null
+            ? summitManager.getAllBonuses(playerId)
+            : new SummitManager.BonusTriplet(1.0, 3.0, 0.0);
         BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
 
         BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(5.0));
 
         // Mine cross-progression bonuses
-        MineBonusCalculator mineBonusCalc = plugin != null ? plugin.getMineBonusCalculator() : null;
+        MineBonusCalculator mineBonusCalc = mineBonusCalculator;
         MinePlayerProgress mineProgress = null;
-        if (mineBonusCalc != null && plugin.getMinePlayerStore() != null) {
-            mineProgress = plugin.getMinePlayerStore().getPlayer(playerId);
+        if (mineBonusCalc != null && minePlayerStore != null) {
+            mineProgress = minePlayerStore.getPlayer(playerId);
         }
 
         // Mine cross-progression: multiplier gain bonus
@@ -363,18 +401,17 @@ public class AscendRunTracker {
         AscendHudManager.showToastSafe(playerId, ToastType.SUCCESS, toastMsg);
 
         // Check achievements
-        if (plugin != null && plugin.getAchievementManager() != null) {
-            plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+        if (achievementManager != null) {
+            achievementManager.checkAndUnlockAchievements(playerId, player);
         }
 
         // Activate Momentum boost if player has AUTO_RUNNERS skill
-        if (plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasAutoRunners(playerId)) {
+        if (ascensionManager != null && ascensionManager.hasAutoRunners(playerId)) {
             boolean wasActive = mapProgress.isMomentumActive();
             long momentumDuration;
-            if (plugin.getAscensionManager().hasMomentumMastery(playerId)) {
+            if (ascensionManager.hasMomentumMastery(playerId)) {
                 momentumDuration = AscendConstants.MOMENTUM_MASTERY_DURATION_MS;
-            } else if (plugin.getAscensionManager().hasMomentumEndurance(playerId)) {
+            } else if (ascensionManager.hasMomentumEndurance(playerId)) {
                 momentumDuration = AscendConstants.MOMENTUM_ENDURANCE_DURATION_MS;
             } else {
                 momentumDuration = AscendConstants.MOMENTUM_DURATION_MS;
@@ -382,21 +419,23 @@ public class AscendRunTracker {
             mapProgress.activateMomentum(momentumDuration);
             if (!wasActive) {
                 String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-                boolean hasMastery = plugin.getAscensionManager().hasMomentumMastery(playerId);
-                boolean hasSurge = plugin.getAscensionManager().hasMomentumSurge(playerId);
+                boolean hasMastery = ascensionManager.hasMomentumMastery(playerId);
+                boolean hasSurge = ascensionManager.hasMomentumSurge(playerId);
                 String momentumText = hasMastery ? "3" : (hasSurge ? "2.5" : "2");
                 AscendHudManager.showToastSafe(playerId, ToastType.ECONOMY, "Momentum: x" + momentumText + " speed on " + mapName);
             }
         }
 
         // Trigger first completion tutorial
-        if (firstCompletion && plugin != null && plugin.getTutorialTriggerService() != null) {
-            plugin.getTutorialTriggerService().checkFirstCompletion(playerId, ref);
+        if (firstCompletion && tutorialTriggerService != null) {
+            tutorialTriggerService.checkFirstCompletion(playerId, ref);
         }
 
         try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_manual_run",
+            if (analytics != null) {
+                analytics.logEvent(playerId, "ascend_manual_run",
                     "{\"map_id\":\"" + map.getId() + "\",\"time_ms\":" + completionTimeMs + "}");
+            }
         } catch (Exception e) { /* silent */ }
 
         Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
@@ -442,15 +481,12 @@ public class AscendRunTracker {
             double dz = pos.getZ() - entry.startZ;
 
             if (dx * dx + dz * dz <= START_DETECTION_RADIUS_SQ && Math.abs(dy) <= START_VERTICAL_RANGE) {
-                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-
                 // Check if map is blocked by active challenge
-                if (plugin != null && plugin.getChallengeManager() != null
-                        && plugin.getChallengeManager().isMapBlocked(playerId, map.getDisplayOrder())) {
+                if (challengeManager != null && challengeManager.isMapBlocked(playerId, map.getDisplayOrder())) {
                     // Teleport player back to spawn
-                    if (plugin.getSettingsStore() != null && plugin.getSettingsStore().hasSpawnPosition()) {
-                        Vector3d spawnPos = plugin.getSettingsStore().getSpawnPosition();
-                        Vector3f spawnRot = plugin.getSettingsStore().getSpawnRotation();
+                    if (settingsStore != null && settingsStore.hasSpawnPosition()) {
+                        Vector3d spawnPos = settingsStore.getSpawnPosition();
+                        Vector3f spawnRot = settingsStore.getSpawnRotation();
                         store.addComponent(ref, Teleport.getComponentType(),
                             new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
                     }
@@ -464,14 +500,11 @@ public class AscendRunTracker {
                     playerId, map, playerStore, mapStore);
                 if (!unlockResult.unlocked) {
                     // Map not unlocked - teleport player back to spawn
-                    if (plugin != null) {
-                        AscendSettingsStore settingsStore = plugin.getSettingsStore();
-                        if (settingsStore != null && settingsStore.hasSpawnPosition()) {
-                            Vector3d spawnPos = settingsStore.getSpawnPosition();
-                            Vector3f spawnRot = settingsStore.getSpawnRotation();
-                            store.addComponent(ref, Teleport.getComponentType(),
-                                new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
-                        }
+                    if (settingsStore != null && settingsStore.hasSpawnPosition()) {
+                        Vector3d spawnPos = settingsStore.getSpawnPosition();
+                        Vector3f spawnRot = settingsStore.getSpawnRotation();
+                        store.addComponent(ref, Teleport.getComponentType(),
+                            new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
                     }
 
                     // Build message with previous map requirement info
@@ -554,11 +587,6 @@ public class AscendRunTracker {
     }
 
     private boolean isPlayerBelowVoidThreshold(double currentY) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return false;
-        }
-        AscendSettingsStore settingsStore = plugin.getSettingsStore();
         if (settingsStore == null) {
             return false;
         }
@@ -567,11 +595,6 @@ public class AscendRunTracker {
     }
 
     private void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        AscendSettingsStore settingsStore = plugin.getSettingsStore();
         if (settingsStore == null || !settingsStore.hasSpawnPosition()) {
             return;
         }
@@ -582,11 +605,6 @@ public class AscendRunTracker {
     }
 
     private void hideRunnersForMap(UUID viewerId, String mapId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        RobotManager robotManager = plugin.getRobotManager();
         if (robotManager == null) {
             return;
         }
@@ -599,18 +617,12 @@ public class AscendRunTracker {
 
     private void showRunnersAndReapplyVisibility(UUID playerId, String mapId) {
         showRunnersForMap(playerId, mapId);
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getRobotManager() != null) {
-            plugin.getRobotManager().applyRunnerVisibility(playerId);
+        if (robotManager != null) {
+            robotManager.applyRunnerVisibility(playerId);
         }
     }
 
     private void showRunnersForMap(UUID viewerId, String mapId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        RobotManager robotManager = plugin.getRobotManager();
         if (robotManager == null) {
             return;
         }

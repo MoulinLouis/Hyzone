@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 
 import javax.annotation.Nonnull;
@@ -30,11 +29,15 @@ public class AscendWhitelistPage extends InteractiveCustomUIPage<AscendWhitelist
     private static final String BUTTON_REMOVE_PREFIX = "Remove:";
 
     private final AscendWhitelistManager whitelistManager;
+    private final AscendAdminNavigator adminNavigator;
     private String usernameInput = "";
 
-    public AscendWhitelistPage(@Nonnull PlayerRef playerRef, AscendWhitelistManager whitelistManager) {
+    public AscendWhitelistPage(@Nonnull PlayerRef playerRef,
+                               AscendWhitelistManager whitelistManager,
+                               AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, WhitelistData.CODEC);
         this.whitelistManager = whitelistManager;
+        this.adminNavigator = adminNavigator;
     }
 
     @Override
@@ -142,11 +145,7 @@ public class AscendWhitelistPage extends InteractiveCustomUIPage<AscendWhitelist
         if (player == null || playerRef == null) {
             return;
         }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        player.getPageManager().openCustomPage(ref, store, new AscendAdminPanelPage(playerRef));
+        player.getPageManager().openCustomPage(ref, store, adminNavigator.createPanelPage(playerRef));
     }
 
     private void populateFields(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {

@@ -29,7 +29,6 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.Mine;
@@ -73,6 +72,7 @@ public class MineRobotManager {
     private final MineConfigStore configStore;
     private final MinePlayerStore playerStore;
     private final MineManager mineManager;
+    private final MineAchievementTracker achievementTracker;
     private final OrphanedEntityCleanup orphanCleanup;
 
     // ownerId -> slotIndex -> state
@@ -89,10 +89,12 @@ public class MineRobotManager {
     private volatile java.lang.reflect.Field pickupDelayField;
     private volatile java.lang.reflect.Field mergeDelayField;
 
-    public MineRobotManager(MineConfigStore configStore, MinePlayerStore playerStore, MineManager mineManager) {
+    public MineRobotManager(MineConfigStore configStore, MinePlayerStore playerStore, MineManager mineManager,
+                            MineAchievementTracker achievementTracker) {
         this.configStore = configStore;
         this.playerStore = playerStore;
         this.mineManager = mineManager;
+        this.achievementTracker = achievementTracker;
         this.orphanCleanup = new OrphanedEntityCleanup(LOGGER,
                 Path.of("mods", "Parkour", MINER_UUIDS_FILE));
     }
@@ -616,12 +618,8 @@ public class MineRobotManager {
                 progress.addToInventory(lootType, 1);
                 playerStore.markDirty(state.getOwnerId());
 
-                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                if (plugin != null) {
-                    MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-                    if (tracker != null) {
-                        tracker.incrementBlocksMined(state.getOwnerId(), 1);
-                    }
+                if (achievementTracker != null) {
+                    achievementTracker.incrementBlocksMined(state.getOwnerId(), 1);
                 }
             }
         }
@@ -745,12 +743,8 @@ public class MineRobotManager {
                         if (progress != null && progress.addToConveyorBuffer(blockTypeItem, 1)) {
                             playerStore.markDirty(ownerId);
 
-                            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                            if (plugin != null) {
-                                MineAchievementTracker tracker = plugin.getMineAchievementTracker();
-                                if (tracker != null) {
-                                    tracker.incrementBlocksMined(ownerId, 1);
-                                }
+                            if (achievementTracker != null) {
+                                achievementTracker.incrementBlocksMined(ownerId, 1);
                             }
                         }
                     }

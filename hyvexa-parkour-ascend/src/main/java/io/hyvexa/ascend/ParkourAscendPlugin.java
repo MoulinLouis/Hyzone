@@ -68,6 +68,7 @@ import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ui.AscendHelpPage;
 import io.hyvexa.ascend.ui.AscendLeaderboardPage;
+import io.hyvexa.ascend.ui.AscendAdminNavigator;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscendMenuNavigator;
 import io.hyvexa.ascend.ui.AscendMusicPage;
@@ -229,19 +230,20 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Mine HUD manager
         if (minePlayerStore != null && mineManager != null && mineConfigStore != null) {
-            mineHudManager = new MineHudManager(minePlayerStore, mineManager, mineConfigStore);
+            mineHudManager = new MineHudManager(minePlayerStore, mineManager, mineConfigStore, this::getPlayerRef);
             mineManager.setMineHudManager(mineHudManager);
             mineManager.initTimer();
         }
 
         // Mine achievement tracker
-        mineAchievementTracker = new MineAchievementTracker();
+        mineAchievementTracker = new MineAchievementTracker(minePlayerStore, playerStore, this::getPlayerRef);
 
         // Mine robot manager (automated miners)
         if (mineConfigStore != null && minePlayerStore != null) {
             eggOpenService = new io.hyvexa.ascend.mine.egg.EggOpenService(minePlayerStore);
             try {
-                mineRobotManager = new MineRobotManager(mineConfigStore, minePlayerStore, mineManager);
+                mineRobotManager = new MineRobotManager(mineConfigStore, minePlayerStore, mineManager,
+                    mineAchievementTracker);
                 mineRobotManager.start();
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to initialize mine robot manager");
@@ -260,13 +262,35 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         // Pass ghost dependencies to managers
-        runTracker = new AscendRunTracker(mapStore, playerStore, ghostRecorder);
+        runTracker = new AscendRunTracker(
+            mapStore,
+            playerStore,
+            ghostRecorder,
+            settingsStore,
+            mineBonusCalculator,
+            minePlayerStore,
+            AnalyticsStore.getInstance()
+        );
         mapStore.setOnChangeListener(runTracker::onMapStoreChanged);
-        summitManager = new SummitManager(playerStore, mapStore);
         ascensionManager = new AscensionManager(playerStore, runTracker);
         transcendenceManager = new TranscendenceManager(playerStore, runTracker);
         challengeManager = new ChallengeManager(playerStore, mapStore, runTracker);
+        summitManager = new SummitManager(
+            playerStore,
+            mapStore,
+            challengeManager,
+            ascensionManager,
+            AnalyticsStore.getInstance()
+        );
         achievementManager = new AchievementManager(playerStore);
+        tutorialTriggerService = new TutorialTriggerService(playerStore, runTracker, this::getPlayerRef);
+        runTracker.setPrestigeServices(
+            achievementManager,
+            ascensionManager,
+            challengeManager,
+            summitManager,
+            tutorialTriggerService
+        );
         runnerSpeedCalculator = new RunnerSpeedCalculator(
             summitManager,
             ascensionManager,
@@ -275,9 +299,25 @@ public class ParkourAscendPlugin extends JavaPlugin {
             minePlayerStore
         );
         hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager);
+        if (mineGateChecker != null) {
+            mineGateChecker.setHudManagers(hudManager, mineHudManager);
+        }
 
         try {
-            robotManager = new RobotManager(mapStore, playerStore, ghostStore, runnerSpeedCalculator);
+            robotManager = new RobotManager(
+                mapStore,
+                playerStore,
+                ghostStore,
+                runnerSpeedCalculator,
+                runTracker,
+                ascensionManager,
+                challengeManager,
+                summitManager,
+                achievementManager,
+                this::getPlayerRef
+            );
+            runTracker.setRobotManager(robotManager);
+            hudManager.setRobotManager(robotManager);
             robotManager.start();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize robot manager");
@@ -285,11 +325,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Initialize passive earnings manager
         passiveEarningsManager = new PassiveEarningsManager(
-            playerStore, mapStore, ghostStore, runnerSpeedCalculator, this::getPlayerRef
+            playerStore, mapStore, ghostStore, runnerSpeedCalculator, summitManager, this::getPlayerRef
         );
-
-        // Initialize tutorial trigger service
-        tutorialTriggerService = new TutorialTriggerService(playerStore, runTracker);
 
         try {
             if (HylogramsBridge.isAvailable()) {
@@ -302,8 +339,26 @@ public class ParkourAscendPlugin extends JavaPlugin {
             LOGGER.atWarning().withCause(e).log("Failed to initialize holograms");
         }
 
-        getCommandRegistry().registerCommand(new AscendCommand());
-        getCommandRegistry().registerCommand(new AscendAdminCommand());
+        AscendAdminNavigator adminNavigator = new AscendAdminNavigator(
+            playerStore,
+            mapStore,
+            settingsStore,
+            ascensionManager,
+            challengeManager,
+            robotManager,
+            achievementManager,
+            whitelistManager,
+            mineConfigStore,
+            hologramManager
+        );
+        getCommandRegistry().registerCommand(new AscendCommand(this));
+        getCommandRegistry().registerCommand(new AscendAdminCommand(
+            adminNavigator,
+            mapStore,
+            whitelistManager,
+            mineConfigStore,
+            hologramManager
+        ));
         getCommandRegistry().registerCommand(new ElevateCommand());
         getCommandRegistry().registerCommand(new SummitCommand());
         getCommandRegistry().registerCommand(new SkillCommand());
@@ -334,7 +389,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 registry.registerEntityEventType(BreakBlockEvent.class);
             }
             if (!registry.hasSystemClass(MineBreakSystem.class)) {
-                mineBreakSystem = new MineBreakSystem(mineManager, minePlayerStore);
+                mineBreakSystem = new MineBreakSystem(mineManager, minePlayerStore,
+                    mineHudManager, mineAchievementTracker);
                 registry.registerSystem(mineBreakSystem);
             }
             // Mine damage system — scales block damage by mining speed upgrade
@@ -342,7 +398,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 registry.registerEntityEventType(DamageBlockEvent.class);
             }
             if (!registry.hasSystemClass(MineDamageSystem.class)) {
-                mineDamageSystem = new MineDamageSystem(mineManager, minePlayerStore);
+                mineDamageSystem = new MineDamageSystem(mineManager, minePlayerStore,
+                    mineConfigStore, mineHudManager, mineAchievementTracker);
                 registry.registerSystem(mineDamageSystem);
             }
         }
@@ -1006,7 +1063,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 (ref, store, playerRef, plugin) -> new AscendMapSelectPage(playerRef,
                     plugin.getMapStore(), plugin.getPlayerStore(), plugin.getRunTracker(),
                     plugin.getRobotManager(), plugin.getGhostStore(),
-                    plugin.getAscensionManager(), plugin.getChallengeManager(),
+                    plugin.getAscensionManager(), plugin.getChallengeManager(), plugin.getSummitManager(),
                     plugin.getTranscendenceManager(), plugin.getAchievementManager(),
                     plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator()),
                 (plugin, player) -> {

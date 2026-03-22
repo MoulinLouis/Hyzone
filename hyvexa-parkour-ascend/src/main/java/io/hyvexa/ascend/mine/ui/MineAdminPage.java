@@ -28,13 +28,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinerSlot;
-import io.hyvexa.ascend.ui.AscendAdminPanelPage;
+import io.hyvexa.ascend.ui.AscendAdminNavigator;
 import io.hyvexa.common.math.BigNumber;
 
 public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineData> {
 
     private final PlayerRef playerRef;
     private final MineConfigStore mineConfigStore;
+    private final AscendAdminNavigator adminNavigator;
     private String mineId = "";
     private String mineName = "";
     private String mineOrder = "0";
@@ -42,10 +43,13 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
     private String selectedMineId = "";
     private int selectedSlotIndex = 0;
 
-    public MineAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore) {
+    public MineAdminPage(@Nonnull PlayerRef playerRef,
+                         MineConfigStore mineConfigStore,
+                         AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MineData.CODEC);
         this.playerRef = playerRef;
         this.mineConfigStore = mineConfigStore;
+        this.adminNavigator = adminNavigator;
     }
 
     @Override
@@ -258,8 +262,9 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         }
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
-        player.getPageManager().openCustomPage(ref, store,
-            new MineZoneAdminPage(pRef, mineConfigStore, selectedMineId));
+        MineZoneAdminPage page = new MineZoneAdminPage(pRef, mineConfigStore, selectedMineId);
+        page.setAdminNavigator(adminNavigator);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void handleGate(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -268,7 +273,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
         player.getPageManager().openCustomPage(ref, store,
-            new MineGateAdminPage(pRef, mineConfigStore));
+            new MineGateAdminPage(pRef, mineConfigStore, adminNavigator));
     }
 
     private void handleBlockConfig(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -277,7 +282,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
         player.getPageManager().openCustomPage(ref, store,
-            new MineBlockHpPage(pRef, mineConfigStore));
+            new MineBlockHpPage(pRef, mineConfigStore, adminNavigator));
     }
 
     private void handleSetMinerPos(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -382,7 +387,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || pRef == null) return;
-        player.getPageManager().openCustomPage(ref, store, new AscendAdminPanelPage(pRef));
+        player.getPageManager().openCustomPage(ref, store, adminNavigator.createPanelPage(pRef));
     }
 
     private Mine resolveSelectedMine(Player player) {

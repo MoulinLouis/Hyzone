@@ -15,12 +15,13 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.ascend.summit.SummitManager;
-import io.hyvexa.ascend.util.PrestigeHelper;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -47,14 +48,25 @@ public class SummitPage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private final SummitManager summitManager;
+    private final ChallengeManager challengeManager;
+    private final RobotManager robotManager;
+    private final AchievementManager achievementManager;
     private ScheduledFuture<?> refreshTask;
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
     private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
 
-    public SummitPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, SummitManager summitManager) {
+    public SummitPage(@Nonnull PlayerRef playerRef,
+                      AscendPlayerStore playerStore,
+                      SummitManager summitManager,
+                      ChallengeManager challengeManager,
+                      RobotManager robotManager,
+                      AchievementManager achievementManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.summitManager = summitManager;
+        this.challengeManager = challengeManager;
+        this.robotManager = robotManager;
+        this.achievementManager = achievementManager;
     }
 
     @Override
@@ -179,11 +191,7 @@ public class SummitPage extends BaseAscendPage {
             }
 
             // Show colored background if summit is possible, lock icon if not
-            boolean blocked = false;
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getChallengeManager() != null) {
-                blocked = plugin.getChallengeManager().isSummitBlocked(playerId, category);
-            }
+            boolean blocked = challengeManager != null && challengeManager.isSummitBlocked(playerId, category);
             boolean canSummit = !blocked && preview.hasGain() && summitManager.canSummit(playerId);
             commandBuilder.set("#CategoryCards[" + i + "] " + resolveCardBgElementId(i) + ".Visible", canSummit);
             commandBuilder.set("#CategoryCards[" + i + "] #LockIcon.Visible", !canSummit);
@@ -277,9 +285,7 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         // Block summiting in categories locked by an active challenge
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null
-                && plugin.getChallengeManager().isSummitBlocked(playerId, category)) {
+        if (challengeManager != null && challengeManager.isSummitBlocked(playerId, category)) {
             player.sendMessage(Message.raw("[Summit] " + category.getDisplayName()
                 + " is locked during your active challenge.")
                 .color(SystemMessageUtils.SECONDARY));
@@ -305,7 +311,9 @@ public class SummitPage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        PrestigeHelper.despawnRobots(playerId);
+        if (robotManager != null) {
+            robotManager.despawnRobotsForPlayer(playerId);
+        }
 
         SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
         if (!result.succeeded()) {
@@ -322,7 +330,9 @@ public class SummitPage extends BaseAscendPage {
             .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements
-        PrestigeHelper.checkAchievements(playerId, player);
+        if (achievementManager != null) {
+            achievementManager.checkAndUnlockAchievements(playerId, player);
+        }
 
         // Refresh display (auto-refresh will handle subsequent updates)
         if (!isCurrentPage()) {

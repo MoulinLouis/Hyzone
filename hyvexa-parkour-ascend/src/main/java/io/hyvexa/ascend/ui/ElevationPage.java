@@ -13,13 +13,14 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
-import io.hyvexa.ascend.util.PrestigeHelper;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -35,10 +36,23 @@ public class ElevationPage extends BaseAscendPage {
     private static final String BUTTON_ELEVATE = "Elevate";
 
     private final AscendPlayerStore playerStore;
+    private final AscendMapStore mapStore;
+    private final ChallengeManager challengeManager;
+    private final RobotManager robotManager;
+    private final AchievementManager achievementManager;
 
-    public ElevationPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore) {
+    public ElevationPage(@Nonnull PlayerRef playerRef,
+                         AscendPlayerStore playerStore,
+                         AscendMapStore mapStore,
+                         ChallengeManager challengeManager,
+                         RobotManager robotManager,
+                         AchievementManager achievementManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
+        this.mapStore = mapStore;
+        this.challengeManager = challengeManager;
+        this.robotManager = robotManager;
+        this.achievementManager = achievementManager;
     }
 
     @Override
@@ -82,9 +96,7 @@ public class ElevationPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         // Block elevation during active challenge
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null
-                && plugin.getChallengeManager().isElevationBlocked(playerId)) {
+        if (challengeManager != null && challengeManager.isElevationBlocked(playerId)) {
             player.sendMessage(Message.raw("[Ascend] Elevation is blocked during this challenge.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
@@ -104,7 +116,9 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        PrestigeHelper.despawnRobots(playerId);
+        if (robotManager != null) {
+            robotManager.despawnRobotsForPlayer(playerId);
+        }
 
         // Set new elevation and reset volt/accumulators atomically
         int newElevation = currentElevation + purchase.levels;
@@ -115,22 +129,19 @@ public class ElevationPage extends BaseAscendPage {
             + AscendConstants.formatElevationMultiplier(newElevation));
 
         // Reset all progress (volt, map unlocks, runners). Best times are preserved.
-        if (plugin != null) {
-            AscendMapStore mapStore = plugin.getMapStore();
-
-            // Get first map ID
-            String firstMapId = null;
-            if (mapStore != null) {
-                List<AscendMap> maps = mapStore.listMapsSorted();
-                if (!maps.isEmpty()) {
-                    firstMapId = maps.get(0).getId();
-                }
+        String firstMapId = null;
+        if (mapStore != null) {
+            List<AscendMap> maps = mapStore.listMapsSorted();
+            if (!maps.isEmpty()) {
+                firstMapId = maps.get(0).getId();
             }
+        }
 
-            playerStore.resetProgressForElevation(playerId, firstMapId);
+        playerStore.resetProgressForElevation(playerId, firstMapId);
 
-            // Check achievements
-            PrestigeHelper.checkAchievements(playerId, player);
+        // Check achievements
+        if (achievementManager != null) {
+            achievementManager.checkAndUnlockAchievements(playerId, player);
         }
 
         // Refresh display only if still current page
@@ -156,9 +167,7 @@ public class ElevationPage extends BaseAscendPage {
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Show blocked state during active challenge
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null
-                && plugin.getChallengeManager().isElevationBlocked(playerId)) {
+        if (challengeManager != null && challengeManager.isElevationBlocked(playerId)) {
             commandBuilder.set("#ConversionRate.Text", "Elevation is blocked during this challenge");
             commandBuilder.set("#MultiplierValue.Text", AscendConstants.formatElevationMultiplier(currentElevation));
             commandBuilder.set("#NewMultiplierValue.Text", "BLOCKED");

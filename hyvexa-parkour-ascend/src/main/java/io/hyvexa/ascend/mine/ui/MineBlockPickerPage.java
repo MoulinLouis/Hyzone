@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineBlockRegistry;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.ui.AscendAdminNavigator;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -29,14 +30,17 @@ public class MineBlockPickerPage extends InteractiveCustomUIPage<MineBlockPicker
     private final String selectedZoneId;
     private final String selectedLayerId;
     private final String currentBlockId;
+    private final AscendAdminNavigator adminNavigator;
 
     public MineBlockPickerPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore,
-                               String selectedZoneId, String selectedLayerId, String currentBlockId) {
+                               String selectedZoneId, String selectedLayerId, String currentBlockId,
+                               AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PickerData.CODEC);
         this.mineConfigStore = mineConfigStore;
         this.selectedZoneId = selectedZoneId;
         this.selectedLayerId = selectedLayerId != null ? selectedLayerId : "";
         this.currentBlockId = currentBlockId != null ? currentBlockId : "";
+        this.adminNavigator = adminNavigator;
     }
 
     @Override
@@ -90,6 +94,7 @@ public class MineBlockPickerPage extends InteractiveCustomUIPage<MineBlockPicker
         String mineId = mineConfigStore.getMineId();
         if (mineId == null) return;
         MineZoneAdminPage page = new MineZoneAdminPage(playerRef, mineConfigStore, mineId);
+        page.setAdminNavigator(adminNavigator);
         page.setSelectedZoneId(selectedZoneId);
         page.setSelectedLayerId(selectedLayerId);
         page.setSelectedBlockId(selectedBlockId);

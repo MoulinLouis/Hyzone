@@ -25,6 +25,7 @@ import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
+import io.hyvexa.ascend.ui.AscendAdminNavigator;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -43,6 +44,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private final MineConfigStore mineConfigStore;
     private final String mineId;
     private final UUID playerUuid;
+    private AscendAdminNavigator adminNavigator;
     private String zoneId = "";
     private String blockId = "";
     private String blockProb = "";
@@ -59,6 +61,10 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         this.mineConfigStore = mineConfigStore;
         this.mineId = mineId;
         this.playerUuid = playerRef.getUuid();
+    }
+
+    public void setAdminNavigator(AscendAdminNavigator adminNavigator) {
+        this.adminNavigator = adminNavigator;
     }
 
     public void setSelectedZoneId(String zoneId) {
@@ -183,7 +189,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 MineBlockPickerPage picker = new MineBlockPickerPage(
-                    playerRef, mineConfigStore, selectedZoneId, selectedLayerId, blockId
+                    playerRef, mineConfigStore, selectedZoneId, selectedLayerId, blockId, adminNavigator
                 );
                 player.getPageManager().openCustomPage(ref, store, picker);
             }
@@ -468,7 +474,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) return;
-        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(playerRef, mineConfigStore));
+        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(playerRef, mineConfigStore, adminNavigator));
     }
 
     private MineZone resolveSelectedZone(Player player) {

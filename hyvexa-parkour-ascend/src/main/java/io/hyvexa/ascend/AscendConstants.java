@@ -634,7 +634,8 @@ public final class AscendConstants {
 
     /**
      * Calculate the level achieved with given cumulative XP.
-     * Uses binary search to find highest level where getCumulativeXpForLevel(level) <= xp.
+     * Uses binary search to find the highest level where
+     * {@code getCumulativeXpForLevel(level) <= xp}.
      */
     public static int calculateLevelFromXp(double xp) {
         if (xp <= 0) return 0;

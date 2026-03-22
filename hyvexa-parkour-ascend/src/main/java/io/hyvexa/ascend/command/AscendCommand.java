@@ -67,18 +67,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     // NPC-gated commands: only executable with the correct token (passed by NPC dialog buttons)
     private static final String LEGACY_NPC_TOKEN = "hx7Kq9mW";
     private static final Set<String> NPC_GATED = Set.of("elevate", "summit", "skills");
-
-    private static String resolveNpcToken() {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getRuntimeConfig() == null) {
-            return LEGACY_NPC_TOKEN;
-        }
-        String token = plugin.getRuntimeConfig().getNpcCommandToken();
-        if (token == null || token.isBlank()) {
-            return LEGACY_NPC_TOKEN;
-        }
-        return token;
-    }
+    private final ParkourAscendPlugin plugin;
+    private final String npcToken;
 
     /**
      * Close any existing page for the player before opening a new one.
@@ -121,8 +111,7 @@ public class AscendCommand extends AbstractAsyncCommand {
      * Get the plugin instance, sending an error message to the player if unavailable.
      * Returns null if the plugin or its core systems are not ready.
      */
-    private static ParkourAscendPlugin requirePlugin(Player player) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+    private ParkourAscendPlugin requirePlugin(Player player) {
         if (plugin == null) {
             player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
             return null;
@@ -130,10 +119,23 @@ public class AscendCommand extends AbstractAsyncCommand {
         return plugin;
     }
 
-    public AscendCommand() {
+    public AscendCommand(ParkourAscendPlugin plugin) {
         super("ascend", "Open the Ascend menu");
+        this.plugin = plugin;
+        this.npcToken = resolveNpcToken(plugin);
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
+    }
+
+    private static String resolveNpcToken(ParkourAscendPlugin plugin) {
+        if (plugin == null || plugin.getRuntimeConfig() == null) {
+            return LEGACY_NPC_TOKEN;
+        }
+        String token = plugin.getRuntimeConfig().getNpcCommandToken();
+        if (token == null || token.isBlank()) {
+            return LEGACY_NPC_TOKEN;
+        }
+        return token;
     }
 
     @Override
@@ -174,7 +176,7 @@ public class AscendCommand extends AbstractAsyncCommand {
 
             // NPC-gated commands require a secret token as second arg
             if (NPC_GATED.contains(subCommand)) {
-                String expectedToken = resolveNpcToken();
+                String expectedToken = npcToken;
                 if (args.length < 2 || !args[1].equals(expectedToken)) {
                     ctx.sendMessage(Message.raw(UNKNOWN_SUBCOMMAND_MESSAGE));
                     return;
@@ -254,7 +256,14 @@ public class AscendCommand extends AbstractAsyncCommand {
                 TutorialTriggerService.ELEVATION, AscendTutorialPage.Tutorial.ELEVATION)) {
             return;
         }
-        ElevationPage page = new ElevationPage(playerRef, plugin.getPlayerStore());
+        ElevationPage page = new ElevationPage(
+            playerRef,
+            plugin.getPlayerStore(),
+            plugin.getMapStore(),
+            plugin.getChallengeManager(),
+            plugin.getRobotManager(),
+            plugin.getAchievementManager()
+        );
         openTrackedPage(player, playerRef, ref, store, page);
         player.sendMessage(Message.raw("[Ascend] Having trouble elevating? Contact Playfade on Discord.")
             .color(SystemMessageUtils.SECONDARY));
@@ -267,7 +276,14 @@ public class AscendCommand extends AbstractAsyncCommand {
                 TutorialTriggerService.SUMMIT, AscendTutorialPage.Tutorial.SUMMIT)) {
             return;
         }
-        SummitPage page = new SummitPage(playerRef, plugin.getPlayerStore(), plugin.getSummitManager());
+        SummitPage page = new SummitPage(
+            playerRef,
+            plugin.getPlayerStore(),
+            plugin.getSummitManager(),
+            plugin.getChallengeManager(),
+            plugin.getRobotManager(),
+            plugin.getAchievementManager()
+        );
         openTrackedPage(player, playerRef, ref, store, page);
         player.sendMessage(Message.raw("[Ascend] Having trouble summiting? Contact Playfade on Discord.")
             .color(SystemMessageUtils.SECONDARY));
@@ -280,7 +296,14 @@ public class AscendCommand extends AbstractAsyncCommand {
                 TutorialTriggerService.ASCENSION, AscendTutorialPage.Tutorial.ASCENSION)) {
             return;
         }
-        AscensionPage page = new AscensionPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
+        AscensionPage page = new AscensionPage(
+            playerRef,
+            plugin.getPlayerStore(),
+            plugin.getAscensionManager(),
+            plugin.getChallengeManager(),
+            plugin.getRobotManager(),
+            plugin.getAchievementManager()
+        );
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
@@ -336,14 +359,25 @@ public class AscendCommand extends AbstractAsyncCommand {
                 TutorialTriggerService.CHALLENGES, AscendTutorialPage.Tutorial.CHALLENGES)) {
             return;
         }
-        AscendChallengePage page = new AscendChallengePage(playerRef, plugin.getPlayerStore(), plugin.getChallengeManager());
+        AscendChallengePage page = new AscendChallengePage(
+            playerRef,
+            plugin.getPlayerStore(),
+            plugin.getChallengeManager(),
+            plugin.getRobotManager()
+        );
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openTranscendencePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getTranscendenceManager() == null) return;
-        TranscendencePage page = new TranscendencePage(playerRef, plugin.getPlayerStore(), plugin.getTranscendenceManager());
+        TranscendencePage page = new TranscendencePage(
+            playerRef,
+            plugin.getPlayerStore(),
+            plugin.getTranscendenceManager(),
+            plugin.getRobotManager(),
+            plugin.getAchievementManager()
+        );
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
@@ -364,7 +398,7 @@ public class AscendCommand extends AbstractAsyncCommand {
         if (plugin == null || plugin.getPlayerStore() == null || plugin.getMapStore() == null) return;
         AscendMapLeaderboardPage page = new AscendMapLeaderboardPage(playerRef, plugin.getPlayerStore(),
             plugin.getMapStore(), plugin.getRunTracker(), plugin.getRobotManager(), plugin.getGhostStore(),
-            plugin.getAscensionManager(), plugin.getChallengeManager(), plugin.getTranscendenceManager(),
+            plugin.getAscensionManager(), plugin.getChallengeManager(), plugin.getSummitManager(), plugin.getTranscendenceManager(),
             plugin.getAchievementManager(), plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator());
         openUntrackedPage(player, playerRef, ref, store, page);
     }
@@ -402,6 +436,7 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
         AscendMapSelectPage page = new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker,
             robotManager, ghostStore, plugin.getAscensionManager(), plugin.getChallengeManager(),
+            plugin.getSummitManager(),
             plugin.getTranscendenceManager(), plugin.getAchievementManager(),
             plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator());
         openTrackedPage(player, playerRef, ref, store, page);

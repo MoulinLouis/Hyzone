@@ -2,7 +2,6 @@ package io.hyvexa.ascend.mine.system;
 
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
@@ -36,7 +35,8 @@ public final class MineRewardHelper {
      */
     public static boolean rewardBlock(UUID playerId, MinePlayerProgress mineProgress, String blockTypeName,
                                        int blocksGained, String mineId, MineManager mineManager,
-                                       MinePlayerStore minePlayerStore) {
+                                       MinePlayerStore minePlayerStore, MineHudManager mineHudManager,
+                                       MineAchievementTracker achievementTracker) {
         int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
         boolean bagFull = false;
         if (stored < blocksGained) {
@@ -62,29 +62,24 @@ public final class MineRewardHelper {
 
         minePlayerStore.markDirty(playerId);
 
-        MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
         if (mineHudManager != null) {
             mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
         }
 
-        ParkourAscendPlugin achPlugin = ParkourAscendPlugin.getInstance();
-        if (achPlugin != null) {
-            MineAchievementTracker achievementTracker = achPlugin.getMineAchievementTracker();
-            if (achievementTracker != null) {
-                achievementTracker.incrementBlocksMined(playerId, blocksGained);
-                achievementTracker.incrementManualBlocksMined(playerId, blocksGained);
-            }
+        if (achievementTracker != null) {
+            achievementTracker.incrementBlocksMined(playerId, blocksGained);
+            achievementTracker.incrementManualBlocksMined(playerId, blocksGained);
         }
 
         return bagFull;
     }
 
-    public static void handleMomentumCombo(UUID playerId, MinePlayerProgress mineProgress) {
+    public static void handleMomentumCombo(UUID playerId, MinePlayerProgress mineProgress,
+                                           MineHudManager mineHudManager) {
         int momentumLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MOMENTUM);
         if (momentumLevel > 0) {
             mineProgress.checkComboExpired();
             mineProgress.incrementCombo();
-            MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
             if (mineHudManager != null) {
                 mineHudManager.showCombo(playerId, mineProgress.getComboCount(), 1.0f);
             }

@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.ui.AscendAdminNavigator;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -41,11 +42,15 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
 
     private final PlayerRef playerRef;
     private final MineConfigStore mineConfigStore;
+    private final AscendAdminNavigator adminNavigator;
 
-    public MineGateAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore) {
+    public MineGateAdminPage(@Nonnull PlayerRef playerRef,
+                             MineConfigStore mineConfigStore,
+                             AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, GateData.CODEC);
         this.playerRef = playerRef;
         this.mineConfigStore = mineConfigStore;
+        this.adminNavigator = adminNavigator;
     }
 
     @Override
@@ -161,7 +166,7 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || pRef == null) return;
-        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(pRef, mineConfigStore));
+        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(pRef, mineConfigStore, adminNavigator));
     }
 
     private void bindEvents(UIEventBuilder eventBuilder) {

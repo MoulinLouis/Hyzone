@@ -14,6 +14,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.ui.PassiveEarningsPage;
 import io.hyvexa.common.math.BigNumber;
 
@@ -30,15 +31,18 @@ public class PassiveEarningsManager {
     private final AscendMapStore mapStore;
     private final GhostStore ghostStore;
     private final RunnerSpeedCalculator speedCalculator;
+    private final SummitManager summitManager;
     private final Function<UUID, PlayerRef> playerRefLookup;
 
     public PassiveEarningsManager(AscendPlayerStore playerStore, AscendMapStore mapStore,
                                  GhostStore ghostStore, RunnerSpeedCalculator speedCalculator,
+                                 SummitManager summitManager,
                                  Function<UUID, PlayerRef> playerRefLookup) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.ghostStore = ghostStore;
         this.speedCalculator = speedCalculator;
+        this.summitManager = summitManager;
         this.playerRefLookup = playerRefLookup;
     }
 
@@ -106,8 +110,9 @@ public class PassiveEarningsManager {
             // Calculate number of theoretical runs
             double theoreticalRuns = (double) timeAwayMs / completionTimeMs;
 
-            io.hyvexa.ascend.summit.SummitManager.BonusTriplet bonuses =
-                    io.hyvexa.ascend.summit.SummitManager.getSafeBonuses(playerId);
+            SummitManager.BonusTriplet bonuses = summitManager != null
+                ? summitManager.getAllBonuses(playerId)
+                : new SummitManager.BonusTriplet(1.0, 3.0, 0.0);
 
             // Multiplier gain per run (with Summit bonuses) - at offline rate
             BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());

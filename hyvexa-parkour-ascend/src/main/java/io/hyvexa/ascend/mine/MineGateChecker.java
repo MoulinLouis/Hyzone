@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
@@ -46,11 +45,18 @@ public class MineGateChecker {
     private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastTeleport = new ConcurrentHashMap<>();
     private final Map<UUID, GateTransition> pendingTransitions = new ConcurrentHashMap<>();
+    private volatile AscendHudManager ascendHudManager;
+    private volatile MineHudManager mineHudManager;
 
     public MineGateChecker(MineConfigStore configStore, AscendPlayerStore playerStore, MinePlayerStore minePlayerStore) {
         this.configStore = configStore;
         this.playerStore = playerStore;
         this.minePlayerStore = minePlayerStore;
+    }
+
+    public void setHudManagers(AscendHudManager ascendHudManager, MineHudManager mineHudManager) {
+        this.ascendHudManager = ascendHudManager;
+        this.mineHudManager = mineHudManager;
     }
 
     public void checkPlayer(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -150,18 +156,13 @@ public class MineGateChecker {
      * @param onAscendHud true to target the Ascend HUD, false for the Mine HUD
      */
     private void showFade(UUID playerId, boolean onAscendHud, boolean visible) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-
         if (onAscendHud) {
-            AscendHudManager ascendHud = plugin.getHudManager();
-            if (ascendHud != null) {
-                ascendHud.showScreenFade(playerId, visible);
+            if (ascendHudManager != null) {
+                ascendHudManager.showScreenFade(playerId, visible);
             }
         } else {
-            MineHudManager mineHud = plugin.getMineHudManager();
-            if (mineHud != null) {
-                mineHud.showScreenFade(playerId, visible);
+            if (mineHudManager != null) {
+                mineHudManager.showScreenFade(playerId, visible);
             }
         }
     }
@@ -170,18 +171,13 @@ public class MineGateChecker {
      * Update the loading text and progress bar on the appropriate HUD.
      */
     private void updateFadeBar(UUID playerId, boolean onAscendHud, String text, float progress) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-
         if (onAscendHud) {
-            AscendHudManager ascendHud = plugin.getHudManager();
-            if (ascendHud != null) {
-                ascendHud.updateScreenFadeBar(playerId, text, progress);
+            if (ascendHudManager != null) {
+                ascendHudManager.updateScreenFadeBar(playerId, text, progress);
             }
         } else {
-            MineHudManager mineHud = plugin.getMineHudManager();
-            if (mineHud != null) {
-                mineHud.updateScreenFadeBar(playerId, text, progress);
+            if (mineHudManager != null) {
+                mineHudManager.updateScreenFadeBar(playerId, text, progress);
             }
         }
     }
@@ -279,36 +275,26 @@ public class MineGateChecker {
     }
 
     private void swapToMineHud(UUID playerId, PlayerRef playerRef, Player player) {
-        if (player == null) {
-            return;
-        }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
+        if (player == null || ascendHudManager == null) {
             return;
         }
         // Keep the Ascend HUD visible but hide economy elements
-        plugin.getHudManager().setMineMode(playerId, true);
+        ascendHudManager.setMineMode(playerId, true);
         // Add the mine HUD alongside it
-        MineHudManager mineHud = plugin.getMineHudManager();
-        if (mineHud != null && playerRef != null) {
-            mineHud.attachHud(playerRef, player);
+        if (mineHudManager != null && playerRef != null) {
+            mineHudManager.attachHud(playerRef, player);
         }
     }
 
     private void swapToAscendHud(UUID playerId, PlayerRef playerRef, Player player) {
-        if (player == null) {
-            return;
-        }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
+        if (player == null || ascendHudManager == null) {
             return;
         }
         // Detach the mine HUD and restore full Ascend HUD
-        MineHudManager mineHud = plugin.getMineHudManager();
-        if (mineHud != null) {
-            mineHud.detachHud(playerId, playerRef, player);
+        if (mineHudManager != null) {
+            mineHudManager.detachHud(playerId, playerRef, player);
         }
-        plugin.getHudManager().setMineMode(playerId, false);
+        ascendHudManager.setMineMode(playerId, false);
     }
 
     public void applyHasteSpeed(MinePlayerProgress progress, Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
