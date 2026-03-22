@@ -10,41 +10,20 @@ Use `jar tf` to list classes and `javap -c -p` to decompile for API exploration.
 
 ## API Gotchas
 
-### Vector3d Has NO Accessor Methods
+### Vector3d Accessor Methods
 
-You cannot read x, y, z values back from a Vector3d:
+Both `math.vector.Vector3d` and `protocol.Vector3d` have **public fields** `x`, `y`, `z`:
 
 ```java
-// WRONG - will not compile:
 Vector3d pos = new Vector3d(1, 2, 3);
-double x = pos.x();  // ERROR: no x() method
-double y = pos.y();  // ERROR: no y() method
-
-// CORRECT - use double[] arrays when you need to read/compare coordinates:
-double[] pos = new double[]{1, 2, 3};
-double x = pos[0];
-double y = pos[1];
-double z = pos[2];
-
-// Convert to Vector3d only when calling Hytale APIs:
-Vector3d vec = new Vector3d(pos[0], pos[1], pos[2]);
-store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, vec, rotation));
+double x = pos.x;   // public field access
+double y = pos.y;
+double z = pos.z;
 ```
 
-### Position Tracking Pattern
+`math.vector.Vector3d` also has `getX()`/`getY()`/`getZ()`/`setX()`/`setY()`/`setZ()`. The protocol variant does not.
 
-```java
-// Store positions as double[] for computation
-private volatile double[] previousPosition;
-
-// When calculating (e.g., direction/rotation):
-double dx = targetPos[0] - previousPos[0];
-double dz = targetPos[2] - previousPos[2];
-float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
-
-// Convert to Vector3d only for Hytale API calls
-Vector3d targetVec = new Vector3d(targetPos[0], targetPos[1], targetPos[2]);
-```
+Note: there is NO `x()` method (JOML-style) — use `pos.x` or `pos.getX()`.
 
 ### Singleton Components
 
@@ -293,6 +272,14 @@ Use `unzip -l Assets.zip | grep <pattern>` to list, `unzip -p Assets.zip <path>`
 
 ### Cosmetic System (EntityEffect + ModelVFX)
 
+Three visual systems for players:
+
+| System | What | Persistent? | Visible to others? |
+|--------|------|:-----------:|:-------------------:|
+| **EntityEffect** | Full package: ModelVFX shader + particles + tints | Yes (component) | Yes (entity tracker) |
+| **ModelVFX** | Shader on 3D model: glow, highlight, tint | Part of EntityEffect | Part of EntityEffect |
+| **SpawnModelParticles** | Particle systems on model bones | No (packet only) | Only to recipient |
+
 Apply visual effects (glows, auras) to players via `EffectControllerComponent`:
 
 ```java
@@ -328,7 +315,36 @@ ph.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{eu}));
 | `Crown_Gold` | Gold `#ffdb91` | Intense (thickness 10), BottomUp pulse |
 | `Sword_Signature_Status` | Cyan `#94f9ff` | Blue-white glow |
 
-**Warning:** Status effects (`Burn`, `Freeze`, `Poison`) have `DamageCalculator`/`MovementEffects` — they cause gameplay side-effects. Use Drop/Weapon effects for pure cosmetics or create custom ones in `Server/Entity/ModelVFX/` + `Server/Entity/Effects/`.
+**More ModelVFX options:**
+
+| Effect | Style | Notes |
+|--------|-------|-------|
+| `Drop_Rare` | Blue `#7db2ff` | Subtle blue glow |
+| `Drop_Uncommon` | Green `#e0ff7d` | Faint green glow |
+| `Dagger_Signature` | Cyan `#21f3ff` | Pulsing cyan, LoopMirror |
+| `Trinket_Empowered` | Red `#df0000` | Dark red aura, PostColor overlay |
+| `Intangible_Dark` | Dark `#0b0d14` | Shadow/phantom look (82% opacity) |
+| `Freeze` | Icy blue-white | Full ice recolor, progressive |
+| `Stoneskin` | Grey | Stone armor look, progressive |
+| `Test2` | Orange distortion | `SwitchTo: Distortion` — unique visual |
+
+**ModelVFX shader properties** (JSON in `Assets.zip → Server/Entity/ModelVFX/*.json`):
+
+| Property | Values |
+|----------|--------|
+| `HighlightColor` | Hex (e.g., `"#ffdb91"`) |
+| `HighlightThickness` | 0.3 (subtle) → 10 (intense) |
+| `UseBloomOnHighlight` | true/false |
+| `PostColor` / `PostColorOpacity` | Tint overlay, 0.0–1.0 |
+| `LoopOption` | `PlayOnce`, `Loop`, `LoopMirror` |
+| `EffectDirection` | `BottomUp`, `TopDown`, `FromCenter`, `ToCenter`, `None` |
+| `SwitchTo` | `PostColor`, `Distortion`, `Disappear` |
+| `CurveType` | `Linear`, `QuartOut`, `QuartInOut` |
+| `UseProgessiveHighlight` | true/false (note: typo in API) |
+
+**Custom cosmetics:** Create `Server/Entity/ModelVFX/Custom_X.json` + `Server/Entity/Effects/Custom/Custom_X.json` with `"Infinite": true` and no damage/movement effects.
+
+**Warning:** Status effects (`Burn`, `Freeze`, `Poison`) have `DamageCalculator`/`MovementEffects` — they cause gameplay side-effects. Use Drop/Weapon effects for pure cosmetics.
 
 Test command: `/cosmetic` (registered in HyvexaPlugin).
 
@@ -461,7 +477,7 @@ packetHandler.writeNoCache(new PlaySoundEvent2D(index, SoundCategory.SFX, 1.0f, 
 | `SFX_Chest_Legendary_FirstOpen_Player` | Legendary chest open |
 | `SFX_Stamina_Potion_Success` | Potion success |
 
-Sound categories: `Music`, `Ambient`, `SFX`, `UI`.
+Sound categories: `Music`, `Ambient`, `SFX`, `UI`. Volume can exceed 1.0f for louder playback.
 
 ### Entity Light (via packet, deprecated)
 
@@ -491,3 +507,7 @@ Working teleport-follow for companion NPCs:
 - **Critical**: use `world.getEntityStore().getStore()` as canonical store — not `ref.getStore()`
 - AI follow (LockedTarget) only works for aggressive NPCs. Passive NPCs (Kweebecs) need custom role or Flock system.
 - **Companion NPCs auto-despawn in Idle state** if not part of a flock (`FlockStatus: "NotMember"`)
+- **Entity scaling:** `store.addComponent(ref, EntityScaleComponent.getComponentType(), new EntityScaleComponent(0.7f))` + `npcEntity.setInitialModelScale(0.7f)`
+- **MarkedEntitySupport** (more robust than `setMarkedTarget`): `role.getMarkedEntitySupport().setMarkedEntity("LockedTarget", ref)`
+- **Flock API** to prevent auto-despawn: `FlockMembershipSystems.join()` with player as LEADER, pet as MEMBER. Classes: `Flock`, `FlockMembership`, `FlockMembershipSystems`, `PersistentFlockData`, `EntityGroup`
+- **Known NPC types:** Small: `Kweebec_Seedling`, `Kweebec_Sapling`, `Kweebec_Sproutling`, `Kweebec_Sapling_Pink`, `Kweebec_Razorleaf`, `Kweebec_Rootling`. Aggressive: `Zombie`, `Zombie_Burnt`, `Zombie_Frost`, `Zombie_Sand`. Other: `Wolf_Outlander_Priest`, `Wolf_Outlander_Sorcerer`
