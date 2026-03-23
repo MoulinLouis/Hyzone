@@ -346,7 +346,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DiscordCommand());
         this.getCommandRegistry().registerCommand(new RulesCommand());
         this.getCommandRegistry().registerCommand(new ParkourCommand(this.mapStore, this.progressStore, this.settingsStore,
-                this.playerCountStore, this.runTracker, this.medalStore, this.medalRewardStore));
+                this.playerCountStore, this.runTracker, this.medalStore, this.medalRewardStore,
+                this.duelTracker, this::refreshLeaderboardHologram));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
         this.getCommandRegistry().registerCommand(new StoreCommand());
