@@ -2,15 +2,15 @@
 
 ## Status Update — 2026-03-23
 
-This plan is partially implemented. Phases 1 and 4 are complete. Phases 2, 3, and 5 have remaining work.
+This plan is partially implemented. Phases 1–4 are complete. Phase 5 has remaining work.
 
 ### Phase Status At A Glance
 
 | Phase | Status | Handoff note |
 |-------|--------|--------------|
 | Phase 1 — Ascend plugin decoupling | **Completed** | `ParkourAscendPlugin.getInstance()` → 0 external calls (76 classes migrated) |
-| Phase 2 — Interface propagation | **Partial** | Interfaces created (`PlayerAnalytics`, `CurrencyStore`, `ConnectionProvider`). Only a few consumers typed against them. ~50 `VexaStore.getInstance()` + ~18 `FeatherStore.getInstance()` + ~6 `AnalyticsStore.getInstance()` remain outside composition roots |
-| Phase 3 — Store `DatabaseManager` migration | **Partial** | 5 stores migrated. ~68 `DatabaseManager.getInstance()` calls remain (46 in stores, 15 in composition roots, 7 in admin/setup) |
+| Phase 2 — Interface propagation | **Completed** | All gameplay consumers typed against `CurrencyStore`, `PlayerAnalytics`, `ConnectionProvider`. `.getInstance()` only in composition roots |
+| Phase 3 — Store `DatabaseManager` migration | **Completed** | All stores use `ConnectionProvider` field. `DatabaseManager.getInstance()` only in no-arg constructors, composition roots, and setup classes |
 | Phase 4 — Module plugin singleton cleanup | **Completed** | All 6 plugin singletons decoupled. Only 1 trivial call remains (`HubMenuInteraction`) |
 | Phase 5 — Cleanup & docs | **Partial** | CODE_PATTERNS/ARCHITECTURE docs updated. Deprecated getters and no-arg constructors not yet removed |
 
@@ -119,53 +119,16 @@ This plan is partially implemented. Phases 1 and 4 are complete. Phases 2, 3, an
 
 ### Remaining work
 
-#### Phase 2 — Interface propagation (not broadly adopted)
-
-Interfaces exist but most consumers still use concrete classes:
-
-| Singleton | Remaining calls | Where |
-|-----------|----------------|-------|
-| `AnalyticsStore.getInstance()` | 6 | Composition roots only (all 4 plugins). Could type as `PlayerAnalytics` |
-| `VexaStore.getInstance()` | 32 | 16 files: HUD managers, commands, shops, bridges, plugins |
-| `FeatherStore.getInstance()` | 18 | 9 files: commands, HUD, bridges, shops, RunOrFall |
-| `CosmeticStore.getInstance()` | 18 | 6 files: shops, managers, bridges, plugins |
-| `DiscordLinkStore.getInstance()` | 16 | 7 files: commands, plugins, trackers |
-
-#### Phase 3 — `DatabaseManager.getInstance()` (largest remaining work)
-
-**68 calls across 52 files.** Only 5 stores migrated so far.
-
-| Location | Calls | Notes |
-|----------|-------|-------|
-| Store classes | 46 | The bulk of the work — each needs `ConnectionProvider` injection |
-| Plugin `setup()` methods | 15 | Composition roots — acceptable, target state |
-| `*DatabaseSetup` classes | 7 | Schema init — acceptable, target state |
-
-Stores still needing migration (grouped by module):
-- **core** (11): WardrobeBridge, CosmeticShopConfigStore, CachedCurrencyStore, DiscordLinkStore, BasePlayerStore, CosmeticStore, AnalyticsStore, PurgeSkinStore, GhostStore, VoteStore(compat ctor)
-- **parkour** (10): SettingsStore, RunStateStore, ProgressStore, PlayerSettingsPersistence, PlayerCountStore, MapStore, GlobalMessageStore, DuelPreferenceStore, DuelMatchStore, MedalStore/MedalRewardStore(compat ctors)
-- **parkour-ascend** (8): AscendPlayerStore, AscendPlayerPersistence, AscendMapStore, AscendSettingsStore, ChallengeManager, MineConfigStore, MinePlayerStore, MineAchievementTracker
-- **purge** (9): PurgeMissionStore, PurgeWeaponConfigManager, PurgeWaveConfigManager, PurgeVariantConfigManager, WeaponXpStore, PurgeWeaponUpgradeStore, PurgeScrapStore, PurgeClassStore
-- **runorfall** (1): RunOrFallConfigStore
-
 #### Phase 5 — Final cleanup
 
 - Remove `@Deprecated` getters from `ParkourAscendPlugin`
 - Remove no-arg backwards-compat constructors from migrated stores
-- Clean up minor singletons: `VoteManager.getInstance()` (8 calls, HyvexaPlugin only), `PlayerSettingsPersistence.getInstance()` (6 calls), `TrailManager.getInstance()` (9 calls), `ModelParticleTrailManager.getInstance()` (4 calls), `CosmeticManager.getInstance()` (7 calls), `WardrobeBridge.getInstance()` (10 calls)
+- Clean up minor singletons: `VoteManager.getInstance()` (8 calls, HyvexaPlugin only), `PlayerSettingsPersistence.getInstance()` (6 calls), `TrailManager.getInstance()` (9 calls), `ModelParticleTrailManager.getInstance()` (4 calls), `CosmeticManager.getInstance()` (7 calls), `WardrobeBridge.getInstance()` (10 calls), `CosmeticStore.getInstance()` (18 calls), `DiscordLinkStore.getInstance()` (16 calls)
 - Document final patterns
 
 ### Recommended next steps
 
-1. **Phase 3 Group A** — Migrate small isolated parkour stores to `ConnectionProvider` (9 stores, ~50 calls). Mechanical, low risk. See `singleton-phase3-store-migration.md` for the pattern.
-
-2. **Phase 2 Task 2** — Propagate `CurrencyStore` interface to replace `VexaStore.getInstance()` / `FeatherStore.getInstance()` (50 calls across 25 files). High decoupling value.
-
-3. **Phase 3 Group D** — Migrate Ascend stores (8 stores, ~96 calls). Self-contained within parkour-ascend module.
-
-4. **Phase 3 Group E** — Migrate Purge stores (9 stores, ~74 calls). Self-contained within purge module.
-
-5. **Phase 5** — Clean up deprecated getters, no-arg constructors, minor singletons. Quick wins after Phase 3 is done.
+1. **Phase 5** — Clean up deprecated getters, no-arg constructors, minor singletons. Quick wins now that Phases 1–4 are complete.
 
 ### Files changed in this slice
 
