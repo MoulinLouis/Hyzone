@@ -164,6 +164,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private DuelStatsStore duelStatsStore;
     private DuelMatchStore duelMatchStore;
     private DuelPreferenceStore duelPreferenceStore;
+    private AnalyticsStore analyticsStore;
     private HudManager hudManager;
     private AnnouncementManager announcementManager;
     private PlayerPerksManager perksManager;
@@ -232,9 +233,10 @@ public class HyvexaPlugin extends JavaPlugin {
         initSafe("MedalRewardStore", () -> medalRewardStore.initialize());
         initSafe("MedalStore", () -> medalStore.initialize());
         initSafe("CosmeticStore", () -> CosmeticStore.getInstance().initialize());
+        this.analyticsStore = AnalyticsStore.getInstance();
         initSafe("AnalyticsStore", () -> {
-            AnalyticsStore.getInstance().initialize();
-            AnalyticsStore.getInstance().purgeOldEvents(90);
+            analyticsStore.initialize();
+            analyticsStore.purgeOldEvents(90);
         });
         initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
@@ -246,7 +248,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.mapStore.setOnChangeListener(this::onMapStoreChanged);
         this.settingsStore = new SettingsStore();
         this.settingsStore.syncLoad();
-        PlayerAnalytics analytics = AnalyticsStore.getInstance();
+        PlayerAnalytics analytics = analyticsStore;
         CosmeticStore.getInstance().setAnalytics(analytics);
         DiscordLinkStore.getInstance().setAnalytics(analytics);
         WardrobeBridge.getInstance().setAnalytics(analytics);
@@ -585,9 +587,9 @@ public class HyvexaPlugin extends JavaPlugin {
                 try {
                     Long sessionStart = playtimeManager.getSessionStart(playerId);
                     long sessionMs = sessionStart != null ? System.currentTimeMillis() - sessionStart : 0;
-                    AnalyticsStore.getInstance().logEvent(playerId, "player_leave",
+                    analyticsStore.logEvent(playerId, "player_leave",
                             "{\"session_ms\":" + sessionMs + "}");
-                    AnalyticsStore.getInstance().updatePlayerTimestamps(playerId, false);
+                    analyticsStore.updatePlayerTimestamps(playerId, false);
                 } catch (Exception e) {
                     LOGGER.atWarning().withCause(e).log("Disconnect cleanup: Analytics");
                 }
@@ -1083,9 +1085,9 @@ public class HyvexaPlugin extends JavaPlugin {
         try {
             UUID playerId = playerRef.getUuid();
             boolean isNew = progressStore.shouldShowWelcome(playerId);
-            AnalyticsStore.getInstance().logEvent(playerId, "player_join",
+            analyticsStore.logEvent(playerId, "player_join",
                     "{\"is_new\":" + isNew + "}");
-            AnalyticsStore.getInstance().updatePlayerTimestamps(playerId, isNew);
+            analyticsStore.updatePlayerTimestamps(playerId, isNew);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Analytics: player_join");
         }
@@ -1366,7 +1368,7 @@ public class HyvexaPlugin extends JavaPlugin {
         shutdownSafe("hudPlayersByWorld", () -> hudPlayersByWorld.clear());
         shutdownSafe("playerHudWorlds", () -> playerHudWorlds.clear());
         shutdownSafe("progressStore flush", () -> { if (progressStore != null) progressStore.flushPendingSave(); });
-        shutdownSafe("analytics aggregation", () -> AnalyticsStore.getInstance().computeDailyAggregates(java.time.LocalDate.now()));
+        shutdownSafe("analytics aggregation", () -> analyticsStore.computeDailyAggregates(java.time.LocalDate.now()));
         shutdownSafe("AdminPageUtils", AdminPageUtils::clear);
         shutdownSafe("DatabaseManager", () -> DatabaseManager.getInstance().shutdown());
 
