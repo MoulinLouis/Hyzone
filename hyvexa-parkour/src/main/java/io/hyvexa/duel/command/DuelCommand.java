@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -21,6 +20,7 @@ import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.duel.data.DuelStats;
 import io.hyvexa.duel.data.DuelStatsStore;
 import io.hyvexa.parkour.data.Map;
+import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.ParkourUtils;
 
@@ -36,13 +36,15 @@ public class DuelCommand extends AbstractAsyncCommand {
 
     private final DuelTracker duelTracker;
     private final RunTracker runTracker;
+    private final MapStore mapStore;
 
-    public DuelCommand(DuelTracker duelTracker, RunTracker runTracker) {
+    public DuelCommand(DuelTracker duelTracker, RunTracker runTracker, MapStore mapStore) {
         super("duel", "Join the duel queue.");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
         this.duelTracker = duelTracker;
         this.runTracker = runTracker;
+        this.mapStore = mapStore;
     }
 
     @Override
@@ -179,7 +181,7 @@ public class DuelCommand extends AbstractAsyncCommand {
     }
 
     private void handleAdminMaps(CommandContext ctx) {
-        List<Map> maps = HyvexaPlugin.getInstance().getMapStore().listDuelEnabledMaps();
+        List<Map> maps = mapStore.listDuelEnabledMaps();
         if (maps.isEmpty()) {
             ctx.sendMessage(SystemMessageUtils.duelWarn("No duel-enabled maps."));
             return;

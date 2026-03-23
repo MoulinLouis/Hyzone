@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.util.InventoryUtils;
@@ -22,6 +21,7 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.tracker.CheckpointDetector;
@@ -36,6 +36,7 @@ import io.hyvexa.core.analytics.PlayerAnalytics;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.function.Function;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -50,12 +51,25 @@ import java.util.concurrent.TimeUnit;
 
 public class DuelTracker {
 
+    @FunctionalInterface
+    public interface VipSpeedApplier {
+        void apply(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef, float multiplier, boolean showMessage);
+    }
+
+    public record VipSpeedService(
+            Function<UUID, Float> getMultiplier,
+            VipSpeedApplier applyMultiplier
+    ) {}
+
     private final DuelQueue duelQueue;
     private final DuelMatchStore matchStore;
     private final DuelStatsStore statsStore;
     private final DuelPreferenceStore preferenceStore;
     private final MapStore mapStore;
+    private final ProgressStore progressStore;
+    private final SettingsStore settingsStore;
     private final PlayerAnalytics analytics;
+    private VipSpeedService vipSpeedService;
     private final ConcurrentHashMap<String, DuelMatch> activeMatches = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> matchByPlayer = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, DuelPlayerState> playerStates = new ConcurrentHashMap<>();
@@ -65,13 +79,20 @@ public class DuelTracker {
     private final Random random = new Random();
 
     public DuelTracker(DuelQueue duelQueue, DuelMatchStore matchStore, DuelStatsStore statsStore,
-                       DuelPreferenceStore preferenceStore, MapStore mapStore, PlayerAnalytics analytics) {
+                       DuelPreferenceStore preferenceStore, MapStore mapStore, ProgressStore progressStore,
+                       SettingsStore settingsStore, PlayerAnalytics analytics) {
         this.duelQueue = duelQueue;
         this.matchStore = matchStore;
         this.statsStore = statsStore;
         this.preferenceStore = preferenceStore;
         this.mapStore = mapStore;
+        this.progressStore = progressStore;
+        this.settingsStore = settingsStore;
         this.analytics = analytics;
+    }
+
+    public void setVipSpeedService(VipSpeedService service) {
+        this.vipSpeedService = service;
     }
 
     public boolean isInMatch(@Nullable UUID playerId) {
@@ -201,10 +222,9 @@ public class DuelTracker {
         if (runTracker != null && runTracker.getActiveMapId(playerId) != null) {
             return JoinOutcome.of(JoinResult.IN_PARKOUR);
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin != null && plugin.getProgressStore() != null) {
+        if (progressStore != null) {
             int required = DuelConstants.DUEL_UNLOCK_MIN_COMPLETED_MAPS;
-            int completed = plugin.getProgressStore().getCompletedMapCount(playerId);
+            int completed = progressStore.getCompletedMapCount(playerId);
             if (completed < required) {
                 return JoinOutcome.unlockRequired(required, completed);
             }
@@ -882,25 +902,23 @@ public class DuelTracker {
 
     private void resetVipSpeedForDuel(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                       @Nonnull PlayerRef playerRef) {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        if (vipSpeedService == null) {
             return;
         }
         UUID playerId = playerRef.getUuid();
         if (playerId == null) {
             return;
         }
-        float current = plugin.getVipSpeedMultiplier(playerId);
+        float current = vipSpeedService.getMultiplier().apply(playerId);
         speedMultiplierBeforeDuel.put(playerId, current);
         if (current > DUEL_SPEED_RESET_MULTIPLIER) {
-            plugin.applyVipSpeedMultiplier(ref, store, playerRef, DUEL_SPEED_RESET_MULTIPLIER, false);
+            vipSpeedService.applyMultiplier().apply(ref, store, playerRef, DUEL_SPEED_RESET_MULTIPLIER, false);
         }
     }
 
     private void restoreVipSpeedAfterDuel(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                           @Nonnull PlayerRef playerRef) {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        if (vipSpeedService == null) {
             return;
         }
         UUID playerId = playerRef.getUuid();
@@ -911,7 +929,7 @@ public class DuelTracker {
         if (previous == null || previous <= DUEL_SPEED_RESET_MULTIPLIER) {
             return;
         }
-        plugin.applyVipSpeedMultiplier(ref, store, playerRef, previous, false);
+        vipSpeedService.applyMultiplier().apply(ref, store, playerRef, previous, false);
     }
 
     private void applyDuelVisibility(@Nonnull UUID player1, @Nonnull UUID player2) {
@@ -976,21 +994,17 @@ public class DuelTracker {
     }
 
     private double getVoidY() {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        SettingsStore settings = plugin != null ? plugin.getSettingsStore() : null;
-        if (settings == null) {
+        if (settingsStore == null) {
             return ParkourConstants.FALL_FAILSAFE_VOID_Y;
         }
-        return settings.getFallFailsafeVoidY();
+        return settingsStore.getFallFailsafeVoidY();
     }
 
     private long getFallRespawnTimeoutMs() {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        SettingsStore settings = plugin != null ? plugin.getSettingsStore() : null;
-        if (settings == null) {
+        if (settingsStore == null) {
             return (long) (ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS * 1000L);
         }
-        return (long) (settings.getFallRespawnSeconds() * 1000L);
+        return (long) (settingsStore.getFallRespawnSeconds() * 1000L);
     }
 
     private boolean shouldTeleportFromVoid(double currentY) {

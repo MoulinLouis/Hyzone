@@ -306,6 +306,10 @@ public class HyvexaPlugin extends JavaPlugin {
         this.worldMapManager = new WorldMapManager(true);
         ParkourInteractionBridge.configure(new ParkourInteractionBridge.Services(
                 mapStore, progressStore, runTracker, duelTracker, medalStore));
+        this.runTracker.setDuelTracker(duelTracker);
+        this.runTracker.getValidator().setPluginServices(hudManager, this::invalidateRankCache,
+                this::refreshLeaderboardHologram, this::refreshMapLeaderboardHologram);
+        this.progressStore.setRankCacheInvalidator(this::invalidateRankCache);
         registerRunTrackerTickSystem();
         hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates,
                 ParkourTimingConstants.HUD_UPDATE_INTERVAL_MS, ParkourTimingConstants.HUD_UPDATE_INTERVAL_MS,

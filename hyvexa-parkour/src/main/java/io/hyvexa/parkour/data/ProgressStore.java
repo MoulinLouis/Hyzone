@@ -49,6 +49,7 @@ public class ProgressStore {
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private final AtomicLong cachedTotalXp = new AtomicLong(-1L);
     private volatile PlayerAnalytics analytics;
+    private volatile java.util.function.Consumer<UUID> rankCacheInvalidator;
 
     public ProgressStore(ConnectionProvider db) {
         this.db = db;
@@ -60,6 +61,10 @@ public class ProgressStore {
 
     public void setAnalytics(PlayerAnalytics analytics) {
         this.analytics = analytics;
+    }
+
+    public void setRankCacheInvalidator(java.util.function.Consumer<UUID> rankCacheInvalidator) {
+        this.rankCacheInvalidator = rankCacheInvalidator;
     }
 
     public void syncLoad() {
@@ -605,9 +610,8 @@ public class ProgressStore {
                 invalidateLeaderboardCache(mapId);
             }
             deletePlayerFromDatabase(playerId);
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin != null) {
-                plugin.invalidateRankCache(playerId);
+            if (rankCacheInvalidator != null) {
+                rankCacheInvalidator.accept(playerId);
             }
         }
         return removed;
@@ -672,10 +676,9 @@ public class ProgressStore {
             invalidateLeaderboardCache(trimmedId);
             purgeMapFromDatabase(trimmedId);
             queueSave();
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin != null) {
+            if (rankCacheInvalidator != null) {
                 for (UUID playerId : affectedPlayers) {
-                    plugin.invalidateRankCache(playerId);
+                    rankCacheInvalidator.accept(playerId);
                 }
             }
         }
@@ -711,9 +714,8 @@ public class ProgressStore {
             deletePlayerMapCompletion(playerId, trimmedId);
             invalidateLeaderboardCache(trimmedId);
             queueSave();
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin != null) {
-                plugin.invalidateRankCache(playerId);
+            if (rankCacheInvalidator != null) {
+                rankCacheInvalidator.accept(playerId);
             }
         }
         return removed;

@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.discord.DiscordLinkStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.parkour.data.Map;
@@ -50,6 +49,10 @@ class RunValidator {
     private final MedalRewardStore medalRewardStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
+    private io.hyvexa.manager.HudManager hudManager;
+    private java.util.function.Consumer<UUID> rankCacheInvalidator;
+    private java.util.function.Consumer<Store<EntityStore>> leaderboardHologramRefresher;
+    private java.util.function.BiConsumer<String, Store<EntityStore>> mapLeaderboardHologramRefresher;
 
     RunValidator(MapStore mapStore, ProgressStore progressStore,
                  MedalStore medalStore, MedalRewardStore medalRewardStore) {
@@ -57,6 +60,16 @@ class RunValidator {
         this.progressStore = progressStore;
         this.medalStore = medalStore;
         this.medalRewardStore = medalRewardStore;
+    }
+
+    void setPluginServices(io.hyvexa.manager.HudManager hudManager,
+                           java.util.function.Consumer<UUID> rankCacheInvalidator,
+                           java.util.function.Consumer<Store<EntityStore>> leaderboardHologramRefresher,
+                           java.util.function.BiConsumer<String, Store<EntityStore>> mapLeaderboardHologramRefresher) {
+        this.hudManager = hudManager;
+        this.rankCacheInvalidator = rankCacheInvalidator;
+        this.leaderboardHologramRefresher = leaderboardHologramRefresher;
+        this.mapLeaderboardHologramRefresher = mapLeaderboardHologramRefresher;
     }
 
     void setGhostRecorder(GhostRecorder ghostRecorder) {
@@ -84,12 +97,11 @@ class RunValidator {
                     TrackerUtils.playCheckpointSound(playerRef);
                     CheckpointSplitInfo splitInfo = buildCheckpointSplitInfo(index, elapsedMs, personalBestSplits);
                     player.sendMessage(splitInfo.message);
-                    HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-                    if (plugin != null && plugin.getHudManager() != null) {
+                    if (hudManager != null) {
                         if (splitInfo.hudText != null && splitInfo.hudColor != null) {
-                            plugin.getHudManager().showCheckpointSplit(playerRef, splitInfo.hudText, splitInfo.hudColor);
+                            hudManager.showCheckpointSplit(playerRef, splitInfo.hudText, splitInfo.hudColor);
                         } else {
-                            plugin.getHudManager().showCheckpointSplit(playerRef, null, null);
+                            hudManager.showCheckpointSplit(playerRef, null, null);
                         }
                     }
                 });
@@ -121,8 +133,7 @@ class RunValidator {
         ProgressStore.ProgressionResult result = recordCompletion(run, map, playerId, playerName,
                 durationMs, ref, store);
 
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        refreshHolograms(plugin, result, map, playerId, playerName, store);
+        refreshHolograms(result, map, playerId, playerName, store);
 
         int leaderboardPosition = progressStore.getLeaderboardPosition(map.getId(), playerId);
         if (leaderboardPosition <= 0) {
@@ -134,12 +145,12 @@ class RunValidator {
 
         String mapName = getMapDisplayName(map);
         sendCompletionMessages(player, mapName, durationMs, previousBestMs, attempts, result.xpAwarded);
-        int newRank = handleRankUp(plugin, playerId, player, oldRank);
+        int newRank = handleRankUp(playerId, player, oldRank);
 
-        broadcastFinish(plugin, result, playerId, playerName, map, durationMs, leaderboardPosition,
+        broadcastFinish(result, playerId, playerName, map, durationMs, leaderboardPosition,
                 oldRank, newRank);
 
-        awardMedalAndNotify(plugin, playerId, map, durationMs, player, ref, store);
+        awardMedalAndNotify(playerId, map, durationMs, player, ref, store);
 
         runTracker.recordFinishPing(run, playerRef);
         runTracker.sendLatencyWarning(run, player);
@@ -176,19 +187,17 @@ class RunValidator {
         return result;
     }
 
-    private void refreshHolograms(HyvexaPlugin plugin, ProgressStore.ProgressionResult result,
+    private void refreshHolograms(ProgressStore.ProgressionResult result,
                                    Map map, UUID playerId, String playerName, Store<EntityStore> store) {
-        if (result.firstCompletion && plugin != null) {
-            plugin.refreshLeaderboardHologram(store);
+        if (result.firstCompletion && leaderboardHologramRefresher != null) {
+            leaderboardHologramRefresher.accept(store);
         }
-        if (plugin != null) {
-            plugin.refreshMapLeaderboardHologram(map.getId(), store);
-            plugin.logMapHologramDebug("Map holo refresh fired for '" + map.getId()
-                    + "' (player " + playerName + ").");
+        if (mapLeaderboardHologramRefresher != null) {
+            mapLeaderboardHologramRefresher.accept(map.getId(), store);
         }
     }
 
-    private void broadcastFinish(HyvexaPlugin plugin, ProgressStore.ProgressionResult result,
+    private void broadcastFinish(ProgressStore.ProgressionResult result,
                                   UUID playerId, String playerName, Map map, long durationMs,
                                   int leaderboardPosition, int oldRank, int newRank) {
         if (!result.newBest) {
@@ -201,14 +210,14 @@ class RunValidator {
         }
     }
 
-    private void awardMedalAndNotify(HyvexaPlugin plugin, UUID playerId, Map map, long durationMs,
+    private void awardMedalAndNotify(UUID playerId, Map map, long durationMs,
                                       Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
         MedalAwardResult medalResult = awardMedals(playerId, map, durationMs, player);
-        if (medalResult == null || plugin == null) {
+        if (medalResult == null) {
             return;
         }
-        if (plugin.getHudManager() != null) {
-            plugin.getHudManager().showMedalNotification(
+        if (hudManager != null) {
+            hudManager.showMedalNotification(
                     playerId, medalResult.medal(), medalResult.featherReward());
         }
         io.hyvexa.core.cosmetic.CosmeticManager.getInstance().applyCelebrationEffect(
@@ -241,11 +250,11 @@ class RunValidator {
         }
     }
 
-    private int handleRankUp(HyvexaPlugin plugin, UUID playerId, Player player, int oldRank) {
+    private int handleRankUp(UUID playerId, Player player, int oldRank) {
         int newRank = progressStore.getCompletionRank(playerId, mapStore);
         if (newRank > oldRank) {
-            if (plugin != null) {
-                plugin.invalidateRankCache(playerId);
+            if (rankCacheInvalidator != null) {
+                rankCacheInvalidator.accept(playerId);
             }
             String rankName = progressStore.getRankName(playerId, mapStore);
             player.sendMessage(SystemMessageUtils.parkourSuccess("Rank up! You are now " + rankName + "."));

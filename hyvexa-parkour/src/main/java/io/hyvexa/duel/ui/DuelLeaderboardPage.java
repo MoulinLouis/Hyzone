@@ -14,10 +14,13 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.duel.DuelTracker;
+import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.duel.data.DuelStats;
 import io.hyvexa.duel.data.DuelStatsStore;
+import io.hyvexa.parkour.data.ProgressStore;
+import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.common.ui.PaginationState;
 
 import javax.annotation.Nonnull;
@@ -30,11 +33,20 @@ public class DuelLeaderboardPage extends InteractiveCustomUIPage<DuelLeaderboard
     private static final String BUTTON_PREV = "PrevPage";
     private static final String BUTTON_NEXT = "NextPage";
 
+    private final DuelTracker duelTracker;
+    private final RunTracker runTracker;
+    private final ProgressStore progressStore;
+    private final DuelPreferenceStore duelPreferenceStore;
     private final PaginationState pagination = new PaginationState(50);
     private String searchText = "";
 
-    public DuelLeaderboardPage(@Nonnull PlayerRef playerRef) {
+    public DuelLeaderboardPage(@Nonnull PlayerRef playerRef, DuelTracker duelTracker, RunTracker runTracker,
+                               ProgressStore progressStore, DuelPreferenceStore duelPreferenceStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, LeaderboardData.CODEC);
+        this.duelTracker = duelTracker;
+        this.runTracker = runTracker;
+        this.progressStore = progressStore;
+        this.duelPreferenceStore = duelPreferenceStore;
     }
 
     @Override
@@ -74,7 +86,8 @@ public class DuelLeaderboardPage extends InteractiveCustomUIPage<DuelLeaderboard
             Player player = store.getComponent(ref, Player.getComponentType());
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
-                player.getPageManager().openCustomPage(ref, store, new DuelMenuPage(playerRef));
+                player.getPageManager().openCustomPage(ref, store,
+                        new DuelMenuPage(playerRef, duelTracker, runTracker, progressStore, duelPreferenceStore));
             }
         }
     }
@@ -101,10 +114,7 @@ public class DuelLeaderboardPage extends InteractiveCustomUIPage<DuelLeaderboard
     private void buildLeaderboard(UICommandBuilder commandBuilder) {
         commandBuilder.clear("#LeaderboardCards");
         commandBuilder.set("#LeaderboardSearchField.Value", searchText);
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        DuelStatsStore statsStore = plugin != null && plugin.getDuelTracker() != null
-                ? plugin.getDuelTracker().getStatsStore()
-                : null;
+        DuelStatsStore statsStore = duelTracker != null ? duelTracker.getStatsStore() : null;
         if (statsStore == null) {
             commandBuilder.set("#EmptyText.Text", "Duel stats unavailable.");
             commandBuilder.set("#PageLabel.Text", "");

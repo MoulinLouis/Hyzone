@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -37,8 +36,18 @@ public class DuelMenuPage extends BaseParkourPage {
     private static final String BUTTON_ACTIVE_MATCHES = "ActiveMatches";
     private static final String BUTTON_LEADERBOARD = "Leaderboard";
 
-    public DuelMenuPage(@Nonnull PlayerRef playerRef) {
+    private final DuelTracker duelTracker;
+    private final RunTracker runTracker;
+    private final ProgressStore progressStore;
+    private final DuelPreferenceStore duelPreferenceStore;
+
+    public DuelMenuPage(@Nonnull PlayerRef playerRef, DuelTracker duelTracker, RunTracker runTracker,
+                        ProgressStore progressStore, DuelPreferenceStore duelPreferenceStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
+        this.duelTracker = duelTracker;
+        this.runTracker = runTracker;
+        this.progressStore = progressStore;
+        this.duelPreferenceStore = duelPreferenceStore;
     }
 
     @Override
@@ -83,12 +92,6 @@ public class DuelMenuPage extends BaseParkourPage {
     }
 
     private void handleQueue(Ref<EntityStore> ref, Store<EntityStore> store) {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        DuelTracker duelTracker = plugin.getDuelTracker();
-        RunTracker runTracker = plugin.getRunTracker();
         if (duelTracker == null) {
             return;
         }
@@ -162,11 +165,6 @@ public class DuelMenuPage extends BaseParkourPage {
     }
 
     private void applyQueueState(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        DuelTracker duelTracker = plugin.getDuelTracker();
         if (duelTracker == null) {
             return;
         }
@@ -175,7 +173,7 @@ public class DuelMenuPage extends BaseParkourPage {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        DuelUnlockProgress unlockProgress = getUnlockProgress(plugin, playerId);
+        DuelUnlockProgress unlockProgress = getUnlockProgress(playerId);
         if (!unlockProgress.unlocked()) {
             commandBuilder.set("#QueueButton.Text", "Locked");
             commandBuilder.set("#QueueStatus.Text", "Unlock duels: complete "
@@ -195,8 +193,7 @@ public class DuelMenuPage extends BaseParkourPage {
         commandBuilder.set("#QueueStatus.Text", "Not queued.");
     }
 
-    private DuelUnlockProgress getUnlockProgress(HyvexaPlugin plugin, UUID playerId) {
-        ProgressStore progressStore = plugin.getProgressStore();
+    private DuelUnlockProgress getUnlockProgress(UUID playerId) {
         int required = DuelConstants.DUEL_UNLOCK_MIN_COMPLETED_MAPS;
         if (progressStore == null) {
             return new DuelUnlockProgress(required, required);
@@ -222,13 +219,12 @@ public class DuelMenuPage extends BaseParkourPage {
     }
 
     private void applyCategoryState(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (plugin == null || plugin.getDuelPreferenceStore() == null || playerRef == null) {
+        if (duelPreferenceStore == null || playerRef == null) {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        DuelPreferenceStore prefs = plugin.getDuelPreferenceStore();
+        DuelPreferenceStore prefs = duelPreferenceStore;
         setCategoryToggle(commandBuilder, playerId, prefs, DuelCategory.EASY, "#EasyToggleButton");
         setCategoryToggle(commandBuilder, playerId, prefs, DuelCategory.MEDIUM, "#MediumToggleButton");
         setCategoryToggle(commandBuilder, playerId, prefs, DuelCategory.HARD, "#HardToggleButton");
@@ -247,9 +243,8 @@ public class DuelMenuPage extends BaseParkourPage {
             return;
         }
         boolean hidden = PlayerSettingsStore.toggleDuelOpponentHidden(playerRef.getUuid());
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin != null && plugin.getDuelTracker() != null) {
-            plugin.getDuelTracker().refreshOpponentVisibility(playerRef.getUuid());
+        if (duelTracker != null) {
+            duelTracker.refreshOpponentVisibility(playerRef.getUuid());
         }
         refreshQueueState(ref, store);
         Player player = store.getComponent(ref, Player.getComponentType());
@@ -259,8 +254,7 @@ public class DuelMenuPage extends BaseParkourPage {
     }
 
     private void handleCategoryToggle(Ref<EntityStore> ref, Store<EntityStore> store, String button) {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null || plugin.getDuelPreferenceStore() == null || plugin.getDuelTracker() == null) {
+        if (duelPreferenceStore == null || duelTracker == null) {
             return;
         }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -273,17 +267,17 @@ public class DuelMenuPage extends BaseParkourPage {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        plugin.getDuelPreferenceStore().toggle(playerId, category);
-        if (plugin.getDuelTracker().isQueued(playerId) && !plugin.getDuelTracker().hasAvailableMaps(playerId)) {
-            plugin.getDuelTracker().dequeue(playerId);
+        duelPreferenceStore.toggle(playerId, category);
+        if (duelTracker.isQueued(playerId) && !duelTracker.hasAvailableMaps(playerId)) {
+            duelTracker.dequeue(playerId);
             player.sendMessage(SystemMessageUtils.duelWarn(
                     "No duel maps match your selected categories. You left the queue."
             ));
         } else {
-            plugin.getDuelTracker().tryMatch();
+            duelTracker.tryMatch();
         }
         refreshQueueState(ref, store);
-        boolean enabled = plugin.getDuelPreferenceStore().isEnabled(playerId, category);
+        boolean enabled = duelPreferenceStore.isEnabled(playerId, category);
         player.sendMessage(SystemMessageUtils.duelInfo(DuelCategory.labelFor(category) + ": " + (enabled ? "ON" : "OFF")));
     }
 
@@ -296,11 +290,10 @@ public class DuelMenuPage extends BaseParkourPage {
             player.sendMessage(SystemMessageUtils.duelError("You must be OP to view active matches."));
             return;
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null || plugin.getDuelTracker() == null) {
+        if (duelTracker == null) {
             return;
         }
-        List<DuelMatch> matches = plugin.getDuelTracker().getActiveMatches();
+        List<DuelMatch> matches = duelTracker.getActiveMatches();
         if (matches.isEmpty()) {
             player.sendMessage(SystemMessageUtils.duelWarn("No active matches."));
             return;
@@ -320,7 +313,8 @@ public class DuelMenuPage extends BaseParkourPage {
         if (player == null || playerRef == null) {
             return;
         }
-        player.getPageManager().openCustomPage(ref, store, new DuelLeaderboardPage(playerRef));
+        player.getPageManager().openCustomPage(ref, store,
+                new DuelLeaderboardPage(playerRef, duelTracker, runTracker, progressStore, duelPreferenceStore));
     }
 
 }

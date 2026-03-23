@@ -68,6 +68,7 @@ public class RunTracker {
     private RunStateStore runStateStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
+    private io.hyvexa.duel.DuelTracker duelTracker;
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore, MedalStore medalStore,
@@ -80,6 +81,14 @@ public class RunTracker {
         this.validator = new RunValidator(mapStore, progressStore, medalStore, medalRewardStore);
         this.sessionTracker = new RunSessionTracker(mapStore, progressStore);
         this.teleporter = new RunTeleporter(mapStore, activeRuns);
+    }
+
+    public void setDuelTracker(io.hyvexa.duel.DuelTracker duelTracker) {
+        this.duelTracker = duelTracker;
+    }
+
+    RunValidator getValidator() {
+        return validator;
     }
 
     public void setRunStateStore(RunStateStore runStateStore) {
@@ -480,9 +489,7 @@ public class RunTracker {
         if (now - lastSeenAt.getOrDefault(playerRef.getUuid(), 0L) > 10_000) {
             lastSeenAt.put(playerRef.getUuid(), now);
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin != null && plugin.getDuelTracker() != null
-                && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
+        if (duelTracker != null && duelTracker.isInMatch(playerRef.getUuid())) {
             return;
         }
         ActiveRun run = activeRuns.get(playerRef.getUuid());
