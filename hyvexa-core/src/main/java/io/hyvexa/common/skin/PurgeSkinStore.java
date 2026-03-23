@@ -117,6 +117,9 @@ public class PurgeSkinStore {
         if (def == null) {
             return PurchaseResult.NOT_ENOUGH_VEXA;
         }
+        if (vexaStore == null) {
+            return PurchaseResult.NOT_ENOUGH_VEXA;
+        }
         long vexa = vexaStore.getBalance(playerId);
         if (vexa < def.getPrice()) {
             return PurchaseResult.NOT_ENOUGH_VEXA;

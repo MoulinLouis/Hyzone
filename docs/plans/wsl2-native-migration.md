@@ -9,9 +9,9 @@ The project lives on Windows filesystem (`/mnt/c/`) accessed from WSL2 via the 9
 **Hybrid setup:** source code on WSL2, Hytale server runtime on Windows.
 
 - **Source code** (`~/dev/Hytale/hyvexa_plugin/`) → native WSL2 ext4 — fast builds, fast git, fast Claude Code
-- **Server runtime** (`C:\Users\User\Documents\dev\Hytale\hyvexa_plugin\run\`) → stays on Windows — Hytale server reads from here natively
-- **`stagePlugins`** → builds on WSL2, copies 7 JARs to Windows `run/mods/` via `/mnt/c/` (< 1 second)
-- **IntelliJ run config** → uses Windows JDK to launch server with Windows `run/` as working dir
+- **Server runtime** (`C:\Users\User\Documents\dev\Hytale\hyvexa_server\`) → standalone directory on Windows — Hytale server reads from here natively, decoupled from source code
+- **`stagePlugins`** → builds on WSL2, copies 7 JARs to Windows `hyvexa_server/mods/` via `/mnt/c/` (< 1 second)
+- **IntelliJ run config** → uses Windows JDK to launch server with Windows `hyvexa_server/` as working dir
 
 **What changes in daily workflow: nothing.** Code → Ctrl+F9 → Run → localhost. Same one-click. Just faster.
 
@@ -57,14 +57,33 @@ git stash list
 #   git push origin temp/stash-backup
 ```
 
-### Step 2 — Set up line endings (1 min)
+### Step 2 — Move server runtime to standalone directory (2 min)
+
+The server runtime (`run/`) must live at a stable Windows path, independent of the source code directory. This prevents path breakage when we archive the old source later.
+
+```bash
+cd /mnt/c/Users/User/Documents/dev/Hytale
+
+# Move run/ to its own directory
+mv hyvexa_plugin/run hyvexa_server
+```
+
+All subsequent paths in this plan use `hyvexa_server/` for the server runtime.
+
+Verify:
+```bash
+ls /mnt/c/Users/User/Documents/dev/Hytale/hyvexa_server/mods/
+# Should list the existing plugin JARs
+```
+
+### Step 3 — Set up line endings (1 min)
 
 ```bash
 # Global git config for WSL2
 git config --global core.autocrlf input
 ```
 
-### Step 3 — Clone to native WSL2 (2 min)
+### Step 4 — Clone to native WSL2 (2 min)
 
 ```bash
 mkdir -p ~/dev/Hytale
@@ -77,7 +96,7 @@ git fetch --all
 git branch -a
 ```
 
-### Step 4 — Add .gitattributes (2 min)
+### Step 5 — Add .gitattributes (2 min)
 
 Prevents line ending issues between WSL2 (LF) and Windows (CRLF):
 
@@ -106,40 +125,43 @@ git diff --cached --stat
 git commit -m "chore: add .gitattributes for consistent LF line endings"
 ```
 
-### Step 5 — Make Gradle wrapper executable (1 min)
+### Step 6 — Make Gradle wrapper executable (1 min)
 
 ```bash
 chmod +x gradlew
 ```
 
-### Step 6 — Override `hytaleHome` for WSL2 (1 min)
+### Step 7 — Make `hytaleHome` overridable in build.gradle (2 min)
 
-The default `hytaleHome` uses `${user.home}/AppData/Roaming/Hytale` which doesn't resolve on Linux. Override it in `gradle.properties`:
+The current `build.gradle` hardcodes `hytaleHome` via `ext {}`, which unconditionally overwrites any value from `gradle.properties`. Change it to respect an external override:
+
+Edit `build.gradle` — change the `ext {}` block:
+
+**Before:**
+```groovy
+ext {
+    hytaleHome = "${System.getProperty("user.home")}/AppData/Roaming/Hytale"
+```
+
+**After:**
+```groovy
+ext {
+    hytaleHome = project.findProperty('hytaleHome') ?: "${System.getProperty("user.home")}/AppData/Roaming/Hytale"
+```
+
+This way:
+- If `hytaleHome` is set in `~/.gradle/gradle.properties` (or command line `-P`), that value wins
+- Otherwise, the existing Windows default is used as fallback
+- The rest of the `ext {}` block (resolving `HytaleServer.jar`) stays unchanged
 
 ```bash
-cd ~/dev/Hytale/hyvexa_plugin
-
-# Add the WSL2-compatible path (this is a local override, commit it)
+git add build.gradle
+git commit -m "chore: allow hytaleHome override via gradle property"
 ```
 
-Edit `gradle.properties` — add this line:
+### Step 8 — Make `stagePlugins` output dir configurable (2 min)
 
-```properties
-hytaleHome=/mnt/c/Users/User/AppData/Roaming/Hytale
-```
-
-This lets Gradle find `HytaleServer.jar` for compilation. The `/mnt/c/` read is slow but only happens once during dependency resolution, not on every build.
-
-**Important:** This change should be committed because the project now lives on WSL2. The old `${user.home}/AppData/Roaming/Hytale` fallback in `build.gradle` won't apply anymore since `gradle.properties` takes precedence.
-
-```bash
-git add gradle.properties
-git commit -m "chore: set hytaleHome for WSL2 native development"
-```
-
-### Step 7 — Modify `stagePlugins` to copy to Windows (2 min)
-
-`stagePlugins` needs to put JARs where the Windows Hytale server reads them — the original `run/mods/` on Windows. Edit `build.gradle`:
+`stagePlugins` needs to put JARs where the Windows Hytale server reads them — the standalone `hyvexa_server/mods/` directory. Edit `build.gradle`:
 
 **Before:**
 ```groovy
@@ -172,20 +194,31 @@ tasks.register('stagePlugins', Copy) {
 }
 ```
 
-Then add the property to `gradle.properties`:
-
-```properties
-stageModsDir=/mnt/c/Users/User/Documents/dev/Hytale/hyvexa_plugin/run/mods
-```
-
-This way `stagePlugins` compiles on WSL2 (fast), then copies 7 JARs to Windows (< 1 second via `/mnt/c/`).
+The default `run/mods` fallback keeps the task working for anyone without the override (e.g., CI, other developers).
 
 ```bash
-git add build.gradle gradle.properties
-git commit -m "chore: configure stagePlugins to output to Windows mods directory"
+git add build.gradle
+git commit -m "chore: allow stagePlugins output dir override via gradle property"
 ```
 
-### Step 8 — Update `deploy.sh` (1 min)
+### Step 9 — Set machine-local Gradle properties (1 min)
+
+Machine-specific paths go in the **user-level** Gradle properties file, which is never committed to the repo:
+
+```bash
+# Create or append to ~/.gradle/gradle.properties
+mkdir -p ~/.gradle
+cat >> ~/.gradle/gradle.properties << 'EOF'
+
+# Hyvexa WSL2 overrides
+hytaleHome=/mnt/c/Users/User/AppData/Roaming/Hytale
+stageModsDir=/mnt/c/Users/User/Documents/dev/Hytale/hyvexa_server/mods
+EOF
+```
+
+**Why user-level, not project-level?** These paths contain `/mnt/c/Users/User/...` which is specific to this machine. Committing them would break builds for any other checkout path, developer, or CI. The project's `gradle.properties` stays portable with only project-level settings.
+
+### Step 10 — Update `deploy.sh` (1 min)
 
 The production deploy script uses `cmd.exe /c "gradlew.bat collectPlugins"`. Change to native:
 
@@ -202,7 +235,7 @@ git add deploy.sh
 git commit -m "chore: use native gradlew in deploy.sh"
 ```
 
-### Step 9 — Test the build (3 min)
+### Step 11 — Test the build (3 min)
 
 ```bash
 cd ~/dev/Hytale/hyvexa_plugin
@@ -212,10 +245,10 @@ cd ~/dev/Hytale/hyvexa_plugin
 
 # Verify stagePlugins works and JARs land on Windows
 ./gradlew stagePlugins
-ls -la /mnt/c/Users/User/Documents/dev/Hytale/hyvexa_plugin/run/mods/Hyvexa*.jar
+ls -la /mnt/c/Users/User/Documents/dev/Hytale/hyvexa_server/mods/Hyvexa*.jar
 ```
 
-### Step 10 — Update CLAUDE.md (2 min)
+### Step 12 — Update CLAUDE.md (2 min)
 
 Edit the Quick Commands section in `CLAUDE.md`:
 
@@ -234,24 +267,24 @@ git add CLAUDE.md
 git commit -m "docs: update CLAUDE.md build commands for native WSL2"
 ```
 
-### Step 11 — Push all changes (1 min)
+### Step 13 — Push all changes (1 min)
 
 ```bash
 git push origin main
 ```
 
-### Step 12 — Configure IntelliJ (10 min)
+### Step 14 — Configure IntelliJ (10 min)
 
 This is the one-time IntelliJ setup. All done from IntelliJ on Windows.
 
-#### 12a — Open the WSL2 project
+#### 14a — Open the WSL2 project
 
 1. File → Open
 2. In the path bar, type: `\\wsl$\Ubuntu\home\playfade\dev\Hytale\hyvexa_plugin`
 3. Click OK → Open as Project
 4. Wait for IntelliJ to index (first time takes a few minutes)
 
-#### 12b — Configure WSL2 JDK for Gradle
+#### 14b — Configure WSL2 JDK for Gradle
 
 1. File → Settings → Build, Execution, Deployment → Build Tools → Gradle
 2. Gradle JVM: click dropdown → Add JDK → "Download JDK" or "Add JDK from WSL"
@@ -260,7 +293,7 @@ This is the one-time IntelliJ setup. All done from IntelliJ on Windows.
 3. Distribution: "Wrapper" (default)
 4. Click Apply
 
-#### 12c — Create the HytaleServer run configuration
+#### 14c — Create the HytaleServer run configuration
 
 The auto-generated run config from `idea-ext` won't work because it resolves paths in WSL2 context. Create a manual one:
 
@@ -275,20 +308,20 @@ The auto-generated run config from `idea-ext` won't work because it resolves pat
    ```
 7. Working directory:
    ```
-   C:\Users\User\Documents\dev\Hytale\hyvexa_plugin\run
+   C:\Users\User\Documents\dev\Hytale\hyvexa_server
    ```
 8. Before launch (in order):
    - Run Gradle task: `stagePlugins` (this uses the WSL2 Gradle JDK automatically)
    - Build module: `hyvexa_plugin.hyvexa-launch.main`
 9. Click Apply → OK
 
-#### 12d — Test the run config
+#### 14d — Test the run config
 
 1. Select `HytaleServer` in the run config dropdown
 2. Click Run (green arrow)
-3. Expected: Gradle compiles on WSL2 → copies JARs to Windows `run/mods/` → server launches → you connect via Hytale client
+3. Expected: Gradle compiles on WSL2 → copies JARs to Windows `hyvexa_server/mods/` → server launches → you connect via Hytale client
 
-### Step 13 — Migrate Claude Code memory (2 min)
+### Step 15 — Migrate Claude Code memory (2 min)
 
 ```bash
 # Launch Claude Code once from the new project to create the project key
@@ -305,25 +338,22 @@ cp /home/playfade/.claude/projects/$OLD_KEY/memory/* \
    /home/playfade/.claude/projects/$NEW_KEY/memory/
 ```
 
-### Step 14 — Archive the Windows source code (1 min)
+### Step 16 — Archive the Windows source code (1 min)
 
-Keep `run/` on Windows (the server reads from there). Delete only the source code:
+The server runtime is already at `hyvexa_server/` (moved in step 2), so the old source directory can be safely archived without breaking any paths:
 
 ```bash
-# DON'T delete run/ — the server needs it
-# Only clean up source code from the Windows copy
-
 # Option A: rename (safe, reversible)
 cd /mnt/c/Users/User/Documents/dev/Hytale
 mv hyvexa_plugin hyvexa_plugin_OLD
 
-# Option B: keep run/ and delete the rest (after you're confident)
+# Option B: delete (after you're confident)
 # Do this later, not now
 ```
 
 **Wait a few days before deleting.** Make sure the IntelliJ + WSL2 workflow is stable first.
 
-### Step 15 — Verify everything (5 min)
+### Step 17 — Verify everything (5 min)
 
 ```bash
 cd ~/dev/Hytale/hyvexa_plugin
@@ -336,7 +366,7 @@ time ./gradlew build
 
 # Stage JARs to Windows
 ./gradlew stagePlugins
-ls /mnt/c/Users/User/Documents/dev/Hytale/hyvexa_plugin/run/mods/Hyvexa*.jar
+ls /mnt/c/Users/User/Documents/dev/Hytale/hyvexa_server/mods/Hyvexa*.jar
 
 # Production deploy
 ./deploy.sh  # (cancel at confirmation prompt)
@@ -357,18 +387,24 @@ Then in IntelliJ: Run `HytaleServer` → connect via Hytale client → play.
 | File | Change |
 |------|--------|
 | `.gitattributes` | **New** — enforce LF line endings |
-| `gradle.properties` | Add `hytaleHome` and `stageModsDir` overrides |
-| `build.gradle` | `stagePlugins` reads `stageModsDir` property |
+| `build.gradle` | `hytaleHome` uses `findProperty()` with fallback; `stagePlugins` reads `stageModsDir` property |
 | `deploy.sh` | `cmd.exe /c "gradlew.bat ..."` → `./gradlew ...` |
 | `CLAUDE.md` | Build commands updated for native WSL2 |
+
+| File | Change |
+|------|--------|
+| `~/.gradle/gradle.properties` | **Local only** — `hytaleHome` and `stageModsDir` overrides (never committed) |
+
+**Note:** The project's `gradle.properties` is **not modified**. Machine-specific paths live only in the user-level `~/.gradle/gradle.properties`.
 
 ## Rollback
 
 If anything goes wrong:
-1. The Windows repo is still at `/mnt/c/.../hyvexa_plugin_OLD/` (or the original path)
-2. Reopen that project in IntelliJ
-3. Everything works exactly as before
-4. The WSL2 clone can be deleted: `rm -rf ~/dev/Hytale/hyvexa_plugin`
+1. Move server runtime back: `mv /mnt/c/.../hyvexa_server /mnt/c/.../hyvexa_plugin_OLD/run`
+2. Rename: `mv /mnt/c/.../hyvexa_plugin_OLD /mnt/c/.../hyvexa_plugin`
+3. Reopen that project in IntelliJ
+4. Everything works exactly as before
+5. The WSL2 clone can be deleted: `rm -rf ~/dev/Hytale/hyvexa_plugin`
 
 No data can be lost — the remote has everything pushed.
 

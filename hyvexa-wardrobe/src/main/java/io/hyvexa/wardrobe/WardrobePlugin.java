@@ -39,6 +39,9 @@ public class WardrobePlugin extends JavaPlugin {
     private WardrobeBridge wardrobeBridge;
     private CosmeticStore cosmeticStore;
     private CosmeticShopConfigStore cosmeticShopConfigStore;
+    private io.hyvexa.core.economy.CurrencyStore vexaStore;
+    private io.hyvexa.core.economy.CurrencyStore featherStore;
+    private PurgeSkinStore purgeSkinStore;
 
     public WardrobePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -67,6 +70,9 @@ public class WardrobePlugin extends JavaPlugin {
 
         cosmeticStore = CosmeticStore.getInstance();
         cosmeticShopConfigStore = CosmeticShopConfigStore.getInstance();
+        vexaStore = VexaStore.getInstance();
+        featherStore = FeatherStore.getInstance();
+        purgeSkinStore = PurgeSkinStore.getInstance();
 
         wardrobeBridge.setCosmeticStore(cosmeticStore);
         wardrobeBridge.setCosmeticShopConfigStore(cosmeticShopConfigStore);
@@ -74,17 +80,18 @@ public class WardrobePlugin extends JavaPlugin {
         cosmeticManager = CosmeticManager.getInstance();
         cosmeticManager.setTrailManager(io.hyvexa.core.trail.TrailManager.getInstance());
         cosmeticManager.setModelParticleTrailManager(io.hyvexa.core.trail.ModelParticleTrailManager.getInstance());
+        cosmeticManager.setCosmeticStore(cosmeticStore);
 
         wardrobeShopTab = new WardrobeShopTab(wardrobeBridge, cosmeticStore, cosmeticShopConfigStore);
         ShopTabRegistry.register(wardrobeShopTab);
         effectsShopTab = new EffectsShopTab(cosmeticManager, cosmeticStore);
         ShopTabRegistry.register(effectsShopTab);
-        purgeSkinShopTab = new PurgeSkinShopTab(PurgeSkinStore.getInstance());
+        purgeSkinShopTab = new PurgeSkinShopTab(purgeSkinStore);
         ShopTabRegistry.register(purgeSkinShopTab);
         shopConfigTab = new ShopConfigTab(wardrobeBridge, cosmeticShopConfigStore);
         ShopTabRegistry.register(shopConfigTab);
 
-        this.getCommandRegistry().registerCommand(new ShopCommand(VexaStore.getInstance(), FeatherStore.getInstance()));
+        this.getCommandRegistry().registerCommand(new ShopCommand(vexaStore, featherStore));
         this.getCommandRegistry().registerCommand(new WardrobeBuyCommand(wardrobeBridge));
         this.getCommandRegistry().registerCommand(new WardrobeResetCommand(wardrobeBridge));
 
@@ -117,9 +124,9 @@ public class WardrobePlugin extends JavaPlugin {
                     id -> { if (purgeSkinShopTab != null) purgeSkinShopTab.evictPlayer(id); },
                     id -> cosmeticManager.cleanupOnDisconnect(id),
                     id -> cosmeticStore.evictPlayer(id),
-                    id -> VexaStore.getInstance().evictPlayer(id),
-                    id -> FeatherStore.getInstance().evictPlayer(id),
-                    id -> PurgeSkinStore.getInstance().evictPlayer(id)
+                    id -> { if (vexaStore != null) vexaStore.evictPlayer(id); },
+                    id -> { if (featherStore != null) featherStore.evictPlayer(id); },
+                    id -> { if (purgeSkinStore != null) purgeSkinStore.evictPlayer(id); }
             );
         });
 

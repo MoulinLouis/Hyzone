@@ -122,6 +122,10 @@ public class WardrobeBridge {
      * DB transaction, then grant permission and log analytics outside the transaction.
      */
     public PurchaseResult purchase(UUID playerId, String cosmeticId) {
+        if (cosmeticStore == null || cosmeticShopConfigStore == null) {
+            return error("Store not initialized");
+        }
+
         WardrobeCosmeticDef def = findById(cosmeticId);
         if (def == null) return error("Unknown cosmetic: " + cosmeticId);
 
@@ -209,6 +213,7 @@ public class WardrobeBridge {
      * Re-grant all wardrobe permissions for owned cosmetics. Call on player login.
      */
     public void regrantPermissions(UUID playerId) {
+        if (cosmeticStore == null) return;
         for (WardrobeCosmeticDef def : cosmetics) {
             if (cosmeticStore.ownsCosmetic(playerId, def.id())) {
                 grantPermission(playerId, def.permissionNode());
@@ -220,6 +225,7 @@ public class WardrobeBridge {
      * Reset all wardrobe cosmetics: clear DB records and revoke all permissions.
      */
     public void resetAll(UUID playerId) {
+        if (cosmeticStore == null) return;
         for (WardrobeCosmeticDef def : cosmetics) {
             revokePermission(playerId, def.permissionNode());
         }

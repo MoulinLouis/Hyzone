@@ -196,6 +196,9 @@ public class HyvexaPlugin extends JavaPlugin {
     private PetManager petManager;
     private DiscordLinkStore discordLinkStore;
     private io.hyvexa.core.trail.TrailManager trailManager;
+    private io.hyvexa.core.economy.CurrencyStore vexaStore;
+    private io.hyvexa.core.economy.CurrencyStore featherStore;
+    private CosmeticStore cosmeticStore;
     private final Map<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
     private final Map<World, AtomicBoolean> hudTickInFlight = new ConcurrentHashMap<>();
     private final Map<World, Set<UUID>> hudPlayersByWorld = new ConcurrentHashMap<>();
@@ -235,13 +238,16 @@ public class HyvexaPlugin extends JavaPlugin {
         this.medalRewardStore = new MedalRewardStore(DatabaseManager.getInstance());
         this.medalStore = new MedalStore(DatabaseManager.getInstance());
         initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
+        this.vexaStore = VexaStore.getInstance();
         this.discordLinkStore = DiscordLinkStore.getInstance();
         initSafe("DiscordLinkStore", () -> discordLinkStore.initialize());
         initSafe("FeatherStore", () -> FeatherStore.getInstance().initialize());
+        this.featherStore = FeatherStore.getInstance();
         initSafe("VoteStore", () -> voteStore.initialize());
         initSafe("MedalRewardStore", () -> medalRewardStore.initialize());
         initSafe("MedalStore", () -> medalStore.initialize());
         initSafe("CosmeticStore", () -> CosmeticStore.getInstance().initialize());
+        this.cosmeticStore = CosmeticStore.getInstance();
         this.analyticsStore = AnalyticsStore.getInstance();
         initSafe("AnalyticsStore", () -> {
             analyticsStore.initialize();
@@ -249,7 +255,7 @@ public class HyvexaPlugin extends JavaPlugin {
         });
         initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
-            VoteManager.getInstance().initialize(voteConfig, voteStore, FeatherStore.getInstance());
+            VoteManager.getInstance().initialize(voteConfig, voteStore, featherStore);
             this.voteManager = VoteManager.getInstance();
         });
         this.collisionManager = new CollisionManager();
@@ -259,12 +265,12 @@ public class HyvexaPlugin extends JavaPlugin {
         this.settingsStore = new SettingsStore(DatabaseManager.getInstance());
         this.settingsStore.syncLoad();
         PlayerAnalytics analytics = analyticsStore;
-        CosmeticStore.getInstance().setAnalytics(analytics);
+        cosmeticStore.setAnalytics(analytics);
         discordLinkStore.setAnalytics(analytics);
-        discordLinkStore.setVexaStore(VexaStore.getInstance());
+        discordLinkStore.setVexaStore(vexaStore);
         WardrobeBridge.getInstance().setAnalytics(analytics);
-        WardrobeBridge.getInstance().setCurrencyStores(VexaStore.getInstance(), FeatherStore.getInstance());
-        PurgeSkinStore.getInstance().setVexaStore(VexaStore.getInstance());
+        WardrobeBridge.getInstance().setCurrencyStores(vexaStore, featherStore);
+        PurgeSkinStore.getInstance().setVexaStore(vexaStore);
         this.progressStore = new ProgressStore(DatabaseManager.getInstance());
         this.progressStore.setAnalytics(analytics);
         this.progressStore.syncLoad();
@@ -273,7 +279,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.globalMessageStore = new GlobalMessageStore(DatabaseManager.getInstance());
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore,
-                this.medalStore, this.medalRewardStore, analytics, FeatherStore.getInstance());
+                this.medalStore, this.medalRewardStore, analytics, featherStore);
         this.runStateStore = new RunStateStore(DatabaseManager.getInstance());
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
@@ -312,7 +318,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.perksManager = new PlayerPerksManager(progressStore, mapStore, playerSettingsPersistence);
         this.chatFormatter = new ChatFormatter(progressStore, mapStore, perksManager);
         this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager,
-                VexaStore.getInstance(), FeatherStore.getInstance(), playerSettingsPersistence);
+                vexaStore, featherStore, playerSettingsPersistence);
         this.announcementManager = new AnnouncementManager(globalMessageStore, hudManager,
                 this::scheduleTick, this::cancelScheduled);
         this.playtimeManager = new PlaytimeManager(progressStore, playerCountStore);
@@ -377,7 +383,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new RulesCommand());
         this.getCommandRegistry().registerCommand(new ParkourCommand(this.mapStore, this.progressStore, this.settingsStore,
                 this.playerCountStore, this.runTracker, this.medalStore, this.medalRewardStore,
-                this.duelTracker, this::refreshLeaderboardHologram, adminNavigator, VexaStore.getInstance()));
+                this.duelTracker, this::refreshLeaderboardHologram, adminNavigator, vexaStore));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
         this.getCommandRegistry().registerCommand(new StoreCommand());
@@ -386,14 +392,14 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
         this.getCommandRegistry().registerCommand(new MessageTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker, this.mapStore));
-        this.getCommandRegistry().registerCommand(new VexaCommand(VexaStore.getInstance()));
+        this.getCommandRegistry().registerCommand(new VexaCommand(vexaStore));
         this.getCommandRegistry().registerCommand(new LinkCommand(discordLinkStore));
         this.getCommandRegistry().registerCommand(new UnlinkCommand(discordLinkStore));
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new PetTestCommand());
         this.getCommandRegistry().registerCommand(new MobGalleryCommand());
         this.getCommandRegistry().registerCommand(new AnalyticsCommand(analyticsStore));
-        this.getCommandRegistry().registerCommand(new FeatherCommand(FeatherStore.getInstance()));
+        this.getCommandRegistry().registerCommand(new FeatherCommand(featherStore));
         this.getCommandRegistry().registerCommand(new CreditsCommand());
         this.getCommandRegistry().registerCommand(new SpectatorCommand());
         this.getCommandRegistry().registerCommand(new io.hyvexa.core.queue.RunOrFallQueueCommand());
@@ -570,10 +576,10 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { cleanupManager.handleDisconnect(event.getPlayerRef()); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: cleanupManager"); }
 
-                try { VexaStore.getInstance().evictPlayer(playerId); }
+                try { if (vexaStore != null) { vexaStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
 
-                try { FeatherStore.getInstance().evictPlayer(playerId); }
+                try { if (featherStore != null) { featherStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: FeatherStore"); }
 
                 try { if (medalStore != null) { medalStore.evictPlayer(playerId); } }
@@ -582,7 +588,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { if (discordLinkStore != null) { discordLinkStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
 
-                try { CosmeticStore.getInstance().evictPlayer(playerId); }
+                try { if (cosmeticStore != null) { cosmeticStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore"); }
 
                 try { if (trailManager != null) { trailManager.stopTrail(playerId); } }

@@ -41,6 +41,7 @@ public class CosmeticManager {
 
     private TrailManager trailManager;
     private ModelParticleTrailManager modelParticleTrailManager;
+    private volatile CosmeticStore cosmeticStore;
 
     /** Tracks active preview timers so we can cancel on disconnect. */
     private final ConcurrentHashMap<UUID, ScheduledFuture<?>> previewTimers = new ConcurrentHashMap<>();
@@ -64,6 +65,10 @@ public class CosmeticManager {
 
     public void setModelParticleTrailManager(ModelParticleTrailManager modelParticleTrailManager) {
         this.modelParticleTrailManager = modelParticleTrailManager;
+    }
+
+    public void setCosmeticStore(CosmeticStore cosmeticStore) {
+        this.cosmeticStore = cosmeticStore;
     }
 
     /**
@@ -162,7 +167,8 @@ public class CosmeticManager {
 
             AsyncExecutionHelper.runBestEffort(world, () -> {
                 if (!ref.isValid()) return;
-                String equipped = CosmeticStore.getInstance().getEquippedCosmeticId(playerId);
+                CosmeticStore store2 = cosmeticStore;
+                String equipped = store2 != null ? store2.getEquippedCosmeticId(playerId) : null;
                 if (equipped != null) {
                     applyCosmetic(ref, store, equipped);
                 } else {
@@ -185,10 +191,12 @@ public class CosmeticManager {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) return;
 
-        String equipped = CosmeticStore.getInstance().getEquippedCosmeticId(playerRef.getUuid());
+        CosmeticStore store2 = cosmeticStore;
+        if (store2 == null) return;
+        String equipped = store2.getEquippedCosmeticId(playerRef.getUuid());
         if (equipped != null) {
             if (CosmeticDefinition.fromId(equipped) == null) {
-                CosmeticStore.getInstance().unequipCosmetic(playerRef.getUuid());
+                store2.unequipCosmetic(playerRef.getUuid());
                 removeCosmetic(ref, store);
                 return;
             }
