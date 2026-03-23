@@ -368,7 +368,23 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineManager,
             hologramManager
         );
-        getCommandRegistry().registerCommand(new AscendCommand(this));
+        getCommandRegistry().registerCommand(new AscendCommand(
+            playerStore,
+            mapStore,
+            ghostStore,
+            runTracker,
+            hudManager,
+            robotManager,
+            achievementManager,
+            ascensionManager,
+            challengeManager,
+            summitManager,
+            transcendenceManager,
+            tutorialTriggerService,
+            runnerSpeedCalculator,
+            analytics,
+            runtimeConfig
+        ));
         getCommandRegistry().registerCommand(new AscendAdminCommand(
             adminNavigator,
             mapStore,
@@ -541,7 +557,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (restoreToMine) {
                         mineGateChecker.giveMineItems(player, playerId);
                         hudManager.setMineMode(playerId, true);
-                        MineHudManager mhm = getMineHudManager();
+                        MineHudManager mhm = mineHudManager;
                         if (mhm != null) {
                             mhm.attachHud(playerRef, player);
                         }
