@@ -109,6 +109,8 @@ import io.hyvexa.parkour.system.NoPlayerKnockbackSystem;
 import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 import io.hyvexa.parkour.system.RunTrackerTickSystem;
+import io.hyvexa.parkour.ui.AdminPageUtils;
+import io.hyvexa.parkour.ui.ParkourAdminNavigator;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.manager.AnnouncementManager;
@@ -162,6 +164,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private DuelStatsStore duelStatsStore;
     private DuelMatchStore duelMatchStore;
     private DuelPreferenceStore duelPreferenceStore;
+    private AnalyticsStore analyticsStore;
     private HudManager hudManager;
     private AnnouncementManager announcementManager;
     private PlayerPerksManager perksManager;
@@ -230,9 +233,10 @@ public class HyvexaPlugin extends JavaPlugin {
         initSafe("MedalRewardStore", () -> medalRewardStore.initialize());
         initSafe("MedalStore", () -> medalStore.initialize());
         initSafe("CosmeticStore", () -> CosmeticStore.getInstance().initialize());
+        this.analyticsStore = AnalyticsStore.getInstance();
         initSafe("AnalyticsStore", () -> {
-            AnalyticsStore.getInstance().initialize();
-            AnalyticsStore.getInstance().purgeOldEvents(90);
+            analyticsStore.initialize();
+            analyticsStore.purgeOldEvents(90);
         });
         initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
@@ -244,7 +248,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.mapStore.setOnChangeListener(this::onMapStoreChanged);
         this.settingsStore = new SettingsStore();
         this.settingsStore.syncLoad();
-        PlayerAnalytics analytics = AnalyticsStore.getInstance();
+        PlayerAnalytics analytics = analyticsStore;
         CosmeticStore.getInstance().setAnalytics(analytics);
         DiscordLinkStore.getInstance().setAnalytics(analytics);
         WardrobeBridge.getInstance().setAnalytics(analytics);
@@ -305,7 +309,9 @@ public class HyvexaPlugin extends JavaPlugin {
                 this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
         this.worldMapManager = new WorldMapManager(true);
         ParkourInteractionBridge.configure(new ParkourInteractionBridge.Services(
-                mapStore, progressStore, runTracker, duelTracker, medalStore, duelPreferenceStore));
+                mapStore, progressStore, runTracker, duelTracker, medalStore, duelPreferenceStore,
+                ghostNpcManager, hudManager, this::hideRunHud, this::showRunHud,
+                this::applyVipSpeedMultiplier));
         this.runTracker.setDuelTracker(duelTracker);
         this.runTracker.getValidator().setPluginServices(hudManager, this::invalidateRankCache,
                 this::refreshLeaderboardHologram, this::refreshMapLeaderboardHologram);
@@ -342,12 +348,18 @@ public class HyvexaPlugin extends JavaPlugin {
                 (ref, firstRun, time, type, ctx) ->
                         new RestartCheckpointInteraction().handle(ref, firstRun, time, type, ctx));
 
+        ParkourAdminNavigator adminNavigator = new ParkourAdminNavigator(
+                mapStore, progressStore, settingsStore, playerCountStore, medalRewardStore,
+                globalMessageStore, this::invalidateRankCache, this::refreshChatAnnouncements,
+                this::broadcastAnnouncement, this::buildMapLeaderboardHologramLines);
+        AdminPageUtils.configure(adminNavigator);
+
         this.getCommandRegistry().registerCommand(new CheckpointCommand());
         this.getCommandRegistry().registerCommand(new DiscordCommand());
         this.getCommandRegistry().registerCommand(new RulesCommand());
         this.getCommandRegistry().registerCommand(new ParkourCommand(this.mapStore, this.progressStore, this.settingsStore,
                 this.playerCountStore, this.runTracker, this.medalStore, this.medalRewardStore,
-                this.duelTracker, this::refreshLeaderboardHologram));
+                this.duelTracker, this::refreshLeaderboardHologram, adminNavigator));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
         this.getCommandRegistry().registerCommand(new StoreCommand());
@@ -362,7 +374,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new PetTestCommand());
         this.getCommandRegistry().registerCommand(new MobGalleryCommand());
-        this.getCommandRegistry().registerCommand(new AnalyticsCommand());
+        this.getCommandRegistry().registerCommand(new AnalyticsCommand(analyticsStore));
         this.getCommandRegistry().registerCommand(new FeatherCommand());
         this.getCommandRegistry().registerCommand(new CreditsCommand());
         this.getCommandRegistry().registerCommand(new SpectatorCommand());
@@ -575,9 +587,9 @@ public class HyvexaPlugin extends JavaPlugin {
                 try {
                     Long sessionStart = playtimeManager.getSessionStart(playerId);
                     long sessionMs = sessionStart != null ? System.currentTimeMillis() - sessionStart : 0;
-                    AnalyticsStore.getInstance().logEvent(playerId, "player_leave",
+                    analyticsStore.logEvent(playerId, "player_leave",
                             "{\"session_ms\":" + sessionMs + "}");
-                    AnalyticsStore.getInstance().updatePlayerTimestamps(playerId, false);
+                    analyticsStore.updatePlayerTimestamps(playerId, false);
                 } catch (Exception e) {
                     LOGGER.atWarning().withCause(e).log("Disconnect cleanup: Analytics");
                 }
@@ -1073,9 +1085,9 @@ public class HyvexaPlugin extends JavaPlugin {
         try {
             UUID playerId = playerRef.getUuid();
             boolean isNew = progressStore.shouldShowWelcome(playerId);
-            AnalyticsStore.getInstance().logEvent(playerId, "player_join",
+            analyticsStore.logEvent(playerId, "player_join",
                     "{\"is_new\":" + isNew + "}");
-            AnalyticsStore.getInstance().updatePlayerTimestamps(playerId, isNew);
+            analyticsStore.updatePlayerTimestamps(playerId, isNew);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Analytics: player_join");
         }
@@ -1356,7 +1368,8 @@ public class HyvexaPlugin extends JavaPlugin {
         shutdownSafe("hudPlayersByWorld", () -> hudPlayersByWorld.clear());
         shutdownSafe("playerHudWorlds", () -> playerHudWorlds.clear());
         shutdownSafe("progressStore flush", () -> { if (progressStore != null) progressStore.flushPendingSave(); });
-        shutdownSafe("analytics aggregation", () -> AnalyticsStore.getInstance().computeDailyAggregates(java.time.LocalDate.now()));
+        shutdownSafe("analytics aggregation", () -> analyticsStore.computeDailyAggregates(java.time.LocalDate.now()));
+        shutdownSafe("AdminPageUtils", AdminPageUtils::clear);
         shutdownSafe("DatabaseManager", () -> DatabaseManager.getInstance().shutdown());
 
         super.shutdown();

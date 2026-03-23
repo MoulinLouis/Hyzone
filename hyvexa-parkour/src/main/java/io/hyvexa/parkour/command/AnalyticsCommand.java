@@ -23,10 +23,13 @@ import java.util.stream.Collectors;
 
 public class AnalyticsCommand extends AbstractAsyncCommand {
 
-    public AnalyticsCommand() {
+    private final AnalyticsStore analyticsStore;
+
+    public AnalyticsCommand(AnalyticsStore analyticsStore) {
         super("analytics", "View server analytics");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
+        this.analyticsStore = analyticsStore;
     }
 
     @Override
@@ -62,11 +65,11 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
             case "ascend" -> showAscend(player, parseDays(args, 1));
             case "economy" -> showEconomy(player, parseDays(args, 1));
             case "refresh" -> {
-                AnalyticsStore.getInstance().computeDailyAggregates(LocalDate.now());
+                analyticsStore.computeDailyAggregates(LocalDate.now());
                 player.sendMessage(Message.raw("[Analytics] Refreshed today's aggregates."));
             }
             case "purge" -> {
-                AnalyticsStore.getInstance().purgeOldEvents(90);
+                analyticsStore.purgeOldEvents(90);
                 player.sendMessage(Message.raw("[Analytics] Purging events older than 90 days."));
             }
             default -> {
@@ -81,8 +84,8 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
     }
 
     private void showOverview(Player player, int days) {
-        AnalyticsStore.getInstance().computeDailyAggregates(LocalDate.now());
-        List<AnalyticsStore.DailyStats> stats = AnalyticsStore.getInstance().getRecentStats(days);
+        analyticsStore.computeDailyAggregates(LocalDate.now());
+        List<AnalyticsStore.DailyStats> stats = analyticsStore.getRecentStats(days);
 
         if (stats.isEmpty()) {
             player.sendMessage(Message.raw("[Analytics] No data available for the last " + days + " days."));
@@ -115,9 +118,9 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
         float avgParkour = totalParkourPct / count;
         float avgAscend = totalAscendPct / count;
 
-        float d1 = AnalyticsStore.getInstance().getRetention(2, 1);
-        float d7 = AnalyticsStore.getInstance().getRetention(8, 7);
-        float d30 = AnalyticsStore.getInstance().getRetention(31, 30);
+        float d1 = analyticsStore.getRetention(2, 1);
+        float d7 = analyticsStore.getRetention(8, 7);
+        float d30 = analyticsStore.getRetention(31, 30);
 
         player.sendMessage(Message.raw("--- Server Analytics (" + days + "d) ---"));
         player.sendMessage(Message.raw("DAU: " + avgDau + " avg | Peak: " + peakConcurrent));
@@ -131,7 +134,7 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
     }
 
     private void showParkour(Player player, int days) {
-        AnalyticsStore store = AnalyticsStore.getInstance();
+        AnalyticsStore store = analyticsStore;
 
         int mapStarts = store.countEvents("map_start", days);
         int mapCompletes = store.countEvents("map_complete", days);
@@ -165,7 +168,7 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
     }
 
     private void showAscend(Player player, int days) {
-        AnalyticsStore store = AnalyticsStore.getInstance();
+        AnalyticsStore store = analyticsStore;
 
         int manualRuns = store.countEvents("ascend_manual_run", days);
         int uniqueRunners = store.countDistinctPlayers("ascend_manual_run", days);
@@ -198,7 +201,7 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
     }
 
     private void showEconomy(Player player, int days) {
-        AnalyticsStore store = AnalyticsStore.getInstance();
+        AnalyticsStore store = analyticsStore;
 
         long vexaSpent = store.sumJsonLongField("gem_spend", "amount", days);
         int purchases = store.countEvents("gem_spend", days);

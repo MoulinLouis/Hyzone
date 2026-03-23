@@ -15,16 +15,20 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 import io.hyvexa.manager.HudManager;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
+import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
+import io.hyvexa.parkour.interaction.ParkourInteractionBridge;
+import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public class PlayerSettingsPage extends BaseParkourPage {
 
@@ -58,14 +62,14 @@ public class PlayerSettingsPage extends BaseParkourPage {
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Parkour_PlayerSettings.ui");
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        ParkourInteractionBridge.Services svc = ParkourInteractionBridge.get();
         boolean showSpeedBoost = false;
-        if (plugin != null && plugin.getProgressStore() != null) {
+        if (svc != null && svc.progressStore() != null) {
             var playerId = playerRef.getUuid();
             boolean isVipOrFounder = playerId != null
-                    && (plugin.getProgressStore().isVip(playerId) || plugin.getProgressStore().isFounder(playerId));
-            boolean inMap = playerId != null && plugin.getRunTracker() != null
-                    && plugin.getRunTracker().getActiveMapId(playerId) != null;
+                    && (svc.progressStore().isVip(playerId) || svc.progressStore().isFounder(playerId));
+            boolean inMap = playerId != null && svc.runTracker() != null
+                    && svc.runTracker().getActiveMapId(playerId) != null;
             showSpeedBoost = isVipOrFounder && !inMap;
         }
         uiCommandBuilder.set("#VipSpeedLabel.Visible", showSpeedBoost);
@@ -73,7 +77,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
         uiCommandBuilder.set(RESET_ITEM_BUTTON_SELECTOR + ".Text", getResetItemLabel(playerRef.getUuid()));
         uiCommandBuilder.set(GHOST_BUTTON_SELECTOR + ".Text", getGhostLabel(playerRef.getUuid()));
         uiCommandBuilder.set(ADVANCED_HUD_BUTTON_SELECTOR + ".Text", getAdvancedHudLabel(playerRef.getUuid()));
-        applyToggleIndicators(uiCommandBuilder, playerRef.getUuid(), plugin);
+        applyToggleIndicators(uiCommandBuilder, playerRef.getUuid(), svc != null ? svc.hudManager() : null);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HideAllButton",
@@ -130,18 +134,21 @@ public class PlayerSettingsPage extends BaseParkourPage {
             player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             return;
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        ParkourInteractionBridge.Services svc = ParkourInteractionBridge.get();
+        if (svc == null) {
+            return;
+        }
         if (BUTTON_HIDE_HUD.equals(data.getButton())) {
-            if (plugin != null) {
-                plugin.hideRunHud(playerRef);
+            if (svc.hideRunHud() != null) {
+                svc.hideRunHud().accept(playerRef);
                 player.sendMessage(Message.raw("Server HUD hidden."));
                 player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             }
             return;
         }
         if (BUTTON_SHOW_HUD.equals(data.getButton())) {
-            if (plugin != null) {
-                plugin.showRunHud(playerRef);
+            if (svc.showRunHud() != null) {
+                svc.showRunHud().accept(playerRef);
                 player.sendMessage(Message.raw("Server HUD shown."));
                 player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             }
@@ -153,11 +160,13 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_TOGGLE_RESET_ITEM.equals(data.getButton())) {
             boolean enabled = PlayerSettingsStore.toggleResetItemEnabled(playerRef.getUuid());
-            if (plugin != null && plugin.getRunTracker() != null) {
-                String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
-                if (mapId != null && plugin.getMapStore() != null) {
-                    Map map = plugin.getMapStore().getMap(mapId);
-                    boolean practiceEnabled = plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid());
+            RunTracker runTracker = svc.runTracker();
+            MapStore mapStore = svc.mapStore();
+            if (runTracker != null) {
+                String mapId = runTracker.getActiveMapId(playerRef.getUuid());
+                if (mapId != null && mapStore != null) {
+                    Map map = mapStore.getMap(mapId);
+                    boolean practiceEnabled = runTracker.isPracticeEnabled(playerRef.getUuid());
                     InventoryUtils.giveRunItems(player, map, practiceEnabled);
                 }
             }
@@ -167,10 +176,11 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_TOGGLE_GHOST.equals(data.getButton())) {
             boolean visible = PlayerSettingsStore.toggleGhostVisible(playerRef.getUuid());
-            if (plugin != null && plugin.getRunTracker() != null) {
-                String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+            RunTracker runTracker = svc.runTracker();
+            if (runTracker != null) {
+                String mapId = runTracker.getActiveMapId(playerRef.getUuid());
                 if (mapId != null) {
-                    GhostNpcManager ghostNpcManager = plugin.getGhostNpcManager();
+                    GhostNpcManager ghostNpcManager = svc.ghostNpcManager();
                     if (ghostNpcManager != null) {
                         if (!visible) {
                             ghostNpcManager.despawnGhost(playerRef.getUuid());
@@ -186,8 +196,9 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_TOGGLE_ADVANCED_HUD.equals(data.getButton())) {
             boolean enabled = PlayerSettingsStore.toggleAdvancedHud(playerRef.getUuid());
-            if (plugin != null && plugin.getHudManager() != null) {
-                plugin.getHudManager().setAdvancedHudVisible(playerRef, enabled);
+            HudManager hudManager = svc.hudManager();
+            if (hudManager != null) {
+                hudManager.setAdvancedHudVisible(playerRef, enabled);
             }
             player.sendMessage(Message.raw(enabled ? "Advanced HUD enabled." : "Advanced HUD disabled."));
             player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
@@ -196,19 +207,21 @@ public class PlayerSettingsPage extends BaseParkourPage {
         if (BUTTON_SPEED_X1.equals(data.getButton())
                 || BUTTON_SPEED_X2.equals(data.getButton())
                 || BUTTON_SPEED_X4.equals(data.getButton())) {
-            if (plugin == null || plugin.getProgressStore() == null) {
+            ProgressStore progressStore = svc.progressStore();
+            if (progressStore == null) {
                 player.sendMessage(Message.raw("Speed boost unavailable right now."));
                 return;
             }
             UUID playerId = playerRef.getUuid();
             boolean isVipOrFounder = playerId != null
-                    && (plugin.getProgressStore().isVip(playerId) || plugin.getProgressStore().isFounder(playerId));
+                    && (progressStore.isVip(playerId) || progressStore.isFounder(playerId));
             if (!isVipOrFounder) {
                 player.sendMessage(Message.raw("Speed boost is VIP/Founder only."));
                 return;
             }
-            boolean inMap = playerId != null && plugin.getRunTracker() != null
-                    && plugin.getRunTracker().getActiveMapId(playerId) != null;
+            RunTracker runTracker = svc.runTracker();
+            boolean inMap = playerId != null && runTracker != null
+                    && runTracker.getActiveMapId(playerId) != null;
             if (inMap) {
                 player.sendMessage(Message.raw("Speed boost is only available outside runs."));
                 return;
@@ -224,11 +237,14 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 return;
             }
             float finalMultiplier = multiplier;
+            ParkourInteractionBridge.VipSpeedApplier speedApplier = svc.vipSpeedApplier();
             world.execute(() -> {
                 if (!ref.isValid() || !playerRef.isValid()) {
                     return;
                 }
-                plugin.applyVipSpeedMultiplier(ref, store, playerRef, finalMultiplier, true);
+                if (speedApplier != null) {
+                    speedApplier.apply(ref, store, playerRef, finalMultiplier, true);
+                }
                 Player playerEntity = store.getComponent(ref, Player.getComponentType());
                 if (playerEntity != null) {
                     playerEntity.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
@@ -267,13 +283,12 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
     }
 
-    private static void applyToggleIndicators(UICommandBuilder cmd, UUID playerId, HyvexaPlugin plugin) {
+    private static void applyToggleIndicators(UICommandBuilder cmd, UUID playerId, HudManager hudManager) {
         boolean playersHidden = PlayerSettingsStore.isPlayersHidden(playerId);
         cmd.set("#HidePlayersIndicator.Visible", playersHidden);
         cmd.set("#ShowPlayersIndicator.Visible", !playersHidden);
 
-        boolean hudHidden = plugin != null && plugin.getHudManager() != null
-                && plugin.getHudManager().isRunHudHidden(playerId);
+        boolean hudHidden = hudManager != null && hudManager.isRunHudHidden(playerId);
         cmd.set("#HideHudIndicator.Visible", hudHidden);
         cmd.set("#ShowHudIndicator.Visible", !hudHidden);
     }

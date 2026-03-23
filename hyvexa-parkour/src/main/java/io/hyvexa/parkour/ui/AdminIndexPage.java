@@ -14,23 +14,13 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.parkour.data.MapStore;
-import io.hyvexa.parkour.data.MedalRewardStore;
-import io.hyvexa.parkour.data.PlayerCountStore;
-import io.hyvexa.parkour.data.ProgressStore;
-import io.hyvexa.parkour.data.SettingsStore;
 import com.hypixel.hytale.server.core.Message;
 
 import javax.annotation.Nonnull;
 
 public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.AdminIndexData> {
 
-    private final MapStore mapStore;
-    private final ProgressStore progressStore;
-    private final SettingsStore settingsStore;
-    private final PlayerCountStore playerCountStore;
-    private final MedalRewardStore medalRewardStore;
+    private final ParkourAdminNavigator navigator;
     private static final String BUTTON_MAPS = "Maps";
     private static final String BUTTON_PROGRESS = "Progress";
     private static final String BUTTON_SETTINGS = "Settings";
@@ -42,26 +32,9 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
     private static final String BUTTON_MEDAL_REWARDS = "MedalRewards";
     private String announcementInput = "";
 
-    public AdminIndexPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                 ProgressStore progressStore) {
-        this(playerRef, mapStore, progressStore, HyvexaPlugin.getInstance() != null
-                ? HyvexaPlugin.getInstance().getSettingsStore()
-                : null, HyvexaPlugin.getInstance() != null
-                ? HyvexaPlugin.getInstance().getPlayerCountStore()
-                : null, HyvexaPlugin.getInstance() != null
-                ? HyvexaPlugin.getInstance().getMedalRewardStore()
-                : null);
-    }
-
-    public AdminIndexPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                 ProgressStore progressStore, SettingsStore settingsStore,
-                                 PlayerCountStore playerCountStore, MedalRewardStore medalRewardStore) {
+    public AdminIndexPage(@Nonnull PlayerRef playerRef, ParkourAdminNavigator navigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, AdminIndexData.CODEC);
-        this.mapStore = mapStore;
-        this.progressStore = progressStore;
-        this.settingsStore = settingsStore;
-        this.playerCountStore = playerCountStore;
-        this.medalRewardStore = medalRewardStore;
+        this.navigator = navigator;
     }
 
     @Override
@@ -88,48 +61,41 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
             return;
         }
         if (BUTTON_MAPS.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store, new MapAdminPage(playerRef, mapStore));
+            player.getPageManager().openCustomPage(ref, store, navigator.createMapAdminPage(playerRef));
             return;
         }
         if (BUTTON_PROGRESS.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store, new ProgressAdminPage(playerRef, progressStore));
+            player.getPageManager().openCustomPage(ref, store, navigator.createProgressAdminPage(playerRef));
             return;
         }
         if (BUTTON_SETTINGS.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new SettingsAdminPage(playerRef, settingsStore, mapStore));
+            player.getPageManager().openCustomPage(ref, store, navigator.createSettingsAdminPage(playerRef));
             return;
         }
         if (BUTTON_PLAYERS.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new AdminPlayersPage(playerRef, mapStore, progressStore));
+            player.getPageManager().openCustomPage(ref, store, navigator.createPlayersPage(playerRef));
             return;
         }
         if (BUTTON_PLAYTIME.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store, new PlaytimeAdminPage(playerRef, progressStore));
+            player.getPageManager().openCustomPage(ref, store, navigator.createPlaytimePage(playerRef));
             return;
         }
         if (BUTTON_POPULATION.equals(data.button)) {
-            if (playerCountStore == null) {
+            PlayerCountAdminPage page = navigator.createPlayerCountPage(playerRef);
+            if (page == null) {
                 player.sendMessage(Message.raw("Population history unavailable."));
                 return;
             }
-            player.getPageManager().openCustomPage(ref, store, new PlayerCountAdminPage(playerRef, playerCountStore));
+            player.getPageManager().openCustomPage(ref, store, page);
             return;
         }
         if (BUTTON_MEDAL_REWARDS.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new MedalRewardAdminPage(playerRef, mapStore, progressStore, medalRewardStore));
+            player.getPageManager().openCustomPage(ref, store, navigator.createMedalRewardPage(playerRef));
             return;
         }
         if (BUTTON_GLOBAL_MESSAGES.equals(data.button)) {
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin == null) {
-                player.sendMessage(Message.raw("Global messages unavailable."));
-                return;
-            }
             player.getPageManager().openCustomPage(ref, store,
-                    new GlobalMessageAdminPage(playerRef, plugin.getGlobalMessageStore()));
+                    navigator.createGlobalMessageAdminPage(playerRef));
             return;
         }
         if (BUTTON_BROADCAST.equals(data.button)) {
@@ -137,12 +103,12 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 player.sendMessage(Message.raw("Enter a message to broadcast."));
                 return;
             }
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin == null) {
+            var broadcastFn = navigator.getBroadcastAnnouncement();
+            if (broadcastFn == null) {
                 player.sendMessage(Message.raw("Broadcast unavailable."));
                 return;
             }
-            plugin.broadcastAnnouncement(announcementInput, playerRef);
+            broadcastFn.accept(announcementInput, playerRef);
             announcementInput = "";
             sendRefresh();
         }

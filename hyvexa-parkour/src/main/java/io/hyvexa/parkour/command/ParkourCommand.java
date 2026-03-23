@@ -27,9 +27,9 @@ import io.hyvexa.parkour.data.PlayerCountStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.tracker.RunTracker;
-import io.hyvexa.parkour.ui.AdminIndexPage;
 import io.hyvexa.parkour.ui.CategorySelectPage;
 import io.hyvexa.parkour.ui.LeaderboardMenuPage;
+import io.hyvexa.parkour.ui.ParkourAdminNavigator;
 import io.hyvexa.parkour.ui.StatsPage;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.ModeGate;
@@ -55,11 +55,13 @@ public class ParkourCommand extends AbstractAsyncCommand {
     private final MedalRewardStore medalRewardStore;
     private final DuelTracker duelTracker;
     private final Consumer<Store<EntityStore>> leaderboardRefresher;
+    private final ParkourAdminNavigator adminNavigator;
 
     public ParkourCommand(MapStore mapStore, ProgressStore progressStore, SettingsStore settingsStore,
                           PlayerCountStore playerCountStore, RunTracker runTracker,
                           MedalStore medalStore, MedalRewardStore medalRewardStore,
-                          DuelTracker duelTracker, Consumer<Store<EntityStore>> leaderboardRefresher) {
+                          DuelTracker duelTracker, Consumer<Store<EntityStore>> leaderboardRefresher,
+                          ParkourAdminNavigator adminNavigator) {
         super("pk", "Open the parkour map list.");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -72,6 +74,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
         this.medalRewardStore = medalRewardStore;
         this.duelTracker = duelTracker;
         this.leaderboardRefresher = leaderboardRefresher;
+        this.adminNavigator = adminNavigator;
     }
 
     @Override
@@ -192,8 +195,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, settingsStore, playerCountStore,
-                        medalRewardStore));
+                adminNavigator.createIndexPage(playerRef));
     }
 
     private record ResolvedPlayer(UUID playerId, String name) {}
