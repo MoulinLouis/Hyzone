@@ -185,12 +185,15 @@ public class HyvexaPlugin extends JavaPlugin {
     private ScheduledFuture<?> duelTickTask;
     private ScheduledFuture<?> votePollingTask;
 
+    private VoteManager voteManager;
+    private PlayerSettingsPersistence playerSettingsPersistence;
     private RunStateStore runStateStore;
     private Thread shutdownHook;
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
     private PetManager petManager;
+    private io.hyvexa.core.trail.TrailManager trailManager;
     private final Map<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
     private final Map<World, AtomicBoolean> hudTickInFlight = new ConcurrentHashMap<>();
     private final Map<World, Set<UUID>> hudPlayersByWorld = new ConcurrentHashMap<>();
@@ -219,7 +222,10 @@ public class HyvexaPlugin extends JavaPlugin {
             DatabaseManager.getInstance().initialize();
             LOGGER.atInfo().log("Database connection initialized");
             ParkourDatabaseSetup.ensureTables();
-            new PlayerSettingsPersistence(DatabaseManager.getInstance()).ensureTable();
+            this.playerSettingsPersistence = new PlayerSettingsPersistence(DatabaseManager.getInstance());
+            this.playerSettingsPersistence.ensureTable();
+            PlayerSettingsStore.setPersistence(this.playerSettingsPersistence);
+            PlayerMusicPage.setPersistence(this.playerSettingsPersistence);
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
@@ -241,6 +247,7 @@ public class HyvexaPlugin extends JavaPlugin {
         initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
             VoteManager.getInstance().initialize(voteConfig, voteStore);
+            this.voteManager = VoteManager.getInstance();
         });
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore(DatabaseManager.getInstance());
@@ -285,6 +292,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.ghostNpcManager.start();
         this.petManager = new PetManager();
         this.petManager.start();
+        this.trailManager = TrailManager.getInstance();
         this.runTracker.setGhostRecorder(this.ghostRecorder);
         this.runTracker.setGhostNpcManager(this.ghostNpcManager);
         this.duelStatsStore = new DuelStatsStore(DatabaseManager.getInstance());
@@ -295,9 +303,9 @@ public class HyvexaPlugin extends JavaPlugin {
         this.duelPreferenceStore.syncLoad();
         this.duelQueue = new DuelQueue();
         this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, progressStore, settingsStore, analytics);
-        this.perksManager = new PlayerPerksManager(progressStore, mapStore);
+        this.perksManager = new PlayerPerksManager(progressStore, mapStore, playerSettingsPersistence);
         this.chatFormatter = new ChatFormatter(progressStore, mapStore, perksManager);
-        this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager);
+        this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager, playerSettingsPersistence);
         this.announcementManager = new AnnouncementManager(globalMessageStore, hudManager,
                 this::scheduleTick, this::cancelScheduled);
         this.playtimeManager = new PlaytimeManager(progressStore, playerCountStore);
@@ -313,7 +321,9 @@ public class HyvexaPlugin extends JavaPlugin {
                 ghostNpcManager, hudManager, this::hideRunHud, this::showRunHud,
                 this::applyVipSpeedMultiplier));
         this.runTracker.setDuelTracker(duelTracker);
-        this.runTracker.getValidator().setPluginServices(hudManager, this::invalidateRankCache,
+        this.runTracker.getValidator().setPluginServices(hudManager,
+                io.hyvexa.core.cosmetic.CosmeticManager.getInstance(),
+                this::invalidateRankCache,
                 this::refreshLeaderboardHologram, this::refreshMapLeaderboardHologram);
         this.progressStore.setRankCacheInvalidator(this::invalidateRankCache);
         registerRunTrackerTickSystem();
@@ -338,8 +348,8 @@ public class HyvexaPlugin extends JavaPlugin {
         duelTickTask = scheduleTick("duel tick", this::tickDuel,
                 ParkourTimingConstants.DUEL_TICK_INTERVAL_MS, ParkourTimingConstants.DUEL_TICK_INTERVAL_MS,
                 TimeUnit.MILLISECONDS);
-        int votePollInterval = VoteManager.getInstance().getPollIntervalSeconds();
-        votePollingTask = scheduleTick("vote polling", VoteManager.getInstance()::pollAllPlayers,
+        int votePollInterval = voteManager.getPollIntervalSeconds();
+        votePollingTask = scheduleTick("vote polling", voteManager::pollAllPlayers,
                 votePollInterval, votePollInterval, TimeUnit.SECONDS);
         announcementManager.refreshChatAnnouncements();
         scheduleLeaderboardHologramRefresh();
@@ -412,8 +422,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     PlayerSettingsPersistence.PlayerSettings savedSettings = null;
                     if (playerRef != null) {
                         UUID pid = playerRef.getUuid();
-                        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-                        savedSettings = persistence != null ? persistence.loadPlayer(pid) : null;
+                        savedSettings = playerSettingsPersistence != null ? playerSettingsPersistence.loadPlayer(pid) : null;
                         if (savedSettings != null) {
                             PlayerSettingsStore.loadFrom(pid, savedSettings);
                             PlayerMusicPage.loadFrom(pid, savedSettings);
@@ -510,9 +519,8 @@ public class HyvexaPlugin extends JavaPlugin {
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             cacheHudPlayer(playerRef);
             if (playerRef != null) {
-                PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-                PlayerSettingsPersistence.PlayerSettings ps = persistence != null
-                        ? persistence.loadPlayer(playerRef.getUuid()) : null;
+                PlayerSettingsPersistence.PlayerSettings ps = playerSettingsPersistence != null
+                        ? playerSettingsPersistence.loadPlayer(playerRef.getUuid()) : null;
                 if (ps != null) {
                     PlayerSettingsStore.loadFrom(playerRef.getUuid(), ps);
                     PlayerMusicPage.loadFrom(playerRef.getUuid(), ps);
@@ -569,13 +577,13 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { CosmeticStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore"); }
 
-                try { TrailManager.getInstance().stopTrail(playerId); }
+                try { if (trailManager != null) { trailManager.stopTrail(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: TrailManager"); }
 
                 try { if (petManager != null) { petManager.despawnPet(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PetManager"); }
 
-                try { VoteManager.getInstance().unregisterPlayer(playerId); }
+                try { if (voteManager != null) { voteManager.unregisterPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteManager"); }
 
                 try { if (voteStore != null) { voteStore.evictPlayer(playerId); } }
@@ -895,7 +903,7 @@ public class HyvexaPlugin extends JavaPlugin {
 
     private void scheduleVoteReadyTasks(Ref<EntityStore> ref, Store<EntityStore> store,
                                         PlayerRef playerRef) {
-        if (ref == null || store == null || playerRef == null) {
+        if (ref == null || store == null || playerRef == null || voteManager == null) {
             return;
         }
         UUID playerId = playerRef.getUuid();
@@ -907,15 +915,15 @@ public class HyvexaPlugin extends JavaPlugin {
         if (world == null) {
             return;
         }
-        VoteManager.getInstance().registerPlayer(playerId, username);
-        VoteManager.getInstance().checkAndRewardAsync(playerId)
+        voteManager.registerPlayer(playerId, username);
+        voteManager.checkAndRewardAsync(playerId)
                 .thenAcceptAsync(count -> {
                     if (count <= 0 || !ref.isValid()) {
                         return;
                     }
                     Player player = ref.getStore().getComponent(ref, Player.getComponentType());
                     if (player != null) {
-                        int total = count * VoteManager.getInstance().getRewardPerVote();
+                        int total = count * voteManager.getRewardPerVote();
                         String suffix = count > 1 ? " (x" + count + ")" : "";
                         player.sendMessage(Message.join(
                                 Message.raw("You received ").color("#a3e635"),
@@ -1355,7 +1363,7 @@ public class HyvexaPlugin extends JavaPlugin {
         shutdownSafe("teleportDebugTask", () -> cancelScheduled(teleportDebugTask));
         shutdownSafe("duelTickTask", () -> cancelScheduled(duelTickTask));
         shutdownSafe("votePollingTask", () -> cancelScheduled(votePollingTask));
-        shutdownSafe("VoteManager", () -> VoteManager.getInstance().shutdown());
+        shutdownSafe("VoteManager", () -> { if (voteManager != null) voteManager.shutdown(); });
         shutdownSafe("ghostRecorder", () -> { if (ghostRecorder != null) ghostRecorder.stop(); });
         shutdownSafe("ghostNpcManager", () -> { if (ghostNpcManager != null) ghostNpcManager.stop(); });
         shutdownSafe("petManager", () -> { if (petManager != null) petManager.stop(); });

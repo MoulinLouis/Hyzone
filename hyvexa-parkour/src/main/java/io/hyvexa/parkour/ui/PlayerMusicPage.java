@@ -48,6 +48,12 @@ public class PlayerMusicPage extends BaseParkourPage {
     private static final ConcurrentHashMap<UUID, Boolean> CHECKPOINT_SFX_ENABLED = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> VICTORY_SFX_ENABLED = new ConcurrentHashMap<>();
 
+    private static volatile PlayerSettingsPersistence persistence;
+
+    public static void setPersistence(PlayerSettingsPersistence persistence) {
+        PlayerMusicPage.persistence = persistence;
+    }
+
     public PlayerMusicPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
     }
@@ -366,11 +372,11 @@ public class PlayerMusicPage extends BaseParkourPage {
         if (playerId == null) {
             return;
         }
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
+        PlayerSettingsPersistence p = persistence;
+        if (p == null) {
             return;
         }
-        persistence.updateField(playerId, s -> {
+        p.updateField(playerId, s -> {
             s.musicLabel = MUSIC_LABELS.get(playerId);
             s.checkpointSfxEnabled = CHECKPOINT_SFX_ENABLED.getOrDefault(playerId, true);
             s.victorySfxEnabled = VICTORY_SFX_ENABLED.getOrDefault(playerId, true);

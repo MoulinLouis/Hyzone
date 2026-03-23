@@ -35,6 +35,7 @@ public class WardrobePlugin extends JavaPlugin {
     private EffectsShopTab effectsShopTab;
     private ShopConfigTab shopConfigTab;
     private PurgeSkinShopTab purgeSkinShopTab;
+    private CosmeticManager cosmeticManager;
 
     public WardrobePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -60,9 +61,13 @@ public class WardrobePlugin extends JavaPlugin {
                 () -> CosmeticShopConfigStore.getInstance().initialize()
         );
 
+        cosmeticManager = CosmeticManager.getInstance();
+        cosmeticManager.setTrailManager(io.hyvexa.core.trail.TrailManager.getInstance());
+        cosmeticManager.setModelParticleTrailManager(io.hyvexa.core.trail.ModelParticleTrailManager.getInstance());
+
         wardrobeShopTab = new WardrobeShopTab();
         ShopTabRegistry.register(wardrobeShopTab);
-        effectsShopTab = new EffectsShopTab();
+        effectsShopTab = new EffectsShopTab(cosmeticManager);
         ShopTabRegistry.register(effectsShopTab);
         purgeSkinShopTab = new PurgeSkinShopTab();
         ShopTabRegistry.register(purgeSkinShopTab);
@@ -85,7 +90,7 @@ public class WardrobePlugin extends JavaPlugin {
                 LOGGER.atWarning().withCause(e).log("Wardrobe permission re-grant failed");
             }
             try {
-                CosmeticManager.getInstance().reapplyOnLogin(ref, store);
+                cosmeticManager.reapplyOnLogin(ref, store);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Cosmetic reapply on login failed");
             }
@@ -100,7 +105,7 @@ public class WardrobePlugin extends JavaPlugin {
                     id -> shopConfigTab.evictPlayer(id),
                     id -> effectsShopTab.evictPlayer(id),
                     id -> { if (purgeSkinShopTab != null) purgeSkinShopTab.evictPlayer(id); },
-                    id -> CosmeticManager.getInstance().cleanupOnDisconnect(id),
+                    id -> cosmeticManager.cleanupOnDisconnect(id),
                     id -> CosmeticStore.getInstance().evictPlayer(id),
                     id -> VexaStore.getInstance().evictPlayer(id),
                     id -> FeatherStore.getInstance().evictPlayer(id),
@@ -115,7 +120,7 @@ public class WardrobePlugin extends JavaPlugin {
     protected void shutdown() {
         LOGGER.atInfo().log("Shutting down " + this.getName());
         try {
-            CosmeticManager.getInstance().shutdown();
+            cosmeticManager.shutdown();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Shutdown: CosmeticManager");
         }

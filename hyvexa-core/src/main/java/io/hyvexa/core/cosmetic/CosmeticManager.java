@@ -39,6 +39,9 @@ public class CosmeticManager {
     private static final long APPLY_DELAY_MS = 100;
     private static final long LOGIN_APPLY_DELAY_MS = 1000;
 
+    private TrailManager trailManager;
+    private ModelParticleTrailManager modelParticleTrailManager;
+
     /** Tracks active preview timers so we can cancel on disconnect. */
     private final ConcurrentHashMap<UUID, ScheduledFuture<?>> previewTimers = new ConcurrentHashMap<>();
 
@@ -53,6 +56,14 @@ public class CosmeticManager {
 
     public static CosmeticManager getInstance() {
         return INSTANCE;
+    }
+
+    public void setTrailManager(TrailManager trailManager) {
+        this.trailManager = trailManager;
+    }
+
+    public void setModelParticleTrailManager(ModelParticleTrailManager modelParticleTrailManager) {
+        this.modelParticleTrailManager = modelParticleTrailManager;
     }
 
     /**
@@ -231,8 +242,8 @@ public class CosmeticManager {
         if (playerId == null) return;
         cancelPreviewTimer(playerId);
         pendingCosmeticId.remove(playerId);
-        TrailManager.getInstance().stopTrail(playerId);
-        ModelParticleTrailManager.getInstance().stopTrail(playerId);
+        trailManager.stopTrail(playerId);
+        modelParticleTrailManager.stopTrail(playerId);
     }
 
     /**
@@ -244,8 +255,8 @@ public class CosmeticManager {
         }
         previewTimers.clear();
         pendingCosmeticId.clear();
-        TrailManager.getInstance().shutdown();
-        ModelParticleTrailManager.getInstance().shutdown();
+        trailManager.shutdown();
+        modelParticleTrailManager.shutdown();
     }
 
     private void applyDefinition(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
@@ -265,7 +276,7 @@ public class CosmeticManager {
             case MODEL_PARTICLE_TRAIL -> {
                 World world = store.getExternalData().getWorld();
                 if (world == null) return;
-                ModelParticleTrailManager.getInstance().startTrail(playerRef.getUuid(), ref, store, world,
+                modelParticleTrailManager.startTrail(playerRef.getUuid(), ref, store, world,
                         def.getParticleId(), def.getScale(), def.getIntervalMs(),
                         def.getXOffset(), def.getYOffset(), def.getZOffset());
             }
@@ -280,7 +291,7 @@ public class CosmeticManager {
         String finalParticleId = resolvedParticleId != null ? resolvedParticleId : particleId;
         World world = store.getExternalData().getWorld();
         if (world == null) return;
-        TrailManager.getInstance().startTrail(playerRef.getUuid(), ref, store, world,
+        trailManager.startTrail(playerRef.getUuid(), ref, store, world,
                 finalParticleId, scale, intervalMs);
     }
 
@@ -302,8 +313,8 @@ public class CosmeticManager {
         }
 
         if (playerId != null) {
-            TrailManager.getInstance().stopTrail(playerId);
-            ModelParticleTrailManager.getInstance().stopTrail(playerId);
+            trailManager.stopTrail(playerId);
+            modelParticleTrailManager.stopTrail(playerId);
         }
     }
 

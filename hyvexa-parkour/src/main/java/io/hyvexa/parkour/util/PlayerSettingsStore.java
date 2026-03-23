@@ -13,7 +13,13 @@ public final class PlayerSettingsStore {
     private static final ConcurrentHashMap<UUID, Boolean> PLAYERS_HIDDEN = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> ADVANCED_HUD_ENABLED = new ConcurrentHashMap<>();
 
+    private static volatile PlayerSettingsPersistence persistence;
+
     private PlayerSettingsStore() {
+    }
+
+    public static void setPersistence(PlayerSettingsPersistence persistence) {
+        PlayerSettingsStore.persistence = persistence;
     }
 
     /**
@@ -131,10 +137,10 @@ public final class PlayerSettingsStore {
     }
 
     private static void persistField(UUID playerId, java.util.function.Consumer<PlayerSettingsPersistence.PlayerSettings> updater) {
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
+        PlayerSettingsPersistence p = persistence;
+        if (p == null) {
             return;
         }
-        persistence.updateField(playerId, updater);
+        p.updateField(playerId, updater);
     }
 }

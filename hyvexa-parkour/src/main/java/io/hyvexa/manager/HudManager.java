@@ -44,14 +44,16 @@ public class HudManager {
     private final RunTracker runTracker;
     private final DuelTracker duelTracker;
     private final PlayerPerksManager perksManager;
+    private final PlayerSettingsPersistence playerSettingsPersistence;
 
     public HudManager(ProgressStore progressStore, MapStore mapStore, RunTracker runTracker, DuelTracker duelTracker,
-                      PlayerPerksManager perksManager) {
+                      PlayerPerksManager perksManager, PlayerSettingsPersistence playerSettingsPersistence) {
         this.progressStore = progressStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
         this.duelTracker = duelTracker;
         this.perksManager = perksManager;
+        this.playerSettingsPersistence = playerSettingsPersistence;
     }
 
     private PlayerHudState getState(UUID playerId) {
@@ -680,10 +682,9 @@ public class HudManager {
     }
 
     private void persistHudHidden(UUID playerId, boolean hidden) {
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
+        if (playerSettingsPersistence == null) {
             return;
         }
-        persistence.updateField(playerId, s -> s.hudHidden = hidden);
+        playerSettingsPersistence.updateField(playerId, s -> s.hudHidden = hidden);
     }
 }
