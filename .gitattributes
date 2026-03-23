@@ -1,23 +1,14 @@
-# Normalize line endings to LF in the repo, auto-convert on checkout
-* text=auto
-
-# Force LF for source files
-*.java text eol=lf
-*.ui text eol=lf
-*.json text eol=lf
-*.md text eol=lf
-*.xml text eol=lf
-*.gradle text eol=lf
-*.properties text eol=lf
-*.js text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
-
-# Binary files
-*.jar binary
-
-# Track large JARs in libs/ with Git LFS
-libs/*.jar filter=lfs diff=lfs merge=lfs -text
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
 *.png binary
 *.jpg binary
 *.gif binary
+*.ogg binary
+*.wav binary
+*.mp3 binary
+*.jar binary
+*.enc binary
+
+# Track large JARs in libs/ with Git LFS
+libs/*.jar filter=lfs diff=lfs merge=lfs -text
