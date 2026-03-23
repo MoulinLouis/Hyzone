@@ -1674,7 +1674,7 @@ public class RunOrFallGameManager {
         // Drain any previously pending rewards for this player
         Long pending = pendingFeatherRewards.remove(playerId);
         if (pending != null && pending > 0L) {
-            if (RunOrFallFeatherBridge.addFeathers(playerId, pending)) {
+            if (featherBridge.addFeathers(playerId, pending)) {
                 sendFeatherGainMessage(playerId, amount + pending, reason + " (includes pending)");
                 return;
             }
