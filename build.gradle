@@ -3,7 +3,7 @@ plugins {
 }
 
 ext {
-    hytaleHome = "${System.getProperty("user.home")}/AppData/Roaming/Hytale"
+    hytaleHome = project.findProperty('hytaleHome') ?: "${System.getProperty("user.home")}/AppData/Roaming/Hytale"
 
     // Resolve HytaleServer.jar: prefer local Hytale install, fall back to libs/ for CI.
     def localJar = file("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
@@ -37,7 +37,9 @@ subprojects {
 
 tasks.register('stagePlugins', Copy) {
     dependsOn ':hyvexa-parkour:jar', ':hyvexa-hub:jar', ':hyvexa-parkour-ascend:jar', ':hyvexa-purge:jar', ':hyvexa-runorfall:jar', ':hyvexa-wardrobe:jar', ':hyvexa-votifier:jar'
-    def modsDir = rootProject.file("run/mods")
+    def modsDir = project.hasProperty('stageModsDir')
+            ? file(project.stageModsDir)
+            : rootProject.file("run/mods")
     if (!modsDir.exists()) {
         modsDir.mkdirs()
     }
