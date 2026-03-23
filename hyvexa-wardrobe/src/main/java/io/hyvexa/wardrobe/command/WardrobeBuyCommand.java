@@ -22,8 +22,11 @@ import java.util.stream.Collectors;
  */
 public class WardrobeBuyCommand extends AbstractAsyncCommand {
 
-    public WardrobeBuyCommand() {
+    private final WardrobeBridge wardrobeBridge;
+
+    public WardrobeBuyCommand(WardrobeBridge wardrobeBridge) {
         super("wbuy", "Buy a wardrobe cosmetic.");
+        this.wardrobeBridge = wardrobeBridge;
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -41,7 +44,7 @@ public class WardrobeBuyCommand extends AbstractAsyncCommand {
 
         String[] args = CommandUtils.tokenize(ctx);
         if (args.length == 0) {
-            String available = WardrobeBridge.getInstance().getAllCosmetics().stream()
+            String available = wardrobeBridge.getAllCosmetics().stream()
                     .map(WardrobeBridge.WardrobeCosmeticDef::id)
                     .collect(Collectors.joining(", "));
             player.sendMessage(Message.raw("[Wardrobe] Available: " + available)
@@ -52,7 +55,7 @@ public class WardrobeBuyCommand extends AbstractAsyncCommand {
         }
 
         String cosmeticId = args[0];
-        WardrobeBridge.PurchaseResult result = WardrobeBridge.getInstance().purchase(playerRef.getUuid(), cosmeticId);
+        WardrobeBridge.PurchaseResult result = wardrobeBridge.purchase(playerRef.getUuid(), cosmeticId);
         String color = result.success() ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
         player.sendMessage(Message.raw("[Wardrobe] " + result.message()).color(color));
 

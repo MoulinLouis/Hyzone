@@ -96,6 +96,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
     private PurgeUpgradeManager upgradeManager;
     private PurgeClassManager classManager;
     private WeaponXpManager weaponXpManager;
+    private PurgeSkinStore purgeSkinStore;
 
     public HyvexaPurgePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -144,7 +145,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
                 () -> PurgeScrapStore.getInstance().initialize(),
                 // PurgePlayerStore: no init needed (BasePlayerStore handles lazy loading)
                 () -> PurgeWeaponUpgradeStore.getInstance().initialize(),
-                () -> PurgeSkinStore.getInstance().initialize(),
+                () -> { purgeSkinStore = PurgeSkinStore.getInstance(); purgeSkinStore.initialize(); },
                 () -> WeaponXpStore.getInstance().initialize(),
                 () -> PurgeClassStore.getInstance().initialize(),
                 () -> PurgeMissionStore.getInstance().initialize()
@@ -181,13 +182,13 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
 
         // Register commands
         this.getCommandRegistry().registerCommand(
-                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager, this));
+                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager, this, purgeSkinStore));
         this.getCommandRegistry().registerCommand(new SetAmmoCommand());
         this.getCommandRegistry().registerCommand(new CamTestCommand());
 
         // Configure interaction bridge for codec-instantiated handlers
         PurgeInteractionBridge.configure(new PurgeInteractionBridge.Services(
-                sessionManager, partyManager, weaponConfigManager, this));
+                sessionManager, partyManager, weaponConfigManager, this, purgeSkinStore));
 
         // Register item interaction codecs
         registerInteractionCodecs();
@@ -485,7 +486,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
         if (playerId == null) {
             return weaponId;
         }
-        String skinId = PurgeSkinStore.getInstance().getSelectedSkin(playerId, weaponId);
+        String skinId = purgeSkinStore != null ? purgeSkinStore.getSelectedSkin(playerId, weaponId) : null;
         if (skinId != null) {
             return PurgeSkinRegistry.getSkinnedItemId(weaponId, skinId);
         }

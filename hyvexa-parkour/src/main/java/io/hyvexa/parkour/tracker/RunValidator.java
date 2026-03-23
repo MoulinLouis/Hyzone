@@ -51,6 +51,7 @@ public class RunValidator {
     private GhostNpcManager ghostNpcManager;
     private io.hyvexa.manager.HudManager hudManager;
     private io.hyvexa.core.cosmetic.CosmeticManager cosmeticManager;
+    private DiscordLinkStore discordLinkStore;
     private java.util.function.Consumer<UUID> rankCacheInvalidator;
     private java.util.function.Consumer<Store<EntityStore>> leaderboardHologramRefresher;
     private java.util.function.BiConsumer<String, Store<EntityStore>> mapLeaderboardHologramRefresher;
@@ -65,11 +66,13 @@ public class RunValidator {
 
     public void setPluginServices(io.hyvexa.manager.HudManager hudManager,
                            io.hyvexa.core.cosmetic.CosmeticManager cosmeticManager,
+                           DiscordLinkStore discordLinkStore,
                            java.util.function.Consumer<UUID> rankCacheInvalidator,
                            java.util.function.Consumer<Store<EntityStore>> leaderboardHologramRefresher,
                            java.util.function.BiConsumer<String, Store<EntityStore>> mapLeaderboardHologramRefresher) {
         this.hudManager = hudManager;
         this.cosmeticManager = cosmeticManager;
+        this.discordLinkStore = discordLinkStore;
         this.rankCacheInvalidator = rankCacheInvalidator;
         this.leaderboardHologramRefresher = leaderboardHologramRefresher;
         this.mapLeaderboardHologramRefresher = mapLeaderboardHologramRefresher;
@@ -263,11 +266,13 @@ public class RunValidator {
             }
             String rankName = progressStore.getRankName(playerId, mapStore);
             player.sendMessage(SystemMessageUtils.parkourSuccess("Rank up! You are now " + rankName + "."));
-            DiscordLinkStore.getInstance().updateRankIfLinkedAsync(playerId, rankName)
-                    .exceptionally(ex -> {
-                        LOGGER.atWarning().withCause(ex).log("Discord rank sync failed for " + playerId);
-                        return null;
-                    });
+            if (discordLinkStore != null) {
+                discordLinkStore.updateRankIfLinkedAsync(playerId, rankName)
+                        .exceptionally(ex -> {
+                            LOGGER.atWarning().withCause(ex).log("Discord rank sync failed for " + playerId);
+                            return null;
+                        });
+            }
         }
         return newRank;
     }

@@ -36,6 +36,9 @@ public class WardrobePlugin extends JavaPlugin {
     private ShopConfigTab shopConfigTab;
     private PurgeSkinShopTab purgeSkinShopTab;
     private CosmeticManager cosmeticManager;
+    private WardrobeBridge wardrobeBridge;
+    private CosmeticStore cosmeticStore;
+    private CosmeticShopConfigStore cosmeticShopConfigStore;
 
     public WardrobePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -50,7 +53,8 @@ public class WardrobePlugin extends JavaPlugin {
     protected void setup() {
         LOGGER.atInfo().log("Setting up " + this.getName());
 
-        WardrobeBridge.getInstance().initialize();
+        wardrobeBridge = WardrobeBridge.getInstance();
+        wardrobeBridge.initialize();
 
         StoreInitializer.initialize(LOGGER,
                 () -> DatabaseManager.getInstance().initialize(),
@@ -61,22 +65,28 @@ public class WardrobePlugin extends JavaPlugin {
                 () -> CosmeticShopConfigStore.getInstance().initialize()
         );
 
+        cosmeticStore = CosmeticStore.getInstance();
+        cosmeticShopConfigStore = CosmeticShopConfigStore.getInstance();
+
+        wardrobeBridge.setCosmeticStore(cosmeticStore);
+        wardrobeBridge.setCosmeticShopConfigStore(cosmeticShopConfigStore);
+
         cosmeticManager = CosmeticManager.getInstance();
         cosmeticManager.setTrailManager(io.hyvexa.core.trail.TrailManager.getInstance());
         cosmeticManager.setModelParticleTrailManager(io.hyvexa.core.trail.ModelParticleTrailManager.getInstance());
 
-        wardrobeShopTab = new WardrobeShopTab();
+        wardrobeShopTab = new WardrobeShopTab(wardrobeBridge, cosmeticStore, cosmeticShopConfigStore);
         ShopTabRegistry.register(wardrobeShopTab);
-        effectsShopTab = new EffectsShopTab(cosmeticManager);
+        effectsShopTab = new EffectsShopTab(cosmeticManager, cosmeticStore);
         ShopTabRegistry.register(effectsShopTab);
-        purgeSkinShopTab = new PurgeSkinShopTab();
+        purgeSkinShopTab = new PurgeSkinShopTab(PurgeSkinStore.getInstance());
         ShopTabRegistry.register(purgeSkinShopTab);
-        shopConfigTab = new ShopConfigTab();
+        shopConfigTab = new ShopConfigTab(wardrobeBridge, cosmeticShopConfigStore);
         ShopTabRegistry.register(shopConfigTab);
 
         this.getCommandRegistry().registerCommand(new ShopCommand());
-        this.getCommandRegistry().registerCommand(new WardrobeBuyCommand());
-        this.getCommandRegistry().registerCommand(new WardrobeResetCommand());
+        this.getCommandRegistry().registerCommand(new WardrobeBuyCommand(wardrobeBridge));
+        this.getCommandRegistry().registerCommand(new WardrobeResetCommand(wardrobeBridge));
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             Ref<EntityStore> ref = event.getPlayerRef();
@@ -85,7 +95,7 @@ public class WardrobePlugin extends JavaPlugin {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef == null) return;
             try {
-                WardrobeBridge.getInstance().regrantPermissions(playerRef.getUuid());
+                wardrobeBridge.regrantPermissions(playerRef.getUuid());
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Wardrobe permission re-grant failed");
             }
@@ -106,7 +116,7 @@ public class WardrobePlugin extends JavaPlugin {
                     id -> effectsShopTab.evictPlayer(id),
                     id -> { if (purgeSkinShopTab != null) purgeSkinShopTab.evictPlayer(id); },
                     id -> cosmeticManager.cleanupOnDisconnect(id),
-                    id -> CosmeticStore.getInstance().evictPlayer(id),
+                    id -> cosmeticStore.evictPlayer(id),
                     id -> VexaStore.getInstance().evictPlayer(id),
                     id -> FeatherStore.getInstance().evictPlayer(id),
                     id -> PurgeSkinStore.getInstance().evictPlayer(id)

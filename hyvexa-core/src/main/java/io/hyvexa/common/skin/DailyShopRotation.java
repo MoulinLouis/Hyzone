@@ -16,9 +16,8 @@ public final class DailyShopRotation {
 
     private DailyShopRotation() {}
 
-    public static List<PurgeSkinDefinition> getRotation(UUID playerId) {
+    public static List<PurgeSkinDefinition> getRotation(UUID playerId, PurgeSkinStore skinStore) {
         List<PurgeSkinDefinition> all = PurgeSkinRegistry.getAllSkins();
-        PurgeSkinStore skinStore = PurgeSkinStore.getInstance();
 
         // Filter out owned skins
         List<PurgeSkinDefinition> unowned = new ArrayList<>();

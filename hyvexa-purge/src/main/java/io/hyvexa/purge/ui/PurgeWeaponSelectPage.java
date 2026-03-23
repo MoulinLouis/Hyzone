@@ -73,6 +73,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeSessionManager sessionManager;
     private final PurgeLoadoutService loadoutService;
+    private final PurgeSkinStore purgeSkinStore;
 
     // Track selected weapon for inline detail panel
     private String selectedWeaponId;
@@ -89,7 +90,8 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                                  PurgeInstanceManager instanceManager,
                                  PurgeVariantConfigManager variantConfigManager,
                                  PurgeSessionManager sessionManager,
-                                 PurgeLoadoutService loadoutService) {
+                                 PurgeLoadoutService loadoutService,
+                                 PurgeSkinStore purgeSkinStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWeaponSelectData.CODEC);
         this.mode = mode;
         this.playerId = playerId;
@@ -99,6 +101,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         this.variantConfigManager = variantConfigManager;
         this.sessionManager = sessionManager;
         this.loadoutService = loadoutService;
+        this.purgeSkinStore = purgeSkinStore;
     }
 
     @Override
@@ -167,7 +170,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
+                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore));
             }
         } else {
             close();
@@ -206,7 +209,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                 return;
             }
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeWeaponAdminPage(playerRef, weaponId, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager));
+                    new PurgeWeaponAdminPage(playerRef, weaponId, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager, purgeSkinStore));
         } else {
             // PLAYER/LOADOUT mode: toggle inline detail panel
             if (weaponId.equals(this.selectedWeaponId)) {
@@ -232,7 +235,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         }
         String displayName = weaponConfigManager.getDisplayName(selectedWeaponId);
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeSkinSelectPage(playerRef, playerId, selectedWeaponId, displayName));
+                new PurgeSkinSelectPage(playerRef, playerId, selectedWeaponId, displayName, purgeSkinStore));
     }
 
     private void handleCloseDetail() {
@@ -357,7 +360,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         boolean hasSkins = PurgeSkinRegistry.hasAnySkins(selectedWeaponId);
         commandBuilder.set("#SkinsButton.Visible", hasSkins);
         if (hasSkins) {
-            String selectedSkin = PurgeSkinStore.getInstance().getSelectedSkin(playerId, selectedWeaponId);
+            String selectedSkin = purgeSkinStore.getSelectedSkin(playerId, selectedWeaponId);
             String skinLabel = selectedSkin != null ? "Skin: " + selectedSkin : "Skins";
             commandBuilder.set("#SkinsButton.Text", skinLabel);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SkinsButton",

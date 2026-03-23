@@ -20,10 +20,13 @@ import java.util.concurrent.CompletableFuture;
 
 public class UnlinkCommand extends AbstractAsyncCommand {
 
-    public UnlinkCommand() {
+    private final DiscordLinkStore discordLinkStore;
+
+    public UnlinkCommand(DiscordLinkStore discordLinkStore) {
         super("unlink", "Unlink a player's Discord account (OP only)");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
+        this.discordLinkStore = discordLinkStore;
     }
 
     @Override
@@ -62,7 +65,7 @@ public class UnlinkCommand extends AbstractAsyncCommand {
             return;
         }
 
-        boolean removed = DiscordLinkStore.getInstance().unlinkPlayer(targetRef.getUuid());
+        boolean removed = discordLinkStore.unlinkPlayer(targetRef.getUuid());
         if (removed) {
             player.sendMessage(Message.raw("Unlinked " + targetName + "'s Discord account.").color("#a3e635"));
         } else {

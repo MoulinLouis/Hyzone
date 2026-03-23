@@ -34,12 +34,14 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
     private static final String PREFIX_BUY = "Buy:";
 
     private final UUID playerId;
+    private final PurgeSkinStore purgeSkinStore;
     // Pending buy confirmation — stores "weaponId:skinId" while confirm overlay is shown
     private String pendingBuyKey;
 
-    public PurgeSkinShopPage(@Nonnull PlayerRef playerRef, UUID playerId) {
+    public PurgeSkinShopPage(@Nonnull PlayerRef playerRef, UUID playerId, PurgeSkinStore purgeSkinStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, SkinShopEventData.CODEC);
         this.playerId = playerId;
+        this.purgeSkinStore = purgeSkinStore;
     }
 
     @Override
@@ -99,7 +101,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         String skinId = parts[1];
 
         Player player = store.getComponent(ref, Player.getComponentType());
-        PurgeSkinStore.PurchaseResult result = PurgeSkinStore.getInstance().purchaseSkin(playerId, weaponId, skinId);
+        PurgeSkinStore.PurchaseResult result = purgeSkinStore.purchaseSkin(playerId, weaponId, skinId);
 
         PurgeSkinDefinition def = PurgeSkinRegistry.getSkin(weaponId, skinId);
         String name = def != null ? def.getDisplayName() : skinId;
@@ -168,7 +170,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         commandBuilder.set("#Title.Text", "Daily Shop");
         commandBuilder.set("#BackButton.Text", "Close");
 
-        List<PurgeSkinDefinition> rotation = DailyShopRotation.getRotation(playerId);
+        List<PurgeSkinDefinition> rotation = DailyShopRotation.getRotation(playerId, purgeSkinStore);
 
         if (rotation.isEmpty()) {
             commandBuilder.set("#Subtitle.Text", "You own all skins!");

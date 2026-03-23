@@ -20,8 +20,11 @@ import java.util.concurrent.CompletableFuture;
  */
 public class WardrobeResetCommand extends AbstractAsyncCommand {
 
-    public WardrobeResetCommand() {
+    private final WardrobeBridge wardrobeBridge;
+
+    public WardrobeResetCommand(WardrobeBridge wardrobeBridge) {
         super("wreset", "Reset all owned wardrobe cosmetics.");
+        this.wardrobeBridge = wardrobeBridge;
         this.setPermissionGroup(GameMode.Adventure);
     }
 
@@ -41,7 +44,7 @@ public class WardrobeResetCommand extends AbstractAsyncCommand {
         PlayerRef playerRef = player.getPlayerRef();
         if (playerRef == null) return CompletableFuture.completedFuture(null);
 
-        WardrobeBridge.getInstance().resetAll(playerRef.getUuid());
+        wardrobeBridge.resetAll(playerRef.getUuid());
         player.sendMessage(Message.raw("[Wardrobe] All cosmetics reset. Permissions revoked.")
                 .color(SystemMessageUtils.SUCCESS));
 

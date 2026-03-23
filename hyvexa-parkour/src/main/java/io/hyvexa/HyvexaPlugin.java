@@ -193,6 +193,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
     private PetManager petManager;
+    private DiscordLinkStore discordLinkStore;
     private io.hyvexa.core.trail.TrailManager trailManager;
     private final Map<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
     private final Map<World, AtomicBoolean> hudTickInFlight = new ConcurrentHashMap<>();
@@ -233,7 +234,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.medalRewardStore = new MedalRewardStore(DatabaseManager.getInstance());
         this.medalStore = new MedalStore(DatabaseManager.getInstance());
         initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
-        initSafe("DiscordLinkStore", () -> DiscordLinkStore.getInstance().initialize());
+        this.discordLinkStore = DiscordLinkStore.getInstance();
+        initSafe("DiscordLinkStore", () -> discordLinkStore.initialize());
         initSafe("FeatherStore", () -> FeatherStore.getInstance().initialize());
         initSafe("VoteStore", () -> voteStore.initialize());
         initSafe("MedalRewardStore", () -> medalRewardStore.initialize());
@@ -257,7 +259,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.settingsStore.syncLoad();
         PlayerAnalytics analytics = analyticsStore;
         CosmeticStore.getInstance().setAnalytics(analytics);
-        DiscordLinkStore.getInstance().setAnalytics(analytics);
+        discordLinkStore.setAnalytics(analytics);
         WardrobeBridge.getInstance().setAnalytics(analytics);
         this.progressStore = new ProgressStore(DatabaseManager.getInstance());
         this.progressStore.setAnalytics(analytics);
@@ -323,6 +325,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.runTracker.setDuelTracker(duelTracker);
         this.runTracker.getValidator().setPluginServices(hudManager,
                 io.hyvexa.core.cosmetic.CosmeticManager.getInstance(),
+                discordLinkStore,
                 this::invalidateRankCache,
                 this::refreshLeaderboardHologram, this::refreshMapLeaderboardHologram);
         this.progressStore.setRankCacheInvalidator(this::invalidateRankCache);
@@ -379,8 +382,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new MessageTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker, this.mapStore));
         this.getCommandRegistry().registerCommand(new VexaCommand());
-        this.getCommandRegistry().registerCommand(new LinkCommand());
-        this.getCommandRegistry().registerCommand(new UnlinkCommand());
+        this.getCommandRegistry().registerCommand(new LinkCommand(discordLinkStore));
+        this.getCommandRegistry().registerCommand(new UnlinkCommand(discordLinkStore));
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new PetTestCommand());
         this.getCommandRegistry().registerCommand(new MobGalleryCommand());
@@ -571,7 +574,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { if (medalStore != null) { medalStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MedalStore"); }
 
-                try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
+                try { if (discordLinkStore != null) { discordLinkStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
 
                 try { CosmeticStore.getInstance().evictPlayer(playerId); }
@@ -872,8 +875,10 @@ public class HyvexaPlugin extends JavaPlugin {
         if (playerId == null || world == null) {
             return;
         }
-        DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
-        linkStore.checkAndRewardVexaOnLoginAsync(playerId)
+        if (discordLinkStore == null) {
+            return;
+        }
+        discordLinkStore.checkAndRewardVexaOnLoginAsync(playerId)
                 .thenAcceptAsync(rewarded -> {
                     if (!rewarded || !ref.isValid()) {
                         return;
@@ -883,7 +888,7 @@ public class HyvexaPlugin extends JavaPlugin {
                             ? currentStore.getComponent(ref, Player.getComponentType())
                             : null;
                     if (player != null) {
-                        linkStore.sendRewardGrantedMessage(player);
+                        discordLinkStore.sendRewardGrantedMessage(player);
                     }
                 }, world)
                 .exceptionally(ex -> {
@@ -894,7 +899,7 @@ public class HyvexaPlugin extends JavaPlugin {
             return;
         }
         String rank = progressStore.getRankName(playerId, mapStore);
-        linkStore.updateRankIfLinkedAsync(playerId, rank)
+        discordLinkStore.updateRankIfLinkedAsync(playerId, rank)
                 .exceptionally(ex -> {
                     LOGGER.atWarning().withCause(ex).log("Discord rank sync failed");
                     return null;

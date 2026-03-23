@@ -26,14 +26,15 @@ public final class PurgeAdminUtils {
                                        PurgeWaveConfigManager waveConfigManager,
                                        PurgeInstanceManager instanceManager,
                                        PurgeWeaponConfigManager weaponConfigManager,
-                                       PurgeVariantConfigManager variantConfigManager) {
+                                       PurgeVariantConfigManager variantConfigManager,
+                                       io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore));
     }
 
     /**

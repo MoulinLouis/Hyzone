@@ -24,6 +24,12 @@ import java.util.UUID;
 
 public class PurgeSkinShopTab implements ShopTab {
 
+    private final PurgeSkinStore purgeSkinStore;
+
+    public PurgeSkinShopTab(PurgeSkinStore purgeSkinStore) {
+        this.purgeSkinStore = purgeSkinStore;
+    }
+
     private static final String ACTION_BUY = "Buy:";
 
     private static final List<String> PREVIEW_IDS = List.of(
@@ -57,7 +63,7 @@ public class PurgeSkinShopTab implements ShopTab {
 
     @Override
     public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
-        List<PurgeSkinDefinition> rotation = DailyShopRotation.getRotation(playerId);
+        List<PurgeSkinDefinition> rotation = DailyShopRotation.getRotation(playerId, purgeSkinStore);
 
         if (rotation.isEmpty()) {
             cmd.append("#TabContent", "Pages/Shop_EmptyLabel.ui");
@@ -138,7 +144,7 @@ public class PurgeSkinShopTab implements ShopTab {
         String weaponId = parts[0];
         String skinId = parts[1];
 
-        PurgeSkinStore.PurchaseResult result = PurgeSkinStore.getInstance().purchaseSkin(playerId, weaponId, skinId);
+        PurgeSkinStore.PurchaseResult result = purgeSkinStore.purchaseSkin(playerId, weaponId, skinId);
         PurgeSkinDefinition def = PurgeSkinRegistry.getSkin(weaponId, skinId);
         String name = def != null ? def.getDisplayName() : skinId;
 

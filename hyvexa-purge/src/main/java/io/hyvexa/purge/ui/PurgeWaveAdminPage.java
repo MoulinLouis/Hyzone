@@ -37,17 +37,20 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeInstanceManager instanceManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
+    private final io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore;
 
     public PurgeWaveAdminPage(@Nonnull PlayerRef playerRef,
                               PurgeWaveConfigManager waveConfigManager,
                               PurgeVariantConfigManager variantConfigManager,
                               PurgeInstanceManager instanceManager,
-                              PurgeWeaponConfigManager weaponConfigManager) {
+                              PurgeWeaponConfigManager weaponConfigManager,
+                              io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWaveAdminData.CODEC);
         this.waveConfigManager = waveConfigManager;
         this.variantConfigManager = variantConfigManager;
         this.instanceManager = instanceManager;
         this.weaponConfigManager = weaponConfigManager;
+        this.purgeSkinStore = purgeSkinStore;
     }
 
     @Override
@@ -191,7 +194,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        PurgeAdminUtils.openAdminIndex(ref, store, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager);
+        PurgeAdminUtils.openAdminIndex(ref, store, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore);
     }
 
     private void sendRefresh() {
