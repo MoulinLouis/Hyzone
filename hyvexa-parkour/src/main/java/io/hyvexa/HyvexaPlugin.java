@@ -77,6 +77,7 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
+import io.hyvexa.common.skin.PurgeSkinStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.CosmeticTestCommand;
 import io.hyvexa.parkour.command.PetTestCommand;
@@ -240,7 +241,7 @@ public class HyvexaPlugin extends JavaPlugin {
         });
         initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
-            VoteManager.getInstance().initialize(voteConfig, voteStore);
+            VoteManager.getInstance().initialize(voteConfig, voteStore, FeatherStore.getInstance());
         });
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
@@ -251,7 +252,10 @@ public class HyvexaPlugin extends JavaPlugin {
         PlayerAnalytics analytics = analyticsStore;
         CosmeticStore.getInstance().setAnalytics(analytics);
         DiscordLinkStore.getInstance().setAnalytics(analytics);
+        DiscordLinkStore.getInstance().setVexaStore(VexaStore.getInstance());
         WardrobeBridge.getInstance().setAnalytics(analytics);
+        WardrobeBridge.getInstance().setCurrencyStores(VexaStore.getInstance(), FeatherStore.getInstance());
+        PurgeSkinStore.getInstance().setVexaStore(VexaStore.getInstance());
         this.progressStore = new ProgressStore();
         this.progressStore.setAnalytics(analytics);
         this.progressStore.syncLoad();

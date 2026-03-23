@@ -3,7 +3,7 @@ package io.hyvexa.common.skin;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyStore;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -32,9 +32,14 @@ public class PurgeSkinStore {
     }
 
     private final ConnectionProvider db;
+    private volatile CurrencyStore vexaStore;
 
     private PurgeSkinStore() {
         this.db = DatabaseManager.getInstance();
+    }
+
+    public void setVexaStore(CurrencyStore vexaStore) {
+        this.vexaStore = vexaStore;
     }
 
     public static PurgeSkinStore getInstance() {
@@ -112,11 +117,11 @@ public class PurgeSkinStore {
         if (def == null) {
             return PurchaseResult.NOT_ENOUGH_VEXA;
         }
-        long vexa = VexaStore.getInstance().getVexa(playerId);
+        long vexa = vexaStore.getBalance(playerId);
         if (vexa < def.getPrice()) {
             return PurchaseResult.NOT_ENOUGH_VEXA;
         }
-        VexaStore.getInstance().removeVexa(playerId, def.getPrice());
+        vexaStore.removeBalance(playerId, def.getPrice());
         persistPurchase(playerId, weaponId, skinId);
         // Update cache
         ownedCache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())

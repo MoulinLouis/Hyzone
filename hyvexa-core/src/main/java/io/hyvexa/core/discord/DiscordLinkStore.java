@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyStore;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -38,6 +38,7 @@ public class DiscordLinkStore {
     private final ConcurrentHashMap<UUID, Boolean> rewardCheckedThisSession = new ConcurrentHashMap<>();
     private final ConnectionProvider db;
     private volatile PlayerAnalytics analytics;
+    private volatile CurrencyStore vexaStore;
 
     private DiscordLinkStore() {
         this.db = DatabaseManager.getInstance();
@@ -49,6 +50,10 @@ public class DiscordLinkStore {
 
     public void setAnalytics(PlayerAnalytics analytics) {
         this.analytics = analytics;
+    }
+
+    public void setVexaStore(CurrencyStore vexaStore) {
+        this.vexaStore = vexaStore;
     }
 
     /**
@@ -266,7 +271,9 @@ public class DiscordLinkStore {
         }
 
         // Evict VexaStore cache so next balance read picks up the committed DB value
-        VexaStore.getInstance().evictPlayer(playerId);
+        if (vexaStore != null) {
+            vexaStore.evictPlayer(playerId);
+        }
 
         LOGGER.atInfo().log("Awarded " + VEXA_REWARD + " vexa to " + playerId + " for Discord link");
         try {

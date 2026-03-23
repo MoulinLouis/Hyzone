@@ -7,8 +7,7 @@ import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.CurrencyBridge;
-import io.hyvexa.core.economy.FeatherStore;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyStore;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -33,6 +32,8 @@ public class WardrobeBridge {
     private volatile List<WardrobeCosmeticDef> cosmetics = List.of();
     private final ConnectionProvider db;
     private volatile PlayerAnalytics analytics;
+    private volatile CurrencyStore vexaStore;
+    private volatile CurrencyStore featherStore;
 
     /** Maps fine-grained categories to broad shop groups. */
     private static final Map<String, String> CATEGORY_GROUPS = Map.ofEntries(
@@ -68,6 +69,11 @@ public class WardrobeBridge {
 
     public void setAnalytics(PlayerAnalytics analytics) {
         this.analytics = analytics;
+    }
+
+    public void setCurrencyStores(CurrencyStore vexaStore, CurrencyStore featherStore) {
+        this.vexaStore = vexaStore;
+        this.featherStore = featherStore;
     }
 
     public void initialize() {
@@ -184,8 +190,8 @@ public class WardrobeBridge {
 
     private void evictCurrencyCache(String currency, UUID playerId) {
         switch (currency) {
-            case "vexa" -> VexaStore.getInstance().evictPlayer(playerId);
-            case "feathers" -> FeatherStore.getInstance().evictPlayer(playerId);
+            case "vexa" -> { if (vexaStore != null) vexaStore.evictPlayer(playerId); }
+            case "feathers" -> { if (featherStore != null) featherStore.evictPlayer(playerId); }
         }
     }
 
