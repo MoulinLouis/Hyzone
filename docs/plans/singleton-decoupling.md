@@ -8,11 +8,11 @@ This plan is now partially implemented.
 
 | Phase | Status | Handoff note |
 |-------|--------|--------------|
-| Phase 1 — Ascend plugin decoupling | Completed | Ascend no longer calls `ParkourAscendPlugin.getInstance()` anywhere in `hyvexa-parkour-ascend/src/main/java`; the codec-instantiated interaction boundary now goes through a narrow `AscendInteractionBridge` instead |
-| Phase 2 — core interfaces | Partially completed | `CurrencyStore`, `PlayerAnalytics`, and `ConnectionProvider` exist; `AscendRunTracker` now consumes `PlayerAnalytics`, but broader adoption is still incomplete |
-| Phase 3 — store `DatabaseManager` migration | Partially completed | `BasePlayerStore`, `RunOrFallStatsStore`, `VoteStore`, `MedalStore`, and `MedalRewardStore` now support injected `ConnectionProvider`; broad migration still remains |
-| Phase 4 — other module singleton cleanup | Partially completed | Parkour now composes `VoteStore`, `MedalStore`, and `MedalRewardStore` at the plugin boundary instead of using static store singletons, but most non-Ascend modules are still untouched |
-| Phase 5 — docs | Partially completed | Architecture/pattern docs updated for the completed slices; remaining docs cleanup is mostly progress/status refreshes as more stores move off singletons |
+| Phase 1 — Ascend plugin decoupling | **Completed** | `ParkourAscendPlugin.getInstance()` eliminated from all consumers |
+| Phase 2 — Interface propagation | **Completed** | `PlayerAnalytics` injected into 15 gameplay consumers across 4 modules. `CurrencyStore` deferred (most consumers use concrete methods not on the interface) |
+| Phase 3 — Store `DatabaseManager` migration | **Completed** | All stores migrated to `ConnectionProvider`. `DatabaseManager.getInstance()` reduced from ~370 to ~68 (remaining in composition roots, backwards-compat constructors, schema setup, admin commands) |
+| Phase 4 — Module plugin singleton cleanup | **In progress** | `ParkourInteractionBridge` created (11 interactions migrated). Remaining: DuelTracker, ProgressStore, RunValidator, admin pages, commands, Purge/RunOrFall/Hub modules |
+| Phase 5 — docs | Pending |
 
 ### Completed so far
 
