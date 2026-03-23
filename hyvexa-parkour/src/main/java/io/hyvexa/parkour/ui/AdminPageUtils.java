@@ -2,35 +2,32 @@ package io.hyvexa.parkour.ui;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 
 /**
  * Shared utility for admin pages that navigate back to the admin index.
  */
 public final class AdminPageUtils {
 
+    private static volatile ParkourAdminNavigator navigator;
+
     private AdminPageUtils() {
     }
 
+    public static void configure(ParkourAdminNavigator navigator) {
+        AdminPageUtils.navigator = navigator;
+    }
+
+    public static void clear() {
+        navigator = null;
+    }
+
     /**
-     * Opens the {@link AdminIndexPage} for the given player, pulling all stores from the plugin singleton.
+     * Opens the {@link AdminIndexPage} for the given player via the configured navigator.
      */
     public static void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
+        if (navigator != null) {
+            navigator.openIndex(ref, store);
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, plugin.getMapStore(), plugin.getProgressStore(),
-                        plugin.getSettingsStore(), plugin.getPlayerCountStore(),
-                        plugin.getMedalRewardStore()));
     }
 }

@@ -109,6 +109,8 @@ import io.hyvexa.parkour.system.NoPlayerKnockbackSystem;
 import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 import io.hyvexa.parkour.system.RunTrackerTickSystem;
+import io.hyvexa.parkour.ui.AdminPageUtils;
+import io.hyvexa.parkour.ui.ParkourAdminNavigator;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.manager.AnnouncementManager;
@@ -344,12 +346,18 @@ public class HyvexaPlugin extends JavaPlugin {
                 (ref, firstRun, time, type, ctx) ->
                         new RestartCheckpointInteraction().handle(ref, firstRun, time, type, ctx));
 
+        ParkourAdminNavigator adminNavigator = new ParkourAdminNavigator(
+                mapStore, progressStore, settingsStore, playerCountStore, medalRewardStore,
+                globalMessageStore, this::invalidateRankCache, this::refreshChatAnnouncements,
+                this::broadcastAnnouncement, this::buildMapLeaderboardHologramLines);
+        AdminPageUtils.configure(adminNavigator);
+
         this.getCommandRegistry().registerCommand(new CheckpointCommand());
         this.getCommandRegistry().registerCommand(new DiscordCommand());
         this.getCommandRegistry().registerCommand(new RulesCommand());
         this.getCommandRegistry().registerCommand(new ParkourCommand(this.mapStore, this.progressStore, this.settingsStore,
                 this.playerCountStore, this.runTracker, this.medalStore, this.medalRewardStore,
-                this.duelTracker, this::refreshLeaderboardHologram));
+                this.duelTracker, this::refreshLeaderboardHologram, adminNavigator));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
         this.getCommandRegistry().registerCommand(new StoreCommand());
@@ -1359,6 +1367,7 @@ public class HyvexaPlugin extends JavaPlugin {
         shutdownSafe("playerHudWorlds", () -> playerHudWorlds.clear());
         shutdownSafe("progressStore flush", () -> { if (progressStore != null) progressStore.flushPendingSave(); });
         shutdownSafe("analytics aggregation", () -> AnalyticsStore.getInstance().computeDailyAggregates(java.time.LocalDate.now()));
+        shutdownSafe("AdminPageUtils", AdminPageUtils::clear);
         shutdownSafe("DatabaseManager", () -> DatabaseManager.getInstance().shutdown());
 
         super.shutdown();
