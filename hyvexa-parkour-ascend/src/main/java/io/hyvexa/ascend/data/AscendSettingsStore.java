@@ -23,10 +23,6 @@ public class AscendSettingsStore {
 
     private final ConnectionProvider db;
 
-    public AscendSettingsStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public AscendSettingsStore(ConnectionProvider db) {
         this.db = db;
     }

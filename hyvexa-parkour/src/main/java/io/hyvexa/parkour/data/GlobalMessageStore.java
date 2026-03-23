@@ -32,10 +32,6 @@ public class GlobalMessageStore {
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private long intervalMinutes = DEFAULT_INTERVAL_MINUTES;
 
-    public GlobalMessageStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public GlobalMessageStore(ConnectionProvider db) {
         this.db = db;
     }

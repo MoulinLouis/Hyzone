@@ -71,10 +71,6 @@ public class PurgeWeaponConfigManager {
     private static final Map<String, String> MELEE_ITEM_TO_WEAPON = buildMeleeItemMap();
     private static final Map<String, WeaponDefaults> DEFAULT_WEAPONS = buildDefaultWeapons();
 
-    public PurgeWeaponConfigManager() {
-        this(DatabaseManager.getInstance());
-    }
-
     public PurgeWeaponConfigManager(ConnectionProvider db) {
         this.db = db;
         seedDefaults();

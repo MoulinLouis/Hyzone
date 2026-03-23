@@ -45,9 +45,11 @@ public class HudManager {
     private final PlayerPerksManager perksManager;
     private final CurrencyStore vexaStore;
     private final CurrencyStore featherStore;
+    private final PlayerSettingsPersistence playerSettingsPersistence;
 
     public HudManager(ProgressStore progressStore, MapStore mapStore, RunTracker runTracker, DuelTracker duelTracker,
-                      PlayerPerksManager perksManager, CurrencyStore vexaStore, CurrencyStore featherStore) {
+                      PlayerPerksManager perksManager, CurrencyStore vexaStore, CurrencyStore featherStore,
+                      PlayerSettingsPersistence playerSettingsPersistence) {
         this.progressStore = progressStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
@@ -55,6 +57,7 @@ public class HudManager {
         this.perksManager = perksManager;
         this.vexaStore = vexaStore;
         this.featherStore = featherStore;
+        this.playerSettingsPersistence = playerSettingsPersistence;
     }
 
     private PlayerHudState getState(UUID playerId) {
@@ -683,10 +686,9 @@ public class HudManager {
     }
 
     private void persistHudHidden(UUID playerId, boolean hidden) {
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
+        if (playerSettingsPersistence == null) {
             return;
         }
-        persistence.updateField(playerId, s -> s.hudHidden = hidden);
+        playerSettingsPersistence.updateField(playerId, s -> s.hudHidden = hidden);
     }
 }

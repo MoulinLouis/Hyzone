@@ -22,10 +22,6 @@ public class MedalRewardStore {
     private final ConnectionProvider connectionProvider;
     private final ConcurrentHashMap<String, MedalRewards> rewards = new ConcurrentHashMap<>();
 
-    public MedalRewardStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public MedalRewardStore(ConnectionProvider connectionProvider) {
         this.connectionProvider = connectionProvider;
     }

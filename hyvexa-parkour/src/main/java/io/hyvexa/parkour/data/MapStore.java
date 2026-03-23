@@ -36,10 +36,6 @@ public class MapStore {
         this.db = db;
     }
 
-    public MapStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public void syncLoad() {
         if (!this.db.isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, MapStore will be empty");

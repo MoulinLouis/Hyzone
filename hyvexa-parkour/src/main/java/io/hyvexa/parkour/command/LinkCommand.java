@@ -19,9 +19,12 @@ import java.util.concurrent.CompletableFuture;
 
 public class LinkCommand extends AbstractAsyncCommand {
 
-    public LinkCommand() {
+    private final DiscordLinkStore discordLinkStore;
+
+    public LinkCommand(DiscordLinkStore discordLinkStore) {
         super("link", "Link your Discord account");
         this.setPermissionGroup(GameMode.Adventure);
+        this.discordLinkStore = discordLinkStore;
     }
 
     @Override
@@ -55,16 +58,14 @@ public class LinkCommand extends AbstractAsyncCommand {
             return;
         }
 
-        DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
-
         // Check if already linked
-        if (linkStore.isLinked(playerId)) {
+        if (discordLinkStore.isLinked(playerId)) {
             player.sendMessage(Message.raw("Your account is already linked to Discord!").color("#a3e635"));
             return;
         }
 
         // Generate or retrieve existing code
-        String code = linkStore.generateCode(playerId);
+        String code = discordLinkStore.generateCode(playerId);
         if (code == null) {
             player.sendMessage(Message.raw("Failed to generate link code. Try again later.").color("#ef4444"));
             return;

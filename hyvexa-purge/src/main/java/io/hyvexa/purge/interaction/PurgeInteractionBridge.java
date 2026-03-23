@@ -32,6 +32,7 @@ public final class PurgeInteractionBridge {
         PurgeSessionManager sessionManager,
         PurgePartyManager partyManager,
         PurgeWeaponConfigManager weaponConfigManager,
-        PurgeLoadoutService loadoutService
+        PurgeLoadoutService loadoutService,
+        io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore
     ) {}
 }

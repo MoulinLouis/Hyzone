@@ -65,10 +65,6 @@ public class DuelPreferenceStore {
     private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, EnumSet<DuelCategory>> enabledByPlayer = new ConcurrentHashMap<>();
 
-    public DuelPreferenceStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public DuelPreferenceStore(ConnectionProvider db) {
         this.db = db;
     }

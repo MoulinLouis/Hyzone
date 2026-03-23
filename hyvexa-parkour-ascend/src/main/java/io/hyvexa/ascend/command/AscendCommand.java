@@ -14,15 +14,22 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.AscendRuntimeConfig;
 import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostStore;
+import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
+import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.ascend.ui.AscendLeaderboardPage;
 import io.hyvexa.ascend.ui.AscendMapLeaderboardPage;
 import io.hyvexa.ascend.ui.AscendChallengePage;
@@ -67,7 +74,20 @@ public class AscendCommand extends AbstractAsyncCommand {
     // NPC-gated commands: only executable with the correct token (passed by NPC dialog buttons)
     private static final String LEGACY_NPC_TOKEN = "hx7Kq9mW";
     private static final Set<String> NPC_GATED = Set.of("elevate", "summit", "skills");
-    private final ParkourAscendPlugin plugin;
+    private final AscendPlayerStore playerStore;
+    private final AscendMapStore mapStore;
+    private final GhostStore ghostStore;
+    private final AscendRunTracker runTracker;
+    private final AscendHudManager hudManager;
+    private final RobotManager robotManager;
+    private final AchievementManager achievementManager;
+    private final AscensionManager ascensionManager;
+    private final ChallengeManager challengeManager;
+    private final SummitManager summitManager;
+    private final TranscendenceManager transcendenceManager;
+    private final TutorialTriggerService tutorialTriggerService;
+    private final RunnerSpeedCalculator runnerSpeedCalculator;
+    private final PlayerAnalytics analytics;
     private final String npcToken;
 
     /**
@@ -107,31 +127,47 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
     }
 
-    /**
-     * Get the plugin instance, sending an error message to the player if unavailable.
-     * Returns null if the plugin or its core systems are not ready.
-     */
-    private ParkourAscendPlugin requirePlugin(Player player) {
-        if (plugin == null) {
-            player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
-            return null;
-        }
-        return plugin;
-    }
-
-    public AscendCommand(ParkourAscendPlugin plugin) {
+    public AscendCommand(
+            AscendPlayerStore playerStore,
+            AscendMapStore mapStore,
+            GhostStore ghostStore,
+            AscendRunTracker runTracker,
+            AscendHudManager hudManager,
+            RobotManager robotManager,
+            AchievementManager achievementManager,
+            AscensionManager ascensionManager,
+            ChallengeManager challengeManager,
+            SummitManager summitManager,
+            TranscendenceManager transcendenceManager,
+            TutorialTriggerService tutorialTriggerService,
+            RunnerSpeedCalculator runnerSpeedCalculator,
+            PlayerAnalytics analytics,
+            AscendRuntimeConfig runtimeConfig) {
         super("ascend", "Open the Ascend menu");
-        this.plugin = plugin;
-        this.npcToken = resolveNpcToken(plugin);
+        this.playerStore = playerStore;
+        this.mapStore = mapStore;
+        this.ghostStore = ghostStore;
+        this.runTracker = runTracker;
+        this.hudManager = hudManager;
+        this.robotManager = robotManager;
+        this.achievementManager = achievementManager;
+        this.ascensionManager = ascensionManager;
+        this.challengeManager = challengeManager;
+        this.summitManager = summitManager;
+        this.transcendenceManager = transcendenceManager;
+        this.tutorialTriggerService = tutorialTriggerService;
+        this.runnerSpeedCalculator = runnerSpeedCalculator;
+        this.analytics = analytics;
+        this.npcToken = resolveNpcToken(runtimeConfig);
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
 
-    private static String resolveNpcToken(ParkourAscendPlugin plugin) {
-        if (plugin == null || plugin.getRuntimeConfig() == null) {
+    private static String resolveNpcToken(AscendRuntimeConfig runtimeConfig) {
+        if (runtimeConfig == null) {
             return LEGACY_NPC_TOKEN;
         }
-        String token = plugin.getRuntimeConfig().getNpcCommandToken();
+        String token = runtimeConfig.getNpcCommandToken();
         if (token == null || token.isBlank()) {
             return LEGACY_NPC_TOKEN;
         }
@@ -226,9 +262,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openStatsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getPlayerStore() == null) return;
-        StatsPage page = createMenuNavigator(plugin).createStatsPage(playerRef);
+        if (playerStore == null) return;
+        StatsPage page = createMenuNavigator().createStatsPage(playerRef);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
@@ -237,11 +272,11 @@ public class AscendCommand extends AbstractAsyncCommand {
      * Otherwise return false so the caller can proceed with the real page.
      */
     private boolean showTutorialIfNeeded(Player player, PlayerRef playerRef, Ref<EntityStore> ref,
-                                         Store<EntityStore> store, ParkourAscendPlugin plugin,
+                                         Store<EntityStore> store,
                                          int tutorialKey, AscendTutorialPage.Tutorial tutorial) {
         UUID playerId = playerRef.getUuid();
-        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, tutorialKey)) {
-            plugin.getPlayerStore().markTutorialSeen(playerId, tutorialKey);
+        if (!playerStore.hasSeenTutorial(playerId, tutorialKey)) {
+            playerStore.markTutorialSeen(playerId, tutorialKey);
             player.getPageManager().openCustomPage(ref, store,
                 new AscendTutorialPage(playerRef, tutorial));
             return true;
@@ -250,19 +285,18 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openElevationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getPlayerStore() == null) return;
-        if (showTutorialIfNeeded(player, playerRef, ref, store, plugin,
+        if (playerStore == null) return;
+        if (showTutorialIfNeeded(player, playerRef, ref, store,
                 TutorialTriggerService.ELEVATION, AscendTutorialPage.Tutorial.ELEVATION)) {
             return;
         }
         ElevationPage page = new ElevationPage(
             playerRef,
-            plugin.getPlayerStore(),
-            plugin.getMapStore(),
-            plugin.getChallengeManager(),
-            plugin.getRobotManager(),
-            plugin.getAchievementManager()
+            playerStore,
+            mapStore,
+            challengeManager,
+            robotManager,
+            achievementManager
         );
         openTrackedPage(player, playerRef, ref, store, page);
         player.sendMessage(Message.raw("[Ascend] Having trouble elevating? Contact Playfade on Discord.")
@@ -270,19 +304,18 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openSummitPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getSummitManager() == null) return;
-        if (showTutorialIfNeeded(player, playerRef, ref, store, plugin,
+        if (summitManager == null) return;
+        if (showTutorialIfNeeded(player, playerRef, ref, store,
                 TutorialTriggerService.SUMMIT, AscendTutorialPage.Tutorial.SUMMIT)) {
             return;
         }
         SummitPage page = new SummitPage(
             playerRef,
-            plugin.getPlayerStore(),
-            plugin.getSummitManager(),
-            plugin.getChallengeManager(),
-            plugin.getRobotManager(),
-            plugin.getAchievementManager()
+            playerStore,
+            summitManager,
+            challengeManager,
+            robotManager,
+            achievementManager
         );
         openTrackedPage(player, playerRef, ref, store, page);
         player.sendMessage(Message.raw("[Ascend] Having trouble summiting? Contact Playfade on Discord.")
@@ -290,93 +323,86 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openAscensionPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getAscensionManager() == null) return;
-        if (showTutorialIfNeeded(player, playerRef, ref, store, plugin,
+        if (ascensionManager == null) return;
+        if (showTutorialIfNeeded(player, playerRef, ref, store,
                 TutorialTriggerService.ASCENSION, AscendTutorialPage.Tutorial.ASCENSION)) {
             return;
         }
         AscensionPage page = new AscensionPage(
             playerRef,
-            plugin.getPlayerStore(),
-            plugin.getAscensionManager(),
-            plugin.getChallengeManager(),
-            plugin.getRobotManager(),
-            plugin.getAchievementManager()
+            playerStore,
+            ascensionManager,
+            challengeManager,
+            robotManager,
+            achievementManager
         );
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openSkillTreePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getAscensionManager() == null) return;
-        SkillTreePage page = new SkillTreePage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
+        if (ascensionManager == null) return;
+        SkillTreePage page = new SkillTreePage(playerRef, playerStore, ascensionManager);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openAutomationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getAscensionManager() == null) return;
-        AutomationPage page = new AutomationPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
+        if (ascensionManager == null) return;
+        AutomationPage page = new AutomationPage(playerRef, playerStore, ascensionManager);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openProfilePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) return;
-        AscendProfilePage page = createMenuNavigator(plugin).createProfilePage(playerRef);
+        if (playerStore == null || robotManager == null) return;
+        AscendProfilePage page = createMenuNavigator().createProfilePage(playerRef);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openSettingsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) return;
-        AscendSettingsPage page = createMenuNavigator(plugin).createSettingsPage(playerRef);
+        if (playerStore == null || robotManager == null) return;
+        AscendSettingsPage page = createMenuNavigator().createSettingsPage(playerRef);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
-    private AscendMenuNavigator createMenuNavigator(ParkourAscendPlugin plugin) {
+    private AscendMenuNavigator createMenuNavigator() {
         return new AscendMenuNavigator(
-            plugin.getPlayerStore(),
-            plugin.getMapStore(),
-            plugin.getGhostStore(),
-            plugin.getRunnerSpeedCalculator(),
-            plugin.getAchievementManager(),
-            plugin.getRobotManager(),
-            plugin.getHudManager()
+            playerStore,
+            mapStore,
+            ghostStore,
+            runnerSpeedCalculator,
+            achievementManager,
+            robotManager,
+            hudManager
         );
     }
 
     private void openChallengePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getChallengeManager() == null || plugin.getAscensionManager() == null) return;
-        if (!plugin.getAscensionManager().hasAscensionChallenges(playerRef.getUuid())) {
+        if (challengeManager == null || ascensionManager == null) return;
+        if (!ascensionManager.hasAscensionChallenges(playerRef.getUuid())) {
             player.sendMessage(Message.raw("[Ascend] You need the Ascension Challenges skill to access this.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
-        if (showTutorialIfNeeded(player, playerRef, ref, store, plugin,
+        if (showTutorialIfNeeded(player, playerRef, ref, store,
                 TutorialTriggerService.CHALLENGES, AscendTutorialPage.Tutorial.CHALLENGES)) {
             return;
         }
         AscendChallengePage page = new AscendChallengePage(
             playerRef,
-            plugin.getPlayerStore(),
-            plugin.getChallengeManager(),
-            plugin.getRobotManager()
+            playerStore,
+            challengeManager,
+            robotManager
         );
         openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openTranscendencePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getTranscendenceManager() == null) return;
+        if (transcendenceManager == null) return;
         TranscendencePage page = new TranscendencePage(
             playerRef,
-            plugin.getPlayerStore(),
-            plugin.getTranscendenceManager(),
-            plugin.getRobotManager(),
-            plugin.getAchievementManager()
+            playerStore,
+            transcendenceManager,
+            robotManager,
+            achievementManager
         );
         openTrackedPage(player, playerRef, ref, store, page);
     }
@@ -387,29 +413,25 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openLeaderboardPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getPlayerStore() == null) return;
-        AscendLeaderboardPage page = new AscendLeaderboardPage(playerRef, plugin.getPlayerStore());
+        if (playerStore == null) return;
+        AscendLeaderboardPage page = new AscendLeaderboardPage(playerRef, playerStore);
         openUntrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openMapLeaderboardPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getPlayerStore() == null || plugin.getMapStore() == null) return;
-        AscendMapLeaderboardPage page = new AscendMapLeaderboardPage(playerRef, plugin.getPlayerStore(),
-            plugin.getMapStore(), plugin.getRunTracker(), plugin.getRobotManager(), plugin.getGhostStore(),
-            plugin.getAscensionManager(), plugin.getChallengeManager(), plugin.getSummitManager(), plugin.getTranscendenceManager(),
-            plugin.getAchievementManager(), plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator(),
-            plugin.getAnalytics());
+        if (playerStore == null || mapStore == null) return;
+        AscendMapLeaderboardPage page = new AscendMapLeaderboardPage(playerRef, playerStore,
+            mapStore, runTracker, robotManager, ghostStore,
+            ascensionManager, challengeManager, summitManager, transcendenceManager,
+            achievementManager, tutorialTriggerService, runnerSpeedCalculator,
+            analytics);
         openUntrackedPage(player, playerRef, ref, store, page);
     }
 
     private void showAchievements(Player player, PlayerRef playerRef) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getAchievementManager() == null) return;
+        if (achievementManager == null) return;
 
-        AchievementManager achievementManager = plugin.getAchievementManager();
-        var unlocked = plugin.getPlayerStore().getUnlockedAchievements(playerRef.getUuid());
+        var unlocked = playerStore.getUnlockedAchievements(playerRef.getUuid());
 
         player.sendMessage(Message.raw("[Achievements] " + unlocked.size() + "/" + AscendConstants.AchievementType.values().length + " unlocked")
             .color(SystemMessageUtils.PRIMARY_TEXT));
@@ -424,23 +446,16 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openMapMenu(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null) return;
-        AscendMapStore mapStore = plugin.getMapStore();
-        AscendPlayerStore playerStore = plugin.getPlayerStore();
-        AscendRunTracker runTracker = plugin.getRunTracker();
-        RobotManager robotManager = plugin.getRobotManager();
-        GhostStore ghostStore = plugin.getGhostStore();
         if (mapStore == null || playerStore == null || runTracker == null || ghostStore == null) {
             player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
             return;
         }
         AscendMapSelectPage page = new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker,
-            robotManager, ghostStore, plugin.getAscensionManager(), plugin.getChallengeManager(),
-            plugin.getSummitManager(),
-            plugin.getTranscendenceManager(), plugin.getAchievementManager(),
-            plugin.getTutorialTriggerService(), plugin.getRunnerSpeedCalculator(),
-            plugin.getAnalytics());
+            robotManager, ghostStore, ascensionManager, challengeManager,
+            summitManager,
+            transcendenceManager, achievementManager,
+            tutorialTriggerService, runnerSpeedCalculator,
+            analytics);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 

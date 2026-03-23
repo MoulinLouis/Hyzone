@@ -9,7 +9,6 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.core.db.ConnectionProvider;
-import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -50,11 +49,6 @@ public class MineAchievementTracker {
 
     public record MineLeaderboardEntry(UUID playerId, String playerName,
                                        long totalCrystalsEarned, long manualBlocksMined) {}
-
-    public MineAchievementTracker(MinePlayerStore minePlayerStore, AscendPlayerStore playerStore,
-                                  Function<UUID, PlayerRef> playerRefLookup) {
-        this(minePlayerStore, playerStore, playerRefLookup, DatabaseManager.getInstance());
-    }
 
     public MineAchievementTracker(MinePlayerStore minePlayerStore, AscendPlayerStore playerStore,
                                   Function<UUID, PlayerRef> playerRefLookup, ConnectionProvider db) {

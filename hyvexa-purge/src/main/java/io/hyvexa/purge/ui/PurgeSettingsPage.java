@@ -39,18 +39,21 @@ public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
     private final PurgeVariantConfigManager variantConfigManager;
+    private final PurgeSkinStore purgeSkinStore;
     private boolean pendingReset = false;
 
     public PurgeSettingsPage(@Nonnull PlayerRef playerRef,
                              PurgeWeaponConfigManager weaponConfigManager,
                              PurgeWaveConfigManager waveConfigManager,
                              PurgeInstanceManager instanceManager,
-                             PurgeVariantConfigManager variantConfigManager) {
+                             PurgeVariantConfigManager variantConfigManager,
+                             PurgeSkinStore purgeSkinStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeSettingsData.CODEC);
         this.weaponConfigManager = weaponConfigManager;
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
         this.variantConfigManager = variantConfigManager;
+        this.purgeSkinStore = purgeSkinStore;
     }
 
     @Override
@@ -78,7 +81,7 @@ public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
+                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore));
             }
             return;
         }
@@ -104,7 +107,7 @@ public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage
                     PurgePlayerStore.getInstance().save(playerId, new PurgePlayerStats(0, 0, 0));
                     PurgeScrapStore.getInstance().resetPlayer(playerId);
                     PurgeWeaponUpgradeStore.getInstance().resetPlayer(playerId, weaponConfigManager.getDefaultWeaponIds());
-                    PurgeSkinStore.getInstance().resetPlayer(playerId);
+                    purgeSkinStore.resetPlayer(playerId);
                 }
                 sendRefresh();
             }

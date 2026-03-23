@@ -45,10 +45,6 @@ public class ChallengeManager {
     // In-memory cache of active challenges
     private final ConcurrentHashMap<UUID, ActiveChallenge> activeChallenges = new ConcurrentHashMap<>();
 
-    public ChallengeManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, PlayerAnalytics analytics) {
-        this(playerStore, mapStore, runTracker, analytics, DatabaseManager.getInstance());
-    }
-
     public ChallengeManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, PlayerAnalytics analytics, ConnectionProvider db) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;

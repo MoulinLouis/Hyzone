@@ -34,8 +34,15 @@ public class ShopConfigTab implements ShopTab {
     private static final String ACTION_PRICE_DOWN = "PriceDown:";
     private static final String ACTION_CURRENCY = "Currency:";
 
+    private final WardrobeBridge wardrobeBridge;
+    private final CosmeticShopConfigStore cosmeticShopConfigStore;
     private final ConcurrentHashMap<UUID, String> selectedCategory = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> searchText = new ConcurrentHashMap<>();
+
+    public ShopConfigTab(WardrobeBridge wardrobeBridge, CosmeticShopConfigStore cosmeticShopConfigStore) {
+        this.wardrobeBridge = wardrobeBridge;
+        this.cosmeticShopConfigStore = cosmeticShopConfigStore;
+    }
 
     @Override
     public String getId() {
@@ -64,15 +71,13 @@ public class ShopConfigTab implements ShopTab {
 
     @Override
     public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
-        WardrobeBridge bridge = WardrobeBridge.getInstance();
-        CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
         String currentCategory = selectedCategory.get(playerId);
         String currentSearch = searchText.getOrDefault(playerId, "");
         String prefix = getId() + ":";
 
         // --- Pill bar ---
         cmd.append("#TabContent", "Pages/Shop_WardrobePills.ui");
-        List<String> categories = bridge.getCategories();
+        List<String> categories = wardrobeBridge.getCategories();
         WardrobeShopUiUtils.buildCategoryPills(cmd, evt, getId(), getAccentColor(), categories, currentCategory);
 
         // --- Search field ---
@@ -84,7 +89,7 @@ public class ShopConfigTab implements ShopTab {
                 EventData.of(ShopPage.ShopEventData.KEY_SEARCH, "#ConfigSearchField.Value"), false);
 
         // --- Config rows (filtered) ---
-        List<WardrobeCosmeticDef> cosmetics = bridge.getCosmeticsByCategory(currentCategory);
+        List<WardrobeCosmeticDef> cosmetics = wardrobeBridge.getCosmeticsByCategory(currentCategory);
         String searchFilter = currentSearch.toLowerCase();
 
         int rowIndex = 0;
@@ -93,7 +98,7 @@ public class ShopConfigTab implements ShopTab {
                 continue;
             }
 
-            CosmeticConfig cfg = configStore.getConfig(def.id());
+            CosmeticConfig cfg = cosmeticShopConfigStore.getConfig(def.id());
             boolean available = cfg != null && cfg.available();
             int price = cfg != null ? cfg.price() : 0;
             String currency = cfg != null ? cfg.currency() : "vexa";
@@ -136,29 +141,27 @@ public class ShopConfigTab implements ShopTab {
     @Override
     public ShopTabResult handleEvent(String button, Ref<EntityStore> ref, Store<EntityStore> store,
                                      Player player, UUID playerId) {
-        CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
-
         if (WardrobeShopUiUtils.handleCategoryFilter(button, playerId, selectedCategory)) {
             return ShopTabResult.REFRESH;
         }
         if (button.startsWith(ACTION_TOGGLE)) {
             String id = button.substring(ACTION_TOGGLE.length());
-            configStore.toggleAvailable(id);
+            cosmeticShopConfigStore.toggleAvailable(id);
             return ShopTabResult.REFRESH;
         }
         if (button.startsWith(ACTION_PRICE_UP)) {
             String id = button.substring(ACTION_PRICE_UP.length());
-            configStore.adjustPrice(id, 50);
+            cosmeticShopConfigStore.adjustPrice(id, 50);
             return ShopTabResult.REFRESH;
         }
         if (button.startsWith(ACTION_PRICE_DOWN)) {
             String id = button.substring(ACTION_PRICE_DOWN.length());
-            configStore.adjustPrice(id, -50);
+            cosmeticShopConfigStore.adjustPrice(id, -50);
             return ShopTabResult.REFRESH;
         }
         if (button.startsWith(ACTION_CURRENCY)) {
             String id = button.substring(ACTION_CURRENCY.length());
-            configStore.toggleCurrency(id);
+            cosmeticShopConfigStore.toggleCurrency(id);
             return ShopTabResult.REFRESH;
         }
 

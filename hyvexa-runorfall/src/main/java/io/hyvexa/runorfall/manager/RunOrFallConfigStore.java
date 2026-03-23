@@ -147,10 +147,6 @@ public class RunOrFallConfigStore {
     private final File legacyConfigFile;
     private RunOrFallConfig config;
 
-    public RunOrFallConfigStore(File legacyConfigFile) {
-        this(DatabaseManager.getInstance(), legacyConfigFile);
-    }
-
     public RunOrFallConfigStore(ConnectionProvider db, File legacyConfigFile) {
         this.db = db;
         this.legacyConfigFile = legacyConfigFile;

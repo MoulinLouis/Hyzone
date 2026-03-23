@@ -2,6 +2,7 @@ package io.hyvexa.purge.data;
 
 import io.hyvexa.core.db.BasePlayerStore;
 import io.hyvexa.core.db.ConnectionProvider;
+import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,9 +11,7 @@ import java.util.UUID;
 
 public class PurgePlayerStore extends BasePlayerStore<PurgePlayerStats> {
 
-    private static final PurgePlayerStore INSTANCE = new PurgePlayerStore();
-
-    private PurgePlayerStore() {}
+    private static final PurgePlayerStore INSTANCE = new PurgePlayerStore(DatabaseManager.getInstance());
 
     public PurgePlayerStore(ConnectionProvider db) {
         super(db);

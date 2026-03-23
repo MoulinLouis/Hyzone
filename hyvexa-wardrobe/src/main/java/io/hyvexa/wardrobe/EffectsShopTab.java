@@ -31,7 +31,14 @@ public class EffectsShopTab implements ShopTab {
     private static final String FILTER_GLOW = "Glow";
     private static final String FILTER_TRAIL = "Trail";
 
+    private final CosmeticManager cosmeticManager;
+    private final CosmeticStore cosmeticStore;
     private final ConcurrentHashMap<UUID, String> selectedFilter = new ConcurrentHashMap<>();
+
+    public EffectsShopTab(CosmeticManager cosmeticManager, CosmeticStore cosmeticStore) {
+        this.cosmeticManager = cosmeticManager;
+        this.cosmeticStore = cosmeticStore;
+    }
 
     @Override
     public String getId() {
@@ -55,7 +62,7 @@ public class EffectsShopTab implements ShopTab {
 
     @Override
     public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
-        String equippedId = CosmeticStore.getInstance().getEquippedCosmeticId(playerId);
+        String equippedId = cosmeticStore.getEquippedCosmeticId(playerId);
         String filter = selectedFilter.getOrDefault(playerId, FILTER_GLOW);
 
         // Pill bar
@@ -109,7 +116,7 @@ public class EffectsShopTab implements ShopTab {
             CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
             String name = def != null ? def.getDisplayName() : cosmeticId;
             if (!executeOnWorldThread(player, (wRef, wStore) ->
-                    CosmeticManager.getInstance().previewCosmetic(wRef, wStore, cosmeticId))) {
+                    cosmeticManager.previewCosmetic(wRef, wStore, cosmeticId))) {
                 player.sendMessage(Message.raw("[Shop] Could not preview right now. Try again.")
                         .color(SystemMessageUtils.ERROR));
                 return ShopTabResult.NONE;
@@ -123,7 +130,7 @@ public class EffectsShopTab implements ShopTab {
             String cosmeticId = button.substring(ACTION_BUY.length());
             CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
             if (def == null) return ShopTabResult.NONE;
-            CosmeticStore.PurchaseResult result = CosmeticStore.getInstance().purchaseShopCosmetic(playerId, def);
+            CosmeticStore.PurchaseResult result = cosmeticStore.purchaseShopCosmetic(playerId, def);
             String color = result.success() ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
             player.sendMessage(Message.raw("[Shop] " + result.message()).color(color));
             return result.success() ? ShopTabResult.REFRESH : ShopTabResult.NONE;
@@ -131,11 +138,11 @@ public class EffectsShopTab implements ShopTab {
 
         if (button.startsWith(ACTION_EQUIP)) {
             String cosmeticId = button.substring(ACTION_EQUIP.length());
-            CosmeticStore.getInstance().equipCosmetic(playerId, cosmeticId);
+            cosmeticStore.equipCosmetic(playerId, cosmeticId);
             CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
             String name = def != null ? def.getDisplayName() : cosmeticId;
             if (!executeOnWorldThread(player, (wRef, wStore) ->
-                    CosmeticManager.getInstance().applyCosmetic(wRef, wStore, cosmeticId))) {
+                    cosmeticManager.applyCosmetic(wRef, wStore, cosmeticId))) {
                 player.sendMessage(Message.raw("[Shop] Could not apply that cosmetic right now. Try again.")
                         .color(SystemMessageUtils.ERROR));
                 return ShopTabResult.REFRESH;
@@ -146,9 +153,9 @@ public class EffectsShopTab implements ShopTab {
         }
 
         if (button.startsWith(ACTION_UNEQUIP)) {
-            CosmeticStore.getInstance().unequipCosmetic(playerId);
+            cosmeticStore.unequipCosmetic(playerId);
             if (!executeOnWorldThread(player, (wRef, wStore) ->
-                    CosmeticManager.getInstance().removeCosmetic(wRef, wStore))) {
+                    cosmeticManager.removeCosmetic(wRef, wStore))) {
                 player.sendMessage(Message.raw("[Shop] Could not remove cosmetic visual right now. Try again.")
                         .color(SystemMessageUtils.ERROR));
                 return ShopTabResult.REFRESH;
@@ -169,7 +176,7 @@ public class EffectsShopTab implements ShopTab {
     private int appendEntry(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, String equippedId,
                             CosmeticDefinition def, int index) {
         String id = def.getId();
-        boolean owned = CosmeticStore.getInstance().ownsCosmetic(playerId, id);
+        boolean owned = cosmeticStore.ownsCosmetic(playerId, id);
         boolean equipped = id.equals(equippedId);
 
         cmd.append("#TabContent", "Pages/Parkour_CosmeticShopEntry.ui");

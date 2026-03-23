@@ -24,10 +24,6 @@ public class VoteStore {
     private final ConnectionProvider connectionProvider;
     private final ConcurrentHashMap<UUID, Integer> countCache = new ConcurrentHashMap<>();
 
-    public VoteStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public VoteStore(ConnectionProvider connectionProvider) {
         this.connectionProvider = connectionProvider;
     }

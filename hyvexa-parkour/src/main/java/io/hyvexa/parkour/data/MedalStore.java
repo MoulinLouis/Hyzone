@@ -34,10 +34,6 @@ public class MedalStore {
     private final ConcurrentHashMap<UUID, java.util.Map<String, Set<Medal>>> cache = new ConcurrentHashMap<>();
     private final AtomicReference<List<MedalScoreEntry>> leaderboardSnapshot = new AtomicReference<>(List.of());
 
-    public MedalStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public MedalStore(ConnectionProvider connectionProvider) {
         this.connectionProvider = connectionProvider;
     }

@@ -34,10 +34,13 @@ public class PlayerPerksManager {
 
     private final ProgressStore progressStore;
     private final MapStore mapStore;
+    private final PlayerSettingsPersistence playerSettingsPersistence;
 
-    public PlayerPerksManager(ProgressStore progressStore, MapStore mapStore) {
+    public PlayerPerksManager(ProgressStore progressStore, MapStore mapStore,
+                              PlayerSettingsPersistence playerSettingsPersistence) {
         this.progressStore = progressStore;
         this.mapStore = mapStore;
+        this.playerSettingsPersistence = playerSettingsPersistence;
     }
 
     public void invalidateRankCache(UUID playerId) {
@@ -256,11 +259,10 @@ public class PlayerPerksManager {
     }
 
     private void persistVipSpeed(UUID playerId, float multiplier) {
-        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-        if (persistence == null) {
+        if (playerSettingsPersistence == null) {
             return;
         }
-        persistence.updateField(playerId, s -> s.vipSpeedMultiplier = multiplier);
+        playerSettingsPersistence.updateField(playerId, s -> s.vipSpeedMultiplier = multiplier);
     }
 
     public void clearPlayer(UUID playerId) {

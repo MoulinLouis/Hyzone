@@ -28,10 +28,6 @@ public class PlayerCountStore {
     private final long retentionMs;
     private long lastSavedAtMs;
 
-    public PlayerCountStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public PlayerCountStore(ConnectionProvider db) {
         this.db = db;
         this.retentionMs = TimeUnit.DAYS.toMillis(DEFAULT_RETENTION_DAYS);

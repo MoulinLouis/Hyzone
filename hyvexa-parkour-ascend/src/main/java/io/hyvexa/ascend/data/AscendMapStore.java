@@ -23,10 +23,6 @@ public class AscendMapStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private final ConnectionProvider db;
 
-    public AscendMapStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public AscendMapStore(ConnectionProvider db) {
         this.db = db;
     }

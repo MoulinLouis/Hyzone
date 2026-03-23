@@ -28,8 +28,18 @@ public class WardrobeShopTab implements ShopTab {
     private static final String ACTION_BUY = "Buy:";
     private static final String ACTION_FREE_TOGGLE = "FreeToggle";
 
+    private final WardrobeBridge wardrobeBridge;
+    private final CosmeticStore cosmeticStore;
+    private final CosmeticShopConfigStore cosmeticShopConfigStore;
     private final ConcurrentHashMap<UUID, String> selectedCategory = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> freeOnly = new ConcurrentHashMap<>();
+
+    public WardrobeShopTab(WardrobeBridge wardrobeBridge, CosmeticStore cosmeticStore,
+                           CosmeticShopConfigStore cosmeticShopConfigStore) {
+        this.wardrobeBridge = wardrobeBridge;
+        this.cosmeticStore = cosmeticStore;
+        this.cosmeticShopConfigStore = cosmeticShopConfigStore;
+    }
 
     @Override
     public String getId() {
@@ -53,12 +63,11 @@ public class WardrobeShopTab implements ShopTab {
 
     @Override
     public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
-        WardrobeBridge bridge = WardrobeBridge.getInstance();
         String currentCategory = selectedCategory.get(playerId);
 
         // Pill bar
         cmd.append("#TabContent", "Pages/Shop_WardrobePills.ui");
-        List<String> categories = bridge.getCategories();
+        List<String> categories = wardrobeBridge.getCategories();
         int pillIndex = WardrobeShopUiUtils.buildCategoryPills(cmd, evt, getId(), getAccentColor(),
                 categories, currentCategory);
 
@@ -75,19 +84,17 @@ public class WardrobeShopTab implements ShopTab {
 
         // Grid
         cmd.append("#TabContent", "Pages/Shop_WardrobeGrid.ui");
-        List<WardrobeCosmeticDef> cosmetics = bridge.getCosmeticsByCategory(currentCategory);
-        CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
-
+        List<WardrobeCosmeticDef> cosmetics = wardrobeBridge.getCosmeticsByCategory(currentCategory);
         int cardIndex = 0;
         for (WardrobeCosmeticDef def : cosmetics) {
-            if (!configStore.isAvailable(def.id())) continue;
+            if (!cosmeticShopConfigStore.isAvailable(def.id())) continue;
 
-            String currency = configStore.getCurrency(def.id());
+            String currency = cosmeticShopConfigStore.getCurrency(def.id());
             boolean isFeathers = "feathers".equals(currency);
             if (isFreeOnly && !isFeathers) continue;
 
-            boolean owned = CosmeticStore.getInstance().ownsCosmetic(playerId, def.id());
-            int price = configStore.getPrice(def.id());
+            boolean owned = cosmeticStore.ownsCosmetic(playerId, def.id());
+            int price = cosmeticShopConfigStore.getPrice(def.id());
             long balance = CurrencyBridge.getBalance(currency, playerId);
 
             cmd.append("#WardrobeGrid", "Pages/Shop_WardrobeCard.ui");
@@ -151,13 +158,12 @@ public class WardrobeShopTab implements ShopTab {
 
     @Override
     public void populateConfirmOverlay(UICommandBuilder cmd, String confirmKey) {
-        WardrobeCosmeticDef def = WardrobeBridge.getInstance().findById(confirmKey);
+        WardrobeCosmeticDef def = wardrobeBridge.findById(confirmKey);
         if (def == null) return;
-        CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
-        String currency = configStore.getCurrency(def.id());
+        String currency = cosmeticShopConfigStore.getCurrency(def.id());
         boolean isFeathers = "feathers".equals(currency);
         cmd.set("#ConfirmSkinName.Text", def.displayName());
-        cmd.set("#ConfirmPrice.Text", String.valueOf(configStore.getPrice(def.id())));
+        cmd.set("#ConfirmPrice.Text", String.valueOf(cosmeticShopConfigStore.getPrice(def.id())));
         cmd.set("#ConfirmVexaIcon.Visible", !isFeathers);
         cmd.set("#ConfirmFeatherIcon.Visible", isFeathers);
     }
@@ -165,7 +171,7 @@ public class WardrobeShopTab implements ShopTab {
     @Override
     public boolean handleConfirm(String confirmKey, Ref<EntityStore> ref, Store<EntityStore> store,
                                  Player player, UUID playerId) {
-        WardrobeBridge.PurchaseResult result = WardrobeBridge.getInstance().purchase(playerId, confirmKey);
+        WardrobeBridge.PurchaseResult result = wardrobeBridge.purchase(playerId, confirmKey);
         String color = result.success() ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
         player.sendMessage(Message.raw("[Wardrobe] " + result.message()).color(color));
         return true;

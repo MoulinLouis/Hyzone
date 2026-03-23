@@ -34,6 +34,8 @@ public class WardrobeBridge {
     private volatile PlayerAnalytics analytics;
     private volatile CurrencyStore vexaStore;
     private volatile CurrencyStore featherStore;
+    private volatile CosmeticStore cosmeticStore;
+    private volatile CosmeticShopConfigStore cosmeticShopConfigStore;
 
     /** Maps fine-grained categories to broad shop groups. */
     private static final Map<String, String> CATEGORY_GROUPS = Map.ofEntries(
@@ -76,6 +78,14 @@ public class WardrobeBridge {
         this.featherStore = featherStore;
     }
 
+    public void setCosmeticStore(CosmeticStore cosmeticStore) {
+        this.cosmeticStore = cosmeticStore;
+    }
+
+    public void setCosmeticShopConfigStore(CosmeticShopConfigStore cosmeticShopConfigStore) {
+        this.cosmeticShopConfigStore = cosmeticShopConfigStore;
+    }
+
     public void initialize() {
         this.cosmetics = List.copyOf(CosmeticConfigLoader.load());
         LOGGER.atInfo().log("Loaded " + cosmetics.size() + " wardrobe cosmetics");
@@ -115,12 +125,12 @@ public class WardrobeBridge {
         WardrobeCosmeticDef def = findById(cosmeticId);
         if (def == null) return error("Unknown cosmetic: " + cosmeticId);
 
-        CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
+        CosmeticShopConfigStore configStore = cosmeticShopConfigStore;
         if (!configStore.isAvailable(cosmeticId)) {
             return error("This cosmetic is not currently available for purchase.");
         }
 
-        if (CosmeticStore.getInstance().ownsCosmetic(playerId, cosmeticId)) {
+        if (cosmeticStore.ownsCosmetic(playerId, cosmeticId)) {
             return error("You already own " + def.displayName() + "!");
         }
 
@@ -149,7 +159,7 @@ public class WardrobeBridge {
 
         // Update in-memory caches after successful commit
         evictCurrencyCache(currency, playerId);
-        CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
+        cosmeticStore.purchaseCosmetic(playerId, cosmeticId);
 
         grantPermission(playerId, def.permissionNode());
         if (analytics != null) {
@@ -200,7 +210,7 @@ public class WardrobeBridge {
      */
     public void regrantPermissions(UUID playerId) {
         for (WardrobeCosmeticDef def : cosmetics) {
-            if (CosmeticStore.getInstance().ownsCosmetic(playerId, def.id())) {
+            if (cosmeticStore.ownsCosmetic(playerId, def.id())) {
                 grantPermission(playerId, def.permissionNode());
             }
         }
@@ -213,7 +223,7 @@ public class WardrobeBridge {
         for (WardrobeCosmeticDef def : cosmetics) {
             revokePermission(playerId, def.permissionNode());
         }
-        CosmeticStore.getInstance().resetAllCosmetics(playerId);
+        cosmeticStore.resetAllCosmetics(playerId);
         LOGGER.atInfo().log("Reset all wardrobe cosmetics for player " + playerId);
     }
 

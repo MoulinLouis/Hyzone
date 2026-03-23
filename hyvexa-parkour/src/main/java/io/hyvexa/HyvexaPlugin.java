@@ -186,12 +186,16 @@ public class HyvexaPlugin extends JavaPlugin {
     private ScheduledFuture<?> duelTickTask;
     private ScheduledFuture<?> votePollingTask;
 
+    private VoteManager voteManager;
+    private PlayerSettingsPersistence playerSettingsPersistence;
     private RunStateStore runStateStore;
     private Thread shutdownHook;
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
     private PetManager petManager;
+    private DiscordLinkStore discordLinkStore;
+    private io.hyvexa.core.trail.TrailManager trailManager;
     private final Map<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
     private final Map<World, AtomicBoolean> hudTickInFlight = new ConcurrentHashMap<>();
     private final Map<World, Set<UUID>> hudPlayersByWorld = new ConcurrentHashMap<>();
@@ -220,7 +224,10 @@ public class HyvexaPlugin extends JavaPlugin {
             DatabaseManager.getInstance().initialize();
             LOGGER.atInfo().log("Database connection initialized");
             ParkourDatabaseSetup.ensureTables();
-            new PlayerSettingsPersistence().ensureTable();
+            this.playerSettingsPersistence = new PlayerSettingsPersistence(DatabaseManager.getInstance());
+            this.playerSettingsPersistence.ensureTable();
+            PlayerSettingsStore.setPersistence(this.playerSettingsPersistence);
+            PlayerMusicPage.setPersistence(this.playerSettingsPersistence);
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
@@ -228,7 +235,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.medalRewardStore = new MedalRewardStore(DatabaseManager.getInstance());
         this.medalStore = new MedalStore(DatabaseManager.getInstance());
         initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
-        initSafe("DiscordLinkStore", () -> DiscordLinkStore.getInstance().initialize());
+        this.discordLinkStore = DiscordLinkStore.getInstance();
+        initSafe("DiscordLinkStore", () -> discordLinkStore.initialize());
         initSafe("FeatherStore", () -> FeatherStore.getInstance().initialize());
         initSafe("VoteStore", () -> voteStore.initialize());
         initSafe("MedalRewardStore", () -> medalRewardStore.initialize());
@@ -242,30 +250,31 @@ public class HyvexaPlugin extends JavaPlugin {
         initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
             VoteManager.getInstance().initialize(voteConfig, voteStore, FeatherStore.getInstance());
+            this.voteManager = VoteManager.getInstance();
         });
         this.collisionManager = new CollisionManager();
-        this.mapStore = new MapStore();
+        this.mapStore = new MapStore(DatabaseManager.getInstance());
         this.mapStore.syncLoad();
         this.mapStore.setOnChangeListener(this::onMapStoreChanged);
-        this.settingsStore = new SettingsStore();
+        this.settingsStore = new SettingsStore(DatabaseManager.getInstance());
         this.settingsStore.syncLoad();
         PlayerAnalytics analytics = analyticsStore;
         CosmeticStore.getInstance().setAnalytics(analytics);
-        DiscordLinkStore.getInstance().setAnalytics(analytics);
-        DiscordLinkStore.getInstance().setVexaStore(VexaStore.getInstance());
+        discordLinkStore.setAnalytics(analytics);
+        discordLinkStore.setVexaStore(VexaStore.getInstance());
         WardrobeBridge.getInstance().setAnalytics(analytics);
         WardrobeBridge.getInstance().setCurrencyStores(VexaStore.getInstance(), FeatherStore.getInstance());
         PurgeSkinStore.getInstance().setVexaStore(VexaStore.getInstance());
-        this.progressStore = new ProgressStore();
+        this.progressStore = new ProgressStore(DatabaseManager.getInstance());
         this.progressStore.setAnalytics(analytics);
         this.progressStore.syncLoad();
-        this.playerCountStore = new PlayerCountStore();
+        this.playerCountStore = new PlayerCountStore(DatabaseManager.getInstance());
         this.playerCountStore.syncLoad();
-        this.globalMessageStore = new GlobalMessageStore();
+        this.globalMessageStore = new GlobalMessageStore(DatabaseManager.getInstance());
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore,
-                this.medalStore, this.medalRewardStore, analytics, FeatherStore.getInstance());
-        this.runStateStore = new RunStateStore();
+                this.medalStore, this.medalRewardStore, analytics);
+        this.runStateStore = new RunStateStore(DatabaseManager.getInstance());
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
         // Saved runs persist indefinitely — only invalidated when the map changes
@@ -281,7 +290,7 @@ public class HyvexaPlugin extends JavaPlugin {
             }
         }, "RunStateSaveHook");
         Runtime.getRuntime().addShutdownHook(this.shutdownHook);
-        this.ghostStore = new GhostStore("parkour_ghost_recordings", "parkour");
+        this.ghostStore = new GhostStore("parkour_ghost_recordings", "parkour", DatabaseManager.getInstance());
         this.ghostStore.syncLoad();
         this.ghostRecorder = new GhostRecorder(this.ghostStore);
         this.ghostRecorder.start();
@@ -289,20 +298,21 @@ public class HyvexaPlugin extends JavaPlugin {
         this.ghostNpcManager.start();
         this.petManager = new PetManager();
         this.petManager.start();
+        this.trailManager = TrailManager.getInstance();
         this.runTracker.setGhostRecorder(this.ghostRecorder);
         this.runTracker.setGhostNpcManager(this.ghostNpcManager);
-        this.duelStatsStore = new DuelStatsStore();
+        this.duelStatsStore = new DuelStatsStore(DatabaseManager.getInstance());
         this.duelStatsStore.syncLoad();
-        this.duelMatchStore = new DuelMatchStore();
+        this.duelMatchStore = new DuelMatchStore(DatabaseManager.getInstance());
         this.duelMatchStore.ensureTable();
-        this.duelPreferenceStore = new DuelPreferenceStore();
+        this.duelPreferenceStore = new DuelPreferenceStore(DatabaseManager.getInstance());
         this.duelPreferenceStore.syncLoad();
         this.duelQueue = new DuelQueue();
         this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, progressStore, settingsStore, analytics);
-        this.perksManager = new PlayerPerksManager(progressStore, mapStore);
+        this.perksManager = new PlayerPerksManager(progressStore, mapStore, playerSettingsPersistence);
         this.chatFormatter = new ChatFormatter(progressStore, mapStore, perksManager);
         this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager,
-                VexaStore.getInstance(), FeatherStore.getInstance());
+                VexaStore.getInstance(), FeatherStore.getInstance(), playerSettingsPersistence);
         this.announcementManager = new AnnouncementManager(globalMessageStore, hudManager,
                 this::scheduleTick, this::cancelScheduled);
         this.playtimeManager = new PlaytimeManager(progressStore, playerCountStore);
@@ -318,7 +328,10 @@ public class HyvexaPlugin extends JavaPlugin {
                 ghostNpcManager, hudManager, this::hideRunHud, this::showRunHud,
                 this::applyVipSpeedMultiplier));
         this.runTracker.setDuelTracker(duelTracker);
-        this.runTracker.getValidator().setPluginServices(hudManager, this::invalidateRankCache,
+        this.runTracker.getValidator().setPluginServices(hudManager,
+                io.hyvexa.core.cosmetic.CosmeticManager.getInstance(),
+                discordLinkStore,
+                this::invalidateRankCache,
                 this::refreshLeaderboardHologram, this::refreshMapLeaderboardHologram);
         this.progressStore.setRankCacheInvalidator(this::invalidateRankCache);
         registerRunTrackerTickSystem();
@@ -343,8 +356,8 @@ public class HyvexaPlugin extends JavaPlugin {
         duelTickTask = scheduleTick("duel tick", this::tickDuel,
                 ParkourTimingConstants.DUEL_TICK_INTERVAL_MS, ParkourTimingConstants.DUEL_TICK_INTERVAL_MS,
                 TimeUnit.MILLISECONDS);
-        int votePollInterval = VoteManager.getInstance().getPollIntervalSeconds();
-        votePollingTask = scheduleTick("vote polling", VoteManager.getInstance()::pollAllPlayers,
+        int votePollInterval = voteManager.getPollIntervalSeconds();
+        votePollingTask = scheduleTick("vote polling", voteManager::pollAllPlayers,
                 votePollInterval, votePollInterval, TimeUnit.SECONDS);
         announcementManager.refreshChatAnnouncements();
         scheduleLeaderboardHologramRefresh();
@@ -374,8 +387,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new MessageTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker, this.mapStore));
         this.getCommandRegistry().registerCommand(new VexaCommand(VexaStore.getInstance()));
-        this.getCommandRegistry().registerCommand(new LinkCommand());
-        this.getCommandRegistry().registerCommand(new UnlinkCommand());
+        this.getCommandRegistry().registerCommand(new LinkCommand(discordLinkStore));
+        this.getCommandRegistry().registerCommand(new UnlinkCommand(discordLinkStore));
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new PetTestCommand());
         this.getCommandRegistry().registerCommand(new MobGalleryCommand());
@@ -417,8 +430,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     PlayerSettingsPersistence.PlayerSettings savedSettings = null;
                     if (playerRef != null) {
                         UUID pid = playerRef.getUuid();
-                        PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-                        savedSettings = persistence != null ? persistence.loadPlayer(pid) : null;
+                        savedSettings = playerSettingsPersistence != null ? playerSettingsPersistence.loadPlayer(pid) : null;
                         if (savedSettings != null) {
                             PlayerSettingsStore.loadFrom(pid, savedSettings);
                             PlayerMusicPage.loadFrom(pid, savedSettings);
@@ -515,9 +527,8 @@ public class HyvexaPlugin extends JavaPlugin {
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             cacheHudPlayer(playerRef);
             if (playerRef != null) {
-                PlayerSettingsPersistence persistence = PlayerSettingsPersistence.getInstance();
-                PlayerSettingsPersistence.PlayerSettings ps = persistence != null
-                        ? persistence.loadPlayer(playerRef.getUuid()) : null;
+                PlayerSettingsPersistence.PlayerSettings ps = playerSettingsPersistence != null
+                        ? playerSettingsPersistence.loadPlayer(playerRef.getUuid()) : null;
                 if (ps != null) {
                     PlayerSettingsStore.loadFrom(playerRef.getUuid(), ps);
                     PlayerMusicPage.loadFrom(playerRef.getUuid(), ps);
@@ -568,19 +579,19 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { if (medalStore != null) { medalStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MedalStore"); }
 
-                try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
+                try { if (discordLinkStore != null) { discordLinkStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
 
                 try { CosmeticStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore"); }
 
-                try { TrailManager.getInstance().stopTrail(playerId); }
+                try { if (trailManager != null) { trailManager.stopTrail(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: TrailManager"); }
 
                 try { if (petManager != null) { petManager.despawnPet(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PetManager"); }
 
-                try { VoteManager.getInstance().unregisterPlayer(playerId); }
+                try { if (voteManager != null) { voteManager.unregisterPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteManager"); }
 
                 try { if (voteStore != null) { voteStore.evictPlayer(playerId); } }
@@ -869,8 +880,10 @@ public class HyvexaPlugin extends JavaPlugin {
         if (playerId == null || world == null) {
             return;
         }
-        DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
-        linkStore.checkAndRewardVexaOnLoginAsync(playerId)
+        if (discordLinkStore == null) {
+            return;
+        }
+        discordLinkStore.checkAndRewardVexaOnLoginAsync(playerId)
                 .thenAcceptAsync(rewarded -> {
                     if (!rewarded || !ref.isValid()) {
                         return;
@@ -880,7 +893,7 @@ public class HyvexaPlugin extends JavaPlugin {
                             ? currentStore.getComponent(ref, Player.getComponentType())
                             : null;
                     if (player != null) {
-                        linkStore.sendRewardGrantedMessage(player);
+                        discordLinkStore.sendRewardGrantedMessage(player);
                     }
                 }, world)
                 .exceptionally(ex -> {
@@ -891,7 +904,7 @@ public class HyvexaPlugin extends JavaPlugin {
             return;
         }
         String rank = progressStore.getRankName(playerId, mapStore);
-        linkStore.updateRankIfLinkedAsync(playerId, rank)
+        discordLinkStore.updateRankIfLinkedAsync(playerId, rank)
                 .exceptionally(ex -> {
                     LOGGER.atWarning().withCause(ex).log("Discord rank sync failed");
                     return null;
@@ -900,7 +913,7 @@ public class HyvexaPlugin extends JavaPlugin {
 
     private void scheduleVoteReadyTasks(Ref<EntityStore> ref, Store<EntityStore> store,
                                         PlayerRef playerRef) {
-        if (ref == null || store == null || playerRef == null) {
+        if (ref == null || store == null || playerRef == null || voteManager == null) {
             return;
         }
         UUID playerId = playerRef.getUuid();
@@ -912,15 +925,15 @@ public class HyvexaPlugin extends JavaPlugin {
         if (world == null) {
             return;
         }
-        VoteManager.getInstance().registerPlayer(playerId, username);
-        VoteManager.getInstance().checkAndRewardAsync(playerId)
+        voteManager.registerPlayer(playerId, username);
+        voteManager.checkAndRewardAsync(playerId)
                 .thenAcceptAsync(count -> {
                     if (count <= 0 || !ref.isValid()) {
                         return;
                     }
                     Player player = ref.getStore().getComponent(ref, Player.getComponentType());
                     if (player != null) {
-                        int total = count * VoteManager.getInstance().getRewardPerVote();
+                        int total = count * voteManager.getRewardPerVote();
                         String suffix = count > 1 ? " (x" + count + ")" : "";
                         player.sendMessage(Message.join(
                                 Message.raw("You received ").color("#a3e635"),
@@ -1360,7 +1373,7 @@ public class HyvexaPlugin extends JavaPlugin {
         shutdownSafe("teleportDebugTask", () -> cancelScheduled(teleportDebugTask));
         shutdownSafe("duelTickTask", () -> cancelScheduled(duelTickTask));
         shutdownSafe("votePollingTask", () -> cancelScheduled(votePollingTask));
-        shutdownSafe("VoteManager", () -> VoteManager.getInstance().shutdown());
+        shutdownSafe("VoteManager", () -> { if (voteManager != null) voteManager.shutdown(); });
         shutdownSafe("ghostRecorder", () -> { if (ghostRecorder != null) ghostRecorder.stop(); });
         shutdownSafe("ghostNpcManager", () -> { if (ghostNpcManager != null) ghostNpcManager.stop(); });
         shutdownSafe("petManager", () -> { if (petManager != null) petManager.stop(); });

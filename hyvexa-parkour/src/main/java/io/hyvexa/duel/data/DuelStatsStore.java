@@ -18,10 +18,6 @@ public class DuelStatsStore extends BasePlayerStore<DuelStats> {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
-    public DuelStatsStore() {
-        super();
-    }
-
     public DuelStatsStore(ConnectionProvider db) {
         super(db);
     }

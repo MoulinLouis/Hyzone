@@ -33,13 +33,16 @@ public class PurgeSkinSelectPage extends InteractiveCustomUIPage<PurgeSkinSelect
     private final UUID playerId;
     private final String weaponId;
     private final String weaponDisplayName;
+    private final PurgeSkinStore purgeSkinStore;
 
     public PurgeSkinSelectPage(@Nonnull PlayerRef playerRef, UUID playerId,
-                               String weaponId, String weaponDisplayName) {
+                               String weaponId, String weaponDisplayName,
+                               PurgeSkinStore purgeSkinStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, SkinSelectEventData.CODEC);
         this.playerId = playerId;
         this.weaponId = weaponId;
         this.weaponDisplayName = weaponDisplayName;
+        this.purgeSkinStore = purgeSkinStore;
     }
 
     @Override
@@ -83,7 +86,7 @@ public class PurgeSkinSelectPage extends InteractiveCustomUIPage<PurgeSkinSelect
     }
 
     private void handleDefault(Ref<EntityStore> ref, Store<EntityStore> store) {
-        PurgeSkinStore.getInstance().deselectSkin(playerId, weaponId);
+        purgeSkinStore.deselectSkin(playerId, weaponId);
 
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
@@ -93,7 +96,7 @@ public class PurgeSkinSelectPage extends InteractiveCustomUIPage<PurgeSkinSelect
     }
 
     private void handleSelect(Ref<EntityStore> ref, Store<EntityStore> store, String skinId) {
-        PurgeSkinStore.getInstance().selectSkin(playerId, weaponId, skinId);
+        purgeSkinStore.selectSkin(playerId, weaponId, skinId);
 
         Player player = store.getComponent(ref, Player.getComponentType());
         PurgeSkinDefinition def = PurgeSkinRegistry.getSkin(weaponId, skinId);
@@ -127,7 +130,7 @@ public class PurgeSkinSelectPage extends InteractiveCustomUIPage<PurgeSkinSelect
         commandBuilder.set("#Subtitle.Text", "Select a skin");
         commandBuilder.set("#BackButton.Text", "Close");
 
-        String currentSelected = PurgeSkinStore.getInstance().getSelectedSkin(playerId, weaponId);
+        String currentSelected = purgeSkinStore.getSelectedSkin(playerId, weaponId);
 
         // Default skin card (first entry)
         String defaultRoot = "#SkinList[0]";
@@ -152,7 +155,7 @@ public class PurgeSkinSelectPage extends InteractiveCustomUIPage<PurgeSkinSelect
         List<PurgeSkinDefinition> skins = PurgeSkinRegistry.getSkinsForWeapon(weaponId);
         int index = 1;
         for (PurgeSkinDefinition def : skins) {
-            if (!PurgeSkinStore.getInstance().ownsSkin(playerId, weaponId, def.getSkinId())) {
+            if (!purgeSkinStore.ownsSkin(playerId, weaponId, def.getSkinId())) {
                 continue;
             }
 
