@@ -291,7 +291,6 @@ public class HyvexaPlugin extends JavaPlugin {
         this.duelPreferenceStore.syncLoad();
         this.duelQueue = new DuelQueue();
         this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, progressStore, settingsStore, analytics);
-        this.duelTracker.setVipSpeedService(new DuelTracker.VipSpeedService(this::getVipSpeedMultiplier, this::applyVipSpeedMultiplier));
         this.perksManager = new PlayerPerksManager(progressStore, mapStore);
         this.chatFormatter = new ChatFormatter(progressStore, mapStore, perksManager);
         this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager);
@@ -306,7 +305,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
         this.worldMapManager = new WorldMapManager(true);
         ParkourInteractionBridge.configure(new ParkourInteractionBridge.Services(
-                mapStore, progressStore, runTracker, duelTracker, medalStore));
+                mapStore, progressStore, runTracker, duelTracker, medalStore, duelPreferenceStore));
         this.runTracker.setDuelTracker(duelTracker);
         this.runTracker.getValidator().setPluginServices(hudManager, this::invalidateRankCache,
                 this::refreshLeaderboardHologram, this::refreshMapLeaderboardHologram);

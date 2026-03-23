@@ -13,13 +13,13 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.MedalStore;
@@ -38,6 +38,7 @@ import javax.annotation.Nonnull;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import static com.hypixel.hytale.server.core.command.commands.player.inventory.InventorySeeCommand.MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD;
 
@@ -52,10 +53,13 @@ public class ParkourCommand extends AbstractAsyncCommand {
     private final RunTracker runTracker;
     private final MedalStore medalStore;
     private final MedalRewardStore medalRewardStore;
+    private final DuelTracker duelTracker;
+    private final Consumer<Store<EntityStore>> leaderboardRefresher;
 
     public ParkourCommand(MapStore mapStore, ProgressStore progressStore, SettingsStore settingsStore,
                           PlayerCountStore playerCountStore, RunTracker runTracker,
-                          MedalStore medalStore, MedalRewardStore medalRewardStore) {
+                          MedalStore medalStore, MedalRewardStore medalRewardStore,
+                          DuelTracker duelTracker, Consumer<Store<EntityStore>> leaderboardRefresher) {
         super("pk", "Open the parkour map list.");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -66,6 +70,8 @@ public class ParkourCommand extends AbstractAsyncCommand {
         this.runTracker = runTracker;
         this.medalStore = medalStore;
         this.medalRewardStore = medalRewardStore;
+        this.duelTracker = duelTracker;
+        this.leaderboardRefresher = leaderboardRefresher;
     }
 
     @Override
@@ -109,13 +115,10 @@ public class ParkourCommand extends AbstractAsyncCommand {
         if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_PARKOUR, ModeMessages.MESSAGE_ENTER_PARKOUR)) {
             return;
         }
-        if (playerRefComponent != null) {
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin != null && plugin.getDuelTracker() != null
-                    && plugin.getDuelTracker().isInMatch(playerRefComponent.getUuid())) {
-                ctx.sendMessage(Message.raw("You can't use parkour commands during a duel."));
-                return;
-            }
+        if (playerRefComponent != null && duelTracker != null
+                && duelTracker.isInMatch(playerRefComponent.getUuid())) {
+            ctx.sendMessage(Message.raw("You can't use parkour commands during a duel."));
+            return;
         }
         String[] tokens = CommandUtils.tokenize(ctx);
         if (tokens.length == 0 || tokens[0].equalsIgnoreCase("ui")) {
@@ -406,16 +409,15 @@ public class ParkourCommand extends AbstractAsyncCommand {
             ctx.sendMessage(MESSAGE_OP_REQUIRED);
             return;
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
-            ctx.sendMessage(SystemMessageUtils.serverError("Plugin not available."));
-            return;
-        }
         if (!HylogramsBridge.isAvailable()) {
             ctx.sendMessage(SystemMessageUtils.serverError("Hylograms plugin is not available."));
             return;
         }
-        plugin.refreshLeaderboardHologram(store);
+        if (leaderboardRefresher == null) {
+            ctx.sendMessage(SystemMessageUtils.serverError("Leaderboard refresher not available."));
+            return;
+        }
+        leaderboardRefresher.accept(store);
         ctx.sendMessage(SystemMessageUtils.serverInfo("Leaderboard hologram refreshed."));
     }
 

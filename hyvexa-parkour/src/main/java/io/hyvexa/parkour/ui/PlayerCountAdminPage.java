@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 
 public class PlayerCountAdminPage extends BaseParkourPage {
 
@@ -39,15 +38,12 @@ public class PlayerCountAdminPage extends BaseParkourPage {
             .withZone(ZoneId.systemDefault());
 
     private final PlayerCountStore playerCountStore;
-    private final BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback;
     private String summaryText = "No player count history yet.";
     private String windowText = "Last 24 hours";
 
-    public PlayerCountAdminPage(@Nonnull PlayerRef playerRef, PlayerCountStore playerCountStore,
-                                BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback) {
+    public PlayerCountAdminPage(@Nonnull PlayerRef playerRef, PlayerCountStore playerCountStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerCountStore = playerCountStore;
-        this.openIndexCallback = openIndexCallback;
     }
 
     @Override
@@ -85,9 +81,7 @@ public class PlayerCountAdminPage extends BaseParkourPage {
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (openIndexCallback != null) {
-            openIndexCallback.accept(ref, store);
-        }
+        AdminPageUtils.openIndex(ref, store);
     }
 
     private void openSelf(Ref<EntityStore> ref, Store<EntityStore> store) {

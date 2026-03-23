@@ -21,7 +21,6 @@ import io.hyvexa.parkour.data.SettingsStore;
 
 import javax.annotation.Nonnull;
 import java.util.Locale;
-import java.util.function.BiConsumer;
 
 public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage.SettingsData> {
 
@@ -37,16 +36,13 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
 
     private final SettingsStore settingsStore;
     private final MapStore mapStore;
-    private final BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback;
     private String fallRespawnSecondsInput = "";
     private String fallFailsafeVoidInput = "";
 
-    public SettingsAdminPage(@Nonnull PlayerRef playerRef, SettingsStore settingsStore, MapStore mapStore,
-                             BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback) {
+    public SettingsAdminPage(@Nonnull PlayerRef playerRef, SettingsStore settingsStore, MapStore mapStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, SettingsData.CODEC);
         this.settingsStore = settingsStore;
         this.mapStore = mapStore;
-        this.openIndexCallback = openIndexCallback;
         this.fallRespawnSecondsInput = formatDouble(getCurrentSeconds());
         this.fallFailsafeVoidInput = formatDouble(getCurrentFailsafeVoidY());
     }
@@ -150,9 +146,7 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (openIndexCallback != null) {
-            openIndexCallback.accept(ref, store);
-        }
+        AdminPageUtils.openIndex(ref, store);
     }
 
     private void populateFields(UICommandBuilder commandBuilder) {

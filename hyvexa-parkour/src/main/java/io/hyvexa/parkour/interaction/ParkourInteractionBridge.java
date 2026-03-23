@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.interaction;
 
 import io.hyvexa.duel.DuelTracker;
+import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
@@ -34,6 +35,7 @@ public final class ParkourInteractionBridge {
         ProgressStore progressStore,
         RunTracker runTracker,
         DuelTracker duelTracker,
-        MedalStore medalStore
+        MedalStore medalStore,
+        DuelPreferenceStore duelPreferenceStore
     ) {}
 }

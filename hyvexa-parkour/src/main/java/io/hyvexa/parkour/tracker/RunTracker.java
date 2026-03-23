@@ -87,7 +87,7 @@ public class RunTracker {
         this.duelTracker = duelTracker;
     }
 
-    RunValidator getValidator() {
+    public RunValidator getValidator() {
         return validator;
     }
 

@@ -65,7 +65,7 @@ import java.util.UUID;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class HyvexaPurgePlugin extends JavaPlugin {
+public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String ITEM_ORB_BLUE = "Purge_Orb_Blue";
@@ -157,9 +157,9 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         waveConfigManager = new PurgeWaveConfigManager(variantConfigManager);
         weaponConfigManager = new PurgeWeaponConfigManager();
         hudManager = new PurgeHudManager();
-        waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, variantConfigManager, hudManager);
+        waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, variantConfigManager, hudManager, weaponConfigManager, this);
         partyManager = new PurgePartyManager();
-        sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager);
+        sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager, weaponConfigManager, this);
         upgradeManager = new PurgeUpgradeManager();
         weaponXpManager = new WeaponXpManager();
         classManager = new PurgeClassManager(upgradeManager);
@@ -181,9 +181,13 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
         // Register commands
         this.getCommandRegistry().registerCommand(
-                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager));
+                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager, this));
         this.getCommandRegistry().registerCommand(new SetAmmoCommand());
         this.getCommandRegistry().registerCommand(new CamTestCommand());
+
+        // Configure interaction bridge for codec-instantiated handlers
+        PurgeInteractionBridge.configure(new PurgeInteractionBridge.Services(
+                sessionManager, partyManager, weaponConfigManager, this));
 
         // Register item interaction codecs
         registerInteractionCodecs();
@@ -307,6 +311,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        PurgeInteractionBridge.clear();
         if (sessionManager != null) {
             sessionManager.shutdown();
         }
@@ -324,12 +329,13 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         catch (Exception e) { /* Purge DB shutdown */ }
     }
 
-    // --- Public loadout methods for PurgeSessionManager ---
+    // --- PurgeLoadoutService implementation ---
 
     public void grantLoadout(Player player) {
         grantLoadout(player, null);
     }
 
+    @Override
     public void grantLoadout(Player player, PurgeSessionPlayerState state) {
         InventoryUtils.clearAllContainers(player);
         giveStartingWeapon(player, state);
@@ -342,16 +348,19 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         }
     }
 
+    @Override
     public void removeLoadout(Player player) {
         InventoryUtils.clearAllContainers(player);
         giveBaseLoadout(player);
     }
 
+    @Override
     public void giveWaitingLoadout(Player player) {
         InventoryUtils.clearAllContainers(player);
         giveQuitOrb(player);
     }
 
+    @Override
     public void switchWeapon(Player player, PurgeSessionPlayerState state, String newWeaponId) {
         String oldWeaponId = state.getCurrentWeaponId();
         state.setCurrentWeaponId(newWeaponId);
@@ -377,6 +386,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         hudManager.updateWeaponXpHud(state.getPlayerId(), newWeaponId, displayName);
     }
 
+    @Override
     public void switchMeleeWeapon(Player player, PurgeSessionPlayerState state, String newMeleeId) {
         state.setCurrentMeleeWeaponId(newMeleeId);
         String itemId = weaponConfigManager.getMeleeItemId(newMeleeId);
@@ -392,6 +402,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         hudManager.updateMeleeXpHud(state.getPlayerId(), newMeleeId, displayName);
     }
 
+    @Override
     public void grantLootbox(Player player, int count) {
         Inventory inventory = player.getInventory();
         if (inventory == null || inventory.getHotbar() == null) {

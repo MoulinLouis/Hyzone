@@ -35,7 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /** Checkpoint detection and finish logic extracted from RunTracker. */
-class RunValidator {
+public class RunValidator {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS_SQ;
@@ -62,7 +62,7 @@ class RunValidator {
         this.medalRewardStore = medalRewardStore;
     }
 
-    void setPluginServices(io.hyvexa.manager.HudManager hudManager,
+    public void setPluginServices(io.hyvexa.manager.HudManager hudManager,
                            java.util.function.Consumer<UUID> rankCacheInvalidator,
                            java.util.function.Consumer<Store<EntityStore>> leaderboardHologramRefresher,
                            java.util.function.BiConsumer<String, Store<EntityStore>> mapLeaderboardHologramRefresher) {

@@ -21,19 +21,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import java.util.function.BiConsumer;
 
 public class PlaytimeAdminPage extends AbstractSearchablePaginatedPage {
 
     private static final String BUTTON_BACK = "BackButton";
     private final ProgressStore progressStore;
-    private final BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback;
 
-    public PlaytimeAdminPage(@Nonnull PlayerRef playerRef, ProgressStore progressStore,
-                             BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback) {
+    public PlaytimeAdminPage(@Nonnull PlayerRef playerRef, ProgressStore progressStore) {
         super(playerRef, 30);
         this.progressStore = progressStore;
-        this.openIndexCallback = openIndexCallback;
     }
 
     @Override
@@ -107,9 +103,7 @@ public class PlaytimeAdminPage extends AbstractSearchablePaginatedPage {
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (openIndexCallback != null) {
-            openIndexCallback.accept(ref, store);
-        }
+        AdminPageUtils.openIndex(ref, store);
     }
 
     private String formatDisplayName(UUID playerId) {
