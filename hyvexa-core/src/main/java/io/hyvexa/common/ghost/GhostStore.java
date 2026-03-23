@@ -36,7 +36,7 @@ public class GhostStore {
     private final Map<String, GhostRecording> cache = new ConcurrentHashMap<>();
 
     public GhostStore(String tableName, String modeLabel) {
-        this(tableName, modeLabel, this.db);
+        this(tableName, modeLabel, DatabaseManager.getInstance());
     }
 
     public GhostStore(String tableName, String modeLabel, ConnectionProvider db) {
