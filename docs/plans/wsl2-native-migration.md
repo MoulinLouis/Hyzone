@@ -70,6 +70,8 @@ mv hyvexa_plugin/run hyvexa_server
 
 All subsequent paths in this plan use `hyvexa_server/` for the server runtime.
 
+**Note:** After this step, the existing IntelliJ run config (which points to `$PROJECT_DIR$/run`) will break. Don't try to run the server from the old project — you'll set up the new run config in step 14.
+
 Verify:
 ```bash
 ls /mnt/c/Users/User/Documents/dev/Hytale/hyvexa_server/mods/
@@ -402,9 +404,10 @@ Then in IntelliJ: Run `HytaleServer` → connect via Hytale client → play.
 If anything goes wrong:
 1. Move server runtime back: `mv /mnt/c/.../hyvexa_server /mnt/c/.../hyvexa_plugin_OLD/run`
 2. Rename: `mv /mnt/c/.../hyvexa_plugin_OLD /mnt/c/.../hyvexa_plugin`
-3. Reopen that project in IntelliJ
-4. Everything works exactly as before
-5. The WSL2 clone can be deleted: `rm -rf ~/dev/Hytale/hyvexa_plugin`
+3. Remove WSL2 Gradle overrides: edit `~/.gradle/gradle.properties` and delete the `hytaleHome` and `stageModsDir` lines
+4. Reopen that project in IntelliJ
+5. Everything works exactly as before
+6. The WSL2 clone can be deleted: `rm -rf ~/dev/Hytale/hyvexa_plugin`
 
 No data can be lost — the remote has everything pushed.
 
