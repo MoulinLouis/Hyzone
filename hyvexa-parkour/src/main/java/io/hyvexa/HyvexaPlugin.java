@@ -374,7 +374,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new PetTestCommand());
         this.getCommandRegistry().registerCommand(new MobGalleryCommand());
-        this.getCommandRegistry().registerCommand(new AnalyticsCommand());
+        this.getCommandRegistry().registerCommand(new AnalyticsCommand(analyticsStore));
         this.getCommandRegistry().registerCommand(new FeatherCommand());
         this.getCommandRegistry().registerCommand(new CreditsCommand());
         this.getCommandRegistry().registerCommand(new SpectatorCommand());
