@@ -305,7 +305,9 @@ public class HyvexaPlugin extends JavaPlugin {
                 this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
         this.worldMapManager = new WorldMapManager(true);
         ParkourInteractionBridge.configure(new ParkourInteractionBridge.Services(
-                mapStore, progressStore, runTracker, duelTracker, medalStore, duelPreferenceStore));
+                mapStore, progressStore, runTracker, duelTracker, medalStore, duelPreferenceStore,
+                ghostNpcManager, hudManager, this::hideRunHud, this::showRunHud,
+                this::applyVipSpeedMultiplier));
         this.runTracker.setDuelTracker(duelTracker);
         this.runTracker.getValidator().setPluginServices(hudManager, this::invalidateRankCache,
                 this::refreshLeaderboardHologram, this::refreshMapLeaderboardHologram);
