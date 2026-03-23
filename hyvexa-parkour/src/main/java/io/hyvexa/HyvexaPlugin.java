@@ -273,7 +273,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.globalMessageStore = new GlobalMessageStore(DatabaseManager.getInstance());
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore,
-                this.medalStore, this.medalRewardStore, analytics);
+                this.medalStore, this.medalRewardStore, analytics, FeatherStore.getInstance());
         this.runStateStore = new RunStateStore(DatabaseManager.getInstance());
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
