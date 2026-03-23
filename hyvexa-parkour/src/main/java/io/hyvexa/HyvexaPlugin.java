@@ -264,7 +264,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.globalMessageStore = new GlobalMessageStore();
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore,
-                this.medalStore, this.medalRewardStore, analytics);
+                this.medalStore, this.medalRewardStore, analytics, FeatherStore.getInstance());
         this.runStateStore = new RunStateStore();
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
@@ -301,7 +301,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, progressStore, settingsStore, analytics);
         this.perksManager = new PlayerPerksManager(progressStore, mapStore);
         this.chatFormatter = new ChatFormatter(progressStore, mapStore, perksManager);
-        this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager);
+        this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager,
+                VexaStore.getInstance(), FeatherStore.getInstance());
         this.announcementManager = new AnnouncementManager(globalMessageStore, hudManager,
                 this::scheduleTick, this::cancelScheduled);
         this.playtimeManager = new PlaytimeManager(progressStore, playerCountStore);
@@ -363,7 +364,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new RulesCommand());
         this.getCommandRegistry().registerCommand(new ParkourCommand(this.mapStore, this.progressStore, this.settingsStore,
                 this.playerCountStore, this.runTracker, this.medalStore, this.medalRewardStore,
-                this.duelTracker, this::refreshLeaderboardHologram, adminNavigator));
+                this.duelTracker, this::refreshLeaderboardHologram, adminNavigator, VexaStore.getInstance()));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
         this.getCommandRegistry().registerCommand(new StoreCommand());
@@ -372,14 +373,14 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
         this.getCommandRegistry().registerCommand(new MessageTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker, this.mapStore));
-        this.getCommandRegistry().registerCommand(new VexaCommand());
+        this.getCommandRegistry().registerCommand(new VexaCommand(VexaStore.getInstance()));
         this.getCommandRegistry().registerCommand(new LinkCommand());
         this.getCommandRegistry().registerCommand(new UnlinkCommand());
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new PetTestCommand());
         this.getCommandRegistry().registerCommand(new MobGalleryCommand());
         this.getCommandRegistry().registerCommand(new AnalyticsCommand(analyticsStore));
-        this.getCommandRegistry().registerCommand(new FeatherCommand());
+        this.getCommandRegistry().registerCommand(new FeatherCommand(FeatherStore.getInstance()));
         this.getCommandRegistry().registerCommand(new CreditsCommand());
         this.getCommandRegistry().registerCommand(new SpectatorCommand());
         this.getCommandRegistry().registerCommand(new io.hyvexa.core.queue.RunOrFallQueueCommand());

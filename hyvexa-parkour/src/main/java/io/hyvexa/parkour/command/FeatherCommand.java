@@ -2,14 +2,17 @@ package io.hyvexa.parkour.command;
 
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import io.hyvexa.core.economy.FeatherStore;
+import io.hyvexa.core.economy.CurrencyStore;
 
 import java.util.UUID;
 
 public class FeatherCommand extends AbstractCurrencyCommand {
 
-    public FeatherCommand() {
+    private final CurrencyStore store;
+
+    public FeatherCommand(CurrencyStore store) {
         super("feather", "Manage player feathers");
+        this.store = store;
     }
 
     @Override
@@ -19,22 +22,22 @@ public class FeatherCommand extends AbstractCurrencyCommand {
 
     @Override
     protected long getCurrency(UUID playerId) {
-        return FeatherStore.getInstance().getFeathers(playerId);
+        return store.getBalance(playerId);
     }
 
     @Override
     protected void setCurrency(UUID playerId, long amount) {
-        FeatherStore.getInstance().setFeathers(playerId, amount);
+        store.setBalance(playerId, amount);
     }
 
     @Override
     protected long addCurrency(UUID playerId, long amount) {
-        return FeatherStore.getInstance().addFeathers(playerId, amount);
+        return store.addBalance(playerId, amount);
     }
 
     @Override
     protected long removeCurrency(UUID playerId, long amount) {
-        return FeatherStore.getInstance().removeFeathers(playerId, amount);
+        return store.removeBalance(playerId, amount);
     }
 
     @Override

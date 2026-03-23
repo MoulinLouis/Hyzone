@@ -16,7 +16,7 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.parkour.ParkourConstants;
-import io.hyvexa.core.economy.FeatherStore;
+import io.hyvexa.core.economy.CurrencyStore;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.Medal;
@@ -47,6 +47,7 @@ public class RunValidator {
     private final ProgressStore progressStore;
     private final MedalStore medalStore;
     private final MedalRewardStore medalRewardStore;
+    private final CurrencyStore featherStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
     private io.hyvexa.manager.HudManager hudManager;
@@ -55,11 +56,13 @@ public class RunValidator {
     private java.util.function.BiConsumer<String, Store<EntityStore>> mapLeaderboardHologramRefresher;
 
     RunValidator(MapStore mapStore, ProgressStore progressStore,
-                 MedalStore medalStore, MedalRewardStore medalRewardStore) {
+                 MedalStore medalStore, MedalRewardStore medalRewardStore,
+                 CurrencyStore featherStore) {
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.medalStore = medalStore;
         this.medalRewardStore = medalRewardStore;
+        this.featherStore = featherStore;
     }
 
     public void setPluginServices(io.hyvexa.manager.HudManager hudManager,
@@ -507,7 +510,6 @@ public class RunValidator {
     private record MedalAwardResult(Medal medal, int featherReward) {}
 
     private MedalAwardResult awardMedals(UUID playerId, Map map, long durationMs, Player player) {
-        FeatherStore featherStore = FeatherStore.getInstance();
         String category = map.getCategory();
         Medal highestEarned = null;
         int highestFeathers = 0;
@@ -526,7 +528,7 @@ public class RunValidator {
             medalStore.awardMedal(playerId, map.getId(), medal);
             int featherReward = medalRewardStore.getReward(category, medal);
             if (featherReward > 0) {
-                featherStore.addFeathers(playerId, featherReward);
+                featherStore.addBalance(playerId, featherReward);
                 player.sendMessage(SystemMessageUtils.parkourSuccess(
                         medal.name() + " Medal! +" + featherReward + " feathers"));
             } else {
@@ -542,7 +544,7 @@ public class RunValidator {
             medalStore.awardMedal(playerId, map.getId(), Medal.INSANE);
             int featherReward = medalRewardStore.getReward(category, Medal.INSANE);
             if (featherReward > 0) {
-                featherStore.addFeathers(playerId, featherReward);
+                featherStore.addBalance(playerId, featherReward);
                 player.sendMessage(SystemMessageUtils.parkourSuccess(
                         "INSANE Medal! +" + featherReward + " feathers"));
             } else {

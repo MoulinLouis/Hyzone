@@ -22,8 +22,7 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.parkour.data.PlayerSettingsPersistence;
 import io.hyvexa.duel.DuelTracker;
-import io.hyvexa.core.economy.VexaStore;
-import io.hyvexa.core.economy.FeatherStore;
+import io.hyvexa.core.economy.CurrencyStore;
 import io.hyvexa.parkour.data.Medal;
 import io.hyvexa.parkour.ParkourTimingConstants;
 
@@ -44,14 +43,18 @@ public class HudManager {
     private final RunTracker runTracker;
     private final DuelTracker duelTracker;
     private final PlayerPerksManager perksManager;
+    private final CurrencyStore vexaStore;
+    private final CurrencyStore featherStore;
 
     public HudManager(ProgressStore progressStore, MapStore mapStore, RunTracker runTracker, DuelTracker duelTracker,
-                      PlayerPerksManager perksManager) {
+                      PlayerPerksManager perksManager, CurrencyStore vexaStore, CurrencyStore featherStore) {
         this.progressStore = progressStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
         this.duelTracker = duelTracker;
         this.perksManager = perksManager;
+        this.vexaStore = vexaStore;
+        this.featherStore = featherStore;
     }
 
     private PlayerHudState getState(UUID playerId) {
@@ -148,8 +151,8 @@ public class HudManager {
         int totalMaps = mapStore.getMapCount();
         hud.updateInfo(playerRef.getUsername(), rankName, completedMaps, totalMaps, SERVER_IP_DISPLAY);
         hud.updatePlayerCount();
-        hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
-        hud.updateFeathers(FeatherStore.getInstance().getCachedFeathers(playerId));
+        hud.updateVexa(vexaStore.getBalance(playerId));
+        hud.updateFeathers(featherStore.getBalance(playerId));
         updateAdvancedHudData(ref, store, playerRef, hud);
         if (!running) {
             if (wasRunning) {
