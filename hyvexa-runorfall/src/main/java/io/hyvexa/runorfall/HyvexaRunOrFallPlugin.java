@@ -25,6 +25,7 @@ import io.hyvexa.common.util.StoreInitializer;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.bridge.GameModeBridge;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.core.queue.RunOrFallQueueCommand;
 import io.hyvexa.core.queue.RunOrFallQueueStore;
@@ -74,6 +75,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private RunOrFallConfigStore configStore;
     private RunOrFallStatsStore statsStore;
     private RunOrFallGameManager gameManager;
+    private RunOrFallFeatherBridge featherBridge;
     private RunOrFallCommand runOrFallCommand;
     private static final long HUD_READY_DELAY_MS = 1500L;
     private final ConcurrentHashMap<UUID, RunOrFallHud> runOrFallHuds = new ConcurrentHashMap<>();
@@ -118,6 +120,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
 
         configStore = new RunOrFallConfigStore(new File(folder, "config.json"));
         statsStore = new RunOrFallStatsStore(DatabaseManager.getInstance());
+        featherBridge = new RunOrFallFeatherBridge(FeatherStore.getInstance());
 
         RunOrFallGameManager.PluginCallbacks callbacks = new RunOrFallGameManager.PluginCallbacks() {
             @Override public void refreshRunOrFallHotbar(UUID playerId) {
@@ -133,7 +136,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 HyvexaRunOrFallPlugin.this.updateBlinkChargesHud(playerId, blinkCharges);
             }
         };
-        gameManager = new RunOrFallGameManager(configStore, statsStore, callbacks);
+        gameManager = new RunOrFallGameManager(configStore, statsStore, callbacks, featherBridge);
 
         RunOrFallInteractionBridge.configure(new RunOrFallInteractionBridge.Services(
                 gameManager, statsStore,
@@ -238,7 +241,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             hiddenHudPlayers.remove(playerId);
             RunOrFallAdminPage.clearSelection(playerId);
             RunOrFallMusicPage.clearPlayer(playerId);
-            RunOrFallFeatherBridge.evictPlayer(playerId);
+            featherBridge.evictPlayer(playerId);
             if (runOrFallCommand != null) {
                 runOrFallCommand.clearSelection(playerId);
             }
@@ -478,7 +481,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         hud.updateBlinkCharges(blinkCharges, showBrokenBlocks);
         hud.updatePlayerCount();
         hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
-        hud.updateFeathers(RunOrFallFeatherBridge.getCachedFeathers(playerId));
+        hud.updateFeathers(featherBridge.getCachedFeathers(playerId));
     }
 
     private void attachHiddenRunOrFallHud(PlayerRef playerRef, Player player) {
@@ -577,7 +580,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             RunOrFallHud hud = entry.getValue();
             hud.updatePlayerCount();
             hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
-            hud.updateFeathers(RunOrFallFeatherBridge.getCachedFeathers(playerId));
+            hud.updateFeathers(featherBridge.getCachedFeathers(playerId));
             int brokenBlocks = gameManager != null ? gameManager.getBrokenBlocksCount(playerId) : 0;
             boolean showBrokenBlocks = gameManager != null && gameManager.isInActiveRound(playerId);
             hud.updateBrokenBlocks(brokenBlocks, showBrokenBlocks);

@@ -303,7 +303,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineBonusCalculator,
             minePlayerStore
         );
-        hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager);
+        hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager, VexaStore.getInstance());
         if (mineGateChecker != null) {
             mineGateChecker.setHudManagers(hudManager, mineHudManager);
         }

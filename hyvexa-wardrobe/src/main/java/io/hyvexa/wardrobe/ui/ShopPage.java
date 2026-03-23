@@ -20,8 +20,7 @@ import io.hyvexa.common.shop.ShopTabRegistry;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.core.economy.FeatherStore;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyStore;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 
 import javax.annotation.Nonnull;
@@ -40,14 +39,18 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
     private static final String TAB_PREFIX = "Tab:";
 
     private final UUID playerId;
+    private final CurrencyStore vexaStore;
+    private final CurrencyStore featherStore;
     private String activeTabId;
     private boolean showingVexaPacks;
     private String pendingConfirmKey;
     private String pendingConfirmTabId;
 
-    public ShopPage(@Nonnull PlayerRef playerRef, UUID playerId) {
+    public ShopPage(@Nonnull PlayerRef playerRef, UUID playerId, CurrencyStore vexaStore, CurrencyStore featherStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ShopEventData.CODEC);
         this.playerId = playerId;
+        this.vexaStore = vexaStore;
+        this.featherStore = featherStore;
     }
 
     @Override
@@ -55,9 +58,9 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
                       @Nonnull UIEventBuilder evt, @Nonnull Store<EntityStore> store) {
         cmd.append("Pages/Shop.ui");
 
-        long vexa = VexaStore.getInstance().getVexa(playerId);
+        long vexa = vexaStore.getBalance(playerId);
         cmd.set("#VexaBalance.Text", String.valueOf(vexa));
-        long feathers = FeatherStore.getInstance().getFeathers(playerId);
+        long feathers = featherStore.getBalance(playerId);
         cmd.set("#FeatherBalance.Text", String.valueOf(feathers));
 
         registerBaseEventBindings(evt);
@@ -241,9 +244,9 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
         UICommandBuilder cmd = new UICommandBuilder();
         UIEventBuilder evt = new UIEventBuilder();
 
-        long vexa = VexaStore.getInstance().getVexa(playerId);
+        long vexa = vexaStore.getBalance(playerId);
         cmd.set("#VexaBalance.Text", String.valueOf(vexa));
-        long feathers = FeatherStore.getInstance().getFeathers(playerId);
+        long feathers = featherStore.getBalance(playerId);
         cmd.set("#FeatherBalance.Text", String.valueOf(feathers));
         cmd.set("#ConfirmOverlay.Visible", false);
 

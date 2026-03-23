@@ -36,6 +36,7 @@ import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.parkour.util.ParkourUtils;
 import io.hyvexa.core.analytics.PlayerAnalytics;
+import io.hyvexa.core.economy.CurrencyStore;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -72,13 +73,14 @@ public class RunTracker {
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore, MedalStore medalStore,
-                             MedalRewardStore medalRewardStore, PlayerAnalytics analytics) {
+                             MedalRewardStore medalRewardStore, PlayerAnalytics analytics,
+                             CurrencyStore featherStore) {
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.settingsStore = settingsStore;
         this.analytics = analytics;
         this.jumpTracker = new JumpTracker(progressStore);
-        this.validator = new RunValidator(mapStore, progressStore, medalStore, medalRewardStore);
+        this.validator = new RunValidator(mapStore, progressStore, medalStore, medalRewardStore, featherStore);
         this.sessionTracker = new RunSessionTracker(mapStore, progressStore);
         this.teleporter = new RunTeleporter(mapStore, activeRuns);
     }

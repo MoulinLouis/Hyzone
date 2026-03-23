@@ -69,7 +69,7 @@ public class WardrobePlugin extends JavaPlugin {
         shopConfigTab = new ShopConfigTab();
         ShopTabRegistry.register(shopConfigTab);
 
-        this.getCommandRegistry().registerCommand(new ShopCommand());
+        this.getCommandRegistry().registerCommand(new ShopCommand(VexaStore.getInstance(), FeatherStore.getInstance()));
         this.getCommandRegistry().registerCommand(new WardrobeBuyCommand());
         this.getCommandRegistry().registerCommand(new WardrobeResetCommand());
 

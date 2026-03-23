@@ -18,7 +18,7 @@ import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyStore;
 import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalRewardStore;
@@ -56,12 +56,13 @@ public class ParkourCommand extends AbstractAsyncCommand {
     private final DuelTracker duelTracker;
     private final Consumer<Store<EntityStore>> leaderboardRefresher;
     private final ParkourAdminNavigator adminNavigator;
+    private final CurrencyStore vexaStore;
 
     public ParkourCommand(MapStore mapStore, ProgressStore progressStore, SettingsStore settingsStore,
                           PlayerCountStore playerCountStore, RunTracker runTracker,
                           MedalStore medalStore, MedalRewardStore medalRewardStore,
                           DuelTracker duelTracker, Consumer<Store<EntityStore>> leaderboardRefresher,
-                          ParkourAdminNavigator adminNavigator) {
+                          ParkourAdminNavigator adminNavigator, CurrencyStore vexaStore) {
         super("pk", "Open the parkour map list.");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -75,6 +76,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
         this.duelTracker = duelTracker;
         this.leaderboardRefresher = leaderboardRefresher;
         this.adminNavigator = adminNavigator;
+        this.vexaStore = vexaStore;
     }
 
     @Override
@@ -331,7 +333,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
             return;
         }
 
-        long newBalance = VexaStore.getInstance().addVexa(resolved.playerId, amount);
+        long newBalance = vexaStore.addBalance(resolved.playerId, amount);
         ctx.sendMessage(Message.raw("Gave " + amount + " vexa to " + resolved.name + " (balance: " + newBalance + ")").color("#44ff44"));
     }
 

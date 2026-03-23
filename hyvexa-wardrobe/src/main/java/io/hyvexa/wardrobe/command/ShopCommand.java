@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.core.economy.CurrencyStore;
 import io.hyvexa.wardrobe.ui.ShopPage;
 
 import javax.annotation.Nonnull;
@@ -19,9 +20,14 @@ import static com.hypixel.hytale.server.core.command.commands.player.inventory.I
 
 public class ShopCommand extends AbstractAsyncCommand {
 
-    public ShopCommand() {
+    private final CurrencyStore vexaStore;
+    private final CurrencyStore featherStore;
+
+    public ShopCommand(CurrencyStore vexaStore, CurrencyStore featherStore) {
         super("shop", "Open the shop.");
         this.setPermissionGroup(GameMode.Adventure);
+        this.vexaStore = vexaStore;
+        this.featherStore = featherStore;
     }
 
     @Override
@@ -42,7 +48,7 @@ public class ShopCommand extends AbstractAsyncCommand {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef == null) return;
             player.getPageManager().openCustomPage(ref, store,
-                    new ShopPage(playerRef, playerRef.getUuid()));
+                    new ShopPage(playerRef, playerRef.getUuid(), vexaStore, featherStore));
         }, world);
     }
 }

@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.core.economy.FeatherStore;
+import io.hyvexa.core.economy.CurrencyStore;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -53,6 +53,7 @@ public class VoteManager {
     private volatile ExecutorService ioExecutor;
     private volatile ExecutorService rewardExecutor;
     private VoteStore voteStore;
+    private CurrencyStore featherStore;
     private final Map<UUID, String> onlinePlayers = new ConcurrentHashMap<>();
     private final AtomicBoolean pollInProgress = new AtomicBoolean(false);
     private final AtomicInteger consecutiveBackendFailures = new AtomicInteger();
@@ -65,16 +66,17 @@ public class VoteManager {
         return INSTANCE;
     }
 
-    public synchronized void initialize(VoteConfig config) {
+    public synchronized void initialize(VoteConfig config, CurrencyStore featherStore) {
         VoteStore defaultVoteStore = new VoteStore();
         defaultVoteStore.initialize();
-        initialize(config, defaultVoteStore);
+        initialize(config, defaultVoteStore, featherStore);
     }
 
-    public synchronized void initialize(VoteConfig config, VoteStore voteStore) {
+    public synchronized void initialize(VoteConfig config, VoteStore voteStore, CurrencyStore featherStore) {
         shutdownExecutors();
         this.config = config;
         this.voteStore = voteStore;
+        this.featherStore = featherStore;
         this.ioExecutor = Executors.newFixedThreadPool(IO_THREAD_COUNT, runnable -> {
             Thread t = new Thread(runnable, "VoteIO-" + IO_THREAD_ID.getAndIncrement());
             t.setDaemon(true);
@@ -106,6 +108,7 @@ public class VoteManager {
         pollBackoffUntilMs = 0L;
         httpClient = null;
         voteStore = null;
+        featherStore = null;
         shutdownExecutors();
     }
 
@@ -288,7 +291,7 @@ public class VoteManager {
         }
         long feathers = (long) voteCount * activeConfig.getRewardPerVote();
         try {
-            return CompletableFuture.runAsync(() -> FeatherStore.getInstance().addFeathers(playerId, feathers), executor)
+            return CompletableFuture.runAsync(() -> featherStore.addBalance(playerId, feathers), executor)
                     .exceptionally(ex -> {
                         LOGGER.atWarning().withCause(ex).log("Vote reward persistence failed for " + playerId);
                         return null;

@@ -89,6 +89,7 @@ public class RunOrFallGameManager {
     private final RunOrFallConfigStore configStore;
     private final RunOrFallStatsStore statsStore;
     private final PluginCallbacks pluginCallbacks;
+    private final RunOrFallFeatherBridge featherBridge;
     private final Set<UUID> lobbyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> alivePlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> spectatingPlayers = ConcurrentHashMap.newKeySet();
@@ -127,10 +128,11 @@ public class RunOrFallGameManager {
     private final Map<UUID, Long> pendingFeatherRewards = new ConcurrentHashMap<>();
 
     public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore,
-                               PluginCallbacks pluginCallbacks) {
+                               PluginCallbacks pluginCallbacks, RunOrFallFeatherBridge featherBridge) {
         this.configStore = configStore;
         this.statsStore = statsStore;
         this.pluginCallbacks = pluginCallbacks;
+        this.featherBridge = featherBridge;
         RunOrFallQueueStore.getInstance().setOnQueueChanged(() -> {
             dispatchToWorld(() -> {
                 synchronized (this) {
@@ -1662,7 +1664,7 @@ public class RunOrFallGameManager {
         if (playerId == null || amount <= 0L) {
             return;
         }
-        if (!RunOrFallFeatherBridge.addFeathers(playerId, amount)) {
+        if (!featherBridge.addFeathers(playerId, amount)) {
             LOGGER.atWarning().log("RunOrFall feather reward failed for " + playerId
                     + " (" + amount + " feathers, " + reason + ")");
             sendToPlayer(playerId, "Reward delivery failed. Your feathers were not granted.");
@@ -1672,7 +1674,7 @@ public class RunOrFallGameManager {
         // Drain any previously pending rewards for this player
         Long pending = pendingFeatherRewards.remove(playerId);
         if (pending != null && pending > 0L) {
-            if (RunOrFallFeatherBridge.addFeathers(playerId, pending)) {
+            if (featherBridge.addFeathers(playerId, pending)) {
                 sendFeatherGainMessage(playerId, amount + pending, reason + " (includes pending)");
                 return;
             }
