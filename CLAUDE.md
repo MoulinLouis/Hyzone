@@ -7,10 +7,10 @@ Quick reference for AI agents working on this Hytale plugin project.
 ```bash
 # Do NOT run builds proactively. Only run a build when the user explicitly asks for it
 # (for example, to reproduce/inspect/fix build errors).
-# ./gradlew stagePlugins - copy jars to run/mods
+# ./gradlew stagePlugins - copy jars to hyvexa_server/mods/ on Windows
 # ./gradlew collectPlugins - copy jars to build/libs
-# cmd.exe /c "gradlew.bat build" (only when explicitly requested by the user)
-# cmd.exe /c "gradlew.bat test"  (use cmd.exe — WSL2 has I/O issues with gradlew)
+# ./gradlew build  (only when explicitly requested by the user)
+# ./gradlew test
 ```
 
 ## Project Overview
@@ -40,7 +40,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 | `hyvexa-*/src/main/resources/Server/Item/` | Item definitions and interactions (gameplay modules only) |
 | `hyvexa-parkour/src/main/resources/Common/Music/` | Music files |
 | `hyvexa-parkour/src/main/resources/Common/Sounds/` | Sound effects |
-| `run/mods/Parkour/` | Runtime config (database.json) |
+| `hyvexa_server/mods/Parkour/` | Runtime config (database.json) — on Windows, outside this repo |
 | `docs/` | All documentation files |
 | `discord-bot/` | Discord bot: account linking + vexa reward |
 
@@ -73,7 +73,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 
 ## Database
 
-- Config: `run/mods/Parkour/database.json` (gitignored)
+- Config: `hyvexa_server/mods/Parkour/database.json` (on Windows, outside this repo)
 - Pattern: In-memory cache + MySQL persistence
 - See `docs/DATABASE.md` for schema details
 
