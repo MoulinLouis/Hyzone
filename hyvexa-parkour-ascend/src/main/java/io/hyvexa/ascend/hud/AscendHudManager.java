@@ -17,7 +17,7 @@ import io.hyvexa.ascend.tracker.AscendRunTracker;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.MultiHudBridge;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyStore;
 
 import java.util.List;
 import java.util.Map;
@@ -35,6 +35,7 @@ public class AscendHudManager {
     private final AscendMapStore mapStore;
     private final AscendRunTracker runTracker;
     private final SummitManager summitManager;
+    private final CurrencyStore vexaStore;
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> hudAttached = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
@@ -46,11 +47,12 @@ public class AscendHudManager {
     private final java.util.Set<UUID> mineModeActive = ConcurrentHashMap.newKeySet();
     private volatile RobotManager robotManager;
 
-    public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager) {
+    public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager, CurrencyStore vexaStore) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
         this.summitManager = summitManager;
+        this.vexaStore = vexaStore;
         toastHudManager = this;
     }
 
@@ -382,7 +384,7 @@ public class AscendHudManager {
         SummitManager.SummitPreview speedPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.RUNNER_SPEED) : null;
         SummitManager.SummitPreview evoPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.EVOLUTION_POWER) : null;
 
-        long vexa = VexaStore.getInstance().getVexa(playerId);
+        long vexa = vexaStore.getBalance(playerId);
 
         cached = new CachedEconomyData(now, volt, mr.product, mr.values,
                 elevationLevel, potentialElevation, showElevation,

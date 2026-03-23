@@ -29,6 +29,7 @@ import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
+import io.hyvexa.core.economy.CurrencyStore;
 import io.hyvexa.purge.ui.PurgeAdminIndexPage;
 import io.hyvexa.purge.ui.PurgeSkinShopPage;
 import io.hyvexa.purge.ui.PurgeWeaponSelectPage;
@@ -54,6 +55,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeLoadoutService loadoutService;
+    private final CurrencyStore vexaStore;
 
     public PurgeCommand(PurgeSessionManager sessionManager,
                         PurgeWaveConfigManager waveConfigManager,
@@ -61,7 +63,8 @@ public class PurgeCommand extends AbstractAsyncCommand {
                         PurgeInstanceManager instanceManager,
                         PurgeWeaponConfigManager weaponConfigManager,
                         PurgeVariantConfigManager variantConfigManager,
-                        PurgeLoadoutService loadoutService) {
+                        PurgeLoadoutService loadoutService,
+                        CurrencyStore vexaStore) {
         super("purge", "Purge zombie survival commands");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -72,6 +75,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         this.weaponConfigManager = weaponConfigManager;
         this.variantConfigManager = variantConfigManager;
         this.loadoutService = loadoutService;
+        this.vexaStore = vexaStore;
     }
 
     @Override
@@ -229,7 +233,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeSkinShopPage(playerRef, playerId));
+                new PurgeSkinShopPage(playerRef, playerId, vexaStore));
     }
 
     private void handleScrap(Player player, UUID callerPlayerId, String[] args) {

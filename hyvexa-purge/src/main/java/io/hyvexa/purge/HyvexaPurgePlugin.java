@@ -156,7 +156,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
         variantConfigManager = new PurgeVariantConfigManager();
         waveConfigManager = new PurgeWaveConfigManager(variantConfigManager);
         weaponConfigManager = new PurgeWeaponConfigManager();
-        hudManager = new PurgeHudManager();
+        hudManager = new PurgeHudManager(VexaStore.getInstance());
         waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, variantConfigManager, hudManager, weaponConfigManager, this);
         partyManager = new PurgePartyManager();
         sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager, weaponConfigManager, this);
@@ -181,7 +181,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
 
         // Register commands
         this.getCommandRegistry().registerCommand(
-                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager, this));
+                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager, this, VexaStore.getInstance()));
         this.getCommandRegistry().registerCommand(new SetAmmoCommand());
         this.getCommandRegistry().registerCommand(new CamTestCommand());
 

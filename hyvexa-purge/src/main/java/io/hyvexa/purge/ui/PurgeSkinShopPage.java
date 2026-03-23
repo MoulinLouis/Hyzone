@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyStore;
 import io.hyvexa.common.skin.PurgeSkinDefinition;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
 import io.hyvexa.common.skin.PurgeSkinStore;
@@ -34,12 +34,14 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
     private static final String PREFIX_BUY = "Buy:";
 
     private final UUID playerId;
+    private final CurrencyStore vexaStore;
     // Pending buy confirmation — stores "weaponId:skinId" while confirm overlay is shown
     private String pendingBuyKey;
 
-    public PurgeSkinShopPage(@Nonnull PlayerRef playerRef, UUID playerId) {
+    public PurgeSkinShopPage(@Nonnull PlayerRef playerRef, UUID playerId, CurrencyStore vexaStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, SkinShopEventData.CODEC);
         this.playerId = playerId;
+        this.vexaStore = vexaStore;
     }
 
     @Override
@@ -49,7 +51,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
                       @Nonnull Store<EntityStore> store) {
         commandBuilder.append("Pages/Purge_SkinShop.ui");
 
-        long vexa = VexaStore.getInstance().getVexa(playerId);
+        long vexa = vexaStore.getBalance(playerId);
         commandBuilder.set("#VexaBalance.Text", String.valueOf(vexa));
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
@@ -146,7 +148,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
 
-        long vexa = VexaStore.getInstance().getVexa(playerId);
+        long vexa = vexaStore.getBalance(playerId);
         commandBuilder.set("#VexaBalance.Text", String.valueOf(vexa));
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
@@ -178,7 +180,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         long seconds = DailyShopRotation.getSecondsUntilReset();
         commandBuilder.set("#Subtitle.Text", "Resets in " + DailyShopRotation.formatTimeRemaining(seconds));
 
-        long vexa = VexaStore.getInstance().getVexa(playerId);
+        long vexa = vexaStore.getBalance(playerId);
 
         for (int i = 0; i < rotation.size(); i++) {
             PurgeSkinDefinition def = rotation.get(i);

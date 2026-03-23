@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.MultiHudBridge;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.data.PurgeUpgradeState;
 import io.hyvexa.purge.data.PurgeUpgradeType;
@@ -33,12 +33,17 @@ public class PurgeHudManager {
 
     private static final long HUD_READY_DELAY_MS = 1500L;
     private static final long STREAK_WINDOW_MS = 3000L;
+    private final CurrencyStore vexaStore;
     private final ConcurrentHashMap<UUID, PurgeHud> purgeHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeSessionPlayerState> comboPlayers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeSession> killMeterPlayers = new ConcurrentHashMap<>();
     private volatile long lastKillMeterTickMs;
     private PurgeManagerRegistry registry;
+
+    public PurgeHudManager(CurrencyStore vexaStore) {
+        this.vexaStore = vexaStore;
+    }
 
     public void initRegistry(PurgeManagerRegistry registry) {
         this.registry = registry;
@@ -299,7 +304,7 @@ public class PurgeHudManager {
             }
             PurgeHud hud = entry.getValue();
             hud.updatePlayerCount(playerCount);
-            hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
+            hud.updateVexa(vexaStore.getBalance(playerId));
             hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
             // Update mission panel for idle players (not in a session)
             if (!comboPlayers.containsKey(playerId)) {
