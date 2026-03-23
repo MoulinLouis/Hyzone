@@ -35,10 +35,6 @@ public class GhostStore {
     private final ConnectionProvider db;
     private final Map<String, GhostRecording> cache = new ConcurrentHashMap<>();
 
-    public GhostStore(String tableName, String modeLabel) {
-        this(tableName, modeLabel, DatabaseManager.getInstance());
-    }
-
     public GhostStore(String tableName, String modeLabel, ConnectionProvider db) {
         this.logger = HytaleLogger.forEnclosingClass();
         this.tableName = tableName;

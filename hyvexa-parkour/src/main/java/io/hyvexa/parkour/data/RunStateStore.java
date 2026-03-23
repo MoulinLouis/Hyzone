@@ -25,10 +25,6 @@ public class RunStateStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private final ConnectionProvider db;
 
-    public RunStateStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public RunStateStore(ConnectionProvider db) {
         this.db = db;
     }

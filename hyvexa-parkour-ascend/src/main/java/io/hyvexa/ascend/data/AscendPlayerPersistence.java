@@ -58,12 +58,6 @@ class AscendPlayerPersistence {
     private final Map<String, List<AscendPlayerStore.MapLeaderboardEntry>> mapLeaderboardCache = new ConcurrentHashMap<>();
     private final Map<String, Long> mapLeaderboardCacheTimestamps = new ConcurrentHashMap<>();
 
-    AscendPlayerPersistence(Map<UUID, AscendPlayerProgress> players,
-                            Map<UUID, String> playerNames,
-                            Set<UUID> resetPendingPlayers) {
-        this(DatabaseManager.getInstance(), players, playerNames, resetPendingPlayers);
-    }
-
     AscendPlayerPersistence(ConnectionProvider db,
                             Map<UUID, AscendPlayerProgress> players,
                             Map<UUID, String> playerNames,

@@ -34,10 +34,6 @@ public class SettingsStore {
     private boolean disableWeaponDamage = false;
     private boolean teleportDebugEnabled = false;
 
-    public SettingsStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public SettingsStore(ConnectionProvider db) {
         this.db = db;
     }

@@ -3,7 +3,6 @@ package io.hyvexa.runorfall.manager;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.BasePlayerStore;
 import io.hyvexa.core.db.ConnectionProvider;
-import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.runorfall.data.RunOrFallPlayerStats;
 
 import javax.annotation.Nonnull;
@@ -38,10 +37,6 @@ public class RunOrFallStatsStore extends BasePlayerStore<RunOrFallPlayerStats> {
                    total_blocks_broken, total_blinks_used
             FROM runorfall_player_stats
             """;
-
-    public RunOrFallStatsStore() {
-        this(DatabaseManager.getInstance());
-    }
 
     public RunOrFallStatsStore(ConnectionProvider connectionProvider) {
         super(connectionProvider);

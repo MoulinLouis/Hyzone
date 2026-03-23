@@ -153,9 +153,9 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
         // Create managers
         instanceManager = new PurgeInstanceManager();
         instanceManager.loadConfiguredInstances();
-        variantConfigManager = new PurgeVariantConfigManager();
-        waveConfigManager = new PurgeWaveConfigManager(variantConfigManager);
-        weaponConfigManager = new PurgeWeaponConfigManager();
+        variantConfigManager = new PurgeVariantConfigManager(DatabaseManager.getInstance());
+        waveConfigManager = new PurgeWaveConfigManager(DatabaseManager.getInstance(), variantConfigManager);
+        weaponConfigManager = new PurgeWeaponConfigManager(DatabaseManager.getInstance());
         hudManager = new PurgeHudManager();
         waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, variantConfigManager, hudManager, weaponConfigManager, this);
         partyManager = new PurgePartyManager();

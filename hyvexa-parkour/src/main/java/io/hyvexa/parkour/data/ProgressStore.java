@@ -55,10 +55,6 @@ public class ProgressStore {
         this.db = db;
     }
 
-    public ProgressStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public void setAnalytics(PlayerAnalytics analytics) {
         this.analytics = analytics;
     }

@@ -56,10 +56,6 @@ public class AscendPlayerStore {
     private volatile Function<UUID, PlayerRef> playerRefLookup;
     private volatile PlayerAnalytics analytics;
 
-    public AscendPlayerStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public AscendPlayerStore(ConnectionProvider db) {
         this.db = db;
         this.persistence = new AscendPlayerPersistence(db, players, playerNames, resetPendingPlayers);

@@ -17,10 +17,6 @@ public abstract class BasePlayerStore<V> {
     private final ConcurrentHashMap<UUID, V> cache = new ConcurrentHashMap<>();
     private final ConnectionProvider connectionProvider;
 
-    protected BasePlayerStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     protected BasePlayerStore(ConnectionProvider connectionProvider) {
         this.connectionProvider = Objects.requireNonNull(connectionProvider, "connectionProvider");
     }

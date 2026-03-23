@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.FeatherStore;
 
 import java.net.URI;
@@ -66,7 +67,7 @@ public class VoteManager {
     }
 
     public synchronized void initialize(VoteConfig config) {
-        VoteStore defaultVoteStore = new VoteStore();
+        VoteStore defaultVoteStore = new VoteStore(DatabaseManager.getInstance());
         defaultVoteStore.initialize();
         initialize(config, defaultVoteStore);
     }

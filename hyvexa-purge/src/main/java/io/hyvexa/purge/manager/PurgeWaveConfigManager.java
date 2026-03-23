@@ -28,10 +28,6 @@ public class PurgeWaveConfigManager {
     private final ConcurrentHashMap<Integer, PurgeWaveDefinition> waves = new ConcurrentHashMap<>();
     private final PurgeVariantConfigManager variantConfigManager;
 
-    public PurgeWaveConfigManager(PurgeVariantConfigManager variantConfigManager) {
-        this(DatabaseManager.getInstance(), variantConfigManager);
-    }
-
     public PurgeWaveConfigManager(ConnectionProvider db, PurgeVariantConfigManager variantConfigManager) {
         this.db = db;
         this.variantConfigManager = variantConfigManager;

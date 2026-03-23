@@ -219,7 +219,7 @@ public class HyvexaPlugin extends JavaPlugin {
             DatabaseManager.getInstance().initialize();
             LOGGER.atInfo().log("Database connection initialized");
             ParkourDatabaseSetup.ensureTables();
-            new PlayerSettingsPersistence().ensureTable();
+            new PlayerSettingsPersistence(DatabaseManager.getInstance()).ensureTable();
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
@@ -243,25 +243,25 @@ public class HyvexaPlugin extends JavaPlugin {
             VoteManager.getInstance().initialize(voteConfig, voteStore);
         });
         this.collisionManager = new CollisionManager();
-        this.mapStore = new MapStore();
+        this.mapStore = new MapStore(DatabaseManager.getInstance());
         this.mapStore.syncLoad();
         this.mapStore.setOnChangeListener(this::onMapStoreChanged);
-        this.settingsStore = new SettingsStore();
+        this.settingsStore = new SettingsStore(DatabaseManager.getInstance());
         this.settingsStore.syncLoad();
         PlayerAnalytics analytics = analyticsStore;
         CosmeticStore.getInstance().setAnalytics(analytics);
         DiscordLinkStore.getInstance().setAnalytics(analytics);
         WardrobeBridge.getInstance().setAnalytics(analytics);
-        this.progressStore = new ProgressStore();
+        this.progressStore = new ProgressStore(DatabaseManager.getInstance());
         this.progressStore.setAnalytics(analytics);
         this.progressStore.syncLoad();
-        this.playerCountStore = new PlayerCountStore();
+        this.playerCountStore = new PlayerCountStore(DatabaseManager.getInstance());
         this.playerCountStore.syncLoad();
-        this.globalMessageStore = new GlobalMessageStore();
+        this.globalMessageStore = new GlobalMessageStore(DatabaseManager.getInstance());
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore,
                 this.medalStore, this.medalRewardStore, analytics);
-        this.runStateStore = new RunStateStore();
+        this.runStateStore = new RunStateStore(DatabaseManager.getInstance());
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
         // Saved runs persist indefinitely — only invalidated when the map changes
@@ -277,7 +277,7 @@ public class HyvexaPlugin extends JavaPlugin {
             }
         }, "RunStateSaveHook");
         Runtime.getRuntime().addShutdownHook(this.shutdownHook);
-        this.ghostStore = new GhostStore("parkour_ghost_recordings", "parkour");
+        this.ghostStore = new GhostStore("parkour_ghost_recordings", "parkour", DatabaseManager.getInstance());
         this.ghostStore.syncLoad();
         this.ghostRecorder = new GhostRecorder(this.ghostStore);
         this.ghostRecorder.start();
@@ -287,11 +287,11 @@ public class HyvexaPlugin extends JavaPlugin {
         this.petManager.start();
         this.runTracker.setGhostRecorder(this.ghostRecorder);
         this.runTracker.setGhostNpcManager(this.ghostNpcManager);
-        this.duelStatsStore = new DuelStatsStore();
+        this.duelStatsStore = new DuelStatsStore(DatabaseManager.getInstance());
         this.duelStatsStore.syncLoad();
-        this.duelMatchStore = new DuelMatchStore();
+        this.duelMatchStore = new DuelMatchStore(DatabaseManager.getInstance());
         this.duelMatchStore.ensureTable();
-        this.duelPreferenceStore = new DuelPreferenceStore();
+        this.duelPreferenceStore = new DuelPreferenceStore(DatabaseManager.getInstance());
         this.duelPreferenceStore.syncLoad();
         this.duelQueue = new DuelQueue();
         this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, progressStore, settingsStore, analytics);

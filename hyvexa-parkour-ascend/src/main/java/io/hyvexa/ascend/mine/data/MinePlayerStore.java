@@ -3,7 +3,6 @@ package io.hyvexa.ascend.mine.data;
 import com.google.common.flogger.FluentLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.core.db.ConnectionProvider;
-import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -25,10 +24,6 @@ public class MinePlayerStore {
     private final Map<UUID, MinePlayerProgress> players = new ConcurrentHashMap<>();
     private final Map<UUID, Long> dirtyVersions = new ConcurrentHashMap<>();
     private final AtomicBoolean saveScheduled = new AtomicBoolean(false);
-
-    public MinePlayerStore() {
-        this(DatabaseManager.getInstance());
-    }
 
     public MinePlayerStore(ConnectionProvider db) {
         this.db = db;

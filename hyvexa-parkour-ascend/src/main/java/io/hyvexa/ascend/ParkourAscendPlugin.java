@@ -193,13 +193,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Core stores — fail fast if any fails
         try {
-            mapStore = new AscendMapStore();
+            mapStore = new AscendMapStore(DatabaseManager.getInstance());
             mapStore.syncLoad();
 
-            playerStore = new AscendPlayerStore();
+            playerStore = new AscendPlayerStore(DatabaseManager.getInstance());
             playerStore.syncLoad();
 
-            settingsStore = new AscendSettingsStore();
+            settingsStore = new AscendSettingsStore(DatabaseManager.getInstance());
             settingsStore.syncLoad();
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize core stores for Ascend — plugin will not function");
@@ -208,7 +208,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Mine config
         try {
-            mineConfigStore = new MineConfigStore();
+            mineConfigStore = new MineConfigStore(DatabaseManager.getInstance());
             mineConfigStore.syncLoad();
             mineBonusCalculator = new MineBonusCalculator(mineConfigStore);
         } catch (Exception e) {
@@ -220,7 +220,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Mine player store + manager + gate checker
         if (mineConfigStore != null) {
             try {
-                minePlayerStore = new MinePlayerStore();
+                minePlayerStore = new MinePlayerStore(DatabaseManager.getInstance());
                 mineManager = new MineManager(mineConfigStore, this::getPlayerRef);
                 mineGateChecker = new MineGateChecker(mineConfigStore, playerStore, minePlayerStore);
             } catch (Exception e) {
@@ -239,7 +239,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         // Mine achievement tracker
-        mineAchievementTracker = new MineAchievementTracker(minePlayerStore, playerStore, this::getPlayerRef);
+        mineAchievementTracker = new MineAchievementTracker(minePlayerStore, playerStore, this::getPlayerRef, DatabaseManager.getInstance());
 
         // Mine robot manager (automated miners)
         if (mineConfigStore != null && minePlayerStore != null) {
@@ -255,7 +255,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Ghost system
         try {
-            ghostStore = new GhostStore("ascend_ghost_recordings", "ascend");
+            ghostStore = new GhostStore("ascend_ghost_recordings", "ascend", DatabaseManager.getInstance());
             ghostStore.syncLoad();
 
             ghostRecorder = new GhostRecorder(ghostStore, this::getPlayerRef);
@@ -279,7 +279,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         mapStore.setOnChangeListener(runTracker::onMapStoreChanged);
         ascensionManager = new AscensionManager(playerStore, runTracker, analytics);
         transcendenceManager = new TranscendenceManager(playerStore, runTracker, analytics);
-        challengeManager = new ChallengeManager(playerStore, mapStore, runTracker, analytics);
+        challengeManager = new ChallengeManager(playerStore, mapStore, runTracker, analytics, DatabaseManager.getInstance());
         summitManager = new SummitManager(
             playerStore,
             mapStore,

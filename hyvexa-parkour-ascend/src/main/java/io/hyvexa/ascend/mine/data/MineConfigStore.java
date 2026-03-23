@@ -26,10 +26,6 @@ public class MineConfigStore {
 
     private final ConnectionProvider db;
 
-    public MineConfigStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public MineConfigStore(ConnectionProvider db) {
         this.db = db;
     }

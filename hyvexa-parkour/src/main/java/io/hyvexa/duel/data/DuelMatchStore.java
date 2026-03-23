@@ -16,10 +16,6 @@ public class DuelMatchStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private final ConnectionProvider db;
 
-    public DuelMatchStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     public DuelMatchStore(ConnectionProvider db) {
         this.db = db;
     }

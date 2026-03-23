@@ -21,10 +21,6 @@ public class PurgeVariantConfigManager {
     private final ConnectionProvider db;
     private final ConcurrentHashMap<String, PurgeVariantConfig> variants = new ConcurrentHashMap<>();
 
-    public PurgeVariantConfigManager() {
-        this(DatabaseManager.getInstance());
-    }
-
     public PurgeVariantConfigManager(ConnectionProvider db) {
         this.db = db;
         loadAll();

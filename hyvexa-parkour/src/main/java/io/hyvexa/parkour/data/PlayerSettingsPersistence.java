@@ -72,10 +72,6 @@ public class PlayerSettingsPersistence {
         return INSTANCE;
     }
 
-    public PlayerSettingsPersistence() {
-        this(DatabaseManager.getInstance());
-    }
-
     public PlayerSettingsPersistence(ConnectionProvider db) {
         this.db = db;
         INSTANCE = this;
