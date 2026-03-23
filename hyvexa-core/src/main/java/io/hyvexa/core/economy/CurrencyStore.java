@@ -14,4 +14,6 @@ public interface CurrencyStore {
     long addBalance(UUID playerId, long amount);
 
     long removeBalance(UUID playerId, long amount);
+
+    void evictPlayer(UUID playerId);
 }
