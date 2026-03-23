@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.util.InventoryUtils;
@@ -27,8 +26,8 @@ public class LeavePracticeInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        var plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        var services = ParkourInteractionBridge.get();
+        if (services == null) {
             return;
         }
         var store = ref.getStore();
@@ -42,20 +41,20 @@ public class LeavePracticeInteraction extends SimpleInteraction {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            if (plugin.getRunTracker() == null) {
+            if (services.runTracker() == null) {
                 return;
             }
-            if (!plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid())) {
+            if (!services.runTracker().isPracticeEnabled(playerRef.getUuid())) {
                 player.sendMessage(SystemMessageUtils.parkourWarn("Practice mode is not enabled."));
                 return;
             }
-            boolean disabled = plugin.getRunTracker().disablePracticeAndRestore(ref, store, playerRef);
+            boolean disabled = services.runTracker().disablePracticeAndRestore(ref, store, playerRef);
             if (!disabled) {
                 player.sendMessage(SystemMessageUtils.parkourWarn("Unable to leave practice mode."));
                 return;
             }
-            String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
-            Map map = mapId != null && plugin.getMapStore() != null ? plugin.getMapStore().getMap(mapId) : null;
+            String mapId = services.runTracker().getActiveMapId(playerRef.getUuid());
+            Map map = mapId != null && services.mapStore() != null ? services.mapStore().getMap(mapId) : null;
             InventoryUtils.clearAllItems(player);
             InventoryUtils.giveRunItems(player, map, false);
             player.sendMessage(SystemMessageUtils.parkourInfo("Practice mode disabled. Checkpoint progress restored."));

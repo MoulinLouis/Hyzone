@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
@@ -28,8 +27,8 @@ public class ResetInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        var plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        var services = ParkourInteractionBridge.get();
+        if (services == null) {
             return;
         }
         var store = ref.getStore();
@@ -49,23 +48,23 @@ public class ResetInteraction extends SimpleInteraction {
         }
         CompletableFuture.runAsync(() -> {
             InventoryUtils.clearAllItems(player);
-            if (plugin.getDuelTracker() != null && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
-                Map map = plugin.getDuelTracker().getActiveMap(playerRef.getUuid());
+            if (services.duelTracker() != null && services.duelTracker().isInMatch(playerRef.getUuid())) {
+                Map map = services.duelTracker().getActiveMap(playerRef.getUuid());
                 InventoryUtils.giveDuelItems(player, map);
-                plugin.getDuelTracker().resetRunToStart(ref, store, player, playerRef);
+                services.duelTracker().resetRunToStart(ref, store, player, playerRef);
                 return;
             }
             Map map = null;
-            if (plugin.getRunTracker() != null && plugin.getMapStore() != null) {
-                String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+            if (services.runTracker() != null && services.mapStore() != null) {
+                String mapId = services.runTracker().getActiveMapId(playerRef.getUuid());
                 if (mapId != null) {
-                    map = plugin.getMapStore().getMap(mapId);
+                    map = services.mapStore().getMap(mapId);
                 }
             }
-            boolean practiceEnabled = plugin.getRunTracker() != null
-                    && plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid());
+            boolean practiceEnabled = services.runTracker() != null
+                    && services.runTracker().isPracticeEnabled(playerRef.getUuid());
             InventoryUtils.giveRunItems(player, map, practiceEnabled);
-            plugin.getRunTracker().resetRunToStart(ref, store, player, playerRef);
+            services.runTracker().resetRunToStart(ref, store, player, playerRef);
         }, world);
     }
 }

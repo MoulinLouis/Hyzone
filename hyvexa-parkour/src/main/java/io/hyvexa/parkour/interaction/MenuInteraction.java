@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ui.CategorySelectPage;
 import javax.annotation.Nonnull;
 
@@ -21,8 +20,8 @@ public class MenuInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        var plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        var services = ParkourInteractionBridge.get();
+        if (services == null) {
             return;
         }
         var store = ref.getStore();
@@ -32,7 +31,7 @@ public class MenuInteraction extends SimpleInteraction {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new CategorySelectPage(playerRef, plugin.getMapStore(), plugin.getProgressStore(),
-                        plugin.getRunTracker(), plugin.getMedalStore()));
+                new CategorySelectPage(playerRef, services.mapStore(), services.progressStore(),
+                        services.runTracker(), services.medalStore()));
     }
 }

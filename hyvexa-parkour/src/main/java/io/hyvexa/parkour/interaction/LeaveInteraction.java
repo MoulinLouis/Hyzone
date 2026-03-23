@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.data.Map;
@@ -44,8 +43,8 @@ public class LeaveInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        var plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        var services = ParkourInteractionBridge.get();
+        if (services == null) {
             return;
         }
         var store = ref.getStore();
@@ -59,7 +58,7 @@ public class LeaveInteraction extends SimpleInteraction {
             player.sendMessage(Message.raw("World not available."));
             return;
         }
-        String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+        String mapId = services.runTracker().getActiveMapId(playerRef.getUuid());
         if (mapId == null) {
             PENDING_LEAVES.remove(playerRef.getUuid());
             player.sendMessage(Message.raw("No active map to leave."));
@@ -68,18 +67,18 @@ public class LeaveInteraction extends SimpleInteraction {
         if (!confirmLeave(player, playerRef.getUuid(), mapId)) {
             return;
         }
-        CompletableFuture.runAsync(() -> handleLeave(ref, store, player, playerRef, plugin), world);
+        CompletableFuture.runAsync(() -> handleLeave(ref, store, player, playerRef, services), world);
     }
 
     private void handleLeave(Ref<EntityStore> ref, Store<EntityStore> store, Player player, PlayerRef playerRef,
-                             HyvexaPlugin plugin) {
-        String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+                             ParkourInteractionBridge.Services services) {
+        String mapId = services.runTracker().getActiveMapId(playerRef.getUuid());
         if (mapId == null) {
             player.sendMessage(Message.raw("No active map to leave."));
             return;
         }
-        plugin.getRunTracker().clearActiveMap(playerRef.getUuid());
-        Map map = plugin.getMapStore().getMap(mapId);
+        services.runTracker().clearActiveMap(playerRef.getUuid());
+        Map map = services.mapStore().getMap(mapId);
         TransformData leaveTeleport = map != null ? map.getLeaveTeleport() : null;
         if (leaveTeleport != null) {
             Vector3d position = leaveTeleport.toPosition();
@@ -88,7 +87,7 @@ public class LeaveInteraction extends SimpleInteraction {
                     new Teleport(store.getExternalData().getWorld(), position, rotation));
         } else {
             TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-            plugin.getRunTracker().teleportToSpawn(ref, store, transform);
+            services.runTracker().teleportToSpawn(ref, store, transform);
         }
         InventoryUtils.giveMenuItems(player);
         String mapName = map != null && map.getName() != null && !map.getName().isBlank()

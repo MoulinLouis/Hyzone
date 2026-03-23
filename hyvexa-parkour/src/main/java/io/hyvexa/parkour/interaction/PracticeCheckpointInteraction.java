@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
@@ -24,8 +23,8 @@ public class PracticeCheckpointInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        var plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        var services = ParkourInteractionBridge.get();
+        if (services == null) {
             return;
         }
         var store = ref.getStore();
@@ -39,18 +38,18 @@ public class PracticeCheckpointInteraction extends SimpleInteraction {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            if (plugin.getDuelTracker() != null && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
+            if (services.duelTracker() != null && services.duelTracker().isInMatch(playerRef.getUuid())) {
                 player.sendMessage(SystemMessageUtils.parkourWarn("Practice is unavailable during duels."));
                 return;
             }
-            if (plugin.getRunTracker() == null) {
+            if (services.runTracker() == null) {
                 return;
             }
-            if (!plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid())) {
+            if (!services.runTracker().isPracticeEnabled(playerRef.getUuid())) {
                 player.sendMessage(SystemMessageUtils.parkourWarn("Practice mode must be enabled to set a checkpoint."));
                 return;
             }
-            boolean checkpointSet = plugin.getRunTracker().setPracticeCheckpoint(ref, store, playerRef);
+            boolean checkpointSet = services.runTracker().setPracticeCheckpoint(ref, store, playerRef);
             if (checkpointSet) {
                 player.sendMessage(SystemMessageUtils.parkourInfo("Practice checkpoint set."));
             } else {

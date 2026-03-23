@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.core.bridge.GameModeBridge;
 import io.hyvexa.parkour.ui.LeaderboardMenuPage;
@@ -25,8 +24,8 @@ public class LeaderboardInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        var plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        var services = ParkourInteractionBridge.get();
+        if (services == null) {
             return;
         }
         var store = ref.getStore();
@@ -42,7 +41,7 @@ public class LeaderboardInteraction extends SimpleInteraction {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new LeaderboardMenuPage(playerRef, plugin.getMapStore(), plugin.getProgressStore(),
-                        plugin.getMedalStore()));
+                new LeaderboardMenuPage(playerRef, services.mapStore(), services.progressStore(),
+                        services.medalStore()));
     }
 }

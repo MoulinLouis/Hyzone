@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.bridge.GameModeBridge;
@@ -26,8 +25,8 @@ public class ToggleFlyInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        var plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
+        var services = ParkourInteractionBridge.get();
+        if (services == null) {
             return;
         }
         var store = ref.getStore();
@@ -46,14 +45,14 @@ public class ToggleFlyInteraction extends SimpleInteraction {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            if (plugin.getRunTracker() == null) {
+            if (services.runTracker() == null) {
                 return;
             }
-            if (!plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid())) {
+            if (!services.runTracker().isPracticeEnabled(playerRef.getUuid())) {
                 player.sendMessage(SystemMessageUtils.parkourWarn("Practice mode must be enabled to toggle fly."));
                 return;
             }
-            boolean flyActive = plugin.getRunTracker().toggleFly(playerRef.getUuid());
+            boolean flyActive = services.runTracker().toggleFly(playerRef.getUuid());
             if (flyActive) {
                 player.sendMessage(SystemMessageUtils.parkourInfo("Fly enabled."));
             } else {

@@ -45,6 +45,7 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.RunStateStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import io.hyvexa.parkour.interaction.ParkourInteractionBridge;
 import io.hyvexa.parkour.interaction.MenuInteraction;
 import io.hyvexa.parkour.interaction.LeaderboardInteraction;
 import io.hyvexa.parkour.interaction.LeaveInteraction;
@@ -303,6 +304,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.inventorySyncManager = new InventorySyncManager(mapStore, progressStore, runTracker,
                 this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
         this.worldMapManager = new WorldMapManager(true);
+        ParkourInteractionBridge.configure(new ParkourInteractionBridge.Services(
+                mapStore, progressStore, runTracker, duelTracker, medalStore));
         registerRunTrackerTickSystem();
         hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates,
                 ParkourTimingConstants.HUD_UPDATE_INTERVAL_MS, ParkourTimingConstants.HUD_UPDATE_INTERVAL_MS,

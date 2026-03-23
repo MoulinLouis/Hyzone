@@ -9,8 +9,8 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.parkour.interaction.ParkourInteractionBridge;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -24,8 +24,8 @@ public class ForfeitInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        var plugin = HyvexaPlugin.getInstance();
-        if (plugin == null || plugin.getDuelTracker() == null) {
+        var services = ParkourInteractionBridge.get();
+        if (services == null || services.duelTracker() == null) {
             return;
         }
         var store = ref.getStore();
@@ -39,11 +39,11 @@ public class ForfeitInteraction extends SimpleInteraction {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            if (!plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
+            if (!services.duelTracker().isInMatch(playerRef.getUuid())) {
                 player.sendMessage(SystemMessageUtils.duelWarn("You're not in a duel."));
                 return;
             }
-            plugin.getDuelTracker().handleForfeit(playerRef.getUuid());
+            services.duelTracker().handleForfeit(playerRef.getUuid());
         }, world);
     }
 }
