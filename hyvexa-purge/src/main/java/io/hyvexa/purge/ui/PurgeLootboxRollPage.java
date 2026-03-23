@@ -19,7 +19,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.purge.HyvexaPurgePlugin;
+import io.hyvexa.purge.PurgeLoadoutService;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
@@ -51,6 +51,8 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
     private final PurgeSessionPlayerState playerState;
     private final String rolledWeaponId;
     private final List<String> candidateWeapons;
+    private final PurgeWeaponConfigManager weaponConfigManager;
+    private final PurgeLoadoutService loadoutService;
 
     private volatile ScheduledFuture<?> spinTask;
     private volatile ScheduledFuture<?> timeoutTask;
@@ -61,12 +63,16 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
                                 UUID playerId,
                                 PurgeSessionPlayerState playerState,
                                 String rolledWeaponId,
-                                List<String> candidateWeapons) {
+                                List<String> candidateWeapons,
+                                PurgeWeaponConfigManager weaponConfigManager,
+                                PurgeLoadoutService loadoutService) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, LootboxEventData.CODEC);
         this.playerId = playerId;
         this.playerState = playerState;
         this.rolledWeaponId = rolledWeaponId;
         this.candidateWeapons = candidateWeapons;
+        this.weaponConfigManager = weaponConfigManager;
+        this.loadoutService = loadoutService;
     }
 
     @Override
@@ -118,20 +124,18 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
         }
         cancelTasks();
 
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        if (plugin != null && ref.isValid()) {
+        if (loadoutService != null && weaponConfigManager != null && ref.isValid()) {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
-                PurgeWeaponConfigManager config = plugin.getWeaponConfigManager();
-                if (config.isMeleeWeapon(rolledWeaponId)) {
-                    plugin.switchMeleeWeapon(player, playerState, rolledWeaponId);
+                if (weaponConfigManager.isMeleeWeapon(rolledWeaponId)) {
+                    loadoutService.switchMeleeWeapon(player, playerState, rolledWeaponId);
                 } else {
-                    plugin.switchWeapon(player, playerState, rolledWeaponId);
+                    loadoutService.switchWeapon(player, playerState, rolledWeaponId);
                 }
-                String displayName = config.getDisplayName(rolledWeaponId);
+                String displayName = weaponConfigManager.getDisplayName(rolledWeaponId);
                 int level = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, rolledWeaponId);
                 int effectiveLevel = Math.max(level, 1);
-                int dmg = config.getDamage(rolledWeaponId, effectiveLevel);
+                int dmg = weaponConfigManager.getDamage(rolledWeaponId, effectiveLevel);
                 player.sendMessage(Message.raw("Weapon switched to " + displayName + " (" + dmg + " dmg)!"));
             }
         }
@@ -172,9 +176,8 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
                             ThreadLocalRandom.current().nextInt(candidateWeapons.size()));
                 }
 
-                HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-                String displayName = plugin != null
-                        ? plugin.getWeaponConfigManager().getDisplayName(displayWeapon)
+                String displayName = weaponConfigManager != null
+                        ? weaponConfigManager.getDisplayName(displayWeapon)
                         : displayWeapon;
 
                 UICommandBuilder cmd = new UICommandBuilder();
@@ -188,13 +191,10 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
     }
 
     private void showFinalResult() {
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        PurgeWeaponConfigManager config = plugin != null ? plugin.getWeaponConfigManager() : null;
-
-        String displayName = config != null ? config.getDisplayName(rolledWeaponId) : rolledWeaponId;
+        String displayName = weaponConfigManager != null ? weaponConfigManager.getDisplayName(rolledWeaponId) : rolledWeaponId;
         int level = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, rolledWeaponId);
         int effectiveLevel = Math.max(level, 1);
-        int dmg = config != null ? config.getDamage(rolledWeaponId, effectiveLevel) : 0;
+        int dmg = weaponConfigManager != null ? weaponConfigManager.getDamage(rolledWeaponId, effectiveLevel) : 0;
 
         UICommandBuilder cmd = new UICommandBuilder();
         UIEventBuilder evt = new UIEventBuilder();
@@ -205,7 +205,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
         cmd.set("#DamageLabel.Text", dmg + " dmg");
 
         // Show star display
-        int maxLevel = config != null ? config.getMaxLevel() : 10;
+        int maxLevel = weaponConfigManager != null ? weaponConfigManager.getMaxLevel() : 10;
         updateStarDisplay(cmd, effectiveLevel);
 
         // Show Accept button

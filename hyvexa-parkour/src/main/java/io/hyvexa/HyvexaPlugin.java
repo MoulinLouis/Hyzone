@@ -290,7 +290,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.duelPreferenceStore = new DuelPreferenceStore();
         this.duelPreferenceStore.syncLoad();
         this.duelQueue = new DuelQueue();
-        this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, analytics);
+        this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, progressStore, settingsStore, analytics);
+        this.duelTracker.setVipSpeedService(new DuelTracker.VipSpeedService(this::getVipSpeedMultiplier, this::applyVipSpeedMultiplier));
         this.perksManager = new PlayerPerksManager(progressStore, mapStore);
         this.chatFormatter = new ChatFormatter(progressStore, mapStore, perksManager);
         this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager);
@@ -354,7 +355,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DatabaseReloadCommand());
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
         this.getCommandRegistry().registerCommand(new MessageTestCommand());
-        this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker));
+        this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker, this.mapStore));
         this.getCommandRegistry().registerCommand(new VexaCommand());
         this.getCommandRegistry().registerCommand(new LinkCommand());
         this.getCommandRegistry().registerCommand(new UnlinkCommand());

@@ -40,6 +40,7 @@ import io.hyvexa.purge.data.WeaponXpStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
+import io.hyvexa.purge.interaction.PurgeInteractionBridge;
 import io.hyvexa.purge.interaction.PurgeLootboxInteraction;
 import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
@@ -539,7 +540,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             registry.registerEntityEventType(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class);
         }
         if (!registry.hasSystemClass(PurgeDamageModifierSystem.class)) {
-            PurgeDamageModifierSystem dmgSystem = new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager, weaponXpManager, classManager);
+            PurgeDamageModifierSystem dmgSystem = new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager, weaponXpManager, classManager, hudManager);
             registry.registerSystem(dmgSystem);
         }
     }

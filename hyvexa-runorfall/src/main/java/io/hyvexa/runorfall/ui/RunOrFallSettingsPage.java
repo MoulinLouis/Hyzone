@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
+import io.hyvexa.runorfall.interaction.RunOrFallInteractionBridge;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
 
 import javax.annotation.Nonnull;
@@ -82,24 +82,25 @@ public class RunOrFallSettingsPage extends InteractiveCustomUIPage<ButtonEventDa
         if (player == null || playerRef == null || playerRef.getUuid() == null) {
             return;
         }
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        if (plugin == null) {
+        RunOrFallInteractionBridge.Services services = RunOrFallInteractionBridge.get();
+        if (services == null || services.hudController() == null) {
             return;
         }
+        RunOrFallInteractionBridge.HudController hudController = services.hudController();
         if (BUTTON_MUSIC.equals(data.getButton())) {
             player.getPageManager().openCustomPage(ref, store,
                     new RunOrFallMusicPage(playerRef, statsStore, fromProfile));
             return;
         }
         if (BUTTON_HIDE_HUD.equals(data.getButton())) {
-            plugin.hideHud(playerRef.getUuid());
+            hudController.hideHud(playerRef.getUuid());
             player.sendMessage(Message.raw("HUD hidden."));
             player.getPageManager().openCustomPage(ref, store,
                     new RunOrFallSettingsPage(playerRef, statsStore, fromProfile));
             return;
         }
         if (BUTTON_SHOW_HUD.equals(data.getButton())) {
-            plugin.showHud(playerRef.getUuid());
+            hudController.showHud(playerRef.getUuid());
             player.sendMessage(Message.raw("HUD shown."));
             player.getPageManager().openCustomPage(ref, store,
                     new RunOrFallSettingsPage(playerRef, statsStore, fromProfile));
@@ -107,8 +108,9 @@ public class RunOrFallSettingsPage extends InteractiveCustomUIPage<ButtonEventDa
     }
 
     private static void applyIndicators(UICommandBuilder commandBuilder, UUID playerId) {
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        boolean hudHidden = plugin != null && plugin.isHudHidden(playerId);
+        RunOrFallInteractionBridge.Services services = RunOrFallInteractionBridge.get();
+        boolean hudHidden = services != null && services.hudController() != null
+                && services.hudController().isHudHidden(playerId);
         commandBuilder.set("#HideHudIndicator.Visible", hudHidden);
         commandBuilder.set("#ShowHudIndicator.Visible", !hudHidden);
     }

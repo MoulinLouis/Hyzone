@@ -5,7 +5,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.component.Store;
-import io.hyvexa.purge.HyvexaPurgePlugin;
 
 import java.util.UUID;
 
@@ -17,11 +16,11 @@ public record PurgeInteractionContext(
         Player player,
         PlayerRef playerRef,
         UUID playerId,
-        HyvexaPurgePlugin plugin
+        PurgeInteractionBridge.Services services
 ) {
 
     /**
-     * Resolves player, playerRef, UUID, and plugin instance from the given entity ref.
+     * Resolves player, playerRef, UUID, and bridge services from the given entity ref.
      * Returns null if any component is missing or invalid.
      */
     public static PurgeInteractionContext resolve(Ref<EntityStore> ref) {
@@ -38,10 +37,10 @@ public record PurgeInteractionContext(
         if (playerId == null) {
             return null;
         }
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        if (plugin == null) {
+        PurgeInteractionBridge.Services services = PurgeInteractionBridge.get();
+        if (services == null) {
             return null;
         }
-        return new PurgeInteractionContext(store, player, playerRef, playerId, plugin);
+        return new PurgeInteractionContext(store, player, playerRef, playerId, services);
     }
 }

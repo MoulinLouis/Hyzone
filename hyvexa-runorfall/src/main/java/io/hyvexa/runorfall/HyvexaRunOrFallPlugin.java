@@ -32,6 +32,7 @@ import io.hyvexa.runorfall.command.RunOrFallCommand;
 import io.hyvexa.runorfall.hud.HiddenRunOrFallHud;
 import io.hyvexa.runorfall.hud.RunOrFallHud;
 import io.hyvexa.runorfall.interaction.RunOrFallBlinkInteraction;
+import io.hyvexa.runorfall.interaction.RunOrFallInteractionBridge;
 import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallProfileInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
@@ -117,7 +118,37 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
 
         configStore = new RunOrFallConfigStore(new File(folder, "config.json"));
         statsStore = new RunOrFallStatsStore(DatabaseManager.getInstance());
-        gameManager = new RunOrFallGameManager(configStore, statsStore);
+
+        RunOrFallGameManager.PluginCallbacks callbacks = new RunOrFallGameManager.PluginCallbacks() {
+            @Override public void refreshRunOrFallHotbar(UUID playerId) {
+                HyvexaRunOrFallPlugin.this.refreshRunOrFallHotbar(playerId);
+            }
+            @Override public void updateCountdownHud(UUID playerId, String text) {
+                HyvexaRunOrFallPlugin.this.updateCountdownHud(playerId, text);
+            }
+            @Override public void updateBrokenBlocksHud(UUID playerId, int brokenBlocks) {
+                HyvexaRunOrFallPlugin.this.updateBrokenBlocksHud(playerId, brokenBlocks);
+            }
+            @Override public void updateBlinkChargesHud(UUID playerId, int blinkCharges) {
+                HyvexaRunOrFallPlugin.this.updateBlinkChargesHud(playerId, blinkCharges);
+            }
+        };
+        gameManager = new RunOrFallGameManager(configStore, statsStore, callbacks);
+
+        RunOrFallInteractionBridge.configure(new RunOrFallInteractionBridge.Services(
+                gameManager, statsStore,
+                new RunOrFallInteractionBridge.HudController() {
+                    @Override public void hideHud(UUID playerId) {
+                        HyvexaRunOrFallPlugin.this.hideHud(playerId);
+                    }
+                    @Override public void showHud(UUID playerId) {
+                        HyvexaRunOrFallPlugin.this.showHud(playerId);
+                    }
+                    @Override public boolean isHudHidden(UUID playerId) {
+                        return HyvexaRunOrFallPlugin.this.isHudHidden(playerId);
+                    }
+                }
+        ));
 
         runOrFallCommand = new RunOrFallCommand(configStore, gameManager);
         this.getCommandRegistry().registerCommand(runOrFallCommand);
@@ -560,6 +591,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        RunOrFallInteractionBridge.clear();
         if (hudUpdateTask != null) {
             hudUpdateTask.cancel(false);
             hudUpdateTask = null;

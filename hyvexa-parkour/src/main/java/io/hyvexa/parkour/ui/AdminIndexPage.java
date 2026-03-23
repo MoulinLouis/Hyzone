@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
@@ -23,6 +23,11 @@ import io.hyvexa.parkour.data.SettingsStore;
 import com.hypixel.hytale.server.core.Message;
 
 import javax.annotation.Nonnull;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.AdminIndexData> {
 
@@ -31,6 +36,11 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
     private final SettingsStore settingsStore;
     private final PlayerCountStore playerCountStore;
     private final MedalRewardStore medalRewardStore;
+    private final GlobalMessageStore globalMessageStore;
+    private final Runnable refreshAnnouncementsCallback;
+    private final BiConsumer<String, PlayerRef> broadcastAnnouncement;
+    private final Consumer<UUID> invalidateRankCache;
+    private final Function<String, List<String>> hologramLinesBuilder;
     private static final String BUTTON_MAPS = "Maps";
     private static final String BUTTON_PROGRESS = "Progress";
     private static final String BUTTON_SETTINGS = "Settings";
@@ -43,25 +53,24 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
     private String announcementInput = "";
 
     public AdminIndexPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                 ProgressStore progressStore) {
-        this(playerRef, mapStore, progressStore, HyvexaPlugin.getInstance() != null
-                ? HyvexaPlugin.getInstance().getSettingsStore()
-                : null, HyvexaPlugin.getInstance() != null
-                ? HyvexaPlugin.getInstance().getPlayerCountStore()
-                : null, HyvexaPlugin.getInstance() != null
-                ? HyvexaPlugin.getInstance().getMedalRewardStore()
-                : null);
-    }
-
-    public AdminIndexPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                 ProgressStore progressStore, SettingsStore settingsStore,
-                                 PlayerCountStore playerCountStore, MedalRewardStore medalRewardStore) {
+                          ProgressStore progressStore, SettingsStore settingsStore,
+                          PlayerCountStore playerCountStore, MedalRewardStore medalRewardStore,
+                          GlobalMessageStore globalMessageStore,
+                          Runnable refreshAnnouncementsCallback,
+                          BiConsumer<String, PlayerRef> broadcastAnnouncement,
+                          Consumer<UUID> invalidateRankCache,
+                          Function<String, List<String>> hologramLinesBuilder) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, AdminIndexData.CODEC);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.settingsStore = settingsStore;
         this.playerCountStore = playerCountStore;
         this.medalRewardStore = medalRewardStore;
+        this.globalMessageStore = globalMessageStore;
+        this.refreshAnnouncementsCallback = refreshAnnouncementsCallback;
+        this.broadcastAnnouncement = broadcastAnnouncement;
+        this.invalidateRankCache = invalidateRankCache;
+        this.hologramLinesBuilder = hologramLinesBuilder;
     }
 
     @Override
@@ -87,26 +96,30 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
         if (data.button == null) {
             return;
         }
+        BiConsumer<Ref<EntityStore>, Store<EntityStore>> backCallback = createOpenIndexCallback();
         if (BUTTON_MAPS.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store, new MapAdminPage(playerRef, mapStore));
+            player.getPageManager().openCustomPage(ref, store,
+                    new MapAdminPage(playerRef, mapStore, progressStore, hologramLinesBuilder, backCallback));
             return;
         }
         if (BUTTON_PROGRESS.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store, new ProgressAdminPage(playerRef, progressStore));
+            player.getPageManager().openCustomPage(ref, store,
+                    new ProgressAdminPage(playerRef, progressStore, mapStore, invalidateRankCache, backCallback));
             return;
         }
         if (BUTTON_SETTINGS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new SettingsAdminPage(playerRef, settingsStore, mapStore));
+                    new SettingsAdminPage(playerRef, settingsStore, mapStore, backCallback));
             return;
         }
         if (BUTTON_PLAYERS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new AdminPlayersPage(playerRef, mapStore, progressStore));
+                    new AdminPlayersPage(playerRef, mapStore, progressStore, backCallback));
             return;
         }
         if (BUTTON_PLAYTIME.equals(data.button)) {
-            player.getPageManager().openCustomPage(ref, store, new PlaytimeAdminPage(playerRef, progressStore));
+            player.getPageManager().openCustomPage(ref, store,
+                    new PlaytimeAdminPage(playerRef, progressStore, backCallback));
             return;
         }
         if (BUTTON_POPULATION.equals(data.button)) {
@@ -114,22 +127,23 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 player.sendMessage(Message.raw("Population history unavailable."));
                 return;
             }
-            player.getPageManager().openCustomPage(ref, store, new PlayerCountAdminPage(playerRef, playerCountStore));
+            player.getPageManager().openCustomPage(ref, store,
+                    new PlayerCountAdminPage(playerRef, playerCountStore, backCallback));
             return;
         }
         if (BUTTON_MEDAL_REWARDS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new MedalRewardAdminPage(playerRef, mapStore, progressStore, medalRewardStore));
+                    new MedalRewardAdminPage(playerRef, mapStore, progressStore, medalRewardStore, backCallback));
             return;
         }
         if (BUTTON_GLOBAL_MESSAGES.equals(data.button)) {
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin == null) {
+            if (globalMessageStore == null) {
                 player.sendMessage(Message.raw("Global messages unavailable."));
                 return;
             }
             player.getPageManager().openCustomPage(ref, store,
-                    new GlobalMessageAdminPage(playerRef, plugin.getGlobalMessageStore()));
+                    new GlobalMessageAdminPage(playerRef, globalMessageStore, refreshAnnouncementsCallback,
+                            backCallback));
             return;
         }
         if (BUTTON_BROADCAST.equals(data.button)) {
@@ -137,15 +151,21 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 player.sendMessage(Message.raw("Enter a message to broadcast."));
                 return;
             }
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin == null) {
+            if (broadcastAnnouncement == null) {
                 player.sendMessage(Message.raw("Broadcast unavailable."));
                 return;
             }
-            plugin.broadcastAnnouncement(announcementInput, playerRef);
+            broadcastAnnouncement.accept(announcementInput, playerRef);
             announcementInput = "";
             sendRefresh();
         }
+    }
+
+    private BiConsumer<Ref<EntityStore>, Store<EntityStore>> createOpenIndexCallback() {
+        return AdminPageUtils.createOpenIndexCallback(mapStore, progressStore, settingsStore,
+                playerCountStore, medalRewardStore, globalMessageStore,
+                refreshAnnouncementsCallback, broadcastAnnouncement,
+                invalidateRankCache, hologramLinesBuilder);
     }
 
     private void sendRefresh() {

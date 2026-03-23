@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.WorldConstants;
-import io.hyvexa.purge.HyvexaPurgePlugin;
+import io.hyvexa.purge.PurgeLoadoutService;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
@@ -32,11 +32,18 @@ public class WaveDeathTracker {
 
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeHudManager hudManager;
+    private final PurgeWeaponConfigManager weaponConfigManager;
+    private final PurgeLoadoutService loadoutService;
     private PurgeManagerRegistry registry;
 
-    public WaveDeathTracker(PurgeVariantConfigManager variantConfigManager, PurgeHudManager hudManager) {
+    public WaveDeathTracker(PurgeVariantConfigManager variantConfigManager,
+                            PurgeHudManager hudManager,
+                            PurgeWeaponConfigManager weaponConfigManager,
+                            PurgeLoadoutService loadoutService) {
         this.variantConfigManager = variantConfigManager;
         this.hudManager = hudManager;
+        this.weaponConfigManager = weaponConfigManager;
+        this.loadoutService = loadoutService;
     }
 
     void initRegistry(PurgeManagerRegistry registry) {
@@ -139,9 +146,8 @@ public class WaveDeathTracker {
         }
 
         // Lootbox drop: configurable % chance per dead zombie per alive player
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        if (plugin != null) {
-            double dropChance = plugin.getWeaponConfigManager().getLootboxDropChance();
+        if (weaponConfigManager != null && loadoutService != null) {
+            double dropChance = weaponConfigManager.getLootboxDropChance();
             World world = getPurgeWorld();
             if (world != null && dropChance > 0) {
                 for (int i = 0; i < dead.size(); i++) {
@@ -154,7 +160,7 @@ public class WaveDeathTracker {
                                         Store<EntityStore> playerStore = pRef.getStore();
                                         Player player = playerStore.getComponent(pRef, Player.getComponentType());
                                         if (player != null) {
-                                            plugin.grantLootbox(player, 1);
+                                            loadoutService.grantLootbox(player, 1);
                                         }
                                     } catch (Exception e) {
                                         LOGGER.atFine().log("Failed to grant lootbox: " + e.getMessage());

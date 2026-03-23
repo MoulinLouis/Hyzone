@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
-import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
+import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
 import io.hyvexa.runorfall.ui.RunOrFallStatsPage;
 
 import javax.annotation.Nonnull;
@@ -24,10 +24,11 @@ public class RunOrFallStatsInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        if (plugin == null || plugin.getStatsStore() == null) {
+        RunOrFallInteractionBridge.Services services = RunOrFallInteractionBridge.get();
+        if (services == null || services.statsStore() == null) {
             return;
         }
+        RunOrFallStatsStore statsStore = services.statsStore();
         var store = ref.getStore();
         World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
         if (!ModeGate.isRunOrFallWorld(world)) {
@@ -39,6 +40,6 @@ public class RunOrFallStatsInteraction extends SimpleInteraction {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new RunOrFallStatsPage(playerRef, plugin.getStatsStore()));
+                new RunOrFallStatsPage(playerRef, statsStore));
     }
 }

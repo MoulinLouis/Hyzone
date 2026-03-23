@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.parkour.ParkourConstants;
@@ -31,10 +30,14 @@ import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> {
 
     private final MapStore mapStore;
+    private final ProgressStore progressStore;
+    private final Function<String, List<String>> hologramLinesBuilder;
+    private final BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback;
     private String mapId = "";
     private String mapName = "";
     private String mapCategory = "";
@@ -56,9 +59,14 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private final java.util.Map<String, BiConsumer<Ref<EntityStore>, Store<EntityStore>>> buttonHandlers =
             createButtonHandlers();
 
-    public MapAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore) {
+    public MapAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore, ProgressStore progressStore,
+                        Function<String, List<String>> hologramLinesBuilder,
+                        BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MapData.CODEC);
         this.mapStore = mapStore;
+        this.progressStore = progressStore;
+        this.hologramLinesBuilder = hologramLinesBuilder;
+        this.openIndexCallback = openIndexCallback;
     }
 
     @Override
@@ -519,8 +527,6 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             player.sendMessage(Message.raw("Map '" + selectedMapId + "' not found."));
             return;
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        ProgressStore progressStore = plugin != null ? plugin.getProgressStore() : null;
         if (progressStore == null) {
             player.sendMessage(Message.raw("Progress store not available."));
             return;
@@ -535,7 +541,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             return;
         }
         String holoName = map.getId() + "_holo";
-        List<String> lines = plugin.buildMapLeaderboardHologramLines(map.getId());
+        List<String> lines = hologramLinesBuilder != null
+                ? hologramLinesBuilder.apply(map.getId())
+                : List.of();
         if (HylogramsBridge.exists(holoName)) {
             HylogramsBridge.Hologram holo = HylogramsBridge.get(holoName);
             if (holo != null) {
@@ -672,7 +680,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        AdminPageUtils.openIndex(ref, store);
+        if (openIndexCallback != null) {
+            openIndexCallback.accept(ref, store);
+        }
     }
 
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {

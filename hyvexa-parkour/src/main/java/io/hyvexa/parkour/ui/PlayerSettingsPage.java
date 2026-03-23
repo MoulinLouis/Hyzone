@@ -15,16 +15,19 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 import io.hyvexa.manager.HudManager;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
+import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
+import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public class PlayerSettingsPage extends BaseParkourPage {
 
@@ -50,22 +53,43 @@ public class PlayerSettingsPage extends BaseParkourPage {
     private static final String ADVANCED_HUD_LABEL_ON = "Advanced HUD: On";
     private static final String ADVANCED_HUD_LABEL_OFF = "Advanced HUD: Off";
 
-    public PlayerSettingsPage(@Nonnull PlayerRef playerRef) {
+    private final ProgressStore progressStore;
+    private final RunTracker runTracker;
+    private final MapStore mapStore;
+    private final GhostNpcManager ghostNpcManager;
+    private final HudManager hudManager;
+    private final VipSpeedApplier vipSpeedApplier;
+
+    @FunctionalInterface
+    public interface VipSpeedApplier {
+        void apply(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
+                   float multiplier, boolean notify);
+    }
+
+    public PlayerSettingsPage(@Nonnull PlayerRef playerRef, ProgressStore progressStore,
+                              RunTracker runTracker, MapStore mapStore,
+                              GhostNpcManager ghostNpcManager, HudManager hudManager,
+                              VipSpeedApplier vipSpeedApplier) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
+        this.progressStore = progressStore;
+        this.runTracker = runTracker;
+        this.mapStore = mapStore;
+        this.ghostNpcManager = ghostNpcManager;
+        this.hudManager = hudManager;
+        this.vipSpeedApplier = vipSpeedApplier;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Parkour_PlayerSettings.ui");
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         boolean showSpeedBoost = false;
-        if (plugin != null && plugin.getProgressStore() != null) {
+        if (progressStore != null) {
             var playerId = playerRef.getUuid();
             boolean isVipOrFounder = playerId != null
-                    && (plugin.getProgressStore().isVip(playerId) || plugin.getProgressStore().isFounder(playerId));
-            boolean inMap = playerId != null && plugin.getRunTracker() != null
-                    && plugin.getRunTracker().getActiveMapId(playerId) != null;
+                    && (progressStore.isVip(playerId) || progressStore.isFounder(playerId));
+            boolean inMap = playerId != null && runTracker != null
+                    && runTracker.getActiveMapId(playerId) != null;
             showSpeedBoost = isVipOrFounder && !inMap;
         }
         uiCommandBuilder.set("#VipSpeedLabel.Visible", showSpeedBoost);
@@ -73,7 +97,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
         uiCommandBuilder.set(RESET_ITEM_BUTTON_SELECTOR + ".Text", getResetItemLabel(playerRef.getUuid()));
         uiCommandBuilder.set(GHOST_BUTTON_SELECTOR + ".Text", getGhostLabel(playerRef.getUuid()));
         uiCommandBuilder.set(ADVANCED_HUD_BUTTON_SELECTOR + ".Text", getAdvancedHudLabel(playerRef.getUuid()));
-        applyToggleIndicators(uiCommandBuilder, playerRef.getUuid(), plugin);
+        applyToggleIndicators(uiCommandBuilder, playerRef.getUuid(), hudManager);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HideAllButton",

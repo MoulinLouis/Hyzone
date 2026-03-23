@@ -18,12 +18,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
 import io.hyvexa.common.skin.PurgeSkinStore;
-import io.hyvexa.purge.HyvexaPurgePlugin;
+import io.hyvexa.purge.PurgeLoadoutService;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.data.WeaponXpStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
+import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
@@ -70,6 +71,8 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
     private final PurgeVariantConfigManager variantConfigManager;
+    private final PurgeSessionManager sessionManager;
+    private final PurgeLoadoutService loadoutService;
 
     // Track selected weapon for inline detail panel
     private String selectedWeaponId;
@@ -84,7 +87,9 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                                  PurgeWeaponConfigManager weaponConfigManager,
                                  PurgeWaveConfigManager waveConfigManager,
                                  PurgeInstanceManager instanceManager,
-                                 PurgeVariantConfigManager variantConfigManager) {
+                                 PurgeVariantConfigManager variantConfigManager,
+                                 PurgeSessionManager sessionManager,
+                                 PurgeLoadoutService loadoutService) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWeaponSelectData.CODEC);
         this.mode = mode;
         this.playerId = playerId;
@@ -92,6 +97,8 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
         this.variantConfigManager = variantConfigManager;
+        this.sessionManager = sessionManager;
+        this.loadoutService = loadoutService;
     }
 
     @Override
@@ -582,11 +589,10 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         if (PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId) < 1) {
             return;
         }
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        if (plugin == null) {
+        if (sessionManager == null || loadoutService == null) {
             return;
         }
-        PurgeSession session = plugin.getSessionManager().getSessionByPlayer(playerId);
+        PurgeSession session = sessionManager.getSessionByPlayer(playerId);
         if (session == null) {
             return;
         }
@@ -596,9 +602,9 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             return;
         }
         if (weaponConfigManager.isMeleeWeapon(weaponId)) {
-            plugin.switchMeleeWeapon(player, playerState, weaponId);
+            loadoutService.switchMeleeWeapon(player, playerState, weaponId);
         } else {
-            plugin.switchWeapon(player, playerState, weaponId);
+            loadoutService.switchWeapon(player, playerState, weaponId);
         }
     }
 

@@ -29,7 +29,6 @@ import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.io.PacketHandler;
-import io.hyvexa.purge.HyvexaPurgePlugin;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeVariantConfig;
@@ -60,18 +59,21 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final WeaponXpManager weaponXpManager;
     private final PurgeClassManager classManager;
+    private final PurgeHudManager hudManager;
     private volatile SystemGroup<EntityStore> cachedGroup;
 
     public PurgeDamageModifierSystem(PurgeSessionManager sessionManager,
                                       PurgeVariantConfigManager variantConfigManager,
                                       PurgeWeaponConfigManager weaponConfigManager,
                                       WeaponXpManager weaponXpManager,
-                                      PurgeClassManager classManager) {
+                                      PurgeClassManager classManager,
+                                      PurgeHudManager hudManager) {
         this.sessionManager = sessionManager;
         this.variantConfigManager = variantConfigManager;
         this.weaponConfigManager = weaponConfigManager;
         this.weaponXpManager = weaponXpManager;
         this.classManager = classManager;
+        this.hudManager = hudManager;
     }
 
     @Override
@@ -397,15 +399,11 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         int newLevel = weaponXpManager.addKillXp(playerId, weaponId);
         // Update HUD XP bar on every kill
         String displayName = weaponConfigManager.getDisplayName(weaponId);
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        if (plugin != null) {
-            PurgeHudManager hudManager = plugin.getHudManager();
-            if (hudManager != null) {
-                if (weaponConfigManager.isMeleeWeapon(weaponId)) {
-                    hudManager.updateMeleeXpHud(playerId, weaponId, displayName);
-                } else {
-                    hudManager.updateWeaponXpHud(playerId, weaponId, displayName);
-                }
+        if (hudManager != null) {
+            if (weaponConfigManager.isMeleeWeapon(weaponId)) {
+                hudManager.updateMeleeXpHud(playerId, weaponId, displayName);
+            } else {
+                hudManager.updateWeaponXpHud(playerId, weaponId, displayName);
             }
         }
         // Send level-up chat message

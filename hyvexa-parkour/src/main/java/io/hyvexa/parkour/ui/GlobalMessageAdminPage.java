@@ -15,11 +15,11 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 public class GlobalMessageAdminPage extends InteractiveCustomUIPage<GlobalMessageAdminPage.GlobalMessageData> {
 
@@ -29,12 +29,18 @@ public class GlobalMessageAdminPage extends InteractiveCustomUIPage<GlobalMessag
     private static final String BUTTON_REMOVE_PREFIX = "Remove:";
 
     private final GlobalMessageStore globalMessageStore;
+    private final Runnable refreshAnnouncementsCallback;
+    private final BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback;
     private String messageInput = "";
     private String intervalInput = "";
 
-    public GlobalMessageAdminPage(@Nonnull PlayerRef playerRef, GlobalMessageStore globalMessageStore) {
+    public GlobalMessageAdminPage(@Nonnull PlayerRef playerRef, GlobalMessageStore globalMessageStore,
+                                  Runnable refreshAnnouncementsCallback,
+                                  BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, GlobalMessageData.CODEC);
         this.globalMessageStore = globalMessageStore;
+        this.refreshAnnouncementsCallback = refreshAnnouncementsCallback;
+        this.openIndexCallback = openIndexCallback;
         this.intervalInput = formatMinutes(getIntervalMinutes());
     }
 
@@ -139,14 +145,15 @@ public class GlobalMessageAdminPage extends InteractiveCustomUIPage<GlobalMessag
     }
 
     private void refreshAnnouncements() {
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin != null) {
-            plugin.refreshChatAnnouncements();
+        if (refreshAnnouncementsCallback != null) {
+            refreshAnnouncementsCallback.run();
         }
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        AdminPageUtils.openIndex(ref, store);
+        if (openIndexCallback != null) {
+            openIndexCallback.accept(ref, store);
+        }
     }
 
     private void populateFields(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {

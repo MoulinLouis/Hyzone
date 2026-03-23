@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
-import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
+import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -24,10 +24,11 @@ public class RunOrFallJoinInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        if (plugin == null || plugin.getGameManager() == null) {
+        RunOrFallInteractionBridge.Services services = RunOrFallInteractionBridge.get();
+        if (services == null || services.gameManager() == null) {
             return;
         }
+        RunOrFallGameManager gameManager = services.gameManager();
 
         var store = ref.getStore();
         World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
@@ -41,6 +42,6 @@ public class RunOrFallJoinInteraction extends SimpleInteraction {
             return;
         }
 
-        CompletableFuture.runAsync(() -> plugin.getGameManager().joinLobby(playerId, world), world);
+        CompletableFuture.runAsync(() -> gameManager.joinLobby(playerId, world), world);
     }
 }

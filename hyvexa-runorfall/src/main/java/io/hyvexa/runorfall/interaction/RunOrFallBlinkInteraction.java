@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.core.bridge.GameModeBridge;
-import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.util.RunOrFallUtils;
 
@@ -53,9 +52,9 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        RunOrFallGameManager gameManager = plugin != null ? plugin.getGameManager() : null;
-        if (plugin == null || gameManager == null) {
+        RunOrFallInteractionBridge.Services services = RunOrFallInteractionBridge.get();
+        RunOrFallGameManager gameManager = services != null ? services.gameManager() : null;
+        if (services == null || gameManager == null) {
             return;
         }
         Store<EntityStore> store = ref.getStore();

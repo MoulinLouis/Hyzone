@@ -39,12 +39,12 @@ public class PurgeStartInteraction extends SimpleInteraction {
             ctx.player().sendMessage(Message.raw("You must be in the Purge world."));
             return;
         }
-        if (ctx.plugin().getSessionManager().getSessionByPlayer(ctx.playerId()) != null) {
+        if (ctx.services().sessionManager().getSessionByPlayer(ctx.playerId()) != null) {
             ctx.player().sendMessage(Message.raw("You already have an active Purge session."));
             return;
         }
         ctx.player().getPageManager().openCustomPage(ref, ctx.store(),
                 new PurgePartyMenuPage(ctx.playerRef(), ctx.playerId(),
-                        ctx.plugin().getPartyManager(), ctx.plugin().getSessionManager()));
+                        ctx.services().partyManager(), ctx.services().sessionManager()));
     }
 }

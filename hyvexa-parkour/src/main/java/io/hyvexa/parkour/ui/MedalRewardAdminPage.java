@@ -20,6 +20,7 @@ import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.ProgressStore;
 
 import javax.annotation.Nonnull;
+import java.util.function.BiConsumer;
 
 public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdminPage.RewardData> {
 
@@ -29,6 +30,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
     private final MapStore mapStore;
     private final ProgressStore progressStore;
     private final MedalRewardStore medalRewardStore;
+    private final BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback;
 
     // 4 categories x 4 tiers (bronze/silver/gold/emerald)
     private final String[][] values = new String[4][4];
@@ -36,11 +38,13 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
     private String insaneRewardValue = "0";
 
     public MedalRewardAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
-                                ProgressStore progressStore, MedalRewardStore medalRewardStore) {
+                                ProgressStore progressStore, MedalRewardStore medalRewardStore,
+                                BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, RewardData.CODEC);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.medalRewardStore = medalRewardStore;
+        this.openIndexCallback = openIndexCallback;
         loadCurrentValues();
     }
 
@@ -97,7 +101,9 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             return;
         }
         if ("Back".equals(data.button)) {
-            AdminPageUtils.openIndex(ref, store);
+            if (openIndexCallback != null) {
+                openIndexCallback.accept(ref, store);
+            }
             return;
         }
         if ("Save".equals(data.button)) {

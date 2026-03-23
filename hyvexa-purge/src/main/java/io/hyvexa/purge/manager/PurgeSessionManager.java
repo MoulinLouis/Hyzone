@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.DamageBypassRegistry;
 import io.hyvexa.common.util.ModeGate;
-import io.hyvexa.purge.HyvexaPurgePlugin;
+import io.hyvexa.purge.PurgeLoadoutService;
 import io.hyvexa.purge.data.PurgeLocation;
 import io.hyvexa.purge.data.PurgeMapInstance;
 import io.hyvexa.purge.data.PurgeParty;
@@ -59,17 +59,23 @@ public class PurgeSessionManager {
     private final PurgeInstanceManager instanceManager;
     private final PurgeWaveManager waveManager;
     private final PurgeHudManager hudManager;
+    private final PurgeWeaponConfigManager weaponConfigManager;
+    private final PurgeLoadoutService loadoutService;
     private final AtomicInteger sessionCounter = new AtomicInteger(0);
     private PurgeManagerRegistry registry;
 
     public PurgeSessionManager(PurgePartyManager partyManager,
                                PurgeInstanceManager instanceManager,
                                PurgeWaveManager waveManager,
-                               PurgeHudManager hudManager) {
+                               PurgeHudManager hudManager,
+                               PurgeWeaponConfigManager weaponConfigManager,
+                               PurgeLoadoutService loadoutService) {
         this.partyManager = partyManager;
         this.instanceManager = instanceManager;
         this.waveManager = waveManager;
         this.hudManager = hudManager;
+        this.weaponConfigManager = weaponConfigManager;
+        this.loadoutService = loadoutService;
     }
 
     void initRegistry(PurgeManagerRegistry registry) {
@@ -155,7 +161,6 @@ public class PurgeSessionManager {
             }
 
             // Setup each player
-            HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
             List<UUID> setupFailures = new ArrayList<>();
 
             for (var entry : validPlayers.entrySet()) {
@@ -164,29 +169,29 @@ public class PurgeSessionManager {
                 DamageBypassRegistry.add(pid);
                 // Set initial weapon before granting loadout
                 PurgeSessionPlayerState ps = session.getPlayerState(pid);
-                if (ps != null && plugin != null) {
-                    ps.setCurrentWeaponId(plugin.getWeaponConfigManager().getSessionWeaponId());
-                    ps.setCurrentMeleeWeaponId(plugin.getWeaponConfigManager().getSessionMeleeWeaponId());
+                if (ps != null && weaponConfigManager != null) {
+                    ps.setCurrentWeaponId(weaponConfigManager.getSessionWeaponId());
+                    ps.setCurrentMeleeWeaponId(weaponConfigManager.getSessionMeleeWeaponId());
                 }
                 try {
-                    if (plugin != null && ref.isValid()) {
+                    if (loadoutService != null && ref.isValid()) {
                         Store<EntityStore> store = ref.getStore();
                         Player player = store.getComponent(ref, Player.getComponentType());
                         if (player != null) {
-                            plugin.grantLoadout(player, ps);
+                            loadoutService.grantLoadout(player, ps);
                         }
                         applySessionBaseHealth(ref, store);
                         registry.getClassManager().applyClassEffects(session, pid, ref, store);
                         teleportTo(ref, store, instance.startPoint());
                     }
                     hudManager.showRunHud(pid);
-                    if (ps != null && plugin != null) {
+                    if (ps != null && weaponConfigManager != null) {
                         String weaponId = ps.getCurrentWeaponId();
-                        String displayName = plugin.getWeaponConfigManager().getDisplayName(weaponId);
+                        String displayName = weaponConfigManager.getDisplayName(weaponId);
                         hudManager.updateWeaponXpHud(pid, weaponId, displayName);
                         String meleeId = ps.getCurrentMeleeWeaponId();
                         if (meleeId != null) {
-                            String meleeName = plugin.getWeaponConfigManager().getDisplayName(meleeId);
+                            String meleeName = weaponConfigManager.getDisplayName(meleeId);
                             hudManager.updateMeleeXpHud(pid, meleeId, meleeName);
                         }
                     }
@@ -519,8 +524,7 @@ public class PurgeSessionManager {
             if (!endReason.shouldRestoreIdleLoadout() || !isPurgeWorldRef(ref)) {
                 return;
             }
-            HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-            if (plugin == null) {
+            if (loadoutService == null) {
                 return;
             }
             if (ref == null || !ref.isValid()) {
@@ -529,7 +533,7 @@ public class PurgeSessionManager {
             Store<EntityStore> store = ref.getStore();
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
-                plugin.removeLoadout(player);
+                loadoutService.removeLoadout(player);
             }
             if (endReason.shouldTeleportToExit()) {
                 PurgeMapInstance instance = instanceManager.getInstance(session.getInstanceId());
@@ -628,7 +632,6 @@ public class PurgeSessionManager {
             sessionsById.remove(sessionId);
         }
 
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
         for (var entry : validPlayers.entrySet()) {
             UUID pid = entry.getKey();
             Ref<EntityStore> ref = entry.getValue();
@@ -644,21 +647,21 @@ public class PurgeSessionManager {
                 hudManager.unregisterKillMeter(pid);
                 hudManager.hideRunHud(pid);
             });
-            if (plugin != null) {
+            if (loadoutService != null) {
                 runSafe("restore idle loadout rollback " + pid,
-                        () -> restoreIdleLoadoutIfInPurgeWorld(plugin, ref));
+                        () -> restoreIdleLoadoutIfInPurgeWorld(ref));
             }
         }
     }
 
-    private void restoreIdleLoadoutIfInPurgeWorld(HyvexaPurgePlugin plugin, Ref<EntityStore> ref) {
-        if (plugin == null || ref == null || !ref.isValid() || !isPurgeWorldRef(ref)) {
+    private void restoreIdleLoadoutIfInPurgeWorld(Ref<EntityStore> ref) {
+        if (loadoutService == null || ref == null || !ref.isValid() || !isPurgeWorldRef(ref)) {
             return;
         }
         Store<EntityStore> store = ref.getStore();
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
-            plugin.removeLoadout(player);
+            loadoutService.removeLoadout(player);
         }
     }
 

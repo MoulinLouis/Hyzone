@@ -21,7 +21,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.core.queue.RunOrFallQueueStore;
-import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
 import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 import io.hyvexa.runorfall.data.RunOrFallMapConfig;
@@ -58,6 +57,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class RunOrFallGameManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String PREFIX = "[RunOrFall] ";
+
+    public interface PluginCallbacks {
+        void refreshRunOrFallHotbar(UUID playerId);
+        void updateCountdownHud(UUID playerId, String text);
+        void updateBrokenBlocksHud(UUID playerId, int brokenBlocks);
+        void updateBlinkChargesHud(UUID playerId, int blinkCharges);
+    }
     private static final int FORCED_COUNTDOWN_SECONDS = 10;
     private static final long GAME_TICK_MS = 50L;
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
@@ -82,6 +88,7 @@ public class RunOrFallGameManager {
 
     private final RunOrFallConfigStore configStore;
     private final RunOrFallStatsStore statsStore;
+    private final PluginCallbacks pluginCallbacks;
     private final Set<UUID> lobbyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> alivePlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> spectatingPlayers = ConcurrentHashMap.newKeySet();
@@ -119,9 +126,11 @@ public class RunOrFallGameManager {
     private final Set<UUID> assemblingPlayerIds = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Long> pendingFeatherRewards = new ConcurrentHashMap<>();
 
-    public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore) {
+    public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore,
+                               PluginCallbacks pluginCallbacks) {
         this.configStore = configStore;
         this.statsStore = statsStore;
+        this.pluginCallbacks = pluginCallbacks;
         RunOrFallQueueStore.getInstance().setOnQueueChanged(() -> {
             dispatchToWorld(() -> {
                 synchronized (this) {
@@ -1757,11 +1766,7 @@ public class RunOrFallGameManager {
         if (playerId == null) {
             return;
         }
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        plugin.refreshRunOrFallHotbar(playerId);
+        pluginCallbacks.refreshRunOrFallHotbar(playerId);
     }
 
     private void ensureBrokenBlocksEntry(UUID playerId) {
@@ -1836,11 +1841,7 @@ public class RunOrFallGameManager {
     }
 
     private void updateCountdownHudForPlayer(UUID playerId, String countdownText) {
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        plugin.updateCountdownHud(playerId, countdownText);
+        pluginCallbacks.updateCountdownHud(playerId, countdownText);
     }
 
     private void updateBrokenBlocksHudForPlayer(UUID playerId) {
@@ -1848,11 +1849,7 @@ public class RunOrFallGameManager {
     }
 
     private void updateBrokenBlocksHudForPlayer(UUID playerId, int brokenBlocks) {
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        plugin.updateBrokenBlocksHud(playerId, Math.max(0, brokenBlocks));
+        pluginCallbacks.updateBrokenBlocksHud(playerId, Math.max(0, brokenBlocks));
     }
 
     private void updateBlinkChargesHudForPlayer(UUID playerId) {
@@ -1860,11 +1857,7 @@ public class RunOrFallGameManager {
     }
 
     private void updateBlinkChargesHudForPlayer(UUID playerId, int blinkCharges) {
-        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        plugin.updateBlinkChargesHud(playerId, Math.max(0, blinkCharges));
+        pluginCallbacks.updateBlinkChargesHud(playerId, Math.max(0, blinkCharges));
     }
 
     private String buildCountdownHudText() {

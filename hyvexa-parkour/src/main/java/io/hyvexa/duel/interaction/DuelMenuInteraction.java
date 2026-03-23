@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.duel.ui.DuelMenuPage;
 
 import javax.annotation.Nonnull;
@@ -27,6 +28,12 @@ public class DuelMenuInteraction extends SimpleInteraction {
         if (player == null || playerRef == null) {
             return;
         }
-        player.getPageManager().openCustomPage(ref, store, new DuelMenuPage(playerRef));
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new DuelMenuPage(playerRef, plugin.getDuelTracker(), plugin.getRunTracker(),
+                        plugin.getProgressStore(), plugin.getDuelPreferenceStore()));
     }
 }

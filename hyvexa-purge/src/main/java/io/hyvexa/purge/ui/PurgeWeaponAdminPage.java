@@ -176,7 +176,8 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.ADMIN, null,
-                        weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager));
+                        weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager,
+                        null, null));
     }
 
     private void sendRefresh() {

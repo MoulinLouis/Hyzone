@@ -15,16 +15,20 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage.ProgressData> {
 
     private final ProgressStore progressStore;
+    private final MapStore mapStore;
+    private final Consumer<UUID> invalidateRankCache;
+    private final BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback;
     private String playerUuidInput = "";
     private String playerNameInput = "";
     private String mapIdInput = "";
@@ -36,9 +40,14 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
     private static final String BUTTON_PURGE = "PurgeMapProgress";
     private static final String BUTTON_REFRESH = "RefreshProgress";
 
-    public ProgressAdminPage(@Nonnull PlayerRef playerRef, ProgressStore progressStore) {
+    public ProgressAdminPage(@Nonnull PlayerRef playerRef, ProgressStore progressStore,
+                             MapStore mapStore, Consumer<UUID> invalidateRankCache,
+                             BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ProgressData.CODEC);
         this.progressStore = progressStore;
+        this.mapStore = mapStore;
+        this.invalidateRankCache = invalidateRankCache;
+        this.openIndexCallback = openIndexCallback;
     }
 
     @Override
@@ -107,8 +116,6 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
             sendRefresh(ref, store);
             return;
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        MapStore mapStore = plugin != null ? plugin.getMapStore() : null;
         ProgressStore.MapPurgeResult result = progressStore.purgeMapProgress(mapId, mapStore);
         if (result.playersUpdated == 0) {
             purgeStatusText = "No progress found for map '" + mapId + "'.";
@@ -170,16 +177,17 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
             sendRefresh(ref, store);
             return;
         }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin != null) {
-            plugin.invalidateRankCache(playerId);
+        if (invalidateRankCache != null) {
+            invalidateRankCache.accept(playerId);
         }
         refreshStatusText = "Reloaded progress for " + playerNameInput + " (" + playerId + ").";
         sendRefresh(ref, store);
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        AdminPageUtils.openIndex(ref, store);
+        if (openIndexCallback != null) {
+            openIndexCallback.accept(ref, store);
+        }
     }
 
     private void populateFields(UICommandBuilder commandBuilder) {

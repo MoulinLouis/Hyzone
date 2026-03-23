@@ -24,7 +24,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.DamageBypassRegistry;
-import io.hyvexa.purge.HyvexaPurgePlugin;
+import io.hyvexa.purge.PurgeLoadoutService;
 import io.hyvexa.purge.data.PurgeLocation;
 import io.hyvexa.purge.data.PurgeMapInstance;
 import io.hyvexa.purge.data.PurgeSession;
@@ -65,6 +65,8 @@ public class PurgeWaveManager {
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeHudManager hudManager;
+    private final PurgeWeaponConfigManager weaponConfigManager;
+    private final PurgeLoadoutService loadoutService;
     private final WaveDeathTracker deathTracker;
     private final WaveProgressionController progressionController;
     private volatile NPCPlugin npcPlugin;
@@ -73,12 +75,16 @@ public class PurgeWaveManager {
     public PurgeWaveManager(PurgeInstanceManager instanceManager,
                             PurgeWaveConfigManager waveConfigManager,
                             PurgeVariantConfigManager variantConfigManager,
-                            PurgeHudManager hudManager) {
+                            PurgeHudManager hudManager,
+                            PurgeWeaponConfigManager weaponConfigManager,
+                            PurgeLoadoutService loadoutService) {
         this.instanceManager = instanceManager;
         this.waveConfigManager = waveConfigManager;
         this.variantConfigManager = variantConfigManager;
         this.hudManager = hudManager;
-        this.deathTracker = new WaveDeathTracker(variantConfigManager, hudManager);
+        this.weaponConfigManager = weaponConfigManager;
+        this.loadoutService = loadoutService;
+        this.deathTracker = new WaveDeathTracker(variantConfigManager, hudManager, weaponConfigManager, loadoutService);
         this.progressionController = new WaveProgressionController(this, waveConfigManager, hudManager);
         try {
             this.npcPlugin = NPCPlugin.get();
@@ -517,7 +523,6 @@ public class PurgeWaveManager {
 
     private void updatePlayerHealthHud(PurgeSession session, Store<EntityStore> store, World world) {
         PurgeMapInstance instance = instanceManager.getInstance(session.getInstanceId());
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
         boolean[] anyDied = {false};
 
         session.forEachAliveConnectedPlayerState(ps -> {
@@ -547,7 +552,7 @@ public class PurgeWaveManager {
             }
 
             if (dead && session.getState() != SessionState.ENDED) {
-                handlePlayerDeath(session, pid, ps, store, world, instance, plugin);
+                handlePlayerDeath(session, pid, ps, store, world, instance);
                 anyDied[0] = true;
             }
         });
@@ -558,8 +563,7 @@ public class PurgeWaveManager {
     }
 
     private void handlePlayerDeath(PurgeSession session, UUID playerId, PurgeSessionPlayerState ps,
-                                    Store<EntityStore> store, World world, PurgeMapInstance instance,
-                                    HyvexaPurgePlugin plugin) {
+                                    Store<EntityStore> store, World world, PurgeMapInstance instance) {
         session.markDeadThisWave(playerId);
         DamageBypassRegistry.remove(playerId);
 
@@ -583,9 +587,9 @@ public class PurgeWaveManager {
             }
 
             // Clear inventory, give quit orb only
-            if (player != null && plugin != null) {
+            if (player != null && loadoutService != null) {
                 try {
-                    plugin.giveWaitingLoadout(player);
+                    loadoutService.giveWaitingLoadout(player);
                 } catch (Exception e) {
                     LOGGER.atFine().log("Failed to update dead player inventory: " + e.getMessage());
                 }
@@ -720,7 +724,6 @@ public class PurgeWaveManager {
                 Store<EntityStore> store = world.getEntityStore().getStore();
                 if (store == null) return;
                 PurgeMapInstance instance = instanceManager.getInstance(session.getInstanceId());
-                HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
 
                 for (UUID pid : toRevive) {
                     PurgeSessionPlayerState ps = session.getPlayerState(pid);
@@ -740,8 +743,8 @@ public class PurgeWaveManager {
                     Player player = null;
                     try {
                         player = store.getComponent(ref, Player.getComponentType());
-                        if (player != null && plugin != null) {
-                            plugin.grantLoadout(player, ps);
+                        if (player != null && loadoutService != null) {
+                            loadoutService.grantLoadout(player, ps);
                         }
                     } catch (Exception e) {
                         LOGGER.atFine().log("Failed to re-grant loadout: " + e.getMessage());

@@ -25,6 +25,7 @@ public class PurgeOrangeOrbInteraction extends SimpleInteraction {
         }
         ctx.player().getPageManager().openCustomPage(ref, ctx.store(),
                 new PurgeWeaponSelectPage(ctx.playerRef(), PurgeWeaponSelectPage.Mode.LOADOUT, ctx.playerId(),
-                        ctx.plugin().getWeaponConfigManager(), null, null, null));
+                        ctx.services().weaponConfigManager(), null, null, null,
+                        ctx.services().sessionManager(), ctx.services().loadoutService()));
     }
 }

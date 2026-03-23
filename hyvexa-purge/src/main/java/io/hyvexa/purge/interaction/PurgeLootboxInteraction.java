@@ -36,7 +36,7 @@ public class PurgeLootboxInteraction extends SimpleInteraction {
         if (ctx == null) {
             return;
         }
-        PurgeSessionManager sessionManager = ctx.plugin().getSessionManager();
+        PurgeSessionManager sessionManager = ctx.services().sessionManager();
         PurgeSession session = sessionManager.getSessionByPlayer(ctx.playerId());
         if (session == null) {
             ctx.player().sendMessage(Message.raw("No active Purge session."));
@@ -83,6 +83,7 @@ public class PurgeLootboxInteraction extends SimpleInteraction {
 
         // Open lootbox UI
         ctx.player().getPageManager().openCustomPage(ref, ctx.store(),
-                new PurgeLootboxRollPage(ctx.playerRef(), ctx.playerId(), playerState, rolledWeapon, candidates));
+                new PurgeLootboxRollPage(ctx.playerRef(), ctx.playerId(), playerState, rolledWeapon, candidates,
+                        ctx.services().weaponConfigManager(), ctx.services().loadoutService()));
     }
 }

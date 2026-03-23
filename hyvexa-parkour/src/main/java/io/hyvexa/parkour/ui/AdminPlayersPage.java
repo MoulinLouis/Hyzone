@@ -23,6 +23,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 public class AdminPlayersPage extends AbstractSearchablePaginatedPage {
 
@@ -32,11 +33,14 @@ public class AdminPlayersPage extends AbstractSearchablePaginatedPage {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
+    private final BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback;
 
-    public AdminPlayersPage(@Nonnull PlayerRef playerRef, MapStore mapStore, ProgressStore progressStore) {
+    public AdminPlayersPage(@Nonnull PlayerRef playerRef, MapStore mapStore, ProgressStore progressStore,
+                            BiConsumer<Ref<EntityStore>, Store<EntityStore>> openIndexCallback) {
         super(playerRef, PAGE_SIZE);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
+        this.openIndexCallback = openIndexCallback;
     }
 
     @Override
@@ -125,7 +129,9 @@ public class AdminPlayersPage extends AbstractSearchablePaginatedPage {
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        AdminPageUtils.openIndex(ref, store);
+        if (openIndexCallback != null) {
+            openIndexCallback.accept(ref, store);
+        }
     }
 
     private UUID parsePlayerId(String raw, Store<EntityStore> store, Ref<EntityStore> ref) {
