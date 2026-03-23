@@ -10,11 +10,8 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.parkour.data.MapStore;
-import io.hyvexa.parkour.data.ProgressStore;
-import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.interaction.ParkourInteractionBridge;
 
 import javax.annotation.Nonnull;
 
@@ -51,24 +48,17 @@ public class WelcomeTutorialScreen2Page extends BaseParkourPage {
             return;
         }
 
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-
-        MapStore mapStore = plugin.getMapStore();
-        ProgressStore progressStore = plugin.getProgressStore();
-        RunTracker runTracker = plugin.getRunTracker();
-        var medalStore = plugin.getMedalStore();
-
-        if (mapStore == null || progressStore == null || runTracker == null || medalStore == null) {
+        ParkourInteractionBridge.Services svc = ParkourInteractionBridge.get();
+        if (svc == null || svc.mapStore() == null || svc.progressStore() == null
+                || svc.runTracker() == null || svc.medalStore() == null) {
             return;
         }
 
         if (BUTTON_SHOW_MAPS.equals(data.getButton())) {
-            progressStore.markWelcomeShown(playerRef.getUuid(), playerRef.getUsername());
+            svc.progressStore().markWelcomeShown(playerRef.getUuid(), playerRef.getUsername());
             player.getPageManager().openCustomPage(ref, store,
-                    new CategorySelectPage(playerRef, mapStore, progressStore, runTracker, medalStore));
+                    new CategorySelectPage(playerRef, svc.mapStore(), svc.progressStore(),
+                            svc.runTracker(), svc.medalStore()));
         } else if (BUTTON_BACK.equals(data.getButton())) {
             player.getPageManager().openCustomPage(ref, store,
                     new WelcomeTutorialScreen1Page(playerRef));
