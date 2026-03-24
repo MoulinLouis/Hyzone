@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Optional;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 
 /**
@@ -20,6 +21,10 @@ import java.util.logging.Level;
  *
  * <p>The database schema is automatically created on initialization if it
  * doesn't exist.</p>
+ *
+ * <p>Thread safety: a single shared connection is used with WAL journal mode
+ * for concurrent read performance. All operations are serialized with a
+ * {@link ReentrantLock} to prevent SQLITE_BUSY errors from concurrent writes.</p>
  */
 public class SQLiteVoteStorage implements VoteStorage {
 
@@ -39,6 +44,7 @@ public class SQLiteVoteStorage implements VoteStorage {
 
     private final Path databasePath;
     private final HytaleLogger logger;
+    private final ReentrantLock lock = new ReentrantLock();
     private Connection connection;
 
     /**
@@ -100,12 +106,15 @@ public class SQLiteVoteStorage implements VoteStorage {
             return;
         }
 
+        lock.lock();
         try (PreparedStatement stmt = connection.prepareStatement(UPSERT_SQL)) {
             stmt.setString(1, username.toLowerCase());
             stmt.setLong(2, timestamp);
             stmt.executeUpdate();
         } catch (SQLException e) {
             logger.at(Level.WARNING).log("Failed to record vote for %s: %s", username, e.getMessage());
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -115,6 +124,7 @@ public class SQLiteVoteStorage implements VoteStorage {
             return Optional.empty();
         }
 
+        lock.lock();
         try (PreparedStatement stmt = connection.prepareStatement(SELECT_SQL)) {
             stmt.setString(1, username.toLowerCase());
             try (ResultSet rs = stmt.executeQuery()) {
@@ -124,6 +134,8 @@ public class SQLiteVoteStorage implements VoteStorage {
             }
         } catch (SQLException e) {
             logger.at(Level.WARNING).log("Failed to get last vote for %s: %s", username, e.getMessage());
+        } finally {
+            lock.unlock();
         }
 
         return Optional.empty();
@@ -138,25 +150,33 @@ public class SQLiteVoteStorage implements VoteStorage {
         long expiryMillis = voteExpiryInterval * 60L * 60L * 1000L;
         long cutoffTimestamp = System.currentTimeMillis() - expiryMillis;
 
+        lock.lock();
         try (PreparedStatement stmt = connection.prepareStatement(DELETE_EXPIRED_SQL)) {
             stmt.setLong(1, cutoffTimestamp);
             return stmt.executeUpdate();
         } catch (SQLException e) {
             logger.at(Level.WARNING).log("Failed to cleanup expired votes: %s", e.getMessage());
             return 0;
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void shutdown() {
-        if (connection != null) {
-            try {
-                connection.close();
-                logger.at(Level.INFO).log("SQLite vote storage closed");
-            } catch (SQLException e) {
-                logger.at(Level.WARNING).log("Failed to close SQLite connection: %s", e.getMessage());
+        lock.lock();
+        try {
+            if (connection != null) {
+                try {
+                    connection.close();
+                    logger.at(Level.INFO).log("SQLite vote storage closed");
+                } catch (SQLException e) {
+                    logger.at(Level.WARNING).log("Failed to close SQLite connection: %s", e.getMessage());
+                }
+                connection = null;
             }
-            connection = null;
+        } finally {
+            lock.unlock();
         }
     }
 
