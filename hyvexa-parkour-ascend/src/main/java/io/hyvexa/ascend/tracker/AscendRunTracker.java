@@ -32,6 +32,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.util.MapUnlockHelper;
@@ -305,7 +306,7 @@ public class AscendRunTracker {
             SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, SoundCategory.SFX);
         }
 
-        AscendPlayerProgress.MapProgress mapProgress = playerStore.getOrCreateMapProgress(playerId, run.mapId);
+        GameplayState.MapProgress mapProgress = playerStore.getOrCreateMapProgress(playerId, run.mapId);
 
         boolean firstCompletion = !mapProgress.isCompletedManually();
 

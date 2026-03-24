@@ -3,6 +3,7 @@ package io.hyvexa.ascend.ascension;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
+import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.common.math.BigNumber;
 
 import java.util.HashMap;
@@ -47,16 +48,16 @@ public class ChallengeSnapshot {
     public static ChallengeSnapshot capture(AscendPlayerProgress progress) {
         ChallengeSnapshot snapshot = new ChallengeSnapshot();
 
-        BigNumber volt = progress.getVolt();
+        BigNumber volt = progress.economy().getVolt();
         snapshot.voltMantissa = volt.getMantissa();
         snapshot.voltExp10 = volt.getExponent();
 
-        snapshot.elevationMultiplier = progress.getElevationMultiplier();
+        snapshot.elevationMultiplier = progress.economy().getElevationMultiplier();
 
         // Capture map progress
         snapshot.maps = new HashMap<>();
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
-            AscendPlayerProgress.MapProgress mp = entry.getValue();
+        for (Map.Entry<String, GameplayState.MapProgress> entry : progress.gameplay().getMapProgress().entrySet()) {
+            GameplayState.MapProgress mp = entry.getValue();
             MapSnapshot ms = new MapSnapshot();
             ms.unlocked = mp.isUnlocked();
             ms.completedManually = mp.isCompletedManually();
@@ -72,26 +73,26 @@ public class ChallengeSnapshot {
         // Capture summit XP
         snapshot.summitXp = new HashMap<>();
         for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
-            snapshot.summitXp.put(cat.name(), progress.getSummitXp(cat));
+            snapshot.summitXp.put(cat.name(), progress.economy().getSummitXp(cat));
         }
 
-        BigNumber summitAccum = progress.getSummitAccumulatedVolt();
+        BigNumber summitAccum = progress.economy().getSummitAccumulatedVolt();
         snapshot.summitAccumulatedVoltMantissa = summitAccum.getMantissa();
         snapshot.summitAccumulatedVoltExp10 = summitAccum.getExponent();
 
-        BigNumber elevAccum = progress.getElevationAccumulatedVolt();
+        BigNumber elevAccum = progress.economy().getElevationAccumulatedVolt();
         snapshot.elevationAccumulatedVoltMantissa = elevAccum.getMantissa();
         snapshot.elevationAccumulatedVoltExp10 = elevAccum.getExponent();
 
-        BigNumber totalEarned = progress.getTotalVoltEarned();
+        BigNumber totalEarned = progress.economy().getTotalVoltEarned();
         snapshot.totalVoltEarnedMantissa = totalEarned.getMantissa();
         snapshot.totalVoltEarnedExp10 = totalEarned.getExponent();
 
-        snapshot.totalManualRuns = progress.getTotalManualRuns();
-        snapshot.consecutiveManualRuns = progress.getConsecutiveManualRuns();
-        snapshot.autoUpgradeEnabled = progress.isAutoUpgradeEnabled();
-        snapshot.autoEvolutionEnabled = progress.isAutoEvolutionEnabled();
-        snapshot.ascensionStartedAt = progress.getAscensionStartedAt();
+        snapshot.totalManualRuns = progress.gameplay().getTotalManualRuns();
+        snapshot.consecutiveManualRuns = progress.gameplay().getConsecutiveManualRuns();
+        snapshot.autoUpgradeEnabled = progress.automation().isAutoUpgradeEnabled();
+        snapshot.autoEvolutionEnabled = progress.automation().isAutoEvolutionEnabled();
+        snapshot.ascensionStartedAt = progress.gameplay().getAscensionStartedAt();
 
         return snapshot;
     }
@@ -110,17 +111,17 @@ public class ChallengeSnapshot {
         // Keep lifetime counters monotonic across challenge restore.
         // Challenge runs can increment totalManualRuns and totalVoltEarned; restoring the
         // pre-challenge snapshot must not roll these global stats backward.
-        int currentManualRuns = progress.getTotalManualRuns();
-        BigNumber currentTotalVoltEarned = progress.getTotalVoltEarned();
+        int currentManualRuns = progress.gameplay().getTotalManualRuns();
+        BigNumber currentTotalVoltEarned = progress.economy().getTotalVoltEarned();
 
-        progress.setVolt(BigNumber.of(voltMantissa, voltExp10));
-        progress.setElevationMultiplier(elevationMultiplier);
+        progress.economy().setVolt(BigNumber.of(voltMantissa, voltExp10));
+        progress.economy().setElevationMultiplier(elevationMultiplier);
 
         // Restore map progress
-        progress.getMapProgress().clear();
+        progress.gameplay().getMapProgress().clear();
         if (maps != null) {
             for (Map.Entry<String, MapSnapshot> entry : maps.entrySet()) {
-                AscendPlayerProgress.MapProgress mp = progress.getOrCreateMapProgress(entry.getKey());
+                GameplayState.MapProgress mp = progress.gameplay().getOrCreateMapProgress(entry.getKey());
                 MapSnapshot ms = entry.getValue();
                 mp.setUnlocked(ms.unlocked);
                 mp.setCompletedManually(ms.completedManually);
@@ -133,30 +134,30 @@ public class ChallengeSnapshot {
         }
 
         // Restore summit XP
-        progress.clearSummitXp();
+        progress.economy().clearSummitXp();
         if (summitXp != null) {
             for (Map.Entry<String, Double> entry : summitXp.entrySet()) {
                 try {
                     AscendConstants.SummitCategory cat = AscendConstants.SummitCategory.valueOf(entry.getKey());
-                    progress.setSummitXp(cat, entry.getValue());
+                    progress.economy().setSummitXp(cat, entry.getValue());
                 } catch (IllegalArgumentException ignored) {
                 }
             }
         }
 
-        progress.setSummitAccumulatedVolt(BigNumber.of(summitAccumulatedVoltMantissa, summitAccumulatedVoltExp10));
-        progress.setElevationAccumulatedVolt(BigNumber.of(elevationAccumulatedVoltMantissa, elevationAccumulatedVoltExp10));
-        progress.setTotalVoltEarned(BigNumber.of(totalVoltEarnedMantissa, totalVoltEarnedExp10).max(currentTotalVoltEarned));
+        progress.economy().setSummitAccumulatedVolt(BigNumber.of(summitAccumulatedVoltMantissa, summitAccumulatedVoltExp10));
+        progress.economy().setElevationAccumulatedVolt(BigNumber.of(elevationAccumulatedVoltMantissa, elevationAccumulatedVoltExp10));
+        progress.economy().setTotalVoltEarned(BigNumber.of(totalVoltEarnedMantissa, totalVoltEarnedExp10).max(currentTotalVoltEarned));
 
-        progress.setTotalManualRuns(Math.max(totalManualRuns, currentManualRuns));
-        progress.setConsecutiveManualRuns(consecutiveManualRuns);
-        progress.setAutoUpgradeEnabled(autoUpgradeEnabled);
-        progress.setAutoEvolutionEnabled(autoEvolutionEnabled);
-        progress.setAscensionStartedAt(ascensionStartedAt);
+        progress.gameplay().setTotalManualRuns(Math.max(totalManualRuns, currentManualRuns));
+        progress.gameplay().setConsecutiveManualRuns(consecutiveManualRuns);
+        progress.automation().setAutoUpgradeEnabled(autoUpgradeEnabled);
+        progress.automation().setAutoEvolutionEnabled(autoEvolutionEnabled);
+        progress.gameplay().setAscensionStartedAt(ascensionStartedAt);
 
         // Clear challenge state
-        progress.setActiveChallenge(null);
-        progress.setChallengeStartedAtMs(0);
+        progress.gameplay().setActiveChallenge(null);
+        progress.gameplay().setChallengeStartedAtMs(0);
     }
 
     public static class MapSnapshot {

@@ -4,8 +4,8 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
-import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.GameplayState;
 
 import java.util.UUID;
 
@@ -22,9 +22,9 @@ public final class MapUnlockHelper {
      */
     public static final class UnlockResult {
         public final boolean unlocked;
-        public final AscendPlayerProgress.MapProgress mapProgress;
+        public final GameplayState.MapProgress mapProgress;
 
-        public UnlockResult(boolean unlocked, AscendPlayerProgress.MapProgress mapProgress) {
+        public UnlockResult(boolean unlocked, GameplayState.MapProgress mapProgress) {
             this.unlocked = unlocked;
             this.mapProgress = mapProgress;
         }
@@ -66,7 +66,7 @@ public final class MapUnlockHelper {
             return new UnlockResult(false, null);
         }
 
-        AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+        GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
 
         // Check if already unlocked
         if (mapProgress != null && mapProgress.isUnlocked()) {
@@ -185,7 +185,7 @@ public final class MapUnlockHelper {
      * @param map The map
      * @return true if unlocked
      */
-    public static boolean isUnlocked(AscendPlayerProgress.MapProgress mapProgress, AscendMap map) {
+    public static boolean isUnlocked(GameplayState.MapProgress mapProgress, AscendMap map) {
         if (map == null) {
             return false;
         }

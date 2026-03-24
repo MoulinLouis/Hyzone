@@ -26,6 +26,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
@@ -165,10 +166,10 @@ public class StatsPage extends BaseAscendPage {
             return;
         }
 
-        Long fastestMs = progress.getFastestAscensionMs();
+        Long fastestMs = progress.gameplay().getFastestAscensionMs();
         commandBuilder.set("#BestValue.Text", fastestMs != null ? FormatUtils.formatDurationLong(fastestMs) : "-");
 
-        Long startedAt = progress.getAscensionStartedAt();
+        Long startedAt = progress.gameplay().getAscensionStartedAt();
         if (startedAt != null) {
             long current = System.currentTimeMillis() - startedAt;
             commandBuilder.set("#CurrentValue.Text", FormatUtils.formatDurationLong(current));
@@ -186,7 +187,7 @@ public class StatsPage extends BaseAscendPage {
         BigNumber digitsProduct = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
 
         for (AscendMap map : maps) {
-            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+            GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
             if (mapProgress == null || !mapProgress.hasRobot()) {
                 continue;
             }

@@ -45,8 +45,8 @@ Concise prompts to send one at a time. Each one is a self-contained optimization
 >
 > **Done**: Chose composition over inheritance. Created `NPCEntityState` interface + `NPCHelper` utility class in hyvexa-core with shared `extractEntityRef`, `setupNpcDefaults`, `initNpcPlugin`, `despawnEntity`. Deduplicated RobotManager by delegating to RobotSpawner. Updated MineRobotManager + EggRouletteAnimation to use NPCHelper. Net -204 lines across 4 files.
 
-### 12. Split AscendPlayerProgress
-> AscendPlayerProgress.java (774 lines, 93 public methods) mixes economy state, gameplay state, automation config, and session state. Split into: `EconomyState` (volt, elevation, summit XP), `GameplayState` (map progress, ascension), `AutomationConfig` (auto-upgrade/elevation/summit settings), `SessionState` (timers, passive earnings).
+### 12. ~~Split AscendPlayerProgress~~ ✅
+> Done. Split into 4 focused state classes: `EconomyState` (volt, elevation, summit XP), `GameplayState` (map progress, ascension, challenges, transcendence), `AutomationConfig` (auto-upgrade/elevation/summit settings), `SessionState` (passive earnings, UI settings). AscendPlayerProgress reduced from 774 to 14 lines, now a thin composition class with `economy()`, `gameplay()`, `automation()`, `session()` accessors. All 24 consumers migrated.
 
 ### 13. ~~Merge/Refactor AscendPlayerStore + AscendPlayerPersistence~~ ✅
 > Done. Chose Option B (clear contract). Moved inline SQL from Store into Persistence.deleteAllPlayerData(), consolidated duplicated table lists into CHILD_TABLES constant, removed unused SQL imports from Store, added contract javadoc. Store = cache + business logic + public API. Persistence = SQL + dirty tracking + save scheduling.

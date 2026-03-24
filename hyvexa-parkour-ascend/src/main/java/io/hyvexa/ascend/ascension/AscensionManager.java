@@ -52,40 +52,40 @@ public class AscensionManager {
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
 
         // Grant skill tree points (1 base + 1 per completed challenge)
-        int apGained = 1 + progress.getCompletedChallengeCount();
-        int newPoints = progress.addSkillTreePoints(apGained);
-        int newAscensionCount = progress.incrementAscensionCount();
+        int apGained = 1 + progress.gameplay().getCompletedChallengeCount();
+        int newPoints = progress.gameplay().addSkillTreePoints(apGained);
+        int newAscensionCount = progress.gameplay().incrementAscensionCount();
 
         // Update ascension timer stats
-        Long startedAt = progress.getAscensionStartedAt();
+        Long startedAt = progress.gameplay().getAscensionStartedAt();
         if (startedAt != null) {
             long elapsed = System.currentTimeMillis() - startedAt;
-            Long fastest = progress.getFastestAscensionMs();
+            Long fastest = progress.gameplay().getFastestAscensionMs();
             if (fastest == null || elapsed < fastest) {
-                progress.setFastestAscensionMs(elapsed);
+                progress.gameplay().setFastestAscensionMs(elapsed);
                 LOGGER.atInfo().log("[Ascension] Player " + playerId + " new fastest ascension: " + elapsed + "ms");
             }
         }
         // Reset timer for next ascension
-        progress.setAscensionStartedAt(System.currentTimeMillis());
+        progress.gameplay().setAscensionStartedAt(System.currentTimeMillis());
 
         // Cancel any active run to prevent stale completion on reset state
         runTracker.cancelRun(playerId);
 
         // Reset progress
-        progress.setVolt(BigNumber.ZERO);
-        progress.setElevationMultiplier(1);
-        progress.setAutoElevationTargetIndex(0);
-        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
-        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setVolt(BigNumber.ZERO);
+        progress.economy().setElevationMultiplier(1);
+        progress.automation().setAutoElevationTargetIndex(0);
+        progress.economy().setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setElevationAccumulatedVolt(BigNumber.ZERO);
 
-        progress.clearSummitXp();
+        progress.economy().clearSummitXp();
 
         // Mark for full child-row deletion so stale DB rows are purged
         playerStore.markResetPending(playerId);
 
         // Reset all map progress (multipliers, unlocks, robots) while preserving PBs
-        progress.resetMapProgressPreservingPBs();
+        progress.gameplay().resetMapProgressPreservingPBs();
 
         playerStore.markDirty(playerId);
 
@@ -116,7 +116,7 @@ public class AscensionManager {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
 
         // Unlock the node
-        progress.unlockSkillNode(node);
+        progress.gameplay().unlockSkillNode(node);
 
         // Auto-enable automation toggles when their skills are unlocked
         switch (node) {
@@ -140,15 +140,15 @@ public class AscensionManager {
             return false;
         }
 
-        if (progress.hasSkillNode(node)) {
+        if (progress.gameplay().hasSkillNode(node)) {
             return false;
         }
 
-        if (progress.getAvailableSkillPoints() < node.getCost()) {
+        if (progress.gameplay().getAvailableSkillPoints() < node.getCost()) {
             return false;
         }
 
-        if (!node.hasPrerequisitesSatisfied(progress.getUnlockedSkillNodes())) {
+        if (!node.hasPrerequisitesSatisfied(progress.gameplay().getUnlockedSkillNodes())) {
             return false;
         }
 
@@ -235,7 +235,7 @@ public class AscensionManager {
 
     private boolean hasSkillNode(UUID playerId, SkillTreeNode node) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        return progress != null && progress.hasSkillNode(node);
+        return progress != null && progress.gameplay().hasSkillNode(node);
     }
 
     // Skill Tree Summary
@@ -249,10 +249,10 @@ public class AscensionManager {
             return new SkillTreeSummary(0, 0, 0, Set.of());
         }
         return new SkillTreeSummary(
-            progress.getSkillTreePoints(),
-            progress.getSpentSkillPoints(),
-            progress.getAvailableSkillPoints(),
-            progress.getUnlockedSkillNodes()
+            progress.gameplay().getSkillTreePoints(),
+            progress.gameplay().getSpentSkillPoints(),
+            progress.gameplay().getAvailableSkillPoints(),
+            progress.gameplay().getUnlockedSkillNodes()
         );
     }
 

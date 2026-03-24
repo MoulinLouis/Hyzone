@@ -22,6 +22,7 @@ import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.AutomationConfig;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
@@ -147,7 +148,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         // Show disclaimer if player hasn't ascended yet
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
-        boolean showDisclaimer = progress.getAscensionCount() == 0;
+        boolean showDisclaimer = progress.gameplay().getAscensionCount() == 0;
         commandBuilder.set("#AscensionDisclaimer.Visible", showDisclaimer);
         commandBuilder.set("#DisclaimerSpacer.Visible", showDisclaimer);
 
@@ -200,14 +201,14 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         commandBuilder.set("#SumTimerField.Value", String.valueOf(playerStore.getAutoSummitTimerSeconds(playerId)));
 
         // Summit categories
-        List<AscendPlayerProgress.AutoSummitCategoryConfig> sumConfig = playerStore.getAutoSummitConfig(playerId);
+        List<AutomationConfig.AutoSummitCategoryConfig> sumConfig = playerStore.getAutoSummitConfig(playerId);
 
         int activeCount = 0;
         int reachedCount = 0;
 
         for (int i = 0; i < SUMMIT_CATEGORIES; i++) {
-            AscendPlayerProgress.AutoSummitCategoryConfig catConfig =
-                i < sumConfig.size() ? sumConfig.get(i) : new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0);
+            AutomationConfig.AutoSummitCategoryConfig catConfig =
+                i < sumConfig.size() ? sumConfig.get(i) : new AutomationConfig.AutoSummitCategoryConfig(false, 0);
 
             // Level display
             int level = 0;
@@ -542,7 +543,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             if (value < 1) {
                 return;
             }
-            int currentLevel = playerStore.getOrCreatePlayer(playerId).getElevationMultiplier();
+            int currentLevel = playerStore.getOrCreatePlayer(playerId).economy().getElevationMultiplier();
             long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
             if (value <= currentActualMultiplier) {
                 player.sendMessage(Message.raw("[Automation] Target must be higher than your current elevation (" + AscendConstants.formatElevationMultiplier(currentLevel) + ").")
@@ -592,7 +593,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
      * the player's current elevation multiplier. Already-surpassed targets are skipped.
      */
     private void recalculateTargetIndex(UUID playerId, List<Long> targets) {
-        int currentLevel = playerStore.getOrCreatePlayer(playerId).getElevationMultiplier();
+        int currentLevel = playerStore.getOrCreatePlayer(playerId).economy().getElevationMultiplier();
         long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
         int newIndex = 0;
         while (newIndex < targets.size() && targets.get(newIndex) <= currentActualMultiplier) {
@@ -648,15 +649,15 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
 
         UUID playerId = playerRef.getUuid();
-        List<AscendPlayerProgress.AutoSummitCategoryConfig> config =
+        List<AutomationConfig.AutoSummitCategoryConfig> config =
             new ArrayList<>(playerStore.getAutoSummitConfig(playerId));
 
         while (config.size() <= index) {
-            config.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
+            config.add(new AutomationConfig.AutoSummitCategoryConfig(false, 0));
         }
 
-        AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(index);
-        config.set(index, new AscendPlayerProgress.AutoSummitCategoryConfig(!catConfig.isEnabled(), catConfig.getTargetLevel()));
+        AutomationConfig.AutoSummitCategoryConfig catConfig = config.get(index);
+        config.set(index, new AutomationConfig.AutoSummitCategoryConfig(!catConfig.isEnabled(), catConfig.getTargetLevel()));
         playerStore.setAutoSummitConfig(playerId, config);
 
         UICommandBuilder updateBuilder = new UICommandBuilder();
@@ -679,15 +680,15 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             targetLevel = Math.max(0, Math.min(1000, targetLevel));
 
             UUID playerId = playerRef.getUuid();
-            List<AscendPlayerProgress.AutoSummitCategoryConfig> config =
+            List<AutomationConfig.AutoSummitCategoryConfig> config =
                 new ArrayList<>(playerStore.getAutoSummitConfig(playerId));
 
             while (config.size() <= index) {
-                config.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
+                config.add(new AutomationConfig.AutoSummitCategoryConfig(false, 0));
             }
 
-            AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(index);
-            config.set(index, new AscendPlayerProgress.AutoSummitCategoryConfig(catConfig.isEnabled(), targetLevel));
+            AutomationConfig.AutoSummitCategoryConfig catConfig = config.get(index);
+            config.set(index, new AutomationConfig.AutoSummitCategoryConfig(catConfig.isEnabled(), targetLevel));
             playerStore.setAutoSummitConfig(playerId, config);
         } catch (NumberFormatException ignored) {
         }

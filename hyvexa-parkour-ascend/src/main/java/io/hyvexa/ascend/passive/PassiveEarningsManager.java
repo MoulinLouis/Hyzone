@@ -11,6 +11,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
@@ -81,7 +82,7 @@ public class PassiveEarningsManager {
         // Calculate for each map with an active runner
         for (AscendMap map : allMaps) {
             String mapId = map.getId();
-            AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(mapId);
+            GameplayState.MapProgress mapProgress = progress.gameplay().getMapProgress().get(mapId);
 
             if (mapProgress == null || !mapProgress.hasRobot()) {
                 continue; // No runner on this map

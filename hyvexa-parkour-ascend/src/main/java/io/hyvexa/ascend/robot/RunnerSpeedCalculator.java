@@ -5,6 +5,7 @@ import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.ascend.mine.MineBonusCalculator;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -64,7 +65,7 @@ public class RunnerSpeedCalculator {
         if (playerStore != null) {
             AscendPlayerProgress progress = playerStore.getPlayer(ownerId);
             if (progress != null) {
-                AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(map.getId());
+                GameplayState.MapProgress mapProgress = progress.gameplay().getMapProgress().get(map.getId());
                 if (mapProgress != null && mapProgress.isMomentumActive()) {
                     double momentumMultiplier;
                     if (ascensionManager != null && ascensionManager.hasMomentumMastery(ownerId)) {

@@ -6,6 +6,8 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.data.AutomationConfig.AutoSummitCategoryConfig;
+import io.hyvexa.ascend.data.GameplayState.MapProgress;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
@@ -421,57 +423,57 @@ class AscendPlayerPersistence {
                     // Save player base data
                     playerStmt.setString(1, playerId.toString());
                     playerStmt.setString(2, playerNames.get(playerId));
-                    playerStmt.setDouble(3, progress.getVolt().getMantissa());
-                    playerStmt.setInt(4, progress.getVolt().getExponent());
-                    playerStmt.setInt(5, progress.getElevationMultiplier());
-                    playerStmt.setInt(6, progress.getAscensionCount());
-                    playerStmt.setInt(7, progress.getSkillTreePoints());
-                    playerStmt.setDouble(8, progress.getTotalVoltEarned().getMantissa());
-                    playerStmt.setInt(9, progress.getTotalVoltEarned().getExponent());
-                    playerStmt.setInt(10, progress.getTotalManualRuns());
+                    playerStmt.setDouble(3, progress.economy().getVolt().getMantissa());
+                    playerStmt.setInt(4, progress.economy().getVolt().getExponent());
+                    playerStmt.setInt(5, progress.economy().getElevationMultiplier());
+                    playerStmt.setInt(6, progress.gameplay().getAscensionCount());
+                    playerStmt.setInt(7, progress.gameplay().getSkillTreePoints());
+                    playerStmt.setDouble(8, progress.economy().getTotalVoltEarned().getMantissa());
+                    playerStmt.setInt(9, progress.economy().getTotalVoltEarned().getExponent());
+                    playerStmt.setInt(10, progress.gameplay().getTotalManualRuns());
                     playerStmt.setNull(11, java.sql.Types.VARCHAR);
-                    if (progress.getAscensionStartedAt() != null) {
-                        playerStmt.setLong(12, progress.getAscensionStartedAt());
+                    if (progress.gameplay().getAscensionStartedAt() != null) {
+                        playerStmt.setLong(12, progress.gameplay().getAscensionStartedAt());
                     } else {
                         playerStmt.setNull(12, java.sql.Types.BIGINT);
                     }
-                    if (progress.getFastestAscensionMs() != null) {
-                        playerStmt.setLong(13, progress.getFastestAscensionMs());
+                    if (progress.gameplay().getFastestAscensionMs() != null) {
+                        playerStmt.setLong(13, progress.gameplay().getFastestAscensionMs());
                     } else {
                         playerStmt.setNull(13, java.sql.Types.BIGINT);
                     }
-                    if (progress.getLastActiveTimestamp() != null) {
-                        playerStmt.setLong(14, progress.getLastActiveTimestamp());
+                    if (progress.session().getLastActiveTimestamp() != null) {
+                        playerStmt.setLong(14, progress.session().getLastActiveTimestamp());
                     } else {
                         playerStmt.setNull(14, java.sql.Types.BIGINT);
                     }
-                    playerStmt.setBoolean(15, progress.hasUnclaimedPassive());
-                    playerStmt.setDouble(16, progress.getSummitAccumulatedVolt().getMantissa());
-                    playerStmt.setInt(17, progress.getSummitAccumulatedVolt().getExponent());
-                    playerStmt.setDouble(18, progress.getElevationAccumulatedVolt().getMantissa());
-                    playerStmt.setInt(19, progress.getElevationAccumulatedVolt().getExponent());
-                    playerStmt.setBoolean(20, progress.isAutoUpgradeEnabled());
-                    playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
-                    playerStmt.setInt(22, progress.getSeenTutorials());
-                    playerStmt.setBoolean(23, progress.isHideOtherRunners());
-                    playerStmt.setBoolean(24, progress.isBreakAscensionEnabled());
-                    playerStmt.setBoolean(25, progress.isAutoElevationEnabled());
-                    playerStmt.setInt(26, progress.getAutoElevationTimerSeconds());
-                    playerStmt.setString(27, serializeTargets(progress.getAutoElevationTargets()));
-                    playerStmt.setInt(28, progress.getAutoElevationTargetIndex());
-                    playerStmt.setBoolean(29, progress.isAutoSummitEnabled());
-                    playerStmt.setInt(30, progress.getAutoSummitTimerSeconds());
-                    playerStmt.setString(31, serializeAutoSummitConfig(progress.getAutoSummitConfig()));
-                    playerStmt.setInt(32, progress.getAutoSummitRotationIndex());
-                    playerStmt.setInt(33, progress.getTranscendenceCount());
-                    playerStmt.setBoolean(34, progress.isAutoAscendEnabled());
-                    playerStmt.setBoolean(35, progress.isHudHidden());
-                    playerStmt.setBoolean(36, progress.isPlayersHidden());
+                    playerStmt.setBoolean(15, progress.session().hasUnclaimedPassive());
+                    playerStmt.setDouble(16, progress.economy().getSummitAccumulatedVolt().getMantissa());
+                    playerStmt.setInt(17, progress.economy().getSummitAccumulatedVolt().getExponent());
+                    playerStmt.setDouble(18, progress.economy().getElevationAccumulatedVolt().getMantissa());
+                    playerStmt.setInt(19, progress.economy().getElevationAccumulatedVolt().getExponent());
+                    playerStmt.setBoolean(20, progress.automation().isAutoUpgradeEnabled());
+                    playerStmt.setBoolean(21, progress.automation().isAutoEvolutionEnabled());
+                    playerStmt.setInt(22, progress.gameplay().getSeenTutorials());
+                    playerStmt.setBoolean(23, progress.automation().isHideOtherRunners());
+                    playerStmt.setBoolean(24, progress.automation().isBreakAscensionEnabled());
+                    playerStmt.setBoolean(25, progress.automation().isAutoElevationEnabled());
+                    playerStmt.setInt(26, progress.automation().getAutoElevationTimerSeconds());
+                    playerStmt.setString(27, serializeTargets(progress.automation().getAutoElevationTargets()));
+                    playerStmt.setInt(28, progress.automation().getAutoElevationTargetIndex());
+                    playerStmt.setBoolean(29, progress.automation().isAutoSummitEnabled());
+                    playerStmt.setInt(30, progress.automation().getAutoSummitTimerSeconds());
+                    playerStmt.setString(31, serializeAutoSummitConfig(progress.automation().getAutoSummitConfig()));
+                    playerStmt.setInt(32, progress.automation().getAutoSummitRotationIndex());
+                    playerStmt.setInt(33, progress.gameplay().getTranscendenceCount());
+                    playerStmt.setBoolean(34, progress.automation().isAutoAscendEnabled());
+                    playerStmt.setBoolean(35, progress.session().isHudHidden());
+                    playerStmt.setBoolean(36, progress.session().isPlayersHidden());
                     playerStmt.addBatch();
 
                     // Save map progress
-                    for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
-                        AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
+                    for (Map.Entry<String, MapProgress> entry : progress.gameplay().getMapProgress().entrySet()) {
+                        MapProgress mapProgress = entry.getValue();
                         mapStmt.setString(1, playerId.toString());
                         mapStmt.setString(2, entry.getKey());
                         mapStmt.setBoolean(3, mapProgress.isUnlocked());
@@ -491,7 +493,7 @@ class AscendPlayerPersistence {
 
                     // Save summit XP
                     for (SummitCategory category : SummitCategory.values()) {
-                        double xp = progress.getSummitXp(category);
+                        double xp = progress.economy().getSummitXp(category);
                         summitStmt.setString(1, playerId.toString());
                         summitStmt.setString(2, category.name());
                         summitStmt.setDouble(3, xp);
@@ -499,21 +501,21 @@ class AscendPlayerPersistence {
                     }
 
                     // Save skill nodes
-                    for (SkillTreeNode node : progress.getUnlockedSkillNodes()) {
+                    for (SkillTreeNode node : progress.gameplay().getUnlockedSkillNodes()) {
                         skillStmt.setString(1, playerId.toString());
                         skillStmt.setString(2, node.name());
                         skillStmt.addBatch();
                     }
 
                     // Save achievements
-                    for (AchievementType achievement : progress.getUnlockedAchievements()) {
+                    for (AchievementType achievement : progress.gameplay().getUnlockedAchievements()) {
                         achievementStmt.setString(1, playerId.toString());
                         achievementStmt.setString(2, achievement.name());
                         achievementStmt.addBatch();
                     }
 
                     // Save found cats
-                    for (String catToken : progress.getFoundCats()) {
+                    for (String catToken : progress.gameplay().getFoundCats()) {
                         catStmt.setString(1, playerId.toString());
                         catStmt.setString(2, catToken);
                         catStmt.addBatch();
@@ -671,61 +673,61 @@ class AscendPlayerPersistence {
                             playerNames.put(playerId, dbName);
                         }
                         progress = new AscendPlayerProgress();
-                        progress.setVolt(BigNumber.of(rs.getDouble("volt_mantissa"), rs.getInt("volt_exp10")));
-                        progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
+                        progress.economy().setVolt(BigNumber.of(rs.getDouble("volt_mantissa"), rs.getInt("volt_exp10")));
+                        progress.economy().setElevationMultiplier(rs.getInt("elevation_multiplier"));
 
-                        progress.setAscensionCount(safeGetInt(rs, "ascension_count", 0));
-                        progress.setSkillTreePoints(safeGetInt(rs, "skill_tree_points", 0));
-                        progress.setTotalVoltEarned(safeGetBigNumber(rs, "total_volt_earned_mantissa", "total_volt_earned_exp10"));
-                        progress.setTotalManualRuns(safeGetInt(rs, "total_manual_runs", 0));
+                        progress.gameplay().setAscensionCount(safeGetInt(rs, "ascension_count", 0));
+                        progress.gameplay().setSkillTreePoints(safeGetInt(rs, "skill_tree_points", 0));
+                        progress.economy().setTotalVoltEarned(safeGetBigNumber(rs, "total_volt_earned_mantissa", "total_volt_earned_exp10"));
+                        progress.gameplay().setTotalManualRuns(safeGetInt(rs, "total_manual_runs", 0));
 
                         Long ascensionStartedAt = safeGetLong(rs, "ascension_started_at");
                         if (ascensionStartedAt != null) {
-                            progress.setAscensionStartedAt(ascensionStartedAt);
+                            progress.gameplay().setAscensionStartedAt(ascensionStartedAt);
                         }
 
                         Long fastestAscensionMs = safeGetLong(rs, "fastest_ascension_ms");
                         if (fastestAscensionMs != null) {
-                            progress.setFastestAscensionMs(fastestAscensionMs);
+                            progress.gameplay().setFastestAscensionMs(fastestAscensionMs);
                         }
 
                         Long timestamp = safeGetLong(rs, "last_active_timestamp");
                         if (timestamp != null) {
-                            progress.setLastActiveTimestamp(timestamp);
+                            progress.session().setLastActiveTimestamp(timestamp);
                         }
 
-                        progress.setHasUnclaimedPassive(safeGetBoolean(rs, "has_unclaimed_passive", false));
+                        progress.session().setHasUnclaimedPassive(safeGetBoolean(rs, "has_unclaimed_passive", false));
 
                         BigNumber summitAccumulated = safeGetBigNumber(rs, "summit_accumulated_volt_mantissa", "summit_accumulated_volt_exp10");
                         if (!summitAccumulated.isZero()) {
-                            progress.setSummitAccumulatedVolt(summitAccumulated);
+                            progress.economy().setSummitAccumulatedVolt(summitAccumulated);
                         }
 
                         BigNumber elevationAccumulated = safeGetBigNumber(rs, "elevation_accumulated_volt_mantissa", "elevation_accumulated_volt_exp10");
                         if (!elevationAccumulated.isZero()) {
-                            progress.setElevationAccumulatedVolt(elevationAccumulated);
+                            progress.economy().setElevationAccumulatedVolt(elevationAccumulated);
                         }
 
-                        progress.setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
-                        progress.setAutoEvolutionEnabled(safeGetBoolean(rs, "auto_evolution_enabled", false));
-                        progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
-                        progress.setHideOtherRunners(safeGetBoolean(rs, "hide_other_runners", false));
-                        progress.setHudHidden(safeGetBoolean(rs, "hud_hidden", false));
-                        progress.setPlayersHidden(safeGetBoolean(rs, "players_hidden", false));
-                        progress.setBreakAscensionEnabled(safeGetBoolean(rs, "break_ascension_enabled", false));
+                        progress.automation().setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
+                        progress.automation().setAutoEvolutionEnabled(safeGetBoolean(rs, "auto_evolution_enabled", false));
+                        progress.gameplay().setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
+                        progress.automation().setHideOtherRunners(safeGetBoolean(rs, "hide_other_runners", false));
+                        progress.session().setHudHidden(safeGetBoolean(rs, "hud_hidden", false));
+                        progress.session().setPlayersHidden(safeGetBoolean(rs, "players_hidden", false));
+                        progress.automation().setBreakAscensionEnabled(safeGetBoolean(rs, "break_ascension_enabled", false));
 
-                        progress.setAutoElevationEnabled(safeGetBoolean(rs, "auto_elevation_enabled", false));
-                        progress.setAutoElevationTimerSeconds(safeGetInt(rs, "auto_elevation_timer_seconds", 0));
-                        progress.setAutoElevationTargets(parseTargets(safeGetString(rs, "auto_elevation_targets", "[]")));
-                        progress.setAutoElevationTargetIndex(safeGetInt(rs, "auto_elevation_target_index", 0));
+                        progress.automation().setAutoElevationEnabled(safeGetBoolean(rs, "auto_elevation_enabled", false));
+                        progress.automation().setAutoElevationTimerSeconds(safeGetInt(rs, "auto_elevation_timer_seconds", 0));
+                        progress.automation().setAutoElevationTargets(parseTargets(safeGetString(rs, "auto_elevation_targets", "[]")));
+                        progress.automation().setAutoElevationTargetIndex(safeGetInt(rs, "auto_elevation_target_index", 0));
 
-                        progress.setAutoSummitEnabled(safeGetBoolean(rs, "auto_summit_enabled", false));
-                        progress.setAutoSummitTimerSeconds(safeGetInt(rs, "auto_summit_timer_seconds", 0));
-                        progress.setAutoSummitConfig(parseAutoSummitConfig(safeGetString(rs, "auto_summit_config", "[]")));
-                        progress.setAutoSummitRotationIndex(safeGetInt(rs, "auto_summit_rotation_index", 0));
+                        progress.automation().setAutoSummitEnabled(safeGetBoolean(rs, "auto_summit_enabled", false));
+                        progress.automation().setAutoSummitTimerSeconds(safeGetInt(rs, "auto_summit_timer_seconds", 0));
+                        progress.automation().setAutoSummitConfig(parseAutoSummitConfig(safeGetString(rs, "auto_summit_config", "[]")));
+                        progress.automation().setAutoSummitRotationIndex(safeGetInt(rs, "auto_summit_rotation_index", 0));
 
-                        progress.setTranscendenceCount(safeGetInt(rs, "transcendence_count", 0));
-                        progress.setAutoAscendEnabled(safeGetBoolean(rs, "auto_ascend_enabled", false));
+                        progress.gameplay().setTranscendenceCount(safeGetInt(rs, "transcendence_count", 0));
+                        progress.automation().setAutoAscendEnabled(safeGetBoolean(rs, "auto_ascend_enabled", false));
                     }
                 }
             }
@@ -764,7 +766,7 @@ class AscendPlayerPersistence {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String mapId = rs.getString("map_id");
-                    AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
+                    MapProgress mapProgress = progress.gameplay().getOrCreateMapProgress(mapId);
                     mapProgress.setUnlocked(rs.getBoolean("unlocked"));
                     mapProgress.setCompletedManually(rs.getBoolean("completed_manually"));
                     mapProgress.setHasRobot(rs.getBoolean("has_robot"));
@@ -792,7 +794,7 @@ class AscendPlayerPersistence {
                     double xp = rs.getDouble("xp");
                     try {
                         SummitCategory category = SummitCategory.valueOf(categoryName);
-                        progress.setSummitXp(category, xp);
+                        progress.economy().setSummitXp(category, xp);
                     } catch (IllegalArgumentException ignored) {
                         // Unknown category
                     }
@@ -820,7 +822,7 @@ class AscendPlayerPersistence {
                     }
                     try {
                         SkillTreeNode node = SkillTreeNode.valueOf(nodeName);
-                        progress.unlockSkillNode(node);
+                        progress.gameplay().unlockSkillNode(node);
                     } catch (IllegalArgumentException ignored) {
                         // Unknown node
                     }
@@ -834,11 +836,11 @@ class AscendPlayerPersistence {
      * If spent points exceed total points, grants bonus AP to cover the deficit.
      */
     private void compensateSkillTreeCostChanges(UUID playerId, AscendPlayerProgress progress) {
-        int spent = progress.getSpentSkillPoints();
-        int total = progress.getSkillTreePoints();
+        int spent = progress.gameplay().getSpentSkillPoints();
+        int total = progress.gameplay().getSkillTreePoints();
         if (spent > total) {
             int deficit = spent - total;
-            progress.setSkillTreePoints(spent);
+            progress.gameplay().setSkillTreePoints(spent);
             LOGGER.atInfo().log("[SkillTree] Compensated player " + playerId
                 + " with +" + deficit + " AP for tree rebalance (was " + total + ", now " + spent + ")");
         }
@@ -855,7 +857,7 @@ class AscendPlayerPersistence {
                     String achievementName = rs.getString("achievement");
                     try {
                         AchievementType achievement = AchievementType.valueOf(achievementName);
-                        progress.unlockAchievement(achievement);
+                        progress.gameplay().unlockAchievement(achievement);
                     } catch (IllegalArgumentException ignored) {
                         // Unknown achievement
                     }
@@ -872,7 +874,7 @@ class AscendPlayerPersistence {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    progress.addFoundCat(rs.getString("cat_token"));
+                    progress.gameplay().addFoundCat(rs.getString("cat_token"));
                 }
             }
         }
@@ -964,8 +966,8 @@ class AscendPlayerPersistence {
             String name = playerNames.get(id);
             merged.put(id, new AscendPlayerStore.LeaderboardEntry(
                 id, name,
-                p.getTotalVoltEarned().getMantissa(), p.getTotalVoltEarned().getExponent(),
-                p.getAscensionCount(), p.getTotalManualRuns(), p.getFastestAscensionMs()
+                p.economy().getTotalVoltEarned().getMantissa(), p.economy().getTotalVoltEarned().getExponent(),
+                p.gameplay().getAscensionCount(), p.gameplay().getTotalManualRuns(), p.gameplay().getFastestAscensionMs()
             ));
         }
         return new ArrayList<>(merged.values());
@@ -1058,7 +1060,7 @@ class AscendPlayerPersistence {
         for (Map.Entry<UUID, AscendPlayerProgress> e : players.entrySet()) {
             UUID id = e.getKey();
             AscendPlayerProgress p = e.getValue();
-            AscendPlayerProgress.MapProgress mapProgress = p.getMapProgress().get(mapId);
+            MapProgress mapProgress = p.gameplay().getMapProgress().get(mapId);
             if (mapProgress == null || mapProgress.getBestTimeMs() == null) {
                 continue;
             }
@@ -1230,14 +1232,14 @@ class AscendPlayerPersistence {
      * Serialize auto-summit config to JSON.
      * Format: [{"enabled":true,"target":10},{"enabled":false,"target":5},...]
      */
-    static String serializeAutoSummitConfig(List<AscendPlayerProgress.AutoSummitCategoryConfig> config) {
+    static String serializeAutoSummitConfig(List<AutoSummitCategoryConfig> config) {
         if (config == null || config.isEmpty()) {
             return "[]";
         }
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < config.size(); i++) {
             if (i > 0) sb.append(",");
-            AscendPlayerProgress.AutoSummitCategoryConfig c = config.get(i);
+            AutoSummitCategoryConfig c = config.get(i);
             sb.append("{\"enabled\":").append(c.isEnabled())
               .append(",\"target\":").append(c.getTargetLevel())
               .append("}");
@@ -1250,12 +1252,12 @@ class AscendPlayerPersistence {
      * Parse auto-summit config from JSON.
      * Expects: [{"enabled":true,"target":10},...] (also accepts legacy "increment" key)
      */
-    static List<AscendPlayerProgress.AutoSummitCategoryConfig> parseAutoSummitConfig(String json) {
-        List<AscendPlayerProgress.AutoSummitCategoryConfig> result = new ArrayList<>();
+    static List<AutoSummitCategoryConfig> parseAutoSummitConfig(String json) {
+        List<AutoSummitCategoryConfig> result = new ArrayList<>();
         if (json == null || json.isBlank() || json.equals("[]")) {
             // Return defaults for 3 categories
             for (int i = 0; i < 3; i++) {
-                result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
+                result.add(new AutoSummitCategoryConfig(false, 0));
             }
             return result;
         }
@@ -1289,12 +1291,12 @@ class AscendPlayerPersistence {
                     }
                 }
             }
-            result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(enabled, targetLevel));
+            result.add(new AutoSummitCategoryConfig(enabled, targetLevel));
         }
 
         // Ensure exactly 3 entries
         while (result.size() < 3) {
-            result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
+            result.add(new AutoSummitCategoryConfig(false, 0));
         }
         if (result.size() > 3) {
             result = new ArrayList<>(result.subList(0, 3));

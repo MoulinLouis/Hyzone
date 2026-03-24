@@ -224,7 +224,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         BigNumber volt = playerStore.getVolt(playerId);
         if (volt.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
             AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
-            progress.setVolt(AscendConstants.ASCENSION_VOLT_THRESHOLD);
+            progress.economy().setVolt(AscendConstants.ASCENSION_VOLT_THRESHOLD);
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
@@ -281,16 +281,16 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         int totalCost = 0;
         for (AscendConstants.SkillTreeNode node : AscendConstants.SkillTreeNode.values()) {
             totalCost += node.getCost();
-            progress.unlockSkillNode(node);
+            progress.gameplay().unlockSkillNode(node);
         }
-        int needed = totalCost - progress.getSkillTreePoints();
+        int needed = totalCost - progress.gameplay().getSkillTreePoints();
         if (needed > 0) {
-            progress.addSkillTreePoints(needed);
+            progress.gameplay().addSkillTreePoints(needed);
         }
 
         // Complete all challenges
         for (AscendConstants.ChallengeType type : AscendConstants.ChallengeType.values()) {
-            progress.addChallengeReward(type);
+            progress.gameplay().addChallengeReward(type);
         }
 
         playerStore.markDirty(playerId);
@@ -299,7 +299,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
             .color(SystemMessageUtils.SUCCESS));
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(progress.getSkillTreePoints()));
+        commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(progress.gameplay().getSkillTreePoints()));
         sendUpdate(commandBuilder, null, false);
     }
 
