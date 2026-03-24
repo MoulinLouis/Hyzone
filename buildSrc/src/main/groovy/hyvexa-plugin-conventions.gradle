@@ -1,0 +1,56 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
+plugins {
+    id 'java'
+}
+
+// Extension for per-module configuration.
+class HyvexaPluginExtension {
+    /** Jar name prefix, e.g. "HyvexaParkour". Required. */
+    String archiveName
+
+    /** Whether the jar task depends on :hyvexa-core:jar. Default true. */
+    boolean dependsOnCore = true
+
+    /** Whether IncludesAssetPack is written to manifest.json. Default true. */
+    boolean updatesAssetPack = true
+}
+
+def hyvexa = extensions.create('hyvexa', HyvexaPluginExtension)
+
+// Updates manifest.json with version (and optionally IncludesAssetPack).
+tasks.register('updatePluginManifest') {
+    def manifestFile = file('src/main/resources/manifest.json')
+    doLast {
+        if (!manifestFile.exists()) {
+            throw new GradleException("Could not find manifest.json at ${manifestFile.path}!")
+        }
+        def manifestJson = new JsonSlurper().parseText(manifestFile.text)
+        manifestJson.Version = version
+        if (hyvexa.updatesAssetPack) {
+            manifestJson.IncludesAssetPack = includes_pack.toBoolean()
+        }
+        manifestFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(manifestJson))
+    }
+}
+
+tasks.named('processResources') {
+    dependsOn 'updatePluginManifest'
+}
+
+// Configure the jar task after the build script has set extension values.
+afterEvaluate {
+    tasks.named('jar') {
+        if (hyvexa.dependsOnCore) {
+            dependsOn ':hyvexa-core:jar'
+        }
+        archiveFileName = "${hyvexa.archiveName}-${version}.jar"
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+        from {
+            configurations.runtimeClasspath.findAll { it.name != 'HytaleServer.jar' }
+                    .collect { it.isDirectory() ? it : zipTree(it) }
+        }
+    }
+}

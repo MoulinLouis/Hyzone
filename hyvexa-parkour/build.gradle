@@ -1,7 +1,11 @@
 plugins {
-    id 'java'
+    id 'hyvexa-plugin-conventions'
     id 'idea'
     id 'org.jetbrains.gradle.plugin.idea-ext'
+}
+
+hyvexa {
+    archiveName = 'HyvexaParkour'
 }
 
 dependencies {
@@ -21,39 +25,6 @@ tasks.named('test') {
 def serverRunDir = rootProject.file("run")
 if (!serverRunDir.exists()) {
     serverRunDir.mkdirs()
-}
-
-// Updates the manifest.json file with the latest properties defined in the
-// gradle.properties file. Currently we update the version and if packs are
-// included with the plugin.
-tasks.register('updatePluginManifest') {
-    def manifestFile = file('src/main/resources/manifest.json')
-    doLast {
-        if (!manifestFile.exists()) {
-            throw new GradleException("Could not find manifest.json at ${manifestFile.path}!")
-        }
-        def manifestJson = new groovy.json.JsonSlurper().parseText(manifestFile.text)
-        manifestJson.Version = version
-        manifestJson.IncludesAssetPack = includes_pack.toBoolean()
-        manifestFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(manifestJson))
-    }
-}
-
-// Makes sure the plugin manifest is up to date.
-tasks.named('processResources') {
-    dependsOn 'updatePluginManifest'
-}
-
-// Use a stable plugin jar name.
-tasks.named('jar') {
-    dependsOn ':hyvexa-core:jar'
-    archiveFileName = "HyvexaParkour-${version}.jar"
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
-    from {
-        configurations.runtimeClasspath.findAll { it.name != 'HytaleServer.jar' }
-                .collect { it.isDirectory() ? it : zipTree(it) }
-    }
 }
 
 // Creates a run configuration in IDEA that will run the Hytale server with
