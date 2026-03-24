@@ -3,772 +3,179 @@ package io.hyvexa.ascend.data;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.common.math.BigNumber;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class AscendPlayerProgress {
 
-    private final AtomicReference<BigNumber> volt = new AtomicReference<>(BigNumber.ZERO);
-    private final AtomicInteger elevationMultiplier = new AtomicInteger(1);
-    private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
+    private final EconomyState economy = new EconomyState();
+    private final GameplayState gameplay = new GameplayState();
+    private final AutomationConfig automation = new AutomationConfig();
+    private final SessionState session = new SessionState();
 
-    // Summit System - XP per category (level calculated from XP)
-    private final Map<AscendConstants.SummitCategory, Double> summitXp = new ConcurrentHashMap<>();
-    private final AtomicReference<BigNumber> totalVoltEarned = new AtomicReference<>(BigNumber.ZERO);
-    private final AtomicReference<BigNumber> summitAccumulatedVolt = new AtomicReference<>(BigNumber.ZERO);
-    private final AtomicReference<BigNumber> elevationAccumulatedVolt = new AtomicReference<>(BigNumber.ZERO);
+    // ── Sub-object accessors ─────────────────────────────────────────
 
-    // Ascension System
-    private final AtomicInteger ascensionCount = new AtomicInteger(0);
-    private final AtomicInteger skillTreePoints = new AtomicInteger(0);
-    private final Set<AscendConstants.SkillTreeNode> unlockedSkillNodes = ConcurrentHashMap.newKeySet();
-
-    // Achievement System
-    private final Set<AscendConstants.AchievementType> unlockedAchievements = ConcurrentHashMap.newKeySet();
-    private final AtomicInteger totalManualRuns = new AtomicInteger(0);
-    private final AtomicInteger consecutiveManualRuns = new AtomicInteger(0); // For chain bonus tracking
-    private volatile boolean sessionFirstRunClaimed;
-
-    // Ascension Timer (for stats tracking)
-    private volatile Long ascensionStartedAt; // Timestamp when current ascension run started
-    private volatile Long fastestAscensionMs; // Best ascension time in milliseconds
-
-    // Passive earnings tracking
-    private volatile Long lastActiveTimestamp;
-    private volatile boolean hasUnclaimedPassive;
-
-    // Automation toggles
-    private volatile boolean autoUpgradeEnabled;
-    private volatile boolean autoEvolutionEnabled;
-    private volatile boolean hideOtherRunners;
-    private volatile boolean breakAscensionEnabled;
-    private volatile boolean autoAscendEnabled;
-
-    // Auto-elevation config
-    private volatile boolean autoElevationEnabled;
-    private volatile int autoElevationTimerSeconds;
-    private volatile List<Long> autoElevationTargets = Collections.emptyList();
-    private volatile int autoElevationTargetIndex;
-
-    // Auto-summit config
-    private volatile boolean autoSummitEnabled;
-    private volatile int autoSummitTimerSeconds;
-    private volatile List<AutoSummitCategoryConfig> autoSummitConfig = List.of(
-        new AutoSummitCategoryConfig(false, 0),
-        new AutoSummitCategoryConfig(false, 0),
-        new AutoSummitCategoryConfig(false, 0)
-    );
-    private volatile int autoSummitRotationIndex;
-
-    // Per-player settings (persisted to ascend_players)
-    private volatile boolean hudHidden;
-    private volatile boolean playersHidden;
-
-    // Tutorial tracking (bitmask)
-    private final AtomicInteger seenTutorials = new AtomicInteger(0);
-
-    // Challenge system (in-memory only, persisted via ChallengeManager)
-    private volatile AscendConstants.ChallengeType activeChallenge;
-    private volatile long challengeStartedAtMs;
-
-    // Permanent challenge rewards (never reset by ascension/challenge)
-    private final Set<AscendConstants.ChallengeType> completedChallengeRewards = ConcurrentHashMap.newKeySet();
-
-    // Transcendence System (4th Prestige)
-    private final AtomicInteger transcendenceCount = new AtomicInteger(0);
-
-    public BigNumber getVolt() {
-        return volt.get();
-    }
-
-    public void setVolt(BigNumber value) {
-        this.volt.set(value);
-    }
-
-    public boolean casVolt(BigNumber expect, BigNumber update) {
-        return this.volt.compareAndSet(expect, update);
-    }
-
-    public void addVolt(BigNumber amount) {
-        volt.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
-    }
-
-    public int getElevationMultiplier() {
-        return elevationMultiplier.get();
-    }
-
-    public void setElevationMultiplier(int elevationMultiplier) {
-        this.elevationMultiplier.set(Math.max(1, elevationMultiplier));
-    }
-
-    public int addElevationMultiplier(int amount) {
-        return elevationMultiplier.updateAndGet(current -> Math.max(1, current + amount));
-    }
-
-    public Map<String, MapProgress> getMapProgress() {
-        return mapProgress;
-    }
-
-    public MapProgress getOrCreateMapProgress(String mapId) {
-        return mapProgress.computeIfAbsent(mapId, k -> new MapProgress());
-    }
-
-    /**
-     * Clears all map progress (multipliers, unlocks, robots) while preserving personal best times.
-     */
-    public void resetMapProgressPreservingPBs() {
-        Map<String, Long> savedPBs = new HashMap<>();
-        for (Map.Entry<String, MapProgress> entry : mapProgress.entrySet()) {
-            Long bestTime = entry.getValue().getBestTimeMs();
-            if (bestTime != null) {
-                savedPBs.put(entry.getKey(), bestTime);
-            }
-        }
-        mapProgress.clear();
-        for (Map.Entry<String, Long> entry : savedPBs.entrySet()) {
-            MapProgress mp = getOrCreateMapProgress(entry.getKey());
-            mp.setBestTimeMs(entry.getValue());
-        }
-    }
+    public EconomyState economy() { return economy; }
+    public GameplayState gameplay() { return gameplay; }
+    public AutomationConfig automation() { return automation; }
+    public SessionState session() { return session; }
 
     // ========================================
-    // Summit System (XP-based)
+    // Deprecated delegation methods — Economy
     // ========================================
 
-    public double getSummitXp(AscendConstants.SummitCategory category) {
-        return summitXp.getOrDefault(category, 0.0);
-    }
+    @Deprecated public BigNumber getVolt() { return economy.getVolt(); }
+    @Deprecated public void setVolt(BigNumber value) { economy.setVolt(value); }
+    @Deprecated public boolean casVolt(BigNumber expect, BigNumber update) { return economy.casVolt(expect, update); }
+    @Deprecated public void addVolt(BigNumber amount) { economy.addVolt(amount); }
 
-    public void setSummitXp(AscendConstants.SummitCategory category, double xp) {
-        summitXp.put(category, Math.max(0.0, xp));
-    }
+    @Deprecated public int getElevationMultiplier() { return economy.getElevationMultiplier(); }
+    @Deprecated public void setElevationMultiplier(int elevationMultiplier) { economy.setElevationMultiplier(elevationMultiplier); }
+    @Deprecated public int addElevationMultiplier(int amount) { return economy.addElevationMultiplier(amount); }
 
-    public double addSummitXp(AscendConstants.SummitCategory category, double amount) {
-        return summitXp.compute(category, (cat, current) -> {
-            double base = current != null ? current : 0.0;
-            return Math.max(0.0, base + amount);
-        });
-    }
+    @Deprecated public double getSummitXp(AscendConstants.SummitCategory category) { return economy.getSummitXp(category); }
+    @Deprecated public void setSummitXp(AscendConstants.SummitCategory category, double xp) { economy.setSummitXp(category, xp); }
+    @Deprecated public double addSummitXp(AscendConstants.SummitCategory category, double amount) { return economy.addSummitXp(category, amount); }
+    @Deprecated public int getSummitLevel(AscendConstants.SummitCategory category) { return economy.getSummitLevel(category); }
+    @Deprecated public Map<AscendConstants.SummitCategory, Double> getSummitXpMap() { return economy.getSummitXpMap(); }
+    @Deprecated public void clearSummitXp() { economy.clearSummitXp(); }
+    @Deprecated public Map<AscendConstants.SummitCategory, Integer> getSummitLevels() { return economy.getSummitLevels(); }
 
-    public int getSummitLevel(AscendConstants.SummitCategory category) {
-        return AscendConstants.calculateLevelFromXp(getSummitXp(category));
-    }
+    @Deprecated public BigNumber getTotalVoltEarned() { return economy.getTotalVoltEarned(); }
+    @Deprecated public void setTotalVoltEarned(BigNumber value) { economy.setTotalVoltEarned(value); }
+    @Deprecated public void addTotalVoltEarned(BigNumber amount) { economy.addTotalVoltEarned(amount); }
 
-    public Map<AscendConstants.SummitCategory, Double> getSummitXpMap() {
-        Map<AscendConstants.SummitCategory, Double> xpMap = new EnumMap<>(AscendConstants.SummitCategory.class);
-        for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
-            xpMap.put(cat, getSummitXp(cat));
-        }
-        return xpMap;
-    }
+    @Deprecated public BigNumber getSummitAccumulatedVolt() { return economy.getSummitAccumulatedVolt(); }
+    @Deprecated public void setSummitAccumulatedVolt(BigNumber value) { economy.setSummitAccumulatedVolt(value); }
+    @Deprecated public void addSummitAccumulatedVolt(BigNumber amount) { economy.addSummitAccumulatedVolt(amount); }
 
-    public void clearSummitXp() {
-        summitXp.clear();
-    }
-
-    /**
-     * Get all summit levels as a map.
-     */
-    public Map<AscendConstants.SummitCategory, Integer> getSummitLevels() {
-        Map<AscendConstants.SummitCategory, Integer> levels = new EnumMap<>(AscendConstants.SummitCategory.class);
-        for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
-            levels.put(cat, getSummitLevel(cat));
-        }
-        return levels;
-    }
-
-    public BigNumber getTotalVoltEarned() {
-        return totalVoltEarned.get();
-    }
-
-    public void setTotalVoltEarned(BigNumber value) {
-        this.totalVoltEarned.set(value.max(BigNumber.ZERO));
-    }
-
-    public void addTotalVoltEarned(BigNumber amount) {
-        if (amount.gt(BigNumber.ZERO)) {
-            totalVoltEarned.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
-        }
-    }
-
-    public BigNumber getSummitAccumulatedVolt() {
-        return summitAccumulatedVolt.get();
-    }
-
-    public void setSummitAccumulatedVolt(BigNumber value) {
-        this.summitAccumulatedVolt.set(value.max(BigNumber.ZERO));
-    }
-
-    public void addSummitAccumulatedVolt(BigNumber amount) {
-        if (amount.gt(BigNumber.ZERO)) {
-            summitAccumulatedVolt.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
-        }
-    }
-
-    public BigNumber getElevationAccumulatedVolt() {
-        return elevationAccumulatedVolt.get();
-    }
-
-    public void setElevationAccumulatedVolt(BigNumber value) {
-        this.elevationAccumulatedVolt.set(value.max(BigNumber.ZERO));
-    }
-
-    public void addElevationAccumulatedVolt(BigNumber amount) {
-        if (amount.gt(BigNumber.ZERO)) {
-            elevationAccumulatedVolt.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
-        }
-    }
+    @Deprecated public BigNumber getElevationAccumulatedVolt() { return economy.getElevationAccumulatedVolt(); }
+    @Deprecated public void setElevationAccumulatedVolt(BigNumber value) { economy.setElevationAccumulatedVolt(value); }
+    @Deprecated public void addElevationAccumulatedVolt(BigNumber amount) { economy.addElevationAccumulatedVolt(amount); }
 
     // ========================================
-    // Ascension System
+    // Deprecated delegation methods — Gameplay
     // ========================================
 
-    public int getAscensionCount() {
-        return ascensionCount.get();
-    }
+    @Deprecated public Map<String, GameplayState.MapProgress> getMapProgress() { return gameplay.getMapProgress(); }
+    @Deprecated public GameplayState.MapProgress getOrCreateMapProgress(String mapId) { return gameplay.getOrCreateMapProgress(mapId); }
+    @Deprecated public void resetMapProgressPreservingPBs() { gameplay.resetMapProgressPreservingPBs(); }
 
-    public void setAscensionCount(int ascensionCount) {
-        this.ascensionCount.set(Math.max(0, ascensionCount));
-    }
+    @Deprecated public int getAscensionCount() { return gameplay.getAscensionCount(); }
+    @Deprecated public void setAscensionCount(int ascensionCount) { gameplay.setAscensionCount(ascensionCount); }
+    @Deprecated public int incrementAscensionCount() { return gameplay.incrementAscensionCount(); }
 
-    public int incrementAscensionCount() {
-        return ascensionCount.incrementAndGet();
-    }
+    @Deprecated public int getSkillTreePoints() { return gameplay.getSkillTreePoints(); }
+    @Deprecated public void setSkillTreePoints(int skillTreePoints) { gameplay.setSkillTreePoints(skillTreePoints); }
+    @Deprecated public int addSkillTreePoints(int amount) { return gameplay.addSkillTreePoints(amount); }
 
-    public int getSkillTreePoints() {
-        return skillTreePoints.get();
-    }
+    @Deprecated public boolean hasSkillNode(AscendConstants.SkillTreeNode node) { return gameplay.hasSkillNode(node); }
+    @Deprecated public boolean unlockSkillNode(AscendConstants.SkillTreeNode node) { return gameplay.unlockSkillNode(node); }
+    @Deprecated public Set<AscendConstants.SkillTreeNode> getUnlockedSkillNodes() { return gameplay.getUnlockedSkillNodes(); }
+    @Deprecated public void setUnlockedSkillNodes(Set<AscendConstants.SkillTreeNode> nodes) { gameplay.setUnlockedSkillNodes(nodes); }
+    @Deprecated public int getSpentSkillPoints() { return gameplay.getSpentSkillPoints(); }
+    @Deprecated public int getAvailableSkillPoints() { return gameplay.getAvailableSkillPoints(); }
 
-    public void setSkillTreePoints(int skillTreePoints) {
-        this.skillTreePoints.set(Math.max(0, skillTreePoints));
-    }
+    @Deprecated public boolean hasAchievement(AscendConstants.AchievementType achievement) { return gameplay.hasAchievement(achievement); }
+    @Deprecated public boolean unlockAchievement(AscendConstants.AchievementType achievement) { return gameplay.unlockAchievement(achievement); }
+    @Deprecated public Set<AscendConstants.AchievementType> getUnlockedAchievements() { return gameplay.getUnlockedAchievements(); }
+    @Deprecated public void setUnlockedAchievements(Set<AscendConstants.AchievementType> achievements) { gameplay.setUnlockedAchievements(achievements); }
 
-    public int addSkillTreePoints(int amount) {
-        return skillTreePoints.updateAndGet(v -> Math.max(0, v + amount));
-    }
+    @Deprecated public int getTotalManualRuns() { return gameplay.getTotalManualRuns(); }
+    @Deprecated public void setTotalManualRuns(int totalManualRuns) { gameplay.setTotalManualRuns(totalManualRuns); }
+    @Deprecated public int incrementTotalManualRuns() { return gameplay.incrementTotalManualRuns(); }
 
-    public boolean hasSkillNode(AscendConstants.SkillTreeNode node) {
-        return unlockedSkillNodes.contains(node);
-    }
+    @Deprecated public int getConsecutiveManualRuns() { return gameplay.getConsecutiveManualRuns(); }
+    @Deprecated public void setConsecutiveManualRuns(int consecutiveManualRuns) { gameplay.setConsecutiveManualRuns(consecutiveManualRuns); }
+    @Deprecated public int incrementConsecutiveManualRuns() { return gameplay.incrementConsecutiveManualRuns(); }
+    @Deprecated public void resetConsecutiveManualRuns() { gameplay.resetConsecutiveManualRuns(); }
 
-    public boolean unlockSkillNode(AscendConstants.SkillTreeNode node) {
-        return unlockedSkillNodes.add(node);
-    }
+    @Deprecated public Long getAscensionStartedAt() { return gameplay.getAscensionStartedAt(); }
+    @Deprecated public void setAscensionStartedAt(Long ascensionStartedAt) { gameplay.setAscensionStartedAt(ascensionStartedAt); }
+    @Deprecated public Long getFastestAscensionMs() { return gameplay.getFastestAscensionMs(); }
+    @Deprecated public void setFastestAscensionMs(Long fastestAscensionMs) { gameplay.setFastestAscensionMs(fastestAscensionMs); }
 
-    public Set<AscendConstants.SkillTreeNode> getUnlockedSkillNodes() {
-        return EnumSet.copyOf(unlockedSkillNodes.isEmpty()
-            ? EnumSet.noneOf(AscendConstants.SkillTreeNode.class)
-            : unlockedSkillNodes);
-    }
+    @Deprecated public AscendConstants.ChallengeType getActiveChallenge() { return gameplay.getActiveChallenge(); }
+    @Deprecated public void setActiveChallenge(AscendConstants.ChallengeType activeChallenge) { gameplay.setActiveChallenge(activeChallenge); }
+    @Deprecated public long getChallengeStartedAtMs() { return gameplay.getChallengeStartedAtMs(); }
+    @Deprecated public void setChallengeStartedAtMs(long challengeStartedAtMs) { gameplay.setChallengeStartedAtMs(challengeStartedAtMs); }
 
-    public void setUnlockedSkillNodes(Set<AscendConstants.SkillTreeNode> nodes) {
-        unlockedSkillNodes.clear();
-        if (nodes != null) {
-            unlockedSkillNodes.addAll(nodes);
-        }
-    }
+    @Deprecated public boolean hasChallengeReward(AscendConstants.ChallengeType type) { return gameplay.hasChallengeReward(type); }
+    @Deprecated public void addChallengeReward(AscendConstants.ChallengeType type) { gameplay.addChallengeReward(type); }
+    @Deprecated public Set<AscendConstants.ChallengeType> getCompletedChallengeRewards() { return gameplay.getCompletedChallengeRewards(); }
+    @Deprecated public int getCompletedChallengeCount() { return gameplay.getCompletedChallengeCount(); }
+    @Deprecated public void setCompletedChallengeRewards(Set<AscendConstants.ChallengeType> rewards) { gameplay.setCompletedChallengeRewards(rewards); }
+    @Deprecated public boolean hasAllChallengeRewards() { return gameplay.hasAllChallengeRewards(); }
 
-    public int getSpentSkillPoints() {
-        int total = 0;
-        for (AscendConstants.SkillTreeNode node : unlockedSkillNodes) {
-            total += node.getCost();
-        }
-        return total;
-    }
+    @Deprecated public int getTranscendenceCount() { return gameplay.getTranscendenceCount(); }
+    @Deprecated public void setTranscendenceCount(int count) { gameplay.setTranscendenceCount(count); }
+    @Deprecated public int incrementTranscendenceCount() { return gameplay.incrementTranscendenceCount(); }
 
-    public int getAvailableSkillPoints() {
-        return Math.max(0, skillTreePoints.get() - getSpentSkillPoints());
-    }
+    @Deprecated public int getSeenTutorials() { return gameplay.getSeenTutorials(); }
+    @Deprecated public void setSeenTutorials(int seenTutorials) { gameplay.setSeenTutorials(seenTutorials); }
+    @Deprecated public boolean hasSeenTutorial(int bit) { return gameplay.hasSeenTutorial(bit); }
+    @Deprecated public void markTutorialSeen(int bit) { gameplay.markTutorialSeen(bit); }
 
-    // ========================================
-    // Achievement System
-    // ========================================
-
-    public boolean hasAchievement(AscendConstants.AchievementType achievement) {
-        return unlockedAchievements.contains(achievement);
-    }
-
-    public boolean unlockAchievement(AscendConstants.AchievementType achievement) {
-        return unlockedAchievements.add(achievement);
-    }
-
-    public Set<AscendConstants.AchievementType> getUnlockedAchievements() {
-        return EnumSet.copyOf(unlockedAchievements.isEmpty()
-            ? EnumSet.noneOf(AscendConstants.AchievementType.class)
-            : unlockedAchievements);
-    }
-
-    public void setUnlockedAchievements(Set<AscendConstants.AchievementType> achievements) {
-        unlockedAchievements.clear();
-        if (achievements != null) {
-            unlockedAchievements.addAll(achievements);
-        }
-    }
-
-
-    public int getTotalManualRuns() {
-        return totalManualRuns.get();
-    }
-
-    public void setTotalManualRuns(int totalManualRuns) {
-        this.totalManualRuns.set(Math.max(0, totalManualRuns));
-    }
-
-    public int incrementTotalManualRuns() {
-        return totalManualRuns.incrementAndGet();
-    }
-
-    public int getConsecutiveManualRuns() {
-        return consecutiveManualRuns.get();
-    }
-
-    public void setConsecutiveManualRuns(int consecutiveManualRuns) {
-        this.consecutiveManualRuns.set(Math.max(0, consecutiveManualRuns));
-    }
-
-    public int incrementConsecutiveManualRuns() {
-        return consecutiveManualRuns.incrementAndGet();
-    }
-
-    public void resetConsecutiveManualRuns() {
-        this.consecutiveManualRuns.set(0);
-    }
-
-    public boolean isSessionFirstRunClaimed() {
-        return sessionFirstRunClaimed;
-    }
-
-    public void setSessionFirstRunClaimed(boolean sessionFirstRunClaimed) {
-        this.sessionFirstRunClaimed = sessionFirstRunClaimed;
-    }
+    @Deprecated public boolean hasFoundCat(String token) { return gameplay.hasFoundCat(token); }
+    @Deprecated public boolean addFoundCat(String token) { return gameplay.addFoundCat(token); }
+    @Deprecated public int getFoundCatCount() { return gameplay.getFoundCatCount(); }
+    @Deprecated public Set<String> getFoundCats() { return gameplay.getFoundCats(); }
+    @Deprecated public void setFoundCats(Set<String> cats) { gameplay.setFoundCats(cats); }
 
     // ========================================
-    // Ascension Timer (Stats)
+    // Deprecated delegation methods — Automation
     // ========================================
 
-    public Long getAscensionStartedAt() {
-        return ascensionStartedAt;
-    }
+    @Deprecated public boolean isAutoUpgradeEnabled() { return automation.isAutoUpgradeEnabled(); }
+    @Deprecated public void setAutoUpgradeEnabled(boolean enabled) { automation.setAutoUpgradeEnabled(enabled); }
 
-    public void setAscensionStartedAt(Long ascensionStartedAt) {
-        this.ascensionStartedAt = ascensionStartedAt;
-    }
+    @Deprecated public boolean isAutoEvolutionEnabled() { return automation.isAutoEvolutionEnabled(); }
+    @Deprecated public void setAutoEvolutionEnabled(boolean enabled) { automation.setAutoEvolutionEnabled(enabled); }
 
-    public Long getFastestAscensionMs() {
-        return fastestAscensionMs;
-    }
+    @Deprecated public boolean isHideOtherRunners() { return automation.isHideOtherRunners(); }
+    @Deprecated public void setHideOtherRunners(boolean hideOtherRunners) { automation.setHideOtherRunners(hideOtherRunners); }
 
-    public void setFastestAscensionMs(Long fastestAscensionMs) {
-        this.fastestAscensionMs = fastestAscensionMs;
-    }
+    @Deprecated public boolean isBreakAscensionEnabled() { return automation.isBreakAscensionEnabled(); }
+    @Deprecated public void setBreakAscensionEnabled(boolean breakAscensionEnabled) { automation.setBreakAscensionEnabled(breakAscensionEnabled); }
 
-    // ========================================
-    // Passive Earnings
-    // ========================================
+    @Deprecated public boolean isAutoAscendEnabled() { return automation.isAutoAscendEnabled(); }
+    @Deprecated public void setAutoAscendEnabled(boolean enabled) { automation.setAutoAscendEnabled(enabled); }
 
-    public Long getLastActiveTimestamp() {
-        return lastActiveTimestamp;
-    }
+    @Deprecated public boolean isAutoElevationEnabled() { return automation.isAutoElevationEnabled(); }
+    @Deprecated public void setAutoElevationEnabled(boolean enabled) { automation.setAutoElevationEnabled(enabled); }
+    @Deprecated public int getAutoElevationTimerSeconds() { return automation.getAutoElevationTimerSeconds(); }
+    @Deprecated public void setAutoElevationTimerSeconds(int seconds) { automation.setAutoElevationTimerSeconds(seconds); }
+    @Deprecated public List<Long> getAutoElevationTargets() { return automation.getAutoElevationTargets(); }
+    @Deprecated public void setAutoElevationTargets(List<Long> targets) { automation.setAutoElevationTargets(targets); }
+    @Deprecated public int getAutoElevationTargetIndex() { return automation.getAutoElevationTargetIndex(); }
+    @Deprecated public void setAutoElevationTargetIndex(int index) { automation.setAutoElevationTargetIndex(index); }
 
-    public void setLastActiveTimestamp(Long timestamp) {
-        this.lastActiveTimestamp = timestamp;
-    }
-
-    public boolean hasUnclaimedPassive() {
-        return hasUnclaimedPassive;
-    }
-
-    public void setHasUnclaimedPassive(boolean hasUnclaimed) {
-        this.hasUnclaimedPassive = hasUnclaimed;
-    }
-
-    public boolean isAutoUpgradeEnabled() {
-        return autoUpgradeEnabled;
-    }
-
-    public void setAutoUpgradeEnabled(boolean enabled) {
-        this.autoUpgradeEnabled = enabled;
-    }
-
-    public boolean isAutoEvolutionEnabled() {
-        return autoEvolutionEnabled;
-    }
-
-    public void setAutoEvolutionEnabled(boolean enabled) {
-        this.autoEvolutionEnabled = enabled;
-    }
-
-    public boolean isHideOtherRunners() {
-        return hideOtherRunners;
-    }
-
-    public void setHideOtherRunners(boolean hideOtherRunners) {
-        this.hideOtherRunners = hideOtherRunners;
-    }
-
-    public boolean isHudHidden() {
-        return hudHidden;
-    }
-
-    public void setHudHidden(boolean hudHidden) {
-        this.hudHidden = hudHidden;
-    }
-
-    public boolean isPlayersHidden() {
-        return playersHidden;
-    }
-
-    public void setPlayersHidden(boolean playersHidden) {
-        this.playersHidden = playersHidden;
-    }
-
-    public boolean isBreakAscensionEnabled() {
-        return breakAscensionEnabled;
-    }
-
-    public void setBreakAscensionEnabled(boolean breakAscensionEnabled) {
-        this.breakAscensionEnabled = breakAscensionEnabled;
-    }
+    @Deprecated public boolean isAutoSummitEnabled() { return automation.isAutoSummitEnabled(); }
+    @Deprecated public void setAutoSummitEnabled(boolean enabled) { automation.setAutoSummitEnabled(enabled); }
+    @Deprecated public int getAutoSummitTimerSeconds() { return automation.getAutoSummitTimerSeconds(); }
+    @Deprecated public void setAutoSummitTimerSeconds(int seconds) { automation.setAutoSummitTimerSeconds(seconds); }
+    @Deprecated public List<AutomationConfig.AutoSummitCategoryConfig> getAutoSummitConfig() { return automation.getAutoSummitConfig(); }
+    @Deprecated public void setAutoSummitConfig(List<AutomationConfig.AutoSummitCategoryConfig> config) { automation.setAutoSummitConfig(config); }
+    @Deprecated public int getAutoSummitRotationIndex() { return automation.getAutoSummitRotationIndex(); }
+    @Deprecated public void setAutoSummitRotationIndex(int index) { automation.setAutoSummitRotationIndex(index); }
 
     // ========================================
-    // Auto-Elevation
+    // Deprecated delegation methods — Session
     // ========================================
 
-    public boolean isAutoElevationEnabled() {
-        return autoElevationEnabled;
-    }
+    @Deprecated public Long getLastActiveTimestamp() { return session.getLastActiveTimestamp(); }
+    @Deprecated public void setLastActiveTimestamp(Long timestamp) { session.setLastActiveTimestamp(timestamp); }
 
-    public void setAutoElevationEnabled(boolean enabled) {
-        this.autoElevationEnabled = enabled;
-    }
+    @Deprecated public boolean hasUnclaimedPassive() { return session.hasUnclaimedPassive(); }
+    @Deprecated public void setHasUnclaimedPassive(boolean hasUnclaimed) { session.setHasUnclaimedPassive(hasUnclaimed); }
 
-    public int getAutoElevationTimerSeconds() {
-        return autoElevationTimerSeconds;
-    }
+    @Deprecated public boolean isSessionFirstRunClaimed() { return session.isSessionFirstRunClaimed(); }
+    @Deprecated public void setSessionFirstRunClaimed(boolean sessionFirstRunClaimed) { session.setSessionFirstRunClaimed(sessionFirstRunClaimed); }
 
-    public void setAutoElevationTimerSeconds(int seconds) {
-        this.autoElevationTimerSeconds = Math.max(0, seconds);
-    }
+    @Deprecated public boolean isHudHidden() { return session.isHudHidden(); }
+    @Deprecated public void setHudHidden(boolean hudHidden) { session.setHudHidden(hudHidden); }
 
-    public List<Long> getAutoElevationTargets() {
-        return autoElevationTargets;
-    }
-
-    public void setAutoElevationTargets(List<Long> targets) {
-        this.autoElevationTargets = targets != null ? new ArrayList<>(targets) : Collections.emptyList();
-    }
-
-    public int getAutoElevationTargetIndex() {
-        return autoElevationTargetIndex;
-    }
-
-    public void setAutoElevationTargetIndex(int index) {
-        this.autoElevationTargetIndex = Math.max(0, index);
-    }
-
-    // ========================================
-    // Auto-Summit
-    // ========================================
-
-    public boolean isAutoSummitEnabled() {
-        return autoSummitEnabled;
-    }
-
-    public void setAutoSummitEnabled(boolean enabled) {
-        this.autoSummitEnabled = enabled;
-    }
-
-    public int getAutoSummitTimerSeconds() {
-        return autoSummitTimerSeconds;
-    }
-
-    public void setAutoSummitTimerSeconds(int seconds) {
-        this.autoSummitTimerSeconds = Math.max(0, seconds);
-    }
-
-    public List<AutoSummitCategoryConfig> getAutoSummitConfig() {
-        return autoSummitConfig;
-    }
-
-    public void setAutoSummitConfig(List<AutoSummitCategoryConfig> config) {
-        this.autoSummitConfig = config != null ? new ArrayList<>(config) : List.of(
-            new AutoSummitCategoryConfig(false, 0),
-            new AutoSummitCategoryConfig(false, 0),
-            new AutoSummitCategoryConfig(false, 0)
-        );
-    }
-
-    public int getAutoSummitRotationIndex() {
-        return autoSummitRotationIndex;
-    }
-
-    public void setAutoSummitRotationIndex(int index) {
-        this.autoSummitRotationIndex = Math.max(0, index);
-    }
-
-    // ========================================
-    // Auto-Ascend
-    // ========================================
-
-    public boolean isAutoAscendEnabled() {
-        return autoAscendEnabled;
-    }
-
-    public void setAutoAscendEnabled(boolean enabled) {
-        this.autoAscendEnabled = enabled;
-    }
-
-    // ========================================
-    // Tutorial Tracking
-    // ========================================
-
-    public int getSeenTutorials() {
-        return seenTutorials.get();
-    }
-
-    public void setSeenTutorials(int seenTutorials) {
-        this.seenTutorials.set(seenTutorials);
-    }
-
-    public boolean hasSeenTutorial(int bit) {
-        return (seenTutorials.get() & bit) != 0;
-    }
-
-    public void markTutorialSeen(int bit) {
-        seenTutorials.getAndUpdate(v -> v | bit);
-    }
-
-    // ========================================
-    // Challenge System
-    // ========================================
-
-    public AscendConstants.ChallengeType getActiveChallenge() {
-        return activeChallenge;
-    }
-
-    public void setActiveChallenge(AscendConstants.ChallengeType activeChallenge) {
-        this.activeChallenge = activeChallenge;
-    }
-
-    public long getChallengeStartedAtMs() {
-        return challengeStartedAtMs;
-    }
-
-    public void setChallengeStartedAtMs(long challengeStartedAtMs) {
-        this.challengeStartedAtMs = challengeStartedAtMs;
-    }
-
-    public boolean hasChallengeReward(AscendConstants.ChallengeType type) {
-        return completedChallengeRewards.contains(type);
-    }
-
-    public void addChallengeReward(AscendConstants.ChallengeType type) {
-        completedChallengeRewards.add(type);
-    }
-
-    public Set<AscendConstants.ChallengeType> getCompletedChallengeRewards() {
-        return Set.copyOf(completedChallengeRewards);
-    }
-
-    public int getCompletedChallengeCount() {
-        return completedChallengeRewards.size();
-    }
-
-    public void setCompletedChallengeRewards(Set<AscendConstants.ChallengeType> rewards) {
-        completedChallengeRewards.clear();
-        if (rewards != null) {
-            completedChallengeRewards.addAll(rewards);
-        }
-    }
-
-    public boolean hasAllChallengeRewards() {
-        for (AscendConstants.ChallengeType type : AscendConstants.ChallengeType.values()) {
-            if (!completedChallengeRewards.contains(type)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    // ========================================
-    // Transcendence System (4th Prestige)
-    // ========================================
-
-    public int getTranscendenceCount() {
-        return transcendenceCount.get();
-    }
-
-    public void setTranscendenceCount(int count) {
-        this.transcendenceCount.set(Math.max(0, count));
-    }
-
-    public int incrementTranscendenceCount() {
-        return transcendenceCount.incrementAndGet();
-    }
-
-    // ========================================
-    // Easter Egg - Cat Collector
-    // ========================================
-
-    private final Set<String> foundCats = ConcurrentHashMap.newKeySet();
-
-    public boolean hasFoundCat(String token) {
-        return foundCats.contains(token);
-    }
-
-    public boolean addFoundCat(String token) {
-        return foundCats.add(token);
-    }
-
-    public int getFoundCatCount() {
-        return foundCats.size();
-    }
-
-    public Set<String> getFoundCats() {
-        return Set.copyOf(foundCats);
-    }
-
-    public void setFoundCats(Set<String> cats) {
-        foundCats.clear();
-        if (cats != null) {
-            foundCats.addAll(cats);
-        }
-    }
-
-    public static class AutoSummitCategoryConfig {
-        private boolean enabled;
-        private int targetLevel;
-
-        public AutoSummitCategoryConfig(boolean enabled, int targetLevel) {
-            this.enabled = enabled;
-            this.targetLevel = Math.max(0, targetLevel);
-        }
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getTargetLevel() {
-            return targetLevel;
-        }
-
-        public void setTargetLevel(int targetLevel) {
-            this.targetLevel = Math.max(0, targetLevel);
-        }
-    }
-
-    public static class MapProgress {
-        private volatile boolean unlocked;
-        private volatile boolean completedManually;
-        private volatile boolean hasRobot;
-        private final AtomicInteger robotSpeedLevel = new AtomicInteger(0);
-        private final AtomicInteger robotStars = new AtomicInteger(0);
-        private final AtomicReference<BigNumber> multiplier = new AtomicReference<>(BigNumber.ONE);
-        private volatile Long bestTimeMs;
-        private volatile long momentumExpireTimeMs; // 0 = inactive (ephemeral, not persisted)
-        private volatile long momentumDurationMs = AscendConstants.MOMENTUM_DURATION_MS; // total duration for progress bar
-
-        public boolean isMomentumActive() {
-            return System.currentTimeMillis() < momentumExpireTimeMs;
-        }
-
-        public void activateMomentum(long durationMs) {
-            this.momentumDurationMs = durationMs;
-            this.momentumExpireTimeMs = System.currentTimeMillis() + durationMs;
-        }
-
-        public long getMomentumExpireTimeMs() {
-            return momentumExpireTimeMs;
-        }
-
-        public double getMomentumProgress() {
-            long remaining = momentumExpireTimeMs - System.currentTimeMillis();
-            if (remaining <= 0) return 0.0;
-            return Math.min(1.0, remaining / (double) momentumDurationMs);
-        }
-
-        public boolean isUnlocked() {
-            return unlocked;
-        }
-
-        public void setUnlocked(boolean unlocked) {
-            this.unlocked = unlocked;
-        }
-
-        public boolean isCompletedManually() {
-            return completedManually;
-        }
-
-        public void setCompletedManually(boolean completedManually) {
-            this.completedManually = completedManually;
-        }
-
-        public boolean hasRobot() {
-            return hasRobot;
-        }
-
-        public void setHasRobot(boolean hasRobot) {
-            this.hasRobot = hasRobot;
-        }
-
-        public int getRobotSpeedLevel() {
-            return robotSpeedLevel.get();
-        }
-
-        public void setRobotSpeedLevel(int robotSpeedLevel) {
-            this.robotSpeedLevel.set(Math.max(0, robotSpeedLevel));
-        }
-
-        public int incrementRobotSpeedLevel() {
-            return robotSpeedLevel.incrementAndGet();
-        }
-
-        public int getRobotStars() {
-            return robotStars.get();
-        }
-
-        public void setRobotStars(int robotStars) {
-            this.robotStars.set(Math.max(0, robotStars));
-        }
-
-        public int incrementRobotStars() {
-            return robotStars.incrementAndGet();
-        }
-
-        public BigNumber getMultiplier() {
-            return multiplier.get();
-        }
-
-        public void setMultiplier(BigNumber value) {
-            this.multiplier.set(value.max(BigNumber.ONE));
-        }
-
-        public BigNumber addMultiplier(BigNumber amount) {
-            if (amount.lte(BigNumber.ZERO)) {
-                return multiplier.get();
-            }
-            return multiplier.updateAndGet(m -> m.add(amount).max(BigNumber.ONE));
-        }
-
-        public Long getBestTimeMs() {
-            return bestTimeMs;
-        }
-
-        public void setBestTimeMs(Long bestTimeMs) {
-            this.bestTimeMs = bestTimeMs;
-        }
-    }
+    @Deprecated public boolean isPlayersHidden() { return session.isPlayersHidden(); }
+    @Deprecated public void setPlayersHidden(boolean playersHidden) { session.setPlayersHidden(playersHidden); }
 }
