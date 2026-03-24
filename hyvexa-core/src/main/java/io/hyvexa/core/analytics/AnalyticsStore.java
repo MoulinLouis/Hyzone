@@ -107,7 +107,7 @@ public class AnalyticsStore implements PlayerAnalytics {
         } catch (SQLException e) {
             // Column already exists — expected on subsequent startups
             if (!e.getMessage().contains("Duplicate column")) {
-                LOGGER.atWarning().withCause(e).log("ALTER TABLE failed: " + sql);
+                LOGGER.atSevere().withCause(e).log("Schema migration failed: " + sql);
             }
         }
     }
