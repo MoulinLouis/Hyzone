@@ -78,8 +78,10 @@ Concise prompts to send one at a time. Each one is a self-contained optimization
 
 ## Performance
 
-### 21. Batch Analytics Events
-> AnalyticsStore does individual INSERTs per event. Collect events in a buffer and batch-insert (100+ per round-trip). Reduces DB round-trips ~99% for analytics-heavy loads.
+### ~~21. Batch Analytics Events~~ ✅
+> ~~AnalyticsStore does individual INSERTs per event. Collect events in a buffer and batch-insert (100+ per round-trip). Reduces DB round-trips ~99% for analytics-heavy loads.~~
+>
+> **Done**: Events buffered in ConcurrentLinkedQueue, flushed every 5s via addBatch/executeBatch (up to 500 per batch). Added shutdown() for graceful drain.
 
 ### 22. Add Background Cache Eviction
 > CachedCurrencyStore has 30-min TTL but no background cleaner — stale entries stay in cache until next access. Add a ScheduledExecutor task to evict entries past TTL. Apply same pattern to all TTL-based caches.
@@ -116,8 +118,10 @@ Concise prompts to send one at a time. Each one is a self-contained optimization
 ### 30. Modularize AscendDatabaseSetup
 > AscendDatabaseSetup.java (1669 lines) handles ALL Ascend table creation in one monolithic file. Split by subsystem: `AscendSchemaSetup`, `MineSchemaSetup`, `ChallengeSchemaSetup`, each responsible for their own tables.
 
-### 31. Replace LIKE JSON Queries
-> AnalyticsStore uses `LIKE '%"is_new":true%'` for JSON searching — fragile, depends on serialization format. Replace with `JSON_EXTRACT()` and proper type coercion.
+### ~~31. Replace LIKE JSON Queries~~ ✅
+> ~~AnalyticsStore uses `LIKE '%"is_new":true%'` for JSON searching — fragile, depends on serialization format. Replace with `JSON_EXTRACT()` and proper type coercion.~~
+>
+> **Done**: All 3 LIKE queries in computeDailyAggregates replaced with JSON_EXTRACT/JSON_UNQUOTE. Replaced countEventsWithFilter (LIKE-based) with countEventsWithJsonFilter(path, value) using typed JSON extraction. Updated all callers in AnalyticsCommand.
 
 ---
 

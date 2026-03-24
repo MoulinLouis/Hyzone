@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Event-based analytics store. Logs raw events to analytics_events,
@@ -28,7 +30,11 @@ public class AnalyticsStore implements PlayerAnalytics {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final AnalyticsStore INSTANCE = new AnalyticsStore();
     private static final Gson GSON = new Gson();
+    private static final int FLUSH_BATCH_LIMIT = 500;
     private final ConnectionProvider db;
+    private final ConcurrentLinkedQueue<PendingEvent> eventBuffer = new ConcurrentLinkedQueue<>();
+
+    private record PendingEvent(long timestampMs, UUID playerId, String eventType, String dataJson) {}
 
     private AnalyticsStore() {
         this.db = DatabaseManager.getInstance();
@@ -88,6 +94,7 @@ public class AnalyticsStore implements PlayerAnalytics {
             tryAlterColumn(conn, "ALTER TABLE players ADD COLUMN first_join_ms BIGINT NULL");
             tryAlterColumn(conn, "ALTER TABLE players ADD COLUMN last_seen_ms BIGINT NULL");
             LOGGER.atInfo().log("AnalyticsStore initialized (tables ensured)");
+            HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(this::flushEvents, 5, 5, TimeUnit.SECONDS);
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create analytics tables");
         }
@@ -106,7 +113,7 @@ public class AnalyticsStore implements PlayerAnalytics {
     }
 
     /**
-     * Log an analytics event. Fire-and-forget async INSERT.
+     * Log an analytics event. Buffers the event for batch insertion via {@link #flushEvents()}.
      */
     public void logEvent(UUID playerId, String eventType, String dataJson) {
         if (playerId == null || eventType == null) {
@@ -116,7 +123,7 @@ public class AnalyticsStore implements PlayerAnalytics {
             return;
         }
         long timestampMs = System.currentTimeMillis();
-        HytaleServer.SCHEDULED_EXECUTOR.execute(() -> insertEvent(playerId, eventType, dataJson, timestampMs));
+        eventBuffer.add(new PendingEvent(timestampMs, playerId, eventType, dataJson));
     }
 
     public void logPurchase(UUID playerId, String itemId, long amount, String currency, String source) {
@@ -134,20 +141,48 @@ public class AnalyticsStore implements PlayerAnalytics {
         logEvent(playerId, "purchase", GSON.toJson(data));
     }
 
-    private void insertEvent(UUID playerId, String eventType, String dataJson, long timestampMs) {
+    /**
+     * Drain buffered events and batch-insert them into the database.
+     * Processes up to 500 events per batch, looping until the buffer is empty.
+     */
+    private void flushEvents() {
+        if (eventBuffer.isEmpty()) {
+            return;
+        }
         String sql = "INSERT INTO analytics_events (timestamp_ms, player_uuid, event_type, data_json) "
                 + "VALUES (?, ?, ?, ?)";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setLong(1, timestampMs);
-            stmt.setString(2, playerId.toString());
-            stmt.setString(3, eventType);
-            stmt.setString(4, dataJson);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to insert analytics event: " + eventType);
+        while (!eventBuffer.isEmpty()) {
+            List<PendingEvent> batch = new ArrayList<>(FLUSH_BATCH_LIMIT);
+            for (int i = 0; i < FLUSH_BATCH_LIMIT; i++) {
+                PendingEvent event = eventBuffer.poll();
+                if (event == null) break;
+                batch.add(event);
+            }
+            if (batch.isEmpty()) break;
+            try (Connection conn = this.db.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                for (PendingEvent event : batch) {
+                    stmt.setLong(1, event.timestampMs());
+                    stmt.setString(2, event.playerId().toString());
+                    stmt.setString(3, event.eventType());
+                    stmt.setString(4, event.dataJson());
+                    stmt.addBatch();
+                }
+                stmt.executeBatch();
+            } catch (SQLException e) {
+                LOGGER.atWarning().withCause(e).log("Failed to flush " + batch.size() + " analytics events");
+            }
         }
+    }
+
+    /**
+     * Flush all remaining buffered events. Call during server shutdown to avoid data loss.
+     */
+    public void shutdown() {
+        int remaining = eventBuffer.size();
+        flushEvents();
+        LOGGER.atInfo().log("Analytics shutdown: flushed " + remaining + " remaining events");
     }
 
     /**
@@ -202,11 +237,11 @@ public class AnalyticsStore implements PlayerAnalytics {
                     + "WHERE event_type = 'player_join' AND timestamp_ms >= ? AND timestamp_ms < ?",
                     dayStartMs, dayEndMs);
 
-            // New players: player_join with is_new=true (aggregated in SQL via LIKE)
+            // New players: player_join with is_new=true
             int newPlayers = queryIntScalar(conn,
                     "SELECT COUNT(*) FROM analytics_events "
                     + "WHERE event_type = 'player_join' AND timestamp_ms >= ? AND timestamp_ms < ? "
-                    + "AND data_json LIKE '%\"is_new\":true%'",
+                    + "AND JSON_EXTRACT(data_json, '$.is_new') = true",
                     dayStartMs, dayEndMs);
 
             // Session stats from player_leave events (aggregated in SQL)
@@ -232,16 +267,16 @@ public class AnalyticsStore implements PlayerAnalytics {
                 avgSessionMs = totalSessionMs / totalSessions;
             }
 
-            // Mode split from mode_switch events (aggregated in SQL via LIKE)
+            // Mode split from mode_switch events
             int parkourSwitches = queryIntScalar(conn,
                     "SELECT COUNT(*) FROM analytics_events "
                     + "WHERE event_type = 'mode_switch' AND timestamp_ms >= ? AND timestamp_ms < ? "
-                    + "AND data_json LIKE '%\"to\":\"parkour\"%'",
+                    + "AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.to')) = 'parkour'",
                     dayStartMs, dayEndMs);
             int ascendSwitches = queryIntScalar(conn,
                     "SELECT COUNT(*) FROM analytics_events "
                     + "WHERE event_type = 'mode_switch' AND timestamp_ms >= ? AND timestamp_ms < ? "
-                    + "AND data_json LIKE '%\"to\":\"ascend\"%'",
+                    + "AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.to')) = 'ascend'",
                     dayStartMs, dayEndMs);
             int totalSwitches = parkourSwitches + ascendSwitches;
             float parkourPct = totalSwitches > 0 ? (float) parkourSwitches / totalSwitches * 100f : 0f;
@@ -413,24 +448,40 @@ public class AnalyticsStore implements PlayerAnalytics {
     }
 
     /**
-     * Count events matching a LIKE pattern in data_json.
+     * Count events matching a JSON path/value condition in data_json.
+     * Uses JSON_EXTRACT for type-safe, index-friendly queries.
+     *
+     * @param eventType     the event type to filter on
+     * @param days          number of past days to include
+     * @param jsonPath      JSON path expression (e.g. "$.is_pb", "$.reason")
+     * @param expectedValue the value to compare against (Boolean or String)
      */
-    public int countEventsWithFilter(String eventType, int days, String jsonLikePattern) {
+    public int countEventsWithJsonFilter(String eventType, int days, String jsonPath, Object expectedValue) {
         if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
+        String comparison;
+        if (expectedValue instanceof Boolean) {
+            comparison = "JSON_EXTRACT(data_json, ?) = " + expectedValue;
+        } else {
+            comparison = "JSON_UNQUOTE(JSON_EXTRACT(data_json, ?)) = ?";
+        }
         String sql = "SELECT COUNT(*) FROM analytics_events "
-                + "WHERE event_type = ? AND timestamp_ms >= ? AND data_json LIKE ?";
+                + "WHERE event_type = ? AND timestamp_ms >= ? AND " + comparison;
         try (Connection conn = this.db.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, eventType);
-            stmt.setLong(2, cutoffMs);
-            stmt.setString(3, jsonLikePattern);
+            int idx = 1;
+            stmt.setString(idx++, eventType);
+            stmt.setLong(idx++, cutoffMs);
+            stmt.setString(idx++, jsonPath);
+            if (!(expectedValue instanceof Boolean)) {
+                stmt.setString(idx, expectedValue.toString());
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) return rs.getInt(1);
             }
         } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("countEventsWithFilter failed: " + eventType);
+            LOGGER.atWarning().withCause(e).log("countEventsWithJsonFilter failed: " + eventType);
         }
         return 0;
     }
