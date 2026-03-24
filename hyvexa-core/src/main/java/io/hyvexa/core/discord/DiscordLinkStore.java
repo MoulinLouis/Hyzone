@@ -373,7 +373,8 @@ public class DiscordLinkStore {
      */
     private void cleanExpiredCodes() {
         int deleted = DatabaseManager.executeCount(this.db,
-                "DELETE FROM discord_link_codes WHERE expires_at < NOW()");
+                "DELETE FROM discord_link_codes WHERE expires_at < NOW()",
+                stmt -> {});
         if (deleted > 0) {
             LOGGER.atInfo().log("Cleaned " + deleted + " expired link codes");
         }
