@@ -530,18 +530,20 @@ public class DuelTracker {
             return;
         }
         Vector3d position = transform.getPosition();
-        if (shouldTeleportFromVoid(position.getY())) {
+        if (TrackerUtils.shouldTeleportFromVoid(position.getY(), settingsStore)) {
             teleportToRespawn(context.ref, context.store, state, map);
             state.fallState.reset();
             return;
         }
         checkCheckpoints(state, context.playerRef, player, position, map);
-        long fallTimeoutMs = getFallRespawnTimeoutMs();
+        long fallTimeoutMs = TrackerUtils.getFallRespawnTimeoutMs(settingsStore);
         if (map.isFreeFallEnabled()) {
             state.fallState.reset();
             fallTimeoutMs = 0L;
         }
-        if (fallTimeoutMs > 0 && shouldRespawnFromFall(state, position.getY(), movementStates, fallTimeoutMs)) {
+        if (fallTimeoutMs > 0 && state != null
+                && TrackerUtils.shouldRespawnFromFall(state.fallState, position.getY(),
+                        TrackerUtils.isFallTrackingBlocked(movementStates), fallTimeoutMs)) {
             teleportToRespawn(context.ref, context.store, state, map);
             state.fallState.reset();
             return;
@@ -993,33 +995,6 @@ public class DuelTracker {
         }
     }
 
-    private double getVoidY() {
-        if (settingsStore == null) {
-            return ParkourConstants.FALL_FAILSAFE_VOID_Y;
-        }
-        return settingsStore.getFallFailsafeVoidY();
-    }
-
-    private long getFallRespawnTimeoutMs() {
-        if (settingsStore == null) {
-            return (long) (ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS * 1000L);
-        }
-        return (long) (settingsStore.getFallRespawnSeconds() * 1000L);
-    }
-
-    private boolean shouldTeleportFromVoid(double currentY) {
-        double voidY = getVoidY();
-        return Double.isFinite(voidY) && currentY <= voidY;
-    }
-
-    private boolean shouldRespawnFromFall(DuelPlayerState state, double currentY, MovementStates movementStates,
-                                          long fallTimeoutMs) {
-        if (state == null || fallTimeoutMs <= 0L) {
-            return false;
-        }
-        return TrackerUtils.shouldRespawnFromFall(state.fallState, currentY,
-                TrackerUtils.isFallTrackingBlocked(movementStates), fallTimeoutMs);
-    }
 
     private int resolveCheckpointIndex(DuelPlayerState state, Map map) {
         if (state == null || map == null) {

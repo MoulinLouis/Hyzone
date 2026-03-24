@@ -496,42 +496,103 @@ public class RunTracker {
         }
         ActiveRun run = activeRuns.get(playerRef.getUuid());
         Vector3d position = transform.getPosition();
-        if (shouldTeleportFromVoid(position.getY())) {
-            if (run == null) {
-                teleporter.teleportToSpawn(ref, store, transform, buffer);
-                teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
-                return;
-            }
-            Map map = mapStore.getMapReadonly(run.mapId);
-            if (map != null) {
-                teleporter.teleportToRespawn(ref, store, run, map, buffer);
-                run.fallState.fallStartTime = null;
-                run.fallState.lastY = null;
-                teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.RUN_RESPAWN);
-            } else {
-                teleporter.teleportToSpawn(ref, store, transform, buffer);
-                teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
-            }
+        if (handleVoidTeleport(ref, store, transform, buffer, playerRef, run, position.getY())) {
             return;
         }
         if (run == null) {
-            long fallTimeoutMs = getFallRespawnTimeoutMs();
-            boolean allowOpIdleFall = settingsStore != null && settingsStore.isIdleFallRespawnForOp();
-            if (fallTimeoutMs > 0 && (allowOpIdleFall || !PermissionUtils.isOp(player))
-                    && shouldRespawnFromFall(getIdleFallState(playerRef.getUuid()), position.getY(),
-                    movementStates,
-                    fallTimeoutMs)) {
-                teleporter.teleportToSpawn(ref, store, transform, buffer);
-                teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
-                return;
-            }
-            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
-            Map triggerMap = findStartTriggerMap(world, position);
-            if (triggerMap != null) {
-                startRunFromTrigger(ref, store, playerRef, player, triggerMap, buffer);
-            }
+            handleIdlePlayer(ref, store, transform, buffer, playerRef, player, position, movementStates);
             return;
         }
+        tickActiveRun(ref, store, buffer, deltaSeconds, playerRef, player, position, movementStates, run);
+    }
+
+    private boolean handleVoidTeleport(Ref<EntityStore> ref, Store<EntityStore> store,
+                                       TransformComponent transform, CommandBuffer<EntityStore> buffer,
+                                       PlayerRef playerRef, ActiveRun run, double currentY) {
+        if (!TrackerUtils.shouldTeleportFromVoid(currentY, settingsStore)) {
+            return false;
+        }
+        if (run == null) {
+            teleporter.teleportToSpawn(ref, store, transform, buffer);
+            teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
+            return true;
+        }
+        Map map = mapStore.getMapReadonly(run.mapId);
+        if (map != null) {
+            teleporter.teleportToRespawn(ref, store, run, map, buffer);
+            run.fallState.fallStartTime = null;
+            run.fallState.lastY = null;
+            teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.RUN_RESPAWN);
+        } else {
+            teleporter.teleportToSpawn(ref, store, transform, buffer);
+            teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
+        }
+        return true;
+    }
+
+    private void handleIdlePlayer(Ref<EntityStore> ref, Store<EntityStore> store,
+                                  TransformComponent transform, CommandBuffer<EntityStore> buffer,
+                                  PlayerRef playerRef, Player player, Vector3d position,
+                                  MovementStates movementStates) {
+        long fallTimeoutMs = TrackerUtils.getFallRespawnTimeoutMs(settingsStore);
+        boolean allowOpIdleFall = settingsStore != null && settingsStore.isIdleFallRespawnForOp();
+        if (fallTimeoutMs > 0 && (allowOpIdleFall || !PermissionUtils.isOp(player))
+                && shouldRespawnFromFall(getIdleFallState(playerRef.getUuid()), position.getY(),
+                movementStates,
+                fallTimeoutMs)) {
+            teleporter.teleportToSpawn(ref, store, transform, buffer);
+            teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
+            return;
+        }
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        Map triggerMap = findStartTriggerMap(world, position);
+        if (triggerMap != null) {
+            startRunFromTrigger(ref, store, playerRef, player, triggerMap, buffer);
+        }
+    }
+
+    private boolean handleFlyZone(Ref<EntityStore> ref, Store<EntityStore> store,
+                                  CommandBuffer<EntityStore> buffer,
+                                  PlayerRef playerRef, Player player, ActiveRun run, Map map, Vector3d position) {
+        if (!run.practiceEnabled || !run.flyActive || !map.hasFlyZone()) {
+            return true;
+        }
+        if (!isInsideFlyZone(position, map)) {
+            long now = System.currentTimeMillis();
+            if (now - run.lastFlyZoneRollbackMs >= ParkourConstants.FLY_ZONE_ROLLBACK_THROTTLE_MS) {
+                run.lastFlyZoneRollbackMs = now;
+                if (player != null) {
+                    player.sendMessage(SystemMessageUtils.parkourWarn("You don't have the right to go there."));
+                }
+                double[] rollback = run.lastValidFlyPosition;
+                if (rollback != null) {
+                    Vector3d rollbackPos = new Vector3d(rollback[0], rollback[1], rollback[2]);
+                    Vector3f headRot = playerRef.getHeadRotation();
+                    TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+                    Vector3f bodyRot = headRot != null ? headRot
+                            : (transform != null ? transform.getRotation() : null);
+                    if (bodyRot == null) {
+                        return false;
+                    }
+                    Teleport tp = Teleport.createForPlayer(
+                            store.getExternalData().getWorld(),
+                            new com.hypixel.hytale.math.vector.Transform(rollbackPos, bodyRot));
+                    if (headRot != null) {
+                        tp.setHeadRotation(headRot.clone());
+                    }
+                    teleporter.addTeleport(ref, store, buffer, tp);
+                }
+            }
+            return false;
+        }
+        run.lastValidFlyPosition = new double[]{position.getX(), position.getY(), position.getZ()};
+        return true;
+    }
+
+    private void tickActiveRun(Ref<EntityStore> ref, Store<EntityStore> store,
+                               CommandBuffer<EntityStore> buffer, float deltaSeconds,
+                               PlayerRef playerRef, Player player, Vector3d position,
+                               MovementStates movementStates, ActiveRun run) {
         Map map = mapStore.getMapReadonly(run.mapId);
         if (map == null) {
             return;
@@ -545,31 +606,11 @@ public class RunTracker {
         if (checkLeaveTrigger(ref, store, player, playerRef, position, map, buffer)) {
             return;
         }
-        if (run.practiceEnabled && run.flyActive && map.hasFlyZone()) {
-            if (!isInsideFlyZone(position, map)) {
-                if (now - run.lastFlyZoneRollbackMs >= ParkourConstants.FLY_ZONE_ROLLBACK_THROTTLE_MS) {
-                    run.lastFlyZoneRollbackMs = now;
-                    player.sendMessage(SystemMessageUtils.parkourWarn("You don't have the right to go there."));
-                    double[] rollback = run.lastValidFlyPosition;
-                    if (rollback != null) {
-                        Vector3d rollbackPos = new Vector3d(rollback[0], rollback[1], rollback[2]);
-                        Vector3f headRot = playerRef.getHeadRotation();
-                        Vector3f bodyRot = headRot != null ? headRot : transform.getRotation();
-                        Teleport tp = Teleport.createForPlayer(
-                                store.getExternalData().getWorld(),
-                                new com.hypixel.hytale.math.vector.Transform(rollbackPos, bodyRot));
-                        if (headRot != null) {
-                            tp.setHeadRotation(headRot.clone());
-                        }
-                        teleporter.addTeleport(ref, store, buffer, tp);
-                    }
-                }
-                return;
-            }
-            run.lastValidFlyPosition = new double[]{position.getX(), position.getY(), position.getZ()};
+        if (!handleFlyZone(ref, store, buffer, playerRef, player, run, map, position)) {
+            return;
         }
         validator.checkCheckpoints(run, playerRef, player, position, map, previousPosition, previousElapsedMs, deltaMs);
-        long fallTimeoutMs = getFallRespawnTimeoutMs();
+        long fallTimeoutMs = TrackerUtils.getFallRespawnTimeoutMs(settingsStore);
         if (map.isFreeFallEnabled()) {
             run.fallState.fallStartTime = null;
             run.fallState.lastY = position.getY();
@@ -594,6 +635,7 @@ public class RunTracker {
 
             return;
         }
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         validator.checkFinish(run, playerRef, player, position, map, transform, ref, store, buffer, previousPosition,
                 previousElapsedMs, deltaMs, sessionTracker, teleporter, this);
         if (activeRuns.get(playerRef.getUuid()) == run) {
@@ -670,16 +712,6 @@ public class RunTracker {
                 Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(".").color(SystemMessageUtils.SECONDARY)
         );
-    }
-
-    private long getFallRespawnTimeoutMs() {
-        double seconds = settingsStore != null
-                ? settingsStore.getFallRespawnSeconds()
-                : ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
-        if (seconds <= 0) {
-            return 0L;
-        }
-        return (long) Math.max(1L, seconds * 1000.0);
     }
 
     private boolean shouldRespawnFromFall(ActiveRun run, double currentY, MovementStates movementStates,
@@ -988,13 +1020,6 @@ public class RunTracker {
 
     private TrackerUtils.FallState getIdleFallState(UUID playerId) {
         return idleFalls.computeIfAbsent(playerId, ignored -> new TrackerUtils.FallState());
-    }
-
-    private boolean shouldTeleportFromVoid(double currentY) {
-        double voidY = settingsStore != null
-                ? settingsStore.getFallFailsafeVoidY()
-                : ParkourConstants.FALL_FAILSAFE_VOID_Y;
-        return Double.isFinite(voidY) && currentY <= voidY;
     }
 
     public void markPlayerReady(PlayerRef playerRef) {
