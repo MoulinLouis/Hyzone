@@ -90,7 +90,7 @@ class RobotSpawner {
             String npcRoleName = AscendConstants.getRunnerEntityType(state.getStars());
             Object result = npcPlugin.spawnNPC(store, npcRoleName, displayName, position, rotation);
             if (result != null) {
-                Ref<EntityStore> entityRef = extractEntityRef(result);
+                Ref<EntityStore> entityRef = NPCHelper.extractEntityRef(result, LOGGER);
                 if (entityRef != null) {
                     state.setEntityRef(entityRef);
                     // Extract and store entity UUID for visibility filtering
@@ -119,10 +119,6 @@ class RobotSpawner {
         } finally {
             state.setSpawning(false);
         }
-    }
-
-    private Ref<EntityStore> extractEntityRef(Object pairResult) {
-        return NPCHelper.extractEntityRef(pairResult, LOGGER);
     }
 
     void despawnNpcForRobot(RobotState state) {
