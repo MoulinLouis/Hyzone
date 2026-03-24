@@ -1,14 +1,11 @@
 package io.hyvexa.ascend.robot;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.server.core.entity.Frozen;
-import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -17,9 +14,9 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.common.npc.NPCHelper;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
-import java.util.List;
 import java.util.UUID;
 
 class RobotSpawner {
@@ -34,12 +31,7 @@ class RobotSpawner {
     }
 
     void initNpcPlugin() {
-        try {
-            npcPlugin = NPCPlugin.get();
-        } catch (Exception e) {
-            LOGGER.atWarning().log("NPCPlugin not available, robots will be invisible: " + e.getMessage());
-            npcPlugin = null;
-        }
+        npcPlugin = NPCHelper.initNpcPlugin(LOGGER, "robots");
     }
 
     boolean isNpcAvailable() {
@@ -98,7 +90,7 @@ class RobotSpawner {
             String npcRoleName = AscendConstants.getRunnerEntityType(state.getStars());
             Object result = npcPlugin.spawnNPC(store, npcRoleName, displayName, position, rotation);
             if (result != null) {
-                Ref<EntityStore> entityRef = extractEntityRef(result);
+                Ref<EntityStore> entityRef = NPCHelper.extractEntityRef(result, LOGGER);
                 if (entityRef != null) {
                     state.setEntityRef(entityRef);
                     // Extract and store entity UUID for visibility filtering
@@ -107,6 +99,9 @@ class RobotSpawner {
                         if (uuidComponent != null) {
                             UUID entityUuid = uuidComponent.getUuid();
                             state.setEntityUuid(entityUuid);
+                            if (entityUuid != null) {
+                                manager.getActiveEntityUuids().add(entityUuid);
+                            }
 
                             // Hide from players currently running on this map
                             hideFromActiveRunners(state.getMapId(), entityUuid);
@@ -116,18 +111,7 @@ class RobotSpawner {
                     } catch (Exception e) {
                         LOGGER.atWarning().log("Failed to get NPC UUID: " + e.getMessage());
                     }
-                    // Make NPC invulnerable so players can't kill it
-                    try {
-                        store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to make NPC invulnerable: " + e.getMessage());
-                    }
-                    // Freeze NPC to disable AI movement (we control it via teleport)
-                    try {
-                        store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to freeze NPC: " + e.getMessage());
-                    }
+                    NPCHelper.setupNpcDefaults(store, entityRef, LOGGER);
                 }
             }
         } catch (Exception e) {
@@ -135,30 +119,6 @@ class RobotSpawner {
         } finally {
             state.setSpawning(false);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Ref<EntityStore> extractEntityRef(Object pairResult) {
-        if (pairResult == null) {
-            return null;
-        }
-        try {
-            // Try common Pair accessor methods
-            for (String methodName : List.of("getFirst", "getLeft", "getKey", "first", "left")) {
-                try {
-                    java.lang.reflect.Method method = pairResult.getClass().getMethod(methodName);
-                    Object value = method.invoke(pairResult);
-                    if (value instanceof Ref<?> ref) {
-                        return (Ref<EntityStore>) ref;
-                    }
-                } catch (NoSuchMethodException ignored) {
-                    // Try next method
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to extract entity ref from NPC result: " + e.getMessage());
-        }
-        return null;
     }
 
     void despawnNpcForRobot(RobotState state) {
@@ -187,22 +147,17 @@ class RobotSpawner {
     }
 
     private void despawnNpcOnWorldThread(RobotState state, Ref<EntityStore> entityRef) {
-        boolean despawnSuccess = false;
-        try {
-            Store<EntityStore> store = entityRef.getStore();
-            if (store != null) {
-                store.removeEntity(entityRef, RemoveReason.REMOVE);
-                despawnSuccess = true;
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to despawn NPC: " + e.getMessage());
-        }
+        boolean despawnSuccess = NPCHelper.despawnEntity(entityRef, LOGGER);
         state.setEntityRef(null);
         // Only clear entityUuid if despawn was successful.
         // If despawn failed, the entity may still exist (e.g., in unloaded chunk)
         // and we don't want to spawn a duplicate when it reloads.
         if (despawnSuccess) {
+            UUID clearedUuid = state.getEntityUuid();
             state.setEntityUuid(null);
+            if (clearedUuid != null) {
+                manager.getActiveEntityUuids().remove(clearedUuid);
+            }
         }
     }
 

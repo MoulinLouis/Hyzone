@@ -40,8 +40,10 @@ Concise prompts to send one at a time. Each one is a self-contained optimization
 ### 10. Split AnalyticsStore
 > AnalyticsStore.java (527 lines, 20+ public methods) mixes event logging, daily aggregation, retention analytics, and data purging. Split into: `EventLogger`, `DailyAnalyticsAggregator`, `RetentionAnalyzer`.
 
-### 11. Split RobotManager & MineRobotManager
-> RobotManager (1685 lines) and MineRobotManager (999 lines) duplicate spawn/despawn/visibility/orphan-cleanup patterns. Extract `NPCLifecycleManager` base class with shared entity lifecycle, then have both extend it with domain-specific logic (runner movement vs mining behavior).
+### 11. ~~Split RobotManager & MineRobotManager~~ ✅
+> ~~RobotManager (1685 lines) and MineRobotManager (999 lines) duplicate spawn/despawn/visibility/orphan-cleanup patterns. Extract `NPCLifecycleManager` base class with shared entity lifecycle, then have both extend it with domain-specific logic (runner movement vs mining behavior).~~
+>
+> **Done**: Chose composition over inheritance. Created `NPCEntityState` interface + `NPCHelper` utility class in hyvexa-core with shared `extractEntityRef`, `setupNpcDefaults`, `initNpcPlugin`, `despawnEntity`. Deduplicated RobotManager by delegating to RobotSpawner. Updated MineRobotManager + EggRouletteAnimation to use NPCHelper. Net -204 lines across 4 files.
 
 ### 12. Split AscendPlayerProgress
 > AscendPlayerProgress.java (774 lines, 93 public methods) mixes economy state, gameplay state, automation config, and session state. Split into: `EconomyState` (volt, elevation, summit XP), `GameplayState` (map progress, ascension), `AutomationConfig` (auto-upgrade/elevation/summit settings), `SessionState` (timers, passive earnings).

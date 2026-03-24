@@ -1,22 +1,17 @@
 package io.hyvexa.ascend.robot;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.entity.Frozen;
-import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
@@ -56,7 +51,7 @@ public class RobotManager {
      * - robots, onlinePlayers, dirtyPlayers, teleportWarningByRobot:
      *   ConcurrentHashMap/newKeySet collections (thread-safe by construction).
      * - orphanCleanup: owns orphan UUID + pending-removal concurrency state.
-     * - npcPlugin: volatile, set once in start(), thereafter read-only.
+     * - spawner: owns npcPlugin lifecycle; set once in start(), thereafter read-only.
      * - lastRefreshMs, lastAutoUpgradeMs, viewerContext:
      *   volatile, read/written from scheduled executor tick.
      * - tickTask: only accessed in start()/stop() (single-threaded lifecycle).
@@ -100,7 +95,6 @@ public class RobotManager {
     private volatile long lastRefreshMs;
     private volatile long lastFullRefreshMs;
     private volatile long lastViewerContextRefreshMs;
-    private volatile NPCPlugin npcPlugin;
     private volatile long lastAutoUpgradeMs = 0;
     private volatile long lastTeleportWarningCleanupMs = 0L;
     private volatile long lastHealthLogMs = 0L;
@@ -132,12 +126,7 @@ public class RobotManager {
     public void start() {
         orphanCleanup.loadOrphanedUuids();
 
-        try {
-            npcPlugin = NPCPlugin.get();
-        } catch (Exception e) {
-            LOGGER.atWarning().log("NPCPlugin not available, robots will be invisible: " + e.getMessage());
-            npcPlugin = null;
-        }
+        spawner.initNpcPlugin();
 
         registerCleanupSystem();
 
@@ -209,136 +198,12 @@ public class RobotManager {
         }
 
         // Spawn NPC entity if NPCPlugin is available
-        if (npcPlugin != null && mapStore != null) {
+        if (spawner.isNpcAvailable() && mapStore != null) {
             AscendMap map = mapStore.getMap(mapId);
             if (map != null) {
-                spawnNpcForRobot(state, map);
+                spawner.spawnNpcForRobot(state, map);
             }
         }
-    }
-
-    private void spawnNpcForRobot(RobotState state, AscendMap map) {
-        if (npcPlugin == null || map == null) {
-            return;
-        }
-        // Prevent duplicate spawns
-        if (state.isSpawning()) {
-            return;
-        }
-        // Check if we already have a valid entity
-        Ref<EntityStore> existingRef = state.getEntityRef();
-        if (existingRef != null && existingRef.isValid()) {
-            return;
-        }
-        // HARD CAP: If entityUuid is set, an entity may still exist in world
-        // (e.g., in unloaded chunk). Don't spawn another one.
-        UUID existingUuid = state.getEntityUuid();
-        if (existingUuid != null) {
-            return;
-        }
-        state.setSpawning(true);
-        String worldName = map.getWorld();
-        if (worldName == null || worldName.isEmpty()) {
-            state.setSpawning(false);
-            return;
-        }
-        World world = Universe.get().getWorld(worldName);
-        if (world == null) {
-            state.setSpawning(false);
-            return;
-        }
-
-        // Must run on World thread for entity operations
-        world.execute(() -> spawnNpcOnWorldThread(state, map, world));
-    }
-
-    private void spawnNpcOnWorldThread(RobotState state, AscendMap map, World world) {
-        try {
-            Store<EntityStore> store = world.getEntityStore().getStore();
-            if (store == null) {
-                return;
-            }
-            Vector3d position = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
-            Vector3f rotation = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
-            String displayName = "Runner";
-
-            String npcRoleName = AscendConstants.getRunnerEntityType(state.getStars());
-            Object result = npcPlugin.spawnNPC(store, npcRoleName, displayName, position, rotation);
-            if (result != null) {
-                Ref<EntityStore> entityRef = extractEntityRef(result);
-                if (entityRef != null) {
-                    state.setEntityRef(entityRef);
-                    // Extract and store entity UUID for visibility filtering
-                    try {
-                        UUIDComponent uuidComponent = store.getComponent(entityRef, UUIDComponent.getComponentType());
-                        if (uuidComponent != null) {
-                            UUID entityUuid = uuidComponent.getUuid();
-                            state.setEntityUuid(entityUuid);
-                            if (entityUuid != null) {
-                                activeEntityUuids.add(entityUuid);
-                            }
-
-                            // Hide from players currently running on this map
-                            hideFromActiveRunners(state.getMapId(), entityUuid);
-                            // Hide from players with "hide other runners" setting
-                            hideFromViewersWithSetting(state.getOwnerId(), entityUuid);
-                        }
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to get NPC UUID: " + e.getMessage());
-                    }
-                    // Make NPC invulnerable so players can't kill it
-                    try {
-                        store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to make NPC invulnerable: " + e.getMessage());
-                    }
-                    // Freeze NPC to disable AI movement (we control it via teleport)
-                    try {
-                        store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to freeze NPC: " + e.getMessage());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to spawn NPC: " + e.getMessage());
-        } finally {
-            state.setSpawning(false);
-        }
-    }
-
-    private static volatile java.lang.reflect.Method cachedPairMethod;
-
-    @SuppressWarnings("unchecked")
-    private Ref<EntityStore> extractEntityRef(Object pairResult) {
-        if (pairResult == null) {
-            return null;
-        }
-        try {
-            java.lang.reflect.Method method = cachedPairMethod;
-            if (method != null && method.getDeclaringClass().isAssignableFrom(pairResult.getClass())) {
-                Object value = method.invoke(pairResult);
-                if (value instanceof Ref<?> ref) {
-                    return (Ref<EntityStore>) ref;
-                }
-            }
-            // Try common Pair accessor methods
-            for (String methodName : List.of("getFirst", "getLeft", "getKey", "first", "left")) {
-                try {
-                    method = pairResult.getClass().getMethod(methodName);
-                    Object value = method.invoke(pairResult);
-                    if (value instanceof Ref<?> ref) {
-                        cachedPairMethod = method;
-                        return (Ref<EntityStore>) ref;
-                    }
-                } catch (NoSuchMethodException ignored) {
-                    // Try next method
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to extract entity ref from NPC result: " + e.getMessage());
-        }
-        return null;
     }
 
     public void despawnRobot(UUID ownerId, String mapId) {
@@ -348,64 +213,15 @@ public class RobotManager {
         if (state != null) {
             UUID entityUuid = state.getEntityUuid();
             clearTeleportWarning(state);
-            despawnNpcForRobot(state);
+            spawner.despawnNpcForRobot(state);
             queueOrphanIfDespawnFailed(entityUuid, state);
-        }
-    }
-
-    private void despawnNpcForRobot(RobotState state) {
-        if (state == null) {
-            return;
-        }
-        Ref<EntityStore> entityRef = state.getEntityRef();
-        if (entityRef == null || !entityRef.isValid()) {
-            state.setEntityRef(null);
-            // Note: We intentionally do NOT clear entityUuid here.
-            // If isValid() is false due to chunk unload, the entity still exists
-            // and will reappear when chunks reload. Only clear UUID on successful despawn.
-            return;
-        }
-        // Get world from map to run on world thread
-        AscendMap map = mapStore != null ? mapStore.getMap(state.getMapId()) : null;
-        if (map != null && map.getWorld() != null) {
-            World world = Universe.get().getWorld(map.getWorld());
-            if (world != null) {
-                world.execute(() -> despawnNpcOnWorldThread(state, entityRef));
-                return;
-            }
-        }
-        // Fallback: try without world thread (may fail)
-        despawnNpcOnWorldThread(state, entityRef);
-    }
-
-    private void despawnNpcOnWorldThread(RobotState state, Ref<EntityStore> entityRef) {
-        boolean despawnSuccess = false;
-        try {
-            Store<EntityStore> store = entityRef.getStore();
-            if (store != null) {
-                store.removeEntity(entityRef, RemoveReason.REMOVE);
-                despawnSuccess = true;
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to despawn NPC: " + e.getMessage());
-        }
-        state.setEntityRef(null);
-        // Only clear entityUuid if despawn was successful.
-        // If despawn failed, the entity may still exist (e.g., in unloaded chunk)
-        // and we don't want to spawn a duplicate when it reloads.
-        if (despawnSuccess) {
-            UUID clearedUuid = state.getEntityUuid();
-            state.setEntityUuid(null);
-            if (clearedUuid != null) {
-                activeEntityUuids.remove(clearedUuid);
-            }
         }
     }
 
     public void despawnAllRobots() {
         for (RobotState state : robots.values()) {
             clearTeleportWarning(state);
-            despawnNpcForRobot(state);
+            spawner.despawnNpcForRobot(state);
         }
         robots.clear();
     }
@@ -459,14 +275,14 @@ public class RobotManager {
         state.setStars(newStars);
         state.setSpeedLevel(0);
         // Despawn old NPC and spawn new one with updated entity type
-        despawnNpcForRobot(state);
-        if (npcPlugin != null && mapStore != null) {
+        spawner.despawnNpcForRobot(state);
+        if (spawner.isNpcAvailable() && mapStore != null) {
             AscendMap map = mapStore.getMap(mapId);
             if (map != null) {
                 long now = System.currentTimeMillis();
                 refreshRobotCache(state, map, now);
                 if (getViewerContext(now).isRelevantMap(mapId)) {
-                    spawnNpcForRobot(state, map);
+                    spawner.spawnNpcForRobot(state, map);
                 }
             }
         }
@@ -759,7 +575,7 @@ public class RobotManager {
         }
         UUID entityUuid = removed.getEntityUuid();
         clearTeleportWarning(removed);
-        despawnNpcForRobot(removed);
+        spawner.despawnNpcForRobot(removed);
         queueOrphanIfDespawnFailed(entityUuid, removed);
     }
 
@@ -781,7 +597,7 @@ public class RobotManager {
         }
         LOGGER.atInfo().log("Runner health: robots=%d, visibleNpcs=%d, online=%d, dirty=%d, withGhost=%d, npc=%s",
                 robots.size(), visibleNpcCount, onlinePlayers.size(), dirtyPlayers.size(),
-                ghostCount, npcPlugin != null ? "available" : "NULL");
+                ghostCount, spawner.isNpcAvailable() ? "available" : "NULL");
     }
 
     private ViewerContext getViewerContext(long now) {
@@ -883,7 +699,7 @@ public class RobotManager {
     private void syncRobotNpcState(RobotState robot, ViewerContext currentViewerContext, long now) {
         AscendMap map = getCachedMap(robot, now);
         World world = getCachedWorld(robot, now);
-        boolean shouldHaveNpc = npcPlugin != null
+        boolean shouldHaveNpc = spawner.isNpcAvailable()
                 && map != null
                 && world != null
                 && currentViewerContext.isRelevantMap(robot.getMapId());
@@ -899,7 +715,7 @@ public class RobotManager {
                 return;
             }
             if (!hasEntityUuid && !robot.isSpawning()) {
-                spawnNpcForRobot(robot, map);
+                spawner.spawnNpcForRobot(robot, map);
             }
             return;
         }
@@ -909,7 +725,7 @@ public class RobotManager {
         }
         UUID entityUuid = robot.getEntityUuid();
         clearTeleportWarning(robot);
-        despawnNpcForRobot(robot);
+        spawner.despawnNpcForRobot(robot);
         queueOrphanIfDespawnFailed(entityUuid, robot);
     }
 
@@ -1393,43 +1209,6 @@ public class RobotManager {
     }
 
     /**
-     * Hide a newly spawned runner from all players currently running on the same map.
-     * Skips the runner's owner so they can still see their own runner while playing.
-     */
-    private void hideFromActiveRunners(String mapId, UUID runnerUuid) {
-        if (runTracker == null) {
-            return;
-        }
-        // Find the owner of this runner to skip them
-        UUID runnerOwnerId = null;
-        for (RobotState state : robots.values()) {
-            if (runnerUuid.equals(state.getEntityUuid())) {
-                runnerOwnerId = state.getOwnerId();
-                break;
-            }
-        }
-        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
-        // Iterate over all online players in the Ascend world
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef == null) {
-                continue;
-            }
-            UUID playerId = playerRef.getUuid();
-            if (playerId == null || !isPlayerInAscendWorld(playerId)) {
-                continue;
-            }
-            // Don't hide a runner from its owner - they should see their own runner
-            if (playerId.equals(runnerOwnerId)) {
-                continue;
-            }
-            String activeMapId = runTracker.getActiveMapId(playerId);
-            if (mapId.equals(activeMapId)) {
-                visibilityManager.hideEntity(playerId, runnerUuid);
-            }
-        }
-    }
-
-    /**
      * Check if a player is currently in the Ascend world.
      * Uses the plugin's PlayerRef cache for O(1) lookup instead of scanning all players.
      */
@@ -1574,25 +1353,6 @@ public class RobotManager {
         }
     }
 
-    /**
-     * After spawning a new runner, hide it from all online viewers who have the "hide other runners" setting ON.
-     * Skips the owner of the runner (they should always see their own).
-     */
-    private void hideFromViewersWithSetting(UUID runnerOwnerId, UUID entityUuid) {
-        if (entityUuid == null) {
-            return;
-        }
-        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
-        for (UUID viewerId : onlinePlayers) {
-            if (viewerId.equals(runnerOwnerId)) {
-                continue; // Owner always sees their own runners
-            }
-            if (playerStore.isHideOtherRunners(viewerId)) {
-                visibilityManager.hideEntity(viewerId, entityUuid);
-            }
-        }
-    }
-
     // ── Package-private accessors for extracted subsystems ──
 
     Set<UUID> getOnlinePlayers() { return onlinePlayers; }
@@ -1607,6 +1367,7 @@ public class RobotManager {
     AchievementManager getAchievementManager() { return achievementManager; }
     PlayerRef getPlayerRef(UUID playerId) { return resolvePlayerRef(playerId); }
     Map<String, RobotState> getRobots() { return robots; }
+    Set<UUID> getActiveEntityUuids() { return activeEntityUuids; }
     OrphanedEntityCleanup getOrphanCleanup() { return orphanCleanup; }
     RobotSpawner getSpawner() { return spawner; }
 }
