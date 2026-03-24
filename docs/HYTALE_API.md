@@ -3,7 +3,10 @@
 ## HytaleServer.jar Location
 
 ```
-/mnt/c/Users/User/AppData/Roaming/Hytale/install/release/package/game/latest/Server/HytaleServer.jar
+$hytaleHome/install/release/package/game/latest/Server/HytaleServer.jar
+
+# hytaleHome is set in ~/.gradle/gradle.properties (defaults to $HOME/AppData/Roaming/Hytale)
+# The build falls back to libs/HytaleServer.jar if the path doesn't exist
 ```
 
 Use `jar tf` to list classes and `javap -c -p` to decompile for API exploration.
@@ -267,7 +270,7 @@ HylogramsBridge.updateHologramLines("example", List.of("Title", "1. Player"), st
 
 ## Game Assets
 
-Location: `/mnt/c/Users/User/AppData/Roaming/Hytale/install/release/package/game/latest/Assets.zip`
+Location: `$hytaleHome/install/release/package/game/latest/Assets.zip` (see `~/.gradle/gradle.properties` for `hytaleHome`)
 
 Use `unzip -l Assets.zip | grep <pattern>` to list, `unzip -p Assets.zip <path>` to read contents.
 
