@@ -97,17 +97,17 @@ public class CatCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            if (progress.hasFoundCat(token)) {
+            if (progress.gameplay().hasFoundCat(token)) {
                 if (hudManager != null) {
                     hudManager.showToast(playerId, ToastType.INFO, "You already found this cat!");
                 }
                 return;
             }
 
-            progress.addFoundCat(token);
+            progress.gameplay().addFoundCat(token);
             playerStore.markDirty(playerId);
 
-            int found = progress.getFoundCatCount();
+            int found = progress.gameplay().getFoundCatCount();
             if (hudManager != null) {
                 hudManager.showToast(playerId, ToastType.ECONOMY,
                     "You found " + VALID_CATS.get(token) + "! (" + found + "/" + VALID_CATS.size() + ")");

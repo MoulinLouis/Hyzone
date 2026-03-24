@@ -131,7 +131,7 @@ public class AscendPlayerStore {
         AscendPlayerProgress loaded = persistence.loadPlayerFromDatabase(playerId);
         if (loaded == null) {
             loaded = new AscendPlayerProgress();
-            loaded.setAscensionStartedAt(System.currentTimeMillis());
+            loaded.gameplay().setAscensionStartedAt(System.currentTimeMillis());
             markDirty(playerId);
         }
 
@@ -149,8 +149,8 @@ public class AscendPlayerStore {
     }
 
     private void migrateAscensionTimer(UUID playerId, AscendPlayerProgress progress) {
-        if (progress.getAscensionStartedAt() == null) {
-            progress.setAscensionStartedAt(System.currentTimeMillis());
+        if (progress.gameplay().getAscensionStartedAt() == null) {
+            progress.gameplay().setAscensionStartedAt(System.currentTimeMillis());
             markDirty(playerId);
         }
     }
@@ -178,31 +178,31 @@ public class AscendPlayerStore {
 
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         // Reset basic progression
-        progress.setVolt(BigNumber.ZERO);
-        progress.setElevationMultiplier(1);
-        progress.getMapProgress().clear();
+        progress.economy().setVolt(BigNumber.ZERO);
+        progress.economy().setElevationMultiplier(1);
+        progress.gameplay().getMapProgress().clear();
 
         // Reset Summit system
-        progress.clearSummitXp();
-        progress.setTotalVoltEarned(BigNumber.ZERO);
-        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
-        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().clearSummitXp();
+        progress.economy().setTotalVoltEarned(BigNumber.ZERO);
+        progress.economy().setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setElevationAccumulatedVolt(BigNumber.ZERO);
 
         // Reset Ascension/Skill Tree
-        progress.setAscensionCount(0);
-        progress.setSkillTreePoints(0);
-        progress.setUnlockedSkillNodes(null);
+        progress.gameplay().setAscensionCount(0);
+        progress.gameplay().setSkillTreePoints(0);
+        progress.gameplay().setUnlockedSkillNodes(null);
 
         // Reset Achievements
-        progress.setUnlockedAchievements(null);
+        progress.gameplay().setUnlockedAchievements(null);
 
         // Reset Easter Egg cats
-        progress.setFoundCats(null);
+        progress.gameplay().setFoundCats(null);
 
         // Reset Statistics
-        progress.setTotalManualRuns(0);
-        progress.setConsecutiveManualRuns(0);
-        progress.setSessionFirstRunClaimed(false);
+        progress.gameplay().setTotalManualRuns(0);
+        progress.gameplay().setConsecutiveManualRuns(0);
+        progress.session().setSessionFirstRunClaimed(false);
 
         // Delete all database entries for this player
         persistence.deletePlayerDataFromDatabase(playerId);
@@ -239,12 +239,12 @@ public class AscendPlayerStore {
 
     public BigNumber getVolt(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getVolt() : BigNumber.ZERO;
+        return progress != null ? progress.economy().getVolt() : BigNumber.ZERO;
     }
 
     public void setVolt(UUID playerId, BigNumber volt) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setVolt(volt.max(BigNumber.ZERO));
+        progress.economy().setVolt(volt.max(BigNumber.ZERO));
         markDirty(playerId);
     }
 
@@ -254,7 +254,7 @@ public class AscendPlayerStore {
      */
     public int getElevationLevel(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getElevationMultiplier() : 0;
+        return progress != null ? progress.economy().getElevationMultiplier() : 0;
     }
 
     /**
@@ -278,7 +278,7 @@ public class AscendPlayerStore {
             return getElevationLevel(playerId);
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        int value = progress.addElevationMultiplier(amount);
+        int value = progress.economy().addElevationMultiplier(amount);
         markDirty(playerId);
         if (analytics != null) {
             try {
@@ -289,17 +289,17 @@ public class AscendPlayerStore {
         return value;
     }
 
-    public AscendPlayerProgress.MapProgress getMapProgress(UUID playerId, String mapId) {
+    public GameplayState.MapProgress getMapProgress(UUID playerId, String mapId) {
         AscendPlayerProgress progress = players.get(playerId);
         if (progress == null) {
             return null;
         }
-        return progress.getMapProgress().get(mapId);
+        return progress.gameplay().getMapProgress().get(mapId);
     }
 
-    public AscendPlayerProgress.MapProgress getOrCreateMapProgress(UUID playerId, String mapId) {
+    public GameplayState.MapProgress getOrCreateMapProgress(UUID playerId, String mapId) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        return progress.getOrCreateMapProgress(mapId);
+        return progress.gameplay().getOrCreateMapProgress(mapId);
     }
 
     /**
@@ -311,14 +311,14 @@ public class AscendPlayerStore {
             return null;
         }
 
-        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getMapProgress(playerId, mapId);
         if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
             return mapProgress.getBestTimeMs();
         }
 
         Long dbBest = persistence.loadBestTimeFromDatabase(playerId, mapId);
         if (dbBest != null) {
-            AscendPlayerProgress.MapProgress target = getOrCreateMapProgress(playerId, mapId);
+            GameplayState.MapProgress target = getOrCreateMapProgress(playerId, mapId);
             Long current = target.getBestTimeMs();
             if (current == null || dbBest < current) {
                 target.setBestTimeMs(dbBest);
@@ -328,7 +328,7 @@ public class AscendPlayerStore {
     }
 
     public boolean setMapUnlocked(UUID playerId, String mapId, boolean unlocked) {
-        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         if (mapProgress.isUnlocked() == unlocked) {
             return false;
         }
@@ -339,16 +339,16 @@ public class AscendPlayerStore {
 
     public void addVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addVolt(amount);
+        progress.economy().addVolt(amount);
         markDirty(playerId);
     }
 
     public boolean spendVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        if (progress.getVolt().lt(amount)) {
+        if (progress.economy().getVolt().lt(amount)) {
             return false;
         }
-        progress.addVolt(amount.negate());
+        progress.economy().addVolt(amount.negate());
         markDirty(playerId);
         return true;
     }
@@ -367,9 +367,9 @@ public class AscendPlayerStore {
      */
     public boolean atomicAddVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        BigNumber oldBalance = progress.getVolt();
-        progress.addVolt(amount);
-        BigNumber newBalance = progress.getVolt();
+        BigNumber oldBalance = progress.economy().getVolt();
+        progress.economy().addVolt(amount);
+        BigNumber newBalance = progress.economy().getVolt();
         markDirty(playerId);
         checkVoltTutorialThresholds(playerId, oldBalance, newBalance);
         // Always succeeds; return value is vestigial
@@ -394,7 +394,7 @@ public class AscendPlayerStore {
 
         // Trigger ascension every time the threshold is crossed
         if (crossedAscension) {
-            if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
+            if (progress != null && progress.automation().isBreakAscensionEnabled() && progress.gameplay().hasAllChallengeRewards()) {
                 // Check for transcendence eligibility notification
                 checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
                 return; // Break mode active — suppress auto-ascension
@@ -409,7 +409,7 @@ public class AscendPlayerStore {
         }
 
         // Also check transcendence threshold when break ascension is active
-        if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
+        if (progress != null && progress.automation().isBreakAscensionEnabled() && progress.gameplay().hasAllChallengeRewards()) {
             checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
         }
     }
@@ -659,12 +659,12 @@ public class AscendPlayerStore {
         BigNumber current;
         BigNumber updated;
         do {
-            current = progress.getVolt();
+            current = progress.economy().getVolt();
             if (current.lt(amount)) {
                 return false;
             }
             updated = current.subtract(amount);
-        } while (!progress.casVolt(current, updated));
+        } while (!progress.economy().casVolt(current, updated));
         markDirty(playerId);
         return true;
     }
@@ -705,16 +705,16 @@ public class AscendPlayerStore {
      */
     public boolean atomicSetElevationAndResetVolt(UUID playerId, int newElevation) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setElevationMultiplier(newElevation);
-        progress.setVolt(BigNumber.ZERO);
-        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
-        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setElevationMultiplier(newElevation);
+        progress.economy().setVolt(BigNumber.ZERO);
+        progress.economy().setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setElevationAccumulatedVolt(BigNumber.ZERO);
         markDirty(playerId);
         return true;
     }
 
     public BigNumber getMapMultiplier(UUID playerId, String mapId) {
-        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getMapProgress(playerId, mapId);
         if (mapProgress == null) {
             return BigNumber.ONE;
         }
@@ -722,26 +722,26 @@ public class AscendPlayerStore {
     }
 
     public BigNumber addMapMultiplier(UUID playerId, String mapId, BigNumber amount) {
-        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         BigNumber value = mapProgress.addMultiplier(amount);
         markDirty(playerId);
         return value;
     }
 
     public boolean hasRobot(UUID playerId, String mapId) {
-        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getMapProgress(playerId, mapId);
         return mapProgress != null && mapProgress.hasRobot();
     }
 
     public void setHasRobot(UUID playerId, String mapId, boolean hasRobot) {
-        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         mapProgress.setHasRobot(hasRobot);
         markDirty(playerId);
         notifyRobotManager(playerId);
     }
 
     public int getRobotSpeedLevel(UUID playerId, String mapId) {
-        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getMapProgress(playerId, mapId);
         if (mapProgress == null) {
             return 0;
         }
@@ -749,7 +749,7 @@ public class AscendPlayerStore {
     }
 
     public int incrementRobotSpeedLevel(UUID playerId, String mapId) {
-        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         int value = mapProgress.incrementRobotSpeedLevel();
         markDirty(playerId);
         notifyRobotManager(playerId);
@@ -777,7 +777,7 @@ public class AscendPlayerStore {
             }
 
             // Check if already unlocked
-            AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, map.getId());
+            GameplayState.MapProgress mapProgress = getMapProgress(playerId, map.getId());
             if (mapProgress != null && mapProgress.isUnlocked()) {
                 continue;
             }
@@ -793,7 +793,7 @@ public class AscendPlayerStore {
     }
 
     public int getRobotStars(UUID playerId, String mapId) {
-        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getMapProgress(playerId, mapId);
         if (mapProgress == null) {
             return 0;
         }
@@ -801,7 +801,7 @@ public class AscendPlayerStore {
     }
 
     public int evolveRobot(UUID playerId, String mapId) {
-        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        GameplayState.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         mapProgress.setRobotSpeedLevel(0);
         int newStars = mapProgress.incrementRobotStars();
         // Evolution Power applied per star (handled in AscendConstants.getRunnerMultiplierIncrement)
@@ -819,7 +819,7 @@ public class AscendPlayerStore {
         if (progress == null) {
             return 0;
         }
-        return progress.getSummitLevel(category);
+        return progress.economy().getSummitLevel(category);
     }
 
     public double getSummitXp(UUID playerId, SummitCategory category) {
@@ -827,12 +827,12 @@ public class AscendPlayerStore {
         if (progress == null) {
             return 0.0;
         }
-        return progress.getSummitXp(category);
+        return progress.economy().getSummitXp(category);
     }
 
     public double addSummitXp(UUID playerId, SummitCategory category, double amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        double newXp = progress.addSummitXp(category, amount);
+        double newXp = progress.economy().addSummitXp(category, amount);
         markDirty(playerId);
         return newXp;
     }
@@ -842,7 +842,7 @@ public class AscendPlayerStore {
         if (progress == null) {
             return Map.of();
         }
-        return progress.getSummitLevels();
+        return progress.economy().getSummitLevels();
     }
 
     public double getSummitBonusDouble(UUID playerId, SummitCategory category) {
@@ -852,12 +852,12 @@ public class AscendPlayerStore {
 
     public BigNumber getTotalVoltEarned(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getTotalVoltEarned() : BigNumber.ZERO;
+        return progress != null ? progress.economy().getTotalVoltEarned() : BigNumber.ZERO;
     }
 
     public BigNumber getSummitAccumulatedVolt(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getSummitAccumulatedVolt() : BigNumber.ZERO;
+        return progress != null ? progress.economy().getSummitAccumulatedVolt() : BigNumber.ZERO;
     }
 
     public void addSummitAccumulatedVolt(UUID playerId, BigNumber amount) {
@@ -865,7 +865,7 @@ public class AscendPlayerStore {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addSummitAccumulatedVolt(amount);
+        progress.economy().addSummitAccumulatedVolt(amount);
         markDirty(playerId);
     }
 
@@ -874,7 +874,7 @@ public class AscendPlayerStore {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addElevationAccumulatedVolt(amount);
+        progress.economy().addElevationAccumulatedVolt(amount);
         markDirty(playerId);
     }
 
@@ -883,15 +883,15 @@ public class AscendPlayerStore {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addTotalVoltEarned(amount);
-        progress.addSummitAccumulatedVolt(amount);
-        progress.addElevationAccumulatedVolt(amount);
+        progress.economy().addTotalVoltEarned(amount);
+        progress.economy().addSummitAccumulatedVolt(amount);
+        progress.economy().addElevationAccumulatedVolt(amount);
         markDirty(playerId);
     }
 
     public BigNumber getElevationAccumulatedVolt(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getElevationAccumulatedVolt() : BigNumber.ZERO;
+        return progress != null ? progress.economy().getElevationAccumulatedVolt() : BigNumber.ZERO;
     }
 
     // ========================================
@@ -900,45 +900,45 @@ public class AscendPlayerStore {
 
     public int getAscensionCount(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getAscensionCount() : 0;
+        return progress != null ? progress.gameplay().getAscensionCount() : 0;
     }
 
     public int getTranscendenceCount(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getTranscendenceCount() : 0;
+        return progress != null ? progress.gameplay().getTranscendenceCount() : 0;
     }
 
     public int getSkillTreePoints(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getSkillTreePoints() : 0;
+        return progress != null ? progress.gameplay().getSkillTreePoints() : 0;
     }
 
     public int addSkillTreePoints(UUID playerId, int amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        int newPoints = progress.addSkillTreePoints(amount);
+        int newPoints = progress.gameplay().addSkillTreePoints(amount);
         markDirty(playerId);
         return newPoints;
     }
 
     public int getAvailableSkillPoints(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getAvailableSkillPoints() : 0;
+        return progress != null ? progress.gameplay().getAvailableSkillPoints() : 0;
     }
 
     public boolean hasSkillNode(UUID playerId, SkillTreeNode node) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.hasSkillNode(node);
+        return progress != null && progress.gameplay().hasSkillNode(node);
     }
 
     public boolean unlockSkillNode(UUID playerId, SkillTreeNode node) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        if (progress.hasSkillNode(node)) {
+        if (progress.gameplay().hasSkillNode(node)) {
             return false;
         }
-        if (progress.getAvailableSkillPoints() < node.getCost()) {
+        if (progress.gameplay().getAvailableSkillPoints() < node.getCost()) {
             return false;
         }
-        progress.unlockSkillNode(node);
+        progress.gameplay().unlockSkillNode(node);
         markDirty(playerId);
         return true;
     }
@@ -948,7 +948,7 @@ public class AscendPlayerStore {
         if (progress == null) {
             return EnumSet.noneOf(SkillTreeNode.class);
         }
-        return progress.getUnlockedSkillNodes();
+        return progress.gameplay().getUnlockedSkillNodes();
     }
 
     // ========================================
@@ -957,15 +957,15 @@ public class AscendPlayerStore {
 
     public boolean hasAchievement(UUID playerId, AchievementType achievement) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.hasAchievement(achievement);
+        return progress != null && progress.gameplay().hasAchievement(achievement);
     }
 
     public boolean unlockAchievement(UUID playerId, AchievementType achievement) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        if (progress.hasAchievement(achievement)) {
+        if (progress.gameplay().hasAchievement(achievement)) {
             return false;
         }
-        progress.unlockAchievement(achievement);
+        progress.gameplay().unlockAchievement(achievement);
         markDirty(playerId);
         return true;
     }
@@ -975,29 +975,29 @@ public class AscendPlayerStore {
         if (progress == null) {
             return EnumSet.noneOf(AchievementType.class);
         }
-        return progress.getUnlockedAchievements();
+        return progress.gameplay().getUnlockedAchievements();
     }
 
     public int getTotalManualRuns(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getTotalManualRuns() : 0;
+        return progress != null ? progress.gameplay().getTotalManualRuns() : 0;
     }
 
     public int incrementTotalManualRuns(UUID playerId) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        int count = progress.incrementTotalManualRuns();
+        int count = progress.gameplay().incrementTotalManualRuns();
         markDirty(playerId);
         return count;
     }
 
     public int getConsecutiveManualRuns(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getConsecutiveManualRuns() : 0;
+        return progress != null ? progress.gameplay().getConsecutiveManualRuns() : 0;
     }
 
     public int incrementConsecutiveManualRuns(UUID playerId) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        int count = progress.incrementConsecutiveManualRuns();
+        int count = progress.gameplay().incrementConsecutiveManualRuns();
         markDirty(playerId);
         return count;
     }
@@ -1005,7 +1005,7 @@ public class AscendPlayerStore {
     public void resetConsecutiveManualRuns(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         if (progress != null) {
-            progress.resetConsecutiveManualRuns();
+            progress.gameplay().resetConsecutiveManualRuns();
             markDirty(playerId);
         }
     }
@@ -1019,13 +1019,13 @@ public class AscendPlayerStore {
     private List<String> resetMapProgress(AscendPlayerProgress progress, String firstMapId, boolean clearBestTimes, UUID playerId) {
         List<String> mapsWithRunners = new java.util.ArrayList<>();
 
-        progress.setVolt(BigNumber.ZERO);
-        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
-        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setVolt(BigNumber.ZERO);
+        progress.economy().setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setElevationAccumulatedVolt(BigNumber.ZERO);
 
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
+        for (Map.Entry<String, GameplayState.MapProgress> entry : progress.gameplay().getMapProgress().entrySet()) {
             String mapId = entry.getKey();
-            AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
+            GameplayState.MapProgress mapProgress = entry.getValue();
 
             mapProgress.setUnlocked(mapId.equals(firstMapId));
             mapProgress.setMultiplier(BigNumber.ONE);
@@ -1044,7 +1044,7 @@ public class AscendPlayerStore {
         }
 
         if (firstMapId != null && !firstMapId.isEmpty()) {
-            AscendPlayerProgress.MapProgress firstMapProgress = progress.getOrCreateMapProgress(firstMapId);
+            GameplayState.MapProgress firstMapProgress = progress.gameplay().getOrCreateMapProgress(firstMapId);
             firstMapProgress.setUnlocked(true);
         }
 
@@ -1082,8 +1082,8 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        progress.setElevationMultiplier(1);
-        progress.setAutoElevationTargetIndex(0);
+        progress.economy().setElevationMultiplier(1);
+        progress.automation().setAutoElevationTargetIndex(0);
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
 
@@ -1104,9 +1104,9 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        progress.setElevationMultiplier(1);
-        progress.setAutoElevationTargetIndex(0);
-        progress.clearSummitXp();
+        progress.economy().setElevationMultiplier(1);
+        progress.automation().setAutoElevationTargetIndex(0);
+        progress.economy().clearSummitXp();
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
         markDirty(playerId);
@@ -1123,12 +1123,12 @@ public class AscendPlayerStore {
 
     public boolean isSessionFirstRunClaimed(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isSessionFirstRunClaimed();
+        return progress != null && progress.session().isSessionFirstRunClaimed();
     }
 
     public void setSessionFirstRunClaimed(UUID playerId, boolean claimed) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setSessionFirstRunClaimed(claimed);
+        progress.session().setSessionFirstRunClaimed(claimed);
         // Don't persist - this is session-only
     }
 
@@ -1278,12 +1278,12 @@ public class AscendPlayerStore {
 
     public boolean hasSeenTutorial(UUID playerId, int bit) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.hasSeenTutorial(bit);
+        return progress != null && progress.gameplay().hasSeenTutorial(bit);
     }
 
     public void markTutorialSeen(UUID playerId, int bit) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.markTutorialSeen(bit);
+        progress.gameplay().markTutorialSeen(bit);
         markDirty(playerId);
     }
 
@@ -1394,84 +1394,84 @@ public class AscendPlayerStore {
 
     public Long getLastActiveTimestamp(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getLastActiveTimestamp() : null;
+        return progress != null ? progress.session().getLastActiveTimestamp() : null;
     }
 
     public void setLastActiveTimestamp(UUID playerId, Long timestamp) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setLastActiveTimestamp(timestamp);
+        progress.session().setLastActiveTimestamp(timestamp);
         markDirty(playerId);
     }
 
     public boolean hasUnclaimedPassive(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.hasUnclaimedPassive();
+        return progress != null && progress.session().hasUnclaimedPassive();
     }
 
     public void setHasUnclaimedPassive(UUID playerId, boolean hasUnclaimed) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setHasUnclaimedPassive(hasUnclaimed);
+        progress.session().setHasUnclaimedPassive(hasUnclaimed);
         markDirty(playerId);
     }
 
     public boolean isAutoUpgradeEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isAutoUpgradeEnabled();
+        return progress != null && progress.automation().isAutoUpgradeEnabled();
     }
 
     public void setAutoUpgradeEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoUpgradeEnabled(enabled);
+        progress.automation().setAutoUpgradeEnabled(enabled);
         markDirty(playerId);
     }
 
     public boolean isAutoEvolutionEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isAutoEvolutionEnabled();
+        return progress != null && progress.automation().isAutoEvolutionEnabled();
     }
 
     public void setAutoEvolutionEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoEvolutionEnabled(enabled);
+        progress.automation().setAutoEvolutionEnabled(enabled);
         markDirty(playerId);
     }
 
     public boolean isHideOtherRunners(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isHideOtherRunners();
+        return progress != null && progress.automation().isHideOtherRunners();
     }
 
     public void setHideOtherRunners(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setHideOtherRunners(enabled);
+        progress.automation().setHideOtherRunners(enabled);
         markDirty(playerId);
     }
 
     public boolean isHudHidden(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isHudHidden();
+        return progress != null && progress.session().isHudHidden();
     }
 
     public void setHudHidden(UUID playerId, boolean hidden) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setHudHidden(hidden);
+        progress.session().setHudHidden(hidden);
         markDirty(playerId);
     }
 
     public boolean isPlayersHidden(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isPlayersHidden();
+        return progress != null && progress.session().isPlayersHidden();
     }
 
     public void setPlayersHidden(UUID playerId, boolean hidden) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setPlayersHidden(hidden);
+        progress.session().setPlayersHidden(hidden);
         markDirty(playerId);
     }
 
     public boolean isBreakAscensionEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isBreakAscensionEnabled();
+        return progress != null && progress.automation().isBreakAscensionEnabled();
     }
 
     // ========================================
@@ -1480,48 +1480,48 @@ public class AscendPlayerStore {
 
     public boolean isAutoElevationEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isAutoElevationEnabled();
+        return progress != null && progress.automation().isAutoElevationEnabled();
     }
 
     public void setAutoElevationEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoElevationEnabled(enabled);
+        progress.automation().setAutoElevationEnabled(enabled);
         markDirty(playerId);
     }
 
     public int getAutoElevationTimerSeconds(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getAutoElevationTimerSeconds() : 0;
+        return progress != null ? progress.automation().getAutoElevationTimerSeconds() : 0;
     }
 
     public void setAutoElevationTimerSeconds(UUID playerId, int seconds) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoElevationTimerSeconds(seconds);
+        progress.automation().setAutoElevationTimerSeconds(seconds);
         markDirty(playerId);
     }
 
     public java.util.List<Long> getAutoElevationTargets(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getAutoElevationTargets() : java.util.Collections.emptyList();
+        return progress != null ? progress.automation().getAutoElevationTargets() : java.util.Collections.emptyList();
     }
 
     public void setAutoElevationTargets(UUID playerId, java.util.List<Long> targets) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoElevationTargets(targets);
+        progress.automation().setAutoElevationTargets(targets);
         markDirty(playerId);
     }
 
     public int getAutoElevationTargetIndex(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getAutoElevationTargetIndex() : 0;
+        return progress != null ? progress.automation().getAutoElevationTargetIndex() : 0;
     }
 
     public void setAutoElevationTargetIndex(UUID playerId, int index) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        if (progress.getAutoElevationTargetIndex() == index) {
+        if (progress.automation().getAutoElevationTargetIndex() == index) {
             return;
         }
-        progress.setAutoElevationTargetIndex(index);
+        progress.automation().setAutoElevationTargetIndex(index);
         markDirty(playerId);
     }
 
@@ -1531,55 +1531,55 @@ public class AscendPlayerStore {
 
     public boolean isAutoSummitEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isAutoSummitEnabled();
+        return progress != null && progress.automation().isAutoSummitEnabled();
     }
 
     public void setAutoSummitEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoSummitEnabled(enabled);
+        progress.automation().setAutoSummitEnabled(enabled);
         markDirty(playerId);
     }
 
     public int getAutoSummitTimerSeconds(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getAutoSummitTimerSeconds() : 0;
+        return progress != null ? progress.automation().getAutoSummitTimerSeconds() : 0;
     }
 
     public void setAutoSummitTimerSeconds(UUID playerId, int seconds) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoSummitTimerSeconds(seconds);
+        progress.automation().setAutoSummitTimerSeconds(seconds);
         markDirty(playerId);
     }
 
-    public java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> getAutoSummitConfig(UUID playerId) {
+    public java.util.List<AutomationConfig.AutoSummitCategoryConfig> getAutoSummitConfig(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getAutoSummitConfig() : java.util.List.of();
+        return progress != null ? progress.automation().getAutoSummitConfig() : java.util.List.of();
     }
 
-    public void setAutoSummitConfig(UUID playerId, java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> config) {
+    public void setAutoSummitConfig(UUID playerId, java.util.List<AutomationConfig.AutoSummitCategoryConfig> config) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoSummitConfig(config);
+        progress.automation().setAutoSummitConfig(config);
         markDirty(playerId);
     }
 
     public int getAutoSummitRotationIndex(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getAutoSummitRotationIndex() : 0;
+        return progress != null ? progress.automation().getAutoSummitRotationIndex() : 0;
     }
 
     public void setAutoSummitRotationIndex(UUID playerId, int index) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoSummitRotationIndex(index);
+        progress.automation().setAutoSummitRotationIndex(index);
         markDirty(playerId);
     }
 
     public void setBreakAscensionEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setBreakAscensionEnabled(enabled);
+        progress.automation().setBreakAscensionEnabled(enabled);
         markDirty(playerId);
 
         // If disabling break mode while above threshold, trigger ascension
-        if (!enabled && progress.getVolt().gte(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
+        if (!enabled && progress.economy().getVolt().gte(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
             if (ascensionManager != null
                     && ascensionManager.hasAutoAscend(playerId)
                     && isAutoAscendEnabled(playerId)) {
@@ -1596,12 +1596,12 @@ public class AscendPlayerStore {
 
     public boolean isAutoAscendEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.isAutoAscendEnabled();
+        return progress != null && progress.automation().isAutoAscendEnabled();
     }
 
     public void setAutoAscendEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setAutoAscendEnabled(enabled);
+        progress.automation().setAutoAscendEnabled(enabled);
         markDirty(playerId);
     }
 

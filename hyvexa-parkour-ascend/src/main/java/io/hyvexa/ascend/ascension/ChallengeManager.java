@@ -88,8 +88,8 @@ public class ChallengeManager {
         activeChallenges.put(playerId, new ActiveChallenge(challengeType, startedAtMs, snapshot));
 
         // Set challenge state on progress
-        progress.setActiveChallenge(challengeType);
-        progress.setChallengeStartedAtMs(startedAtMs);
+        progress.gameplay().setActiveChallenge(challengeType);
+        progress.gameplay().setChallengeStartedAtMs(startedAtMs);
 
         // Get first map ID for reset
         String firstMapId = getFirstMapId();
@@ -133,7 +133,7 @@ public class ChallengeManager {
         active.snapshot().restore(progress);
 
         // Apply permanent reward
-        progress.addChallengeReward(active.challengeType());
+        progress.gameplay().addChallengeReward(active.challengeType());
 
         // Clean up
         activeChallenges.remove(playerId);
@@ -207,7 +207,7 @@ public class ChallengeManager {
             if (prev.getId() >= challengeType.getId()) {
                 break;
             }
-            if (!progress.hasChallengeReward(prev)) {
+            if (!progress.gameplay().hasChallengeReward(prev)) {
                 return false;
             }
         }
@@ -310,9 +310,9 @@ public class ChallengeManager {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) return 1.0;
         double mult = 1.0;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_2)) mult *= 1.10;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_5)) mult *= 1.05;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_6)) mult *= 1.05;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_2)) mult *= 1.10;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_5)) mult *= 1.05;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_6)) mult *= 1.05;
         return mult;
     }
 
@@ -324,9 +324,9 @@ public class ChallengeManager {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) return 1.0;
         double mult = 1.0;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_3)) mult *= 1.10;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_5)) mult *= 1.05;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_6)) mult *= 1.05;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_3)) mult *= 1.10;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_5)) mult *= 1.05;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_6)) mult *= 1.05;
         return mult;
     }
 
@@ -338,8 +338,8 @@ public class ChallengeManager {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) return 0.0;
         double bonus = 0.0;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_4)) bonus += 0.50;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_6)) bonus += 0.25;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_4)) bonus += 0.50;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_6)) bonus += 0.25;
         return bonus;
     }
 
@@ -353,11 +353,11 @@ public class ChallengeManager {
         if (progress == null) return 1.0;
         double mult = 1.0;
         // C1: map 5 (displayOrder 4)
-        if (displayOrder == 4 && progress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
+        if (displayOrder == 4 && progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_1)) {
             mult *= 1.5;
         }
         // C7: map 4 (displayOrder 3) and map 5 (displayOrder 4)
-        if ((displayOrder == 3 || displayOrder == 4) && progress.hasChallengeReward(ChallengeType.CHALLENGE_7)) {
+        if ((displayOrder == 3 || displayOrder == 4) && progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_7)) {
             mult *= 1.5;
         }
         return mult;
@@ -370,7 +370,7 @@ public class ChallengeManager {
     public double getChallengeElevationBonus(UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) return 1.0;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_8)) return 1.25;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_8)) return 1.25;
         return 1.0;
     }
 
@@ -381,7 +381,7 @@ public class ChallengeManager {
     public double getChallengeSummitBonus(UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) return 1.0;
-        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_8)) return 1.25;
+        if (progress.gameplay().hasChallengeReward(ChallengeType.CHALLENGE_8)) return 1.25;
         return 1.0;
     }
 
@@ -434,8 +434,8 @@ public class ChallengeManager {
                                 // Restore challenge state on progress
                                 AscendPlayerProgress progress = playerStore.getPlayer(playerId);
                                 if (progress != null) {
-                                    progress.setActiveChallenge(type);
-                                    progress.setChallengeStartedAtMs(startedAt);
+                                    progress.gameplay().setActiveChallenge(type);
+                                    progress.gameplay().setChallengeStartedAtMs(startedAt);
                                 }
 
                                 LOGGER.atInfo().log("[Challenge] Restored active challenge for " + playerId + ": " + type.name());
@@ -509,7 +509,7 @@ public class ChallengeManager {
                         int typeId = rs.getInt("challenge_type_id");
                         ChallengeType type = ChallengeType.fromId(typeId);
                         if (type != null) {
-                            progress.addChallengeReward(type);
+                            progress.gameplay().addChallengeReward(type);
                         }
                     }
                 }

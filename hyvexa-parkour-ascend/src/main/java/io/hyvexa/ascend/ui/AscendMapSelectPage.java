@@ -37,6 +37,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -280,7 +281,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
 
-            AscendPlayerProgress.MapProgress mapProgress = mapState.mapProgress();
+            GameplayState.MapProgress mapProgress = mapState.mapProgress();
 
             // Apply accent color to left accent bar
             applyAccentBarVariant(commandBuilder, index, index);
@@ -316,7 +317,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             if (map == null) {
                 continue;
             }
-            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+            GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
             if (!isMapUnlockedForDisplay(playerId, map, mapProgress)) {
                 continue;
             }
@@ -354,7 +355,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         return new RefreshSnapshot(currentVolt, mapStates, hasAvailableBuyAll, hasEligibleEvolution);
     }
 
-    private boolean isMapUnlockedForDisplay(UUID playerId, AscendMap map, AscendPlayerProgress.MapProgress mapProgress) {
+    private boolean isMapUnlockedForDisplay(UUID playerId, AscendMap map, GameplayState.MapProgress mapProgress) {
         if (MapUnlockHelper.isUnlocked(mapProgress, map)) {
             return true;
         }
@@ -431,7 +432,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private RunnerCardSnapshot renderRunnerButton(UICommandBuilder commandBuilder, int index, AscendMap map,
-                                                  AscendPlayerProgress.MapProgress mapProgress, UUID playerId,
+                                                  GameplayState.MapProgress mapProgress, UUID playerId,
                                                   BigNumber currentVolt) {
         boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
         boolean hasGhostRecording = ghostStore.getRecording(playerId, map.getId()) != null;
@@ -612,7 +613,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
-        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
+        GameplayState.MapProgress mapProgress = progress.gameplay().getOrCreateMapProgress(mapId);
         if (!mapProgress.hasRobot()) {
             // Check if ghost recording exists (preserves PB across progress reset)
             GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), mapId);
@@ -781,7 +782,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         for (int i = 0; i < displayCount; i++) {
             MapRefreshState mapState = maps.get(i);
             AscendMap map = mapState.map();
-            AscendPlayerProgress.MapProgress mapProgress = mapState.mapProgress();
+            GameplayState.MapProgress mapProgress = mapState.mapProgress();
             int speedLevel = mapState.speedLevel();
             int stars = mapState.stars();
 
@@ -851,7 +852,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (index < 0 || selectedMap == null) {
             return;
         }
-        AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), selectedMap.getId());
+        GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), selectedMap.getId());
         UICommandBuilder commandBuilder = new UICommandBuilder();
         RunnerCardSnapshot snapshot = renderRunnerButton(
             commandBuilder,
@@ -898,7 +899,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
 
         // Get map progress (newly unlocked, so might be minimal data)
-        AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+        GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
 
         // Append new map card
         commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
@@ -997,7 +998,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 continue;
             }
 
-            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+            GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
@@ -1088,7 +1089,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         UPGRADE_SPEED
     }
 
-    private record MapRefreshState(AscendMap map, AscendPlayerProgress.MapProgress mapProgress,
+    private record MapRefreshState(AscendMap map, GameplayState.MapProgress mapProgress,
                                    boolean hasRobot, int speedLevel, int stars, boolean momentumActive,
                                    boolean canAffordUpgrade) {}
 
@@ -1097,7 +1098,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private record RunnerCardSnapshot(int speedLevel, int stars, boolean hasRobot) {}
 
-    private String buildMomentumText(AscendPlayerProgress.MapProgress mapProgress, UUID playerId) {
+    private String buildMomentumText(GameplayState.MapProgress mapProgress, UUID playerId) {
         boolean hasMastery = ascensionManager != null && ascensionManager.hasMomentumMastery(playerId);
         boolean hasSurge = ascensionManager != null && ascensionManager.hasMomentumSurge(playerId);
         String mult = hasMastery ? "x3" : (hasSurge ? "x2.5" : "x2");
@@ -1131,7 +1132,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 continue;
             }
 
-            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+            GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             if (mapProgress == null || !mapProgress.hasRobot()) {
                 continue;
             }

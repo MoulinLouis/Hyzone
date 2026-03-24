@@ -38,9 +38,9 @@ public class TranscendenceManager {
         if (progress == null) {
             return false;
         }
-        return progress.getVolt().gte(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
-            && progress.isBreakAscensionEnabled()
-            && progress.hasAllChallengeRewards();
+        return progress.economy().getVolt().gte(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
+            && progress.automation().isBreakAscensionEnabled()
+            && progress.gameplay().hasAllChallengeRewards();
     }
 
     /**
@@ -55,7 +55,7 @@ public class TranscendenceManager {
         }
 
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
-        int newCount = progress.incrementTranscendenceCount();
+        int newCount = progress.gameplay().incrementTranscendenceCount();
 
         // Cancel any active run
         runTracker.cancelRun(playerId);
@@ -63,38 +63,38 @@ public class TranscendenceManager {
         // === Reset all prestige state ===
 
         // Volt
-        progress.setVolt(BigNumber.ZERO);
-        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
-        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setVolt(BigNumber.ZERO);
+        progress.economy().setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.economy().setElevationAccumulatedVolt(BigNumber.ZERO);
 
         // Elevation
-        progress.setElevationMultiplier(1);
+        progress.economy().setElevationMultiplier(1);
 
         // Ascension
-        progress.setAscensionCount(0);
-        progress.setSkillTreePoints(0);
-        progress.setUnlockedSkillNodes(null);
+        progress.gameplay().setAscensionCount(0);
+        progress.gameplay().setSkillTreePoints(0);
+        progress.gameplay().setUnlockedSkillNodes(null);
 
         // Summit
-        progress.clearSummitXp();
+        progress.economy().clearSummitXp();
 
         // Challenges (permanent rewards wiped — this is what makes transcendence special)
-        progress.setCompletedChallengeRewards(null);
+        progress.gameplay().setCompletedChallengeRewards(null);
 
         // Automation toggles
-        progress.setBreakAscensionEnabled(false);
-        progress.setAutoUpgradeEnabled(false);
-        progress.setAutoEvolutionEnabled(false);
-        progress.setAutoElevationEnabled(false);
-        progress.setAutoElevationTargetIndex(0);
-        progress.setAutoSummitEnabled(false);
+        progress.automation().setBreakAscensionEnabled(false);
+        progress.automation().setAutoUpgradeEnabled(false);
+        progress.automation().setAutoEvolutionEnabled(false);
+        progress.automation().setAutoElevationEnabled(false);
+        progress.automation().setAutoElevationTargetIndex(0);
+        progress.automation().setAutoSummitEnabled(false);
 
         // Ascension timer
-        progress.setFastestAscensionMs(null);
-        progress.setAscensionStartedAt(System.currentTimeMillis());
+        progress.gameplay().setFastestAscensionMs(null);
+        progress.gameplay().setAscensionStartedAt(System.currentTimeMillis());
 
         // === Map progress reset (PB-preserving) ===
-        progress.resetMapProgressPreservingPBs();
+        progress.gameplay().resetMapProgressPreservingPBs();
 
         // === DB cleanup ===
         // markResetPending handles: maps, summit, skills, achievements

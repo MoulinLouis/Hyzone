@@ -513,8 +513,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
                     // Initialize ascension timer on first join (if not already set)
                     AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
-                    if (progress.getAscensionStartedAt() == null) {
-                        progress.setAscensionStartedAt(System.currentTimeMillis());
+                    if (progress.gameplay().getAscensionStartedAt() == null) {
+                        progress.gameplay().setAscensionStartedAt(System.currentTimeMillis());
                     }
 
                     playerStore.markDirty(playerId);

@@ -184,7 +184,7 @@ public class MineGateChecker {
 
     public boolean canAccessMine(UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        return progress != null && progress.getAscensionCount() >= 1;
+        return progress != null && progress.gameplay().getAscensionCount() >= 1;
     }
 
     public boolean denyMineAccess(UUID playerId, Player player) {

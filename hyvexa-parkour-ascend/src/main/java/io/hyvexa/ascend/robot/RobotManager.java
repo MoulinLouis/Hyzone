@@ -26,6 +26,8 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.AutomationConfig;
+import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostSample;
@@ -679,9 +681,9 @@ public class RobotManager {
         }
 
         Set<String> activeKeys = new HashSet<>();
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> mapEntry : progress.getMapProgress().entrySet()) {
+        for (Map.Entry<String, GameplayState.MapProgress> mapEntry : progress.gameplay().getMapProgress().entrySet()) {
             String mapId = mapEntry.getKey();
-            AscendPlayerProgress.MapProgress mapProgress = mapEntry.getValue();
+            GameplayState.MapProgress mapProgress = mapEntry.getValue();
             if (mapId == null || mapProgress == null || !mapProgress.hasRobot()) {
                 continue;
             }
@@ -1070,13 +1072,13 @@ public class RobotManager {
     private void autoUpgradeRunners(UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) return;
-        if (!progress.isAutoUpgradeEnabled()) return;
+        if (!progress.automation().isAutoUpgradeEnabled()) return;
 
         List<AscendMap> maps = mapStore.listMapsSorted();
 
         // First priority: buy runners on unlocked maps that have been completed (free)
         for (AscendMap map : maps) {
-            AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
+            GameplayState.MapProgress mp = progress.gameplay().getMapProgress().get(map.getId());
             if (mp == null || !mp.isUnlocked() || mp.hasRobot()) continue;
 
             // Accept ghost recording OR best time as proof of completion
@@ -1090,11 +1092,11 @@ public class RobotManager {
         // Auto-evolve eligible maps (free, all at once — each map independent of others)
         // Runs before speed upgrades so a map at max level evolves immediately,
         // even while other maps still have affordable speed upgrades.
-        if (progress.isAutoEvolutionEnabled()) {
+        if (progress.automation().isAutoEvolutionEnabled()) {
             if (ascensionManager != null && ascensionManager.hasAutoEvolution(playerId)) {
                 boolean anyEvolved = false;
                 for (AscendMap map : maps) {
-                    AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
+                    GameplayState.MapProgress mp = progress.gameplay().getMapProgress().get(map.getId());
                     if (mp == null || !mp.hasRobot()) continue;
                     if (mp.getRobotSpeedLevel() >= AscendConstants.MAX_SPEED_LEVEL
                             && mp.getRobotStars() < AscendConstants.MAX_ROBOT_STARS) {
@@ -1110,12 +1112,12 @@ public class RobotManager {
         }
 
         // Speed upgrade: find cheapest across all maps (one per call for smooth visual)
-        BigNumber volt = progress.getVolt();
+        BigNumber volt = progress.economy().getVolt();
         String cheapestMapId = null;
         BigNumber cheapestCost = null;
 
         for (AscendMap map : maps) {
-            AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
+            GameplayState.MapProgress mp = progress.gameplay().getMapProgress().get(map.getId());
             if (mp == null || !mp.hasRobot()) continue;
 
             int speedLevel = mp.getRobotSpeedLevel();
@@ -1157,32 +1159,32 @@ public class RobotManager {
     private void autoElevatePlayer(UUID playerId, long now) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) return;
-        if (!progress.isAutoElevationEnabled()) return;
+        if (!progress.automation().isAutoElevationEnabled()) return;
 
-        List<Long> targets = progress.getAutoElevationTargets();
-        int targetIndex = progress.getAutoElevationTargetIndex();
+        List<Long> targets = progress.automation().getAutoElevationTargets();
+        int targetIndex = progress.automation().getAutoElevationTargetIndex();
 
         // Skip targets already surpassed by current multiplier
-        int currentLevel = progress.getElevationMultiplier();
+        int currentLevel = progress.economy().getElevationMultiplier();
         long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
         while (targetIndex < targets.size() && targets.get(targetIndex) <= currentActualMultiplier) {
             targetIndex++;
         }
-        if (targetIndex != progress.getAutoElevationTargetIndex()) {
+        if (targetIndex != progress.automation().getAutoElevationTargetIndex()) {
             playerStore.setAutoElevationTargetIndex(playerId, targetIndex);
         }
 
         if (targets.isEmpty() || targetIndex >= targets.size()) return;
 
         // Check timer
-        int timerSeconds = progress.getAutoElevationTimerSeconds();
+        int timerSeconds = progress.automation().getAutoElevationTimerSeconds();
         if (timerSeconds > 0) {
             Long lastMs = lastAutoElevationMs.get(playerId);
             if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
         }
 
         // Calculate purchasable levels
-        BigNumber accumulatedVolt = progress.getElevationAccumulatedVolt();
+        BigNumber accumulatedVolt = progress.economy().getElevationAccumulatedVolt();
         AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVolt, BigNumber.ONE);
         if (result.levels <= 0) return;
 
@@ -1249,27 +1251,27 @@ public class RobotManager {
     private void autoSummitPlayer(UUID playerId, long now) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) return;
-        if (!progress.isAutoSummitEnabled()) return;
+        if (!progress.automation().isAutoSummitEnabled()) return;
 
         if (summitManager == null) return;
 
         if (!summitManager.canSummit(playerId)) return;
 
         // Check timer
-        int timerSeconds = progress.getAutoSummitTimerSeconds();
+        int timerSeconds = progress.automation().getAutoSummitTimerSeconds();
         if (timerSeconds > 0) {
             Long lastMs = lastAutoSummitMs.get(playerId);
             if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
         }
 
-        List<AscendPlayerProgress.AutoSummitCategoryConfig> config = progress.getAutoSummitConfig();
+        List<AutomationConfig.AutoSummitCategoryConfig> config = progress.automation().getAutoSummitConfig();
         AscendConstants.SummitCategory[] categories = AscendConstants.SummitCategory.values();
 
         // Target-based: iterate all categories and summit the first one that can reach its target
         for (int i = 0; i < categories.length; i++) {
             if (i >= config.size()) continue;
 
-            AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(i);
+            AutomationConfig.AutoSummitCategoryConfig catConfig = config.get(i);
             if (!catConfig.isEnabled()) continue;
             int targetLevel = catConfig.getTargetLevel();
             if (targetLevel <= 0) continue;

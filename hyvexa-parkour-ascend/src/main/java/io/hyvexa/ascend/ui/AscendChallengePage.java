@@ -93,7 +93,7 @@ public class AscendChallengePage extends BaseAscendPage {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
 
         // AP Multiplier display
-        int apMultiplier = 1 + (progress != null ? progress.getCompletedChallengeCount() : 0);
+        int apMultiplier = 1 + (progress != null ? progress.gameplay().getCompletedChallengeCount() : 0);
         commandBuilder.set("#ApMultiplier.Text", "AP Multiplier: x" + apMultiplier);
         ChallengeType activeType = challengeManager.getActiveChallenge(playerId);
         ChallengeType[] types = ChallengeType.values();
@@ -119,7 +119,7 @@ public class AscendChallengePage extends BaseAscendPage {
             commandBuilder.set(p + "#RewardLabel.Text", buildRewardDescription(type));
 
             // Reward status (claimed or not)
-            boolean rewardClaimed = progress != null && progress.hasChallengeReward(type);
+            boolean rewardClaimed = progress != null && progress.gameplay().hasChallengeReward(type);
             if (rewardClaimed) {
                 commandBuilder.set(p + "#RewardStatus.Text", "Reward: Claimed");
                 commandBuilder.set(p + "#RewardStatus.Style.TextColor", "#10b981");
@@ -277,12 +277,12 @@ public class AscendChallengePage extends BaseAscendPage {
                                 AscendPlayerProgress progress) {
         commandBuilder.set("#BreakCard.Visible", true);
 
-        if (progress != null && progress.hasAllChallengeRewards()) {
+        if (progress != null && progress.gameplay().hasAllChallengeRewards()) {
             // Unlocked — show toggle button
             commandBuilder.set("#BreakButton.Visible", true);
             commandBuilder.set("#BreakLocked.Visible", false);
 
-            boolean active = progress.isBreakAscensionEnabled();
+            boolean active = progress.automation().isBreakAscensionEnabled();
             commandBuilder.set("#BreakButton.Text", active ? "Disable" : "Break");
             commandBuilder.set("#BreakStatus.Text", active ? "ACTIVE" : "OFF");
             commandBuilder.set("#BreakStatus.Style.TextColor", active ? "#a855f7" : "#64748b");
@@ -296,7 +296,7 @@ public class AscendChallengePage extends BaseAscendPage {
 
             ChallengeType[] types = ChallengeType.values();
             for (int i = 0; i < types.length; i++) {
-                boolean completed = progress != null && progress.hasChallengeReward(types[i]);
+                boolean completed = progress != null && progress.gameplay().hasChallengeReward(types[i]);
                 commandBuilder.set("#Bar" + (i + 1) + ".Visible", completed);
             }
         }
@@ -311,13 +311,13 @@ public class AscendChallengePage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null || !progress.hasAllChallengeRewards()) {
+        if (progress == null || !progress.gameplay().hasAllChallengeRewards()) {
             player.sendMessage(Message.raw("[Challenge] Complete all challenges first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
 
-        boolean newState = !progress.isBreakAscensionEnabled();
+        boolean newState = !progress.automation().isBreakAscensionEnabled();
         playerStore.setBreakAscensionEnabled(playerId, newState);
 
         if (newState) {

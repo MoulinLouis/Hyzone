@@ -13,6 +13,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
@@ -107,9 +108,9 @@ class RobotRefreshSystem {
         Map<String, RobotState> robots = manager.getRobots();
         GhostStore ghostStore = manager.getGhostStore();
         Set<String> activeKeys = new HashSet<>();
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> mapEntry : progress.getMapProgress().entrySet()) {
+        for (Map.Entry<String, GameplayState.MapProgress> mapEntry : progress.gameplay().getMapProgress().entrySet()) {
             String mapId = mapEntry.getKey();
-            AscendPlayerProgress.MapProgress mapProgress = mapEntry.getValue();
+            GameplayState.MapProgress mapProgress = mapEntry.getValue();
             if (mapId == null || mapProgress == null || !mapProgress.hasRobot()) {
                 continue;
             }

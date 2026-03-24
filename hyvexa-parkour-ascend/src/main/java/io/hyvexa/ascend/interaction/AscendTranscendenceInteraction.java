@@ -46,7 +46,7 @@ public class AscendTranscendenceInteraction extends AbstractAscendPageInteractio
 
         UUID playerId = playerRef.getUuid();
         AscendPlayerProgress progress = services.playerStore().getPlayer(playerId);
-        if (progress == null || !progress.hasAllChallengeRewards()) {
+        if (progress == null || !progress.gameplay().hasAllChallengeRewards()) {
             player.sendMessage(Message.raw("[Transcendence] Complete all challenges to unlock Transcendence.")
                 .color(SystemMessageUtils.SECONDARY));
             return false;
