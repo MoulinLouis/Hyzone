@@ -496,7 +496,7 @@ public class RunTracker {
         }
         ActiveRun run = activeRuns.get(playerRef.getUuid());
         Vector3d position = transform.getPosition();
-        if (shouldTeleportFromVoid(position.getY())) {
+        if (TrackerUtils.shouldTeleportFromVoid(position.getY(), settingsStore)) {
             if (run == null) {
                 teleporter.teleportToSpawn(ref, store, transform, buffer);
                 teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
@@ -515,7 +515,7 @@ public class RunTracker {
             return;
         }
         if (run == null) {
-            long fallTimeoutMs = getFallRespawnTimeoutMs();
+            long fallTimeoutMs = TrackerUtils.getFallRespawnTimeoutMs(settingsStore);
             boolean allowOpIdleFall = settingsStore != null && settingsStore.isIdleFallRespawnForOp();
             if (fallTimeoutMs > 0 && (allowOpIdleFall || !PermissionUtils.isOp(player))
                     && shouldRespawnFromFall(getIdleFallState(playerRef.getUuid()), position.getY(),
@@ -569,7 +569,7 @@ public class RunTracker {
             run.lastValidFlyPosition = new double[]{position.getX(), position.getY(), position.getZ()};
         }
         validator.checkCheckpoints(run, playerRef, player, position, map, previousPosition, previousElapsedMs, deltaMs);
-        long fallTimeoutMs = getFallRespawnTimeoutMs();
+        long fallTimeoutMs = TrackerUtils.getFallRespawnTimeoutMs(settingsStore);
         if (map.isFreeFallEnabled()) {
             run.fallState.fallStartTime = null;
             run.fallState.lastY = position.getY();
@@ -670,16 +670,6 @@ public class RunTracker {
                 Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(".").color(SystemMessageUtils.SECONDARY)
         );
-    }
-
-    private long getFallRespawnTimeoutMs() {
-        double seconds = settingsStore != null
-                ? settingsStore.getFallRespawnSeconds()
-                : ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
-        if (seconds <= 0) {
-            return 0L;
-        }
-        return (long) Math.max(1L, seconds * 1000.0);
     }
 
     private boolean shouldRespawnFromFall(ActiveRun run, double currentY, MovementStates movementStates,
@@ -988,13 +978,6 @@ public class RunTracker {
 
     private TrackerUtils.FallState getIdleFallState(UUID playerId) {
         return idleFalls.computeIfAbsent(playerId, ignored -> new TrackerUtils.FallState());
-    }
-
-    private boolean shouldTeleportFromVoid(double currentY) {
-        double voidY = settingsStore != null
-                ? settingsStore.getFallFailsafeVoidY()
-                : ParkourConstants.FALL_FAILSAFE_VOID_Y;
-        return Double.isFinite(voidY) && currentY <= voidY;
     }
 
     public void markPlayerReady(PlayerRef playerRef) {

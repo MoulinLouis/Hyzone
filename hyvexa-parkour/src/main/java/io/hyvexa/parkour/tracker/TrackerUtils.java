@@ -149,4 +149,27 @@ public final class TrackerUtils {
             store.addComponent(ref, Teleport.getComponentType(), teleport);
         }
     }
+
+    /**
+     * Returns the fall respawn timeout in milliseconds from settings, or the default.
+     */
+    public static long getFallRespawnTimeoutMs(io.hyvexa.parkour.data.SettingsStore settingsStore) {
+        double seconds = settingsStore != null
+                ? settingsStore.getFallRespawnSeconds()
+                : io.hyvexa.parkour.ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
+        if (seconds <= 0) {
+            return 0L;
+        }
+        return (long) Math.max(1L, seconds * 1000.0);
+    }
+
+    /**
+     * Returns whether the player is below the void Y threshold.
+     */
+    public static boolean shouldTeleportFromVoid(double currentY, io.hyvexa.parkour.data.SettingsStore settingsStore) {
+        double voidY = settingsStore != null
+                ? settingsStore.getFallFailsafeVoidY()
+                : io.hyvexa.parkour.ParkourConstants.FALL_FAILSAFE_VOID_Y;
+        return Double.isFinite(voidY) && currentY <= voidY;
+    }
 }
