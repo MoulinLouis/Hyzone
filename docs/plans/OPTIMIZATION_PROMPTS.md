@@ -46,8 +46,8 @@ Concise prompts to send one at a time. Each one is a self-contained optimization
 ### 12. Split AscendPlayerProgress
 > AscendPlayerProgress.java (774 lines, 93 public methods) mixes economy state, gameplay state, automation config, and session state. Split into: `EconomyState` (volt, elevation, summit XP), `GameplayState` (map progress, ascension), `AutomationConfig` (auto-upgrade/elevation/summit settings), `SessionState` (timers, passive earnings).
 
-### 13. Merge/Refactor AscendPlayerStore + AscendPlayerPersistence
-> AscendPlayerStore (1590 lines) and AscendPlayerPersistence (1281 lines) are 2871 lines total for one concept (player data). The boundary between them is unclear. Either merge into one clean class with internal separation, or establish a clear contract: Store = cache/API surface, Persistence = SQL only.
+### 13. ~~Merge/Refactor AscendPlayerStore + AscendPlayerPersistence~~ ✅
+> Done. Chose Option B (clear contract). Moved inline SQL from Store into Persistence.deleteAllPlayerData(), consolidated duplicated table lists into CHILD_TABLES constant, removed unused SQL imports from Store, added contract javadoc. Store = cache + business logic + public API. Persistence = SQL + dirty tracking + save scheduling.
 
 ---
 
