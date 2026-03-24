@@ -100,7 +100,11 @@ public class VoteManager {
         pollInProgress.set(false);
         consecutiveBackendFailures.set(0);
         pollBackoffUntilMs = 0L;
+        HttpClient client = httpClient;
         httpClient = null;
+        if (client != null) {
+            client.close();
+        }
         voteStore = null;
         featherStore = null;
         shutdownExecutors();
