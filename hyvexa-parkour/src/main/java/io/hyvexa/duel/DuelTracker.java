@@ -541,7 +541,9 @@ public class DuelTracker {
             state.fallState.reset();
             fallTimeoutMs = 0L;
         }
-        if (fallTimeoutMs > 0 && shouldRespawnFromFall(state, position.getY(), movementStates, fallTimeoutMs)) {
+        if (fallTimeoutMs > 0 && state != null
+                && TrackerUtils.shouldRespawnFromFall(state.fallState, position.getY(),
+                        TrackerUtils.isFallTrackingBlocked(movementStates), fallTimeoutMs)) {
             teleportToRespawn(context.ref, context.store, state, map);
             state.fallState.reset();
             return;
@@ -993,14 +995,6 @@ public class DuelTracker {
         }
     }
 
-    private boolean shouldRespawnFromFall(DuelPlayerState state, double currentY, MovementStates movementStates,
-                                          long fallTimeoutMs) {
-        if (state == null || fallTimeoutMs <= 0L) {
-            return false;
-        }
-        return TrackerUtils.shouldRespawnFromFall(state.fallState, currentY,
-                TrackerUtils.isFallTrackingBlocked(movementStates), fallTimeoutMs);
-    }
 
     private int resolveCheckpointIndex(DuelPlayerState state, Map map) {
         if (state == null || map == null) {
