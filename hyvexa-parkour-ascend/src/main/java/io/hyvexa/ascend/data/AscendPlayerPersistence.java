@@ -32,13 +32,29 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
 /**
- * Handles all database persistence and leaderboard queries for Ascend player data.
+ * Handles all database I/O for Ascend player data.
  * Package-private — accessed only through {@link AscendPlayerStore}.
+ *
+ * <p><b>Contract:</b> This class owns all SQL operations, dirty tracking,
+ * save scheduling, leaderboard queries, and serialization. It never exposes
+ * game-logic decisions — those belong in {@link AscendPlayerStore}.</p>
  */
 class AscendPlayerPersistence {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long LEADERBOARD_CACHE_TTL_MS = 30_000;
+
+    /** Child tables deleted during per-player reset. Order does not matter (no FK constraints). */
+    private static final String[] CHILD_TABLES = {
+        "ascend_player_maps",
+        "ascend_player_summit",
+        "ascend_player_skills",
+        "ascend_player_achievements",
+        "ascend_player_cats",
+        "ascend_ghost_recordings",
+        "ascend_challenges",
+        "ascend_challenge_records"
+    };
 
     private final ConnectionProvider db;
     private final Map<UUID, AscendPlayerProgress> players;
@@ -883,19 +899,8 @@ class AscendPlayerPersistence {
         }
 
         String playerIdStr = playerId.toString();
-        String[] tables = {
-            "ascend_player_maps",
-            "ascend_player_summit",
-            "ascend_player_skills",
-            "ascend_player_achievements",
-            "ascend_player_cats",
-            "ascend_ghost_recordings",
-            "ascend_challenges",
-            "ascend_challenge_records"
-        };
-
         this.db.withTransaction(conn -> {
-            for (String table : tables) {
+            for (String table : CHILD_TABLES) {
                 try (PreparedStatement stmt = conn.prepareStatement(
                     "DELETE FROM " + table + " WHERE player_uuid = ?")) {
                     DatabaseManager.applyQueryTimeout(stmt);
@@ -904,6 +909,36 @@ class AscendPlayerPersistence {
                 }
             }
         });
+    }
+
+    /**
+     * Delete ALL player data from every Ascend table (server-wide wipe).
+     * Deletes child tables first, then the parent ascend_players table.
+     *
+     * @return true if the wipe committed successfully
+     */
+    boolean deleteAllPlayerData() {
+        if (!this.db.isInitialized()) {
+            return false;
+        }
+
+        boolean wiped = this.db.withTransaction(conn -> {
+            for (String table : CHILD_TABLES) {
+                try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + table)) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    stmt.executeUpdate();
+                }
+            }
+            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM ascend_players")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+            }
+        });
+        if (wiped) {
+            LOGGER.atInfo().log("All player progress wiped from database (%d tables cleared)",
+                    CHILD_TABLES.length + 1);
+        }
+        return wiped;
     }
 
     // ========================================
