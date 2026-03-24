@@ -43,8 +43,8 @@ Concise prompts to send one at a time. Each one is a self-contained optimization
 ### 11. Split RobotManager & MineRobotManager
 > RobotManager (1685 lines) and MineRobotManager (999 lines) duplicate spawn/despawn/visibility/orphan-cleanup patterns. Extract `NPCLifecycleManager` base class with shared entity lifecycle, then have both extend it with domain-specific logic (runner movement vs mining behavior).
 
-### 12. Split AscendPlayerProgress
-> AscendPlayerProgress.java (774 lines, 93 public methods) mixes economy state, gameplay state, automation config, and session state. Split into: `EconomyState` (volt, elevation, summit XP), `GameplayState` (map progress, ascension), `AutomationConfig` (auto-upgrade/elevation/summit settings), `SessionState` (timers, passive earnings).
+### 12. ~~Split AscendPlayerProgress~~ ✅
+> Done. Split into 4 focused state classes: `EconomyState` (volt, elevation, summit XP), `GameplayState` (map progress, ascension, challenges, transcendence), `AutomationConfig` (auto-upgrade/elevation/summit settings), `SessionState` (passive earnings, UI settings). AscendPlayerProgress reduced from 774 to 14 lines, now a thin composition class with `economy()`, `gameplay()`, `automation()`, `session()` accessors. All 24 consumers migrated.
 
 ### 13. Merge/Refactor AscendPlayerStore + AscendPlayerPersistence
 > AscendPlayerStore (1590 lines) and AscendPlayerPersistence (1281 lines) are 2871 lines total for one concept (player data). The boundary between them is unclear. Either merge into one clean class with internal separation, or establish a clear contract: Store = cache/API surface, Persistence = SQL only.
