@@ -1,3 +1,5 @@
+> **Note:** Build commands in this plan predate the WSL2 migration. Use native `./gradlew` commands — see [DEVELOPMENT_ENVIRONMENT.md](../DEVELOPMENT_ENVIRONMENT.md).
+
 # Unit Test Expansion Plan
 
 ## Current State

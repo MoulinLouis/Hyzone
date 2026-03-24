@@ -1,6 +1,6 @@
 # Hyguns 3.6.1 - Reference
 
-Modpack location: `run/mods/Hyguns/` | Plugin: `HygunsPlugin-3.6.1.jar` | Dependency: `MultipleHUD-1.0.6.jar`
+Modpack location: `mods/Hyguns/` (server working directory) | Plugin: `HygunsPlugin-3.6.1.jar` | Dependency: `MultipleHUD-1.0.6.jar`
 
 ## Migration Note (3.3.0 -> 3.6.1)
 
@@ -119,7 +119,7 @@ Reference `Gun_Shoot_Fail` or `Flamethrower_Shoot_Fail` in the `FailInteractionI
 ## JSON Customization
 
 ### Creating a custom weapon
-1. Copy an existing item JSON from `run/mods/Hyguns/Server/Item/Items/Weapons/` (e.g., `AK47.json`)
+1. Copy an existing item JSON from `mods/Hyguns/Server/Item/Items/Weapons/` (e.g., `AK47.json`)
 2. Modify the `HyGuns.Settings` block (damage, fire rate, ammo capacity, etc.)
 3. Change the model/texture in `Common/Items/Weapons/`
 4. Optional: create a custom sound in `Common/Sounds/` + sound event in `Server/Audio/SoundEvents/`
@@ -176,7 +176,7 @@ Can be added to any weapon. `Ability1`/`Ability2` for zoom in/out.
 ## File Structure
 
 ```
-run/mods/Hyguns/
+mods/Hyguns/
   manifest.json
   Common/
     Blocks/Benches/          # Gunsmith bench model/texture

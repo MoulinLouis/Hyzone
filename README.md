@@ -79,24 +79,16 @@ The commands below document the repository's development workflow. They do not g
 ### Build
 ```bash
 ./gradlew build
-# Windows: gradlew.bat build
 ```
 Produces shaded plugin JARs per module that bundle runtime dependencies.
 
 ### Deploy
 ```bash
-./gradlew stagePlugins   # Copy JARs to run/mods
-./gradlew collectPlugins # Copy JARs to build/libs
+./gradlew stagePlugins     # Copy JARs to stageModsDir (configured per machine)
+./gradlew collectPlugins   # Copy JARs to build/libs
 ```
 
-### Run
-Use the `HytaleServerLaunch` IntelliJ run config (generated from `hyvexa-launch`) or set your existing `HytaleServer` config to module `hyvexa-launch.main`; both must launch from the `run/` directory.
-
-The Hytale server JAR is expected at:
-```
-%USERPROFILE%/AppData/Roaming/Hytale/install/<patchline>/package/game/latest/Server/HytaleServer.jar
-```
-Where `<patchline>` is configured in `gradle.properties`.
+`stagePlugins` copies JARs to the directory set in `~/.gradle/gradle.properties` (`stageModsDir`). See [docs/DEVELOPMENT_ENVIRONMENT.md](docs/DEVELOPMENT_ENVIRONMENT.md) for the full hybrid WSL2/Windows setup.
 
 ## Project Layout
 
@@ -112,7 +104,7 @@ hyvexa-votifier/                # Vote receiver plugin
 hyvexa-launch/                  # IntelliJ launch classpath module
 discord-bot/                    # Node.js Discord bot for account linking
 docs/                           # All documentation and module landing pages
-run/                            # Working directory and runtime config
+docs/DEVELOPMENT_ENVIRONMENT.md # Build/deploy workflow and runtime path reference
 
 hyvexa-*/src/main/java/         # Java sources
 hyvexa-*/src/main/resources/
@@ -123,9 +115,10 @@ hyvexa-*/src/main/resources/
 ## Configuration
 
 - All runtime data is stored in MySQL and loaded into memory on startup
-- Working directory is `run/`, runtime config lives in `mods/Parkour/`
+- Runtime config lives in `mods/Parkour/` relative to the server working directory
 - DB config: `mods/Parkour/database.json` (gitignored)
 - Ascend runtime flags: `mods/Parkour/ascend.properties`
+- See [docs/DEVELOPMENT_ENVIRONMENT.md](docs/DEVELOPMENT_ENVIRONMENT.md) for the full environment setup
 
 ## Documentation
 

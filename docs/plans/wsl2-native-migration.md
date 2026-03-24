@@ -1,3 +1,5 @@
+> **Status: Completed.** For the current setup, see [DEVELOPMENT_ENVIRONMENT.md](../DEVELOPMENT_ENVIRONMENT.md).
+
 # Migration Plan — Move Project to Native WSL2 Filesystem
 
 ## Why

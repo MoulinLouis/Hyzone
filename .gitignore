@@ -7,7 +7,6 @@ build/
 !**/src/test/**/build/
 
 ### Hytale ###
-run/
 Parkour/database.json
 
 ### IntelliJ IDEA ###

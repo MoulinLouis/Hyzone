@@ -27,7 +27,7 @@ Player receives vexa/rank/item in-game
 
 ### Server-side secret key
 
-File: `run/mods/Parkour/tebex.json` (gitignored, server-only)
+File: `mods/Parkour/tebex.json` (gitignored, relative to server working directory)
 
 ```json
 {
@@ -179,7 +179,7 @@ httpThread.start();
 
 ## Security Notes
 
-- Secret key is **server-side only** (`tebex.json` in gitignored `run/mods/`)
+- Secret key is **server-side only** (`tebex.json` in gitignored `mods/Parkour/`)
 - Checkout links are per-player, per-package, time-limited (~15 min)
 - Post-purchase commands run as console (trusted, no OP bypass needed)
 - Admin commands (`pk admin vexa/rank`) require OP when run by a player

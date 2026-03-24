@@ -417,7 +417,7 @@ All data is stored in MySQL with in-memory caching for performance.
 #### Database Configuration
 Credentials stored in `mods/Parkour/database.json` (gitignored, relative to server working dir):
 
-**Note**: Code references use both `mods/Parkour/` and `run/mods/Parkour/` inconsistently. The runtime path is `run/mods/Parkour/` (relative to project root), but production servers use `mods/Parkour/` (relative to server working directory). This inconsistency should be standardized in future refactoring.
+The canonical runtime path is `mods/Parkour/` relative to the server working directory. See [DEVELOPMENT_ENVIRONMENT.md](DEVELOPMENT_ENVIRONMENT.md) for the full path conventions.
 
 ```json
 {

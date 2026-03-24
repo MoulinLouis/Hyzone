@@ -6,7 +6,7 @@ All modules share a single MySQL database via `DatabaseManager` (in `hyvexa-core
 Tables are grouped by the subsystem that owns them.
 
 Runtime notes:
-- Server working directory is `run/`, so runtime config lives in `mods/Parkour/`
+- Runtime config lives in `mods/Parkour/` relative to the server working directory (see [DEVELOPMENT_ENVIRONMENT.md](DEVELOPMENT_ENVIRONMENT.md))
 - `mods/Parkour/database.json` holds MySQL credentials (gitignored)
 - MySQL is the source of truth for persisted state; some runtime values are intentionally computed from constants (for example Ascend map balance values from `display_order`)
 - `DatabaseManager` lives in `hyvexa-core` and is shared across modules

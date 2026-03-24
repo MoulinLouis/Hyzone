@@ -16,6 +16,7 @@ Quick reference for AI agents. Find the right doc, know when to update it.
 | Hytale API gotchas | `HYTALE_API.md` | New API quirk discovered or workaround found |
 | Hytale Custom UI reference | `hytale-custom-ui/` | Hytale UI system changes (external reference) |
 | Release history (dev) | `../CHANGELOG.md` | Any player-visible change shipped |
+| Development environment & workflow | `DEVELOPMENT_ENVIRONMENT.md` | Build/deploy process, runtime paths, or dev setup changes |
 | Release history (player-facing) | `PLAYER_PATCH_NOTES.md` | New version released to players |
 | Tebex store integration | `TEBEX_INTEGRATION.md` | Store packages or webhook config changes |
 | Wardrobe mod assets | `WARDROBE_MOD.md` | Wardrobe asset structure or JSON format changes |
@@ -60,10 +61,17 @@ Each module has a README documenting its scope, managers, stores, tables, and ke
 
 | Directory | Content |
 |-----------|---------|
-| `plans/` | Implementation plans (dated `YYYY-MM-DD-*.md`) |
+| `plans/` | Implementation plans (dated `YYYY-MM-DD-*.md`) — working or historical documents, not canonical operational guidance |
 | `hytale-custom-ui/` | Hytale Custom UI type documentation (120+ files) — consult before writing `.ui` files |
 | `items/` | Cosmetic item JSON definitions |
 | `weapons/` | Weapon reference docs |
+
+## Path Conventions
+
+- Use `mods/...` for logical runtime paths (relative to the server working directory)
+- Use `hyvexa_server/...` only when giving the concrete Windows example
+- Keep machine-specific overrides (like `stageModsDir`) out of committed config
+- See `DEVELOPMENT_ENVIRONMENT.md` for the full hybrid layout
 
 ## Changelog Ownership
 
