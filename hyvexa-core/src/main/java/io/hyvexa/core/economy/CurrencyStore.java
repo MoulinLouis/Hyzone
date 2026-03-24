@@ -15,5 +15,11 @@ public interface CurrencyStore {
 
     long removeBalance(UUID playerId, long amount);
 
+    /**
+     * Atomically deduct the given amount only if the player has sufficient balance.
+     * Returns true if the deduction was applied, false if the balance was insufficient.
+     */
+    boolean deductIfSufficient(UUID playerId, long amount);
+
     void evictPlayer(UUID playerId);
 }

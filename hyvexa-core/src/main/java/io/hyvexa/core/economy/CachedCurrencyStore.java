@@ -129,6 +129,36 @@ abstract class CachedCurrencyStore implements CurrencyStore {
         return modifyBalance(playerId, current -> Math.max(0, current - amount));
     }
 
+    public boolean deductIfSufficient(UUID playerId, long amount) {
+        if (playerId == null || amount <= 0) {
+            return false;
+        }
+        boolean[] success = new boolean[1];
+        CachedBalance previous = cache.get(playerId);
+        cache.compute(playerId, (uuid, cached) -> {
+            long current = (cached != null && !cached.isStale()) ? cached.value : loadFromDatabase(uuid);
+            if (current < amount) {
+                success[0] = false;
+                return cached != null ? cached : new CachedBalance(current);
+            }
+            success[0] = true;
+            return new CachedBalance(current - amount);
+        });
+        if (!success[0]) {
+            return false;
+        }
+        long newBalance = cache.get(playerId).value;
+        if (!persistToDatabase(playerId, newBalance)) {
+            if (previous == null) {
+                cache.remove(playerId);
+            } else {
+                cache.put(playerId, previous);
+            }
+            return false;
+        }
+        return true;
+    }
+
     public void evictPlayer(UUID playerId) {
         if (playerId != null) {
             cache.remove(playerId);
