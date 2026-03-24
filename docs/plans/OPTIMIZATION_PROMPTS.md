@@ -53,8 +53,10 @@ Concise prompts to send one at a time. Each one is a self-contained optimization
 
 ## Medium Impact - Pattern Extraction
 
-### 14. Extract JDBC Template Pattern
-> 47 occurrences of `try (Connection conn = ... PreparedStatement stmt = ...)` across all Store classes. Create `DatabaseManager.query(sql, mapper)` and `DatabaseManager.update(sql, binder)` template methods. This cuts ~50% of database boilerplate across the entire codebase.
+### 14. ~~Extract JDBC Template Pattern~~ ✅ DONE
+> ~~47 occurrences of `try (Connection conn = ... PreparedStatement stmt = ...)` across all Store classes. Create `DatabaseManager.query(sql, mapper)` and `DatabaseManager.update(sql, binder)` template methods. This cuts ~50% of database boilerplate across the entire codebase.~~
+>
+> Implemented: `queryOne`, `queryList`, `execute`, `executeCount`, `executeBatch` on `DatabaseManager` + `RowMapper`, `ParamBinder`, `SQLBiConsumer` interfaces. 37 files migrated, ~1044 lines removed.
 
 ### 15. Extract HudLifecycleManager to Core
 > Three separate HUD lifecycle implementations exist: HyvexaHubPlugin (HudLifecycle record + tickHubHudRecovery), HyvexaRunOrFallPlugin (separate state tracking maps), PurgeHudManager. Extract `HudLifecycleManager<T>` to hyvexa-core with generic attach/detach/refresh/recovery logic. ~150 lines of duplication eliminated.
