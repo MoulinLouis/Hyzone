@@ -9,8 +9,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -49,6 +47,8 @@ public class GhostStore {
         }
     }
 
+    private record GhostRow(String playerUuid, String mapId, byte[] blob, long completionTimeMs) {}
+
     public void syncLoad() {
         if (!this.db.isInitialized()) {
             logger.atWarning().log("Database not initialized, " + modeLabel + " GhostStore will be empty");
@@ -58,33 +58,26 @@ public class GhostStore {
         ensureGhostTableExists();
         cache.clear();
 
-        String sql = "SELECT player_uuid, map_id, recording_blob, completion_time_ms FROM " + tableName;
+        List<GhostRow> rows = DatabaseManager.queryList(this.db,
+                "SELECT player_uuid, map_id, recording_blob, completion_time_ms FROM " + tableName,
+                rs -> new GhostRow(
+                        rs.getString("player_uuid"),
+                        rs.getString("map_id"),
+                        rs.getBytes("recording_blob"),
+                        rs.getLong("completion_time_ms")));
 
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String playerUuid = rs.getString("player_uuid");
-                    String mapId = rs.getString("map_id");
-                    byte[] blob = rs.getBytes("recording_blob");
-                    long completionTimeMs = rs.getLong("completion_time_ms");
-
-                    try {
-                        GhostRecording recording = deserialize(blob, completionTimeMs);
-                        String key = makeKey(UUID.fromString(playerUuid), mapId);
-                        cache.put(key, recording);
-                    } catch (Exception e) {
-                        logger.atWarning().withCause(e)
-                                .log("Failed to deserialize " + modeLabel
-                                        + " ghost recording for " + playerUuid + "/" + mapId);
-                    }
-                }
+        for (GhostRow row : rows) {
+            try {
+                GhostRecording recording = deserialize(row.blob, row.completionTimeMs);
+                String key = makeKey(UUID.fromString(row.playerUuid), row.mapId);
+                cache.put(key, recording);
+            } catch (Exception e) {
+                logger.atWarning().withCause(e)
+                        .log("Failed to deserialize " + modeLabel
+                                + " ghost recording for " + row.playerUuid + "/" + row.mapId);
             }
-            logger.atInfo().log("Loaded " + cache.size() + " " + modeLabel + " ghost recordings");
-        } catch (SQLException e) {
-            logger.atSevere().withCause(e)
-                    .log("Failed to load " + modeLabel + " ghost recordings");
         }
+        logger.atInfo().log("Loaded " + cache.size() + " " + modeLabel + " ghost recordings");
     }
 
     public void saveRecording(UUID playerId, String mapId, GhostRecording recording) {
@@ -100,22 +93,20 @@ public class GhostStore {
 
         try {
             byte[] blob = serialize(recording);
-            String sql = """
+            DatabaseManager.execute(this.db,
+                    """
                     INSERT INTO %s (player_uuid, map_id, recording_blob, completion_time_ms)
                     VALUES (?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE recording_blob = VALUES(recording_blob),
                                             completion_time_ms = VALUES(completion_time_ms),
                                             recorded_at = CURRENT_TIMESTAMP
-                    """.formatted(tableName);
-
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-                stmt.setString(1, playerId.toString());
-                stmt.setString(2, mapId);
-                stmt.setBytes(3, blob);
-                stmt.setLong(4, recording.getCompletionTimeMs());
-                stmt.executeUpdate();
-            }
+                    """.formatted(tableName),
+                    stmt -> {
+                        stmt.setString(1, playerId.toString());
+                        stmt.setString(2, mapId);
+                        stmt.setBytes(3, blob);
+                        stmt.setLong(4, recording.getCompletionTimeMs());
+                    });
         } catch (Exception e) {
             logger.atSevere().withCause(e)
                     .log("Failed to save " + modeLabel + " ghost recording for " + playerId + "/" + mapId);
@@ -128,17 +119,12 @@ public class GhostStore {
 
     public void deleteRecording(UUID playerId, String mapId) {
         cache.remove(makeKey(playerId, mapId));
-
-        String sql = "DELETE FROM " + tableName + " WHERE player_uuid = ? AND map_id = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, mapId);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            logger.atWarning().withCause(e)
-                    .log("Failed to delete " + modeLabel + " ghost recording for " + playerId + "/" + mapId);
-        }
+        DatabaseManager.execute(this.db,
+                "DELETE FROM " + tableName + " WHERE player_uuid = ? AND map_id = ?",
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, mapId);
+                });
     }
 
     private byte[] serialize(GhostRecording recording) throws Exception {

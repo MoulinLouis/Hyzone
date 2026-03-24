@@ -135,19 +135,15 @@ public class AnalyticsStore implements PlayerAnalytics {
     }
 
     private void insertEvent(UUID playerId, String eventType, String dataJson, long timestampMs) {
-        String sql = "INSERT INTO analytics_events (timestamp_ms, player_uuid, event_type, data_json) "
-                + "VALUES (?, ?, ?, ?)";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setLong(1, timestampMs);
-            stmt.setString(2, playerId.toString());
-            stmt.setString(3, eventType);
-            stmt.setString(4, dataJson);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to insert analytics event: " + eventType);
-        }
+        DatabaseManager.execute(this.db,
+                "INSERT INTO analytics_events (timestamp_ms, player_uuid, event_type, data_json) "
+                + "VALUES (?, ?, ?, ?)",
+                stmt -> {
+                    stmt.setLong(1, timestampMs);
+                    stmt.setString(2, playerId.toString());
+                    stmt.setString(3, eventType);
+                    stmt.setString(4, dataJson);
+                });
     }
 
     /**
@@ -155,32 +151,26 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Sets first_join_ms only if isFirstJoin and not already set.
      */
     public void updatePlayerTimestamps(UUID playerId, boolean isFirstJoin) {
-        if (playerId == null || !this.db.isInitialized()) {
+        if (playerId == null) {
             return;
         }
         HytaleServer.SCHEDULED_EXECUTOR.execute(() -> {
             long now = System.currentTimeMillis();
-            try (Connection conn = this.db.getConnection()) {
-                // Always update last_seen_ms
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE players SET last_seen_ms = ? WHERE uuid = ?")) {
-                    DatabaseManager.applyQueryTimeout(stmt);
-                    stmt.setLong(1, now);
-                    stmt.setString(2, playerId.toString());
-                    stmt.executeUpdate();
-                }
-                // Set first_join_ms only if not already set
-                if (isFirstJoin) {
-                    try (PreparedStatement stmt = conn.prepareStatement(
-                            "UPDATE players SET first_join_ms = ? WHERE uuid = ? AND first_join_ms IS NULL")) {
-                        DatabaseManager.applyQueryTimeout(stmt);
+            // Always update last_seen_ms
+            DatabaseManager.execute(this.db,
+                    "UPDATE players SET last_seen_ms = ? WHERE uuid = ?",
+                    stmt -> {
                         stmt.setLong(1, now);
                         stmt.setString(2, playerId.toString());
-                        stmt.executeUpdate();
-                    }
-                }
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to update player timestamps for " + playerId);
+                    });
+            // Set first_join_ms only if not already set
+            if (isFirstJoin) {
+                DatabaseManager.execute(this.db,
+                        "UPDATE players SET first_join_ms = ? WHERE uuid = ? AND first_join_ms IS NULL",
+                        stmt -> {
+                            stmt.setLong(1, now);
+                            stmt.setString(2, playerId.toString());
+                        });
             }
         });
     }
@@ -286,36 +276,21 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Get recent daily stats for the last N days.
      */
     public List<DailyStats> getRecentStats(int days) {
-        List<DailyStats> results = new ArrayList<>();
-        if (!this.db.isInitialized()) {
-            return results;
-        }
         LocalDate cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(days);
-        String sql = "SELECT date, dau, new_players, avg_session_ms, total_sessions, "
+        return DatabaseManager.queryList(this.db,
+                "SELECT date, dau, new_players, avg_session_ms, total_sessions, "
                 + "parkour_time_pct, ascend_time_pct, peak_concurrent "
-                + "FROM analytics_daily WHERE date >= ? ORDER BY date DESC";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, cutoff.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    results.add(new DailyStats(
-                            LocalDate.parse(rs.getString("date")),
-                            rs.getInt("dau"),
-                            rs.getInt("new_players"),
-                            rs.getLong("avg_session_ms"),
-                            rs.getInt("total_sessions"),
-                            rs.getFloat("parkour_time_pct"),
-                            rs.getFloat("ascend_time_pct"),
-                            rs.getInt("peak_concurrent")
-                    ));
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to get recent stats");
-        }
-        return results;
+                + "FROM analytics_daily WHERE date >= ? ORDER BY date DESC",
+                stmt -> stmt.setString(1, cutoff.toString()),
+                rs -> new DailyStats(
+                        LocalDate.parse(rs.getString("date")),
+                        rs.getInt("dau"),
+                        rs.getInt("new_players"),
+                        rs.getLong("avg_session_ms"),
+                        rs.getInt("total_sessions"),
+                        rs.getFloat("parkour_time_pct"),
+                        rs.getFloat("ascend_time_pct"),
+                        rs.getInt("peak_concurrent")));
     }
 
     /**
@@ -365,17 +340,11 @@ public class AnalyticsStore implements PlayerAnalytics {
         long cutoffMs = LocalDate.now(ZoneOffset.UTC).minusDays(retentionDays)
                 .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         HytaleServer.SCHEDULED_EXECUTOR.execute(() -> {
-            String sql = "DELETE FROM analytics_events WHERE timestamp_ms < ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setLong(1, cutoffMs);
-                int deleted = stmt.executeUpdate();
-                if (deleted > 0) {
-                    LOGGER.atInfo().log("Purged " + deleted + " analytics events older than " + retentionDays + " days");
-                }
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to purge old analytics events");
+            int deleted = DatabaseManager.executeCount(this.db,
+                    "DELETE FROM analytics_events WHERE timestamp_ms < ?",
+                    stmt -> stmt.setLong(1, cutoffMs));
+            if (deleted > 0) {
+                LOGGER.atInfo().log("Purged " + deleted + " analytics events older than " + retentionDays + " days");
             }
         });
     }
@@ -384,55 +353,47 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Count events of a type in the last N days.
      */
     public int countEvents(String eventType, int days) {
-        if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
-        try (Connection conn = this.db.getConnection()) {
-            return queryIntScalar(conn,
-                    "SELECT COUNT(*) FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?",
-                    eventType, cutoffMs);
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("countEvents failed: " + eventType);
-            return 0;
-        }
+        return DatabaseManager.queryOne(this.db,
+                "SELECT COUNT(*) FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?",
+                stmt -> {
+                    stmt.setString(1, eventType);
+                    stmt.setLong(2, cutoffMs);
+                },
+                rs -> rs.getInt(1),
+                0);
     }
 
     /**
      * Count distinct players for an event type in the last N days.
      */
     public int countDistinctPlayers(String eventType, int days) {
-        if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
-        try (Connection conn = this.db.getConnection()) {
-            return queryIntScalar(conn,
-                    "SELECT COUNT(DISTINCT player_uuid) FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?",
-                    eventType, cutoffMs);
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("countDistinctPlayers failed: " + eventType);
-            return 0;
-        }
+        return DatabaseManager.queryOne(this.db,
+                "SELECT COUNT(DISTINCT player_uuid) FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?",
+                stmt -> {
+                    stmt.setString(1, eventType);
+                    stmt.setLong(2, cutoffMs);
+                },
+                rs -> rs.getInt(1),
+                0);
     }
 
     /**
      * Count events matching a LIKE pattern in data_json.
      */
     public int countEventsWithFilter(String eventType, int days, String jsonLikePattern) {
-        if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
-        String sql = "SELECT COUNT(*) FROM analytics_events "
-                + "WHERE event_type = ? AND timestamp_ms >= ? AND data_json LIKE ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, eventType);
-            stmt.setLong(2, cutoffMs);
-            stmt.setString(3, jsonLikePattern);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("countEventsWithFilter failed: " + eventType);
-        }
-        return 0;
+        return DatabaseManager.queryOne(this.db,
+                "SELECT COUNT(*) FROM analytics_events "
+                + "WHERE event_type = ? AND timestamp_ms >= ? AND data_json LIKE ?",
+                stmt -> {
+                    stmt.setString(1, eventType);
+                    stmt.setLong(2, cutoffMs);
+                    stmt.setString(3, jsonLikePattern);
+                },
+                rs -> rs.getInt(1),
+                0);
     }
 
     /**
@@ -440,59 +401,43 @@ public class AnalyticsStore implements PlayerAnalytics {
      * Returns sorted list of (value, count) entries, limited to top N.
      */
     public List<Map.Entry<String, Integer>> getTopJsonValues(String eventType, String jsonKey, int days, int limit) {
-        List<Map.Entry<String, Integer>> result = new ArrayList<>();
-        if (!this.db.isInitialized()) return result;
         long cutoffMs = dayStartMs(days);
         String jsonPath = "$." + jsonKey;
-        String sql = "SELECT JSON_UNQUOTE(JSON_EXTRACT(data_json, ?)) AS val, COUNT(*) AS cnt "
+        List<Map.Entry<String, Integer>> results = DatabaseManager.queryList(this.db,
+                "SELECT JSON_UNQUOTE(JSON_EXTRACT(data_json, ?)) AS val, COUNT(*) AS cnt "
                 + "FROM analytics_events "
                 + "WHERE event_type = ? AND timestamp_ms >= ? "
                 + "AND JSON_EXTRACT(data_json, ?) IS NOT NULL "
-                + "GROUP BY val ORDER BY cnt DESC LIMIT ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, jsonPath);
-            stmt.setString(2, eventType);
-            stmt.setLong(3, cutoffMs);
-            stmt.setString(4, jsonPath);
-            stmt.setInt(5, limit);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String val = rs.getString("val");
-                    if (val != null) {
-                        result.add(Map.entry(val, rs.getInt("cnt")));
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("getTopJsonValues failed: " + eventType);
-        }
-        return result;
+                + "GROUP BY val ORDER BY cnt DESC LIMIT ?",
+                stmt -> {
+                    stmt.setString(1, jsonPath);
+                    stmt.setString(2, eventType);
+                    stmt.setLong(3, cutoffMs);
+                    stmt.setString(4, jsonPath);
+                    stmt.setInt(5, limit);
+                },
+                rs -> Map.entry(rs.getString("val"), rs.getInt("cnt")));
+        // The SQL already filters NULL via IS NOT NULL, but guard against DB nulls
+        results.removeIf(e -> e.getKey() == null);
+        return results;
     }
 
     /**
      * Sum a numeric JSON field across events of a type in the last N days.
      */
     public long sumJsonLongField(String eventType, String jsonKey, int days) {
-        if (!this.db.isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
         String jsonPath = "$." + jsonKey;
-        String sql = "SELECT COALESCE(SUM(JSON_EXTRACT(data_json, ?)), 0) AS total "
-                + "FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, jsonPath);
-            stmt.setString(2, eventType);
-            stmt.setLong(3, cutoffMs);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return rs.getLong("total");
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("sumJsonLongField failed: " + eventType);
-        }
-        return 0;
+        return DatabaseManager.queryOne(this.db,
+                "SELECT COALESCE(SUM(JSON_EXTRACT(data_json, ?)), 0) AS total "
+                + "FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?",
+                stmt -> {
+                    stmt.setString(1, jsonPath);
+                    stmt.setString(2, eventType);
+                    stmt.setLong(3, cutoffMs);
+                },
+                rs -> rs.getLong("total"),
+                0L);
     }
 
     private long dayStartMs(int daysAgo) {

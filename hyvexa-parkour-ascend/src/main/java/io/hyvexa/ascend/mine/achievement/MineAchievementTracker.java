@@ -9,6 +9,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.core.db.ConnectionProvider;
+import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -333,18 +334,12 @@ public class MineAchievementTracker {
     }
 
     private void saveAchievementCompletionSync(UUID playerId, String achievementId) {
-        if (!this.db.isInitialized()) return;
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT IGNORE INTO mine_achievements (player_uuid, achievement_id) VALUES (?, ?)")) {
+        DatabaseManager.execute(this.db,
+            "INSERT IGNORE INTO mine_achievements (player_uuid, achievement_id) VALUES (?, ?)",
+            ps -> {
                 ps.setString(1, playerId.toString());
                 ps.setString(2, achievementId);
-                ps.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save mine achievement %s for %s: %s", achievementId, playerId, e.getMessage());
-        }
+            });
     }
 
     private void queueSave() {
@@ -364,24 +359,18 @@ public class MineAchievementTracker {
     }
 
     private void saveStatsSync(UUID playerId, PlayerAchievementState state) {
-        if (!this.db.isInitialized()) return;
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement ps = conn.prepareStatement("""
-                    INSERT INTO mine_player_stats (player_uuid, total_blocks_mined, total_crystals_earned, manual_blocks_mined)
-                    VALUES (?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE total_blocks_mined = VALUES(total_blocks_mined),
-                                            total_crystals_earned = VALUES(total_crystals_earned),
-                                            manual_blocks_mined = VALUES(manual_blocks_mined)
-                    """)) {
+        DatabaseManager.execute(this.db, """
+                INSERT INTO mine_player_stats (player_uuid, total_blocks_mined, total_crystals_earned, manual_blocks_mined)
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE total_blocks_mined = VALUES(total_blocks_mined),
+                                        total_crystals_earned = VALUES(total_crystals_earned),
+                                        manual_blocks_mined = VALUES(manual_blocks_mined)
+                """,
+            ps -> {
                 ps.setString(1, playerId.toString());
                 ps.setLong(2, state.totalBlocksMined.get());
                 ps.setLong(3, state.totalCrystalsEarned.get());
                 ps.setLong(4, state.manualBlocksMined.get());
-                ps.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save mine player stats for %s: %s", playerId, e.getMessage());
-        }
+            });
     }
 }

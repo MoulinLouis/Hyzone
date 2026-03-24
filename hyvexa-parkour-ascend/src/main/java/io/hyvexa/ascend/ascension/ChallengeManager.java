@@ -496,26 +496,15 @@ public class ChallengeManager {
         }
 
         String sql = "SELECT challenge_type_id FROM ascend_challenge_records WHERE player_uuid = ? AND completions > 0";
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
+        List<Integer> typeIds = DatabaseManager.queryList(this.db, sql,
+            stmt -> stmt.setString(1, playerId.toString()),
+            rs -> rs.getInt("challenge_type_id"));
+
+        for (int typeId : typeIds) {
+            ChallengeType type = ChallengeType.fromId(typeId);
+            if (type != null) {
+                progress.addChallengeReward(type);
             }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        int typeId = rs.getInt("challenge_type_id");
-                        ChallengeType type = ChallengeType.fromId(typeId);
-                        if (type != null) {
-                            progress.addChallengeReward(type);
-                        }
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("[Challenge] Failed to load challenge rewards for " + playerId + ": " + e.getMessage());
         }
     }
 
@@ -530,33 +519,19 @@ public class ChallengeManager {
      * Get challenge record (best time + completions) for a player and challenge type.
      */
     public ChallengeRecord getChallengeRecord(UUID playerId, ChallengeType challengeType) {
-        if (!this.db.isInitialized()) {
-            return new ChallengeRecord(null, 0);
-        }
-
         String sql = "SELECT best_time_ms, completions FROM ascend_challenge_records WHERE player_uuid = ? AND challenge_type_id = ?";
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return new ChallengeRecord(null, 0);
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+        return DatabaseManager.queryOne(this.db, sql,
+            stmt -> {
                 stmt.setString(1, playerId.toString());
                 stmt.setInt(2, challengeType.getId());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        long bestTime = rs.getLong("best_time_ms");
-                        Long bestTimeMs = rs.wasNull() ? null : bestTime;
-                        int completions = rs.getInt("completions");
-                        return new ChallengeRecord(bestTimeMs, completions);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("[Challenge] Failed to load record for " + playerId + ": " + e.getMessage());
-        }
-        return new ChallengeRecord(null, 0);
+            },
+            rs -> {
+                long bestTime = rs.getLong("best_time_ms");
+                Long bestTimeMs = rs.wasNull() ? null : bestTime;
+                int completions = rs.getInt("completions");
+                return new ChallengeRecord(bestTimeMs, completions);
+            },
+            new ChallengeRecord(null, 0));
     }
 
     // ========================================
@@ -564,10 +539,6 @@ public class ChallengeManager {
     // ========================================
 
     private void persistActiveChallenge(UUID playerId, ChallengeType type, long startedAtMs, String snapshotJson) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-
         String sql = """
             INSERT INTO ascend_challenges (player_uuid, challenge_type_id, started_at_ms, snapshot_json)
             VALUES (?, ?, ?, ?)
@@ -575,50 +546,20 @@ public class ChallengeManager {
                 started_at_ms = VALUES(started_at_ms), snapshot_json = VALUES(snapshot_json)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                stmt.setInt(2, type.getId());
-                stmt.setLong(3, startedAtMs);
-                stmt.setString(4, snapshotJson);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("[Challenge] Failed to persist challenge for " + playerId + ": " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, playerId.toString());
+            stmt.setInt(2, type.getId());
+            stmt.setLong(3, startedAtMs);
+            stmt.setString(4, snapshotJson);
+        });
     }
 
     private void deleteActiveChallenge(UUID playerId) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-
-        String sql = "DELETE FROM ascend_challenges WHERE player_uuid = ?";
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("[Challenge] Failed to delete challenge for " + playerId + ": " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, "DELETE FROM ascend_challenges WHERE player_uuid = ?",
+            stmt -> stmt.setString(1, playerId.toString()));
     }
 
     private void recordChallengeCompletion(UUID playerId, ChallengeType type, long elapsedMs) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-
         String sql = """
             INSERT INTO ascend_challenge_records (player_uuid, challenge_type_id, best_time_ms, completions)
             VALUES (?, ?, ?, 1)
@@ -628,21 +569,11 @@ public class ChallengeManager {
                 completions = completions + 1
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                stmt.setInt(2, type.getId());
-                stmt.setLong(3, elapsedMs);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("[Challenge] Failed to record completion for " + playerId + ": " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, playerId.toString());
+            stmt.setInt(2, type.getId());
+            stmt.setLong(3, elapsedMs);
+        });
     }
 
     private String getFirstMapId() {
@@ -668,11 +599,6 @@ public class ChallengeManager {
      * Returns all players who have a best time, sorted fastest first.
      */
     public List<ChallengeLeaderboardEntry> getChallengeLeaderboard(ChallengeType challengeType) {
-        List<ChallengeLeaderboardEntry> entries = new ArrayList<>();
-        if (!this.db.isInitialized()) {
-            return entries;
-        }
-
         String sql = """
             SELECT cr.best_time_ms, cr.completions, ap.player_name
             FROM ascend_challenge_records cr
@@ -681,26 +607,13 @@ public class ChallengeManager {
             ORDER BY cr.best_time_ms ASC
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return entries;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setInt(1, challengeType.getId());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        String playerName = rs.getString("player_name");
-                        long bestTimeMs = rs.getLong("best_time_ms");
-                        int completions = rs.getInt("completions");
-                        entries.add(new ChallengeLeaderboardEntry(playerName, bestTimeMs, completions));
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("[Challenge] Failed to load leaderboard for " + challengeType.name() + ": " + e.getMessage());
-        }
-        return entries;
+        return DatabaseManager.queryList(this.db, sql,
+            stmt -> stmt.setInt(1, challengeType.getId()),
+            rs -> {
+                String playerName = rs.getString("player_name");
+                long bestTimeMs = rs.getLong("best_time_ms");
+                int completions = rs.getInt("completions");
+                return new ChallengeLeaderboardEntry(playerName, bestTimeMs, completions);
+            });
     }
 }

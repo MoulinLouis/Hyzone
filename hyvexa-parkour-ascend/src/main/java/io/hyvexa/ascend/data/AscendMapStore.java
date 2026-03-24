@@ -4,10 +4,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Collections;
@@ -50,42 +46,32 @@ public class AscendMapStore {
             FROM ascend_maps ORDER BY display_order, id
             """;
 
+        List<AscendMap> loaded = DatabaseManager.queryList(this.db, sql, rs -> {
+            AscendMap map = new AscendMap();
+            map.setId(rs.getString("id"));
+            map.setName(rs.getString("name"));
+            map.setWorld(rs.getString("world"));
+            map.setStartX(rs.getDouble("start_x"));
+            map.setStartY(rs.getDouble("start_y"));
+            map.setStartZ(rs.getDouble("start_z"));
+            map.setStartRotX(rs.getFloat("start_rot_x"));
+            map.setStartRotY(rs.getFloat("start_rot_y"));
+            map.setStartRotZ(rs.getFloat("start_rot_z"));
+            map.setFinishX(rs.getDouble("finish_x"));
+            map.setFinishY(rs.getDouble("finish_y"));
+            map.setFinishZ(rs.getDouble("finish_z"));
+            map.setDisplayOrder(rs.getInt("display_order"));
+            return map;
+        });
+
         lock.writeLock().lock();
         try {
             maps.clear();
             invalidateSortedCache();
-            try (Connection conn = this.db.getConnection()) {
-                if (conn == null) {
-                    LOGGER.atWarning().log("Failed to acquire database connection");
-                    return;
-                }
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    DatabaseManager.applyQueryTimeout(stmt);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        while (rs.next()) {
-                            AscendMap map = new AscendMap();
-                            map.setId(rs.getString("id"));
-                            map.setName(rs.getString("name"));
-                            map.setWorld(rs.getString("world"));
-                            map.setStartX(rs.getDouble("start_x"));
-                            map.setStartY(rs.getDouble("start_y"));
-                            map.setStartZ(rs.getDouble("start_z"));
-                            map.setStartRotX(rs.getFloat("start_rot_x"));
-                            map.setStartRotY(rs.getFloat("start_rot_y"));
-                            map.setStartRotZ(rs.getFloat("start_rot_z"));
-                            map.setFinishX(rs.getDouble("finish_x"));
-                            map.setFinishY(rs.getDouble("finish_y"));
-                            map.setFinishZ(rs.getDouble("finish_z"));
-                            map.setDisplayOrder(rs.getInt("display_order"));
-
-                            maps.put(map.getId(), map);
-                        }
-                    }
-                }
-                LOGGER.atInfo().log("AscendMapStore loaded " + maps.size() + " maps");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to load AscendMapStore: " + e.getMessage());
+            for (AscendMap map : loaded) {
+                maps.put(map.getId(), map);
             }
+            LOGGER.atInfo().log("AscendMapStore loaded " + maps.size() + " maps");
         } finally {
             lock.writeLock().unlock();
         }
@@ -162,10 +148,6 @@ public class AscendMapStore {
     }
 
     private void saveMapToDatabase(AscendMap map) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-
         // Compatibility write path: keep legacy columns populated for existing schemas/tools.
         // Runtime logic reads effective values from AscendConstants via display_order.
         String sql = """
@@ -185,38 +167,28 @@ public class AscendMapStore {
                 display_order = VALUES(display_order)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                int i = 1;
-                stmt.setString(i++, map.getId());
-                stmt.setString(i++, map.getName());
-                stmt.setLong(i++, map.getEffectivePrice());
-                stmt.setLong(i++, map.getEffectiveRobotPrice());
-                stmt.setLong(i++, map.getEffectiveBaseReward());
-                stmt.setLong(i++, map.getEffectiveBaseRunTimeMs());
-                stmt.setLong(i++, LEGACY_ROBOT_TIME_REDUCTION_MS);
-                stmt.setInt(i++, LEGACY_STORAGE_CAPACITY);
-                stmt.setString(i++, map.getWorld());
-                stmt.setDouble(i++, map.getStartX());
-                stmt.setDouble(i++, map.getStartY());
-                stmt.setDouble(i++, map.getStartZ());
-                stmt.setFloat(i++, map.getStartRotX());
-                stmt.setFloat(i++, map.getStartRotY());
-                stmt.setFloat(i++, map.getStartRotZ());
-                stmt.setDouble(i++, map.getFinishX());
-                stmt.setDouble(i++, map.getFinishY());
-                stmt.setDouble(i++, map.getFinishZ());
-                stmt.setInt(i, map.getDisplayOrder());
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save map: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            int i = 1;
+            stmt.setString(i++, map.getId());
+            stmt.setString(i++, map.getName());
+            stmt.setLong(i++, map.getEffectivePrice());
+            stmt.setLong(i++, map.getEffectiveRobotPrice());
+            stmt.setLong(i++, map.getEffectiveBaseReward());
+            stmt.setLong(i++, map.getEffectiveBaseRunTimeMs());
+            stmt.setLong(i++, LEGACY_ROBOT_TIME_REDUCTION_MS);
+            stmt.setInt(i++, LEGACY_STORAGE_CAPACITY);
+            stmt.setString(i++, map.getWorld());
+            stmt.setDouble(i++, map.getStartX());
+            stmt.setDouble(i++, map.getStartY());
+            stmt.setDouble(i++, map.getStartZ());
+            stmt.setFloat(i++, map.getStartRotX());
+            stmt.setFloat(i++, map.getStartRotY());
+            stmt.setFloat(i++, map.getStartRotZ());
+            stmt.setDouble(i++, map.getFinishX());
+            stmt.setDouble(i++, map.getFinishY());
+            stmt.setDouble(i++, map.getFinishZ());
+            stmt.setInt(i, map.getDisplayOrder());
+        });
     }
 
     public boolean deleteMap(String id) {
@@ -239,23 +211,8 @@ public class AscendMapStore {
     }
 
     private void deleteMapFromDatabase(String id) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM ascend_maps WHERE id = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, id);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to delete map: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, "DELETE FROM ascend_maps WHERE id = ?",
+            stmt -> stmt.setString(1, id));
     }
 
     private void invalidateSortedCache() {

@@ -620,23 +620,8 @@ public class ProgressStore {
         // CASCADE will delete completions
         String sql = "DELETE FROM players WHERE uuid = ?";
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(checkpointStmt);
-                DatabaseManager.applyQueryTimeout(stmt);
-                checkpointStmt.setString(1, playerId.toString());
-                checkpointStmt.executeUpdate();
-                stmt.setString(1, playerId.toString());
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to delete player: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, deleteCheckpoints, stmt -> stmt.setString(1, playerId.toString()));
+        DatabaseManager.execute(this.db, sql, stmt -> stmt.setString(1, playerId.toString()));
     }
 
     public MapPurgeResult purgeMapProgress(String mapId, MapStore mapStore) {
@@ -723,26 +708,14 @@ public class ProgressStore {
         String deleteCheckpoints = "DELETE FROM player_checkpoint_times WHERE player_uuid = ? AND map_id = ?";
         String sql = "DELETE FROM player_completions WHERE player_uuid = ? AND map_id = ?";
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(checkpointStmt);
-                DatabaseManager.applyQueryTimeout(stmt);
-                checkpointStmt.setString(1, playerId.toString());
-                checkpointStmt.setString(2, mapId);
-                checkpointStmt.executeUpdate();
-
-                stmt.setString(1, playerId.toString());
-                stmt.setString(2, mapId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to delete player map completion: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, deleteCheckpoints, stmt -> {
+            stmt.setString(1, playerId.toString());
+            stmt.setString(2, mapId);
+        });
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, playerId.toString());
+            stmt.setString(2, mapId);
+        });
     }
 
     private void purgeMapFromDatabase(String mapId) {
@@ -751,24 +724,8 @@ public class ProgressStore {
         String deleteCheckpoints = "DELETE FROM player_checkpoint_times WHERE map_id = ?";
         String sql = "DELETE FROM player_completions WHERE map_id = ?";
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(checkpointStmt);
-                DatabaseManager.applyQueryTimeout(stmt);
-                checkpointStmt.setString(1, mapId);
-                checkpointStmt.executeUpdate();
-
-                stmt.setString(1, mapId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to purge map completions: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, deleteCheckpoints, stmt -> stmt.setString(1, mapId));
+        DatabaseManager.execute(this.db, sql, stmt -> stmt.setString(1, mapId));
     }
 
     public void addPlaytime(UUID playerId, String playerName, long deltaMs) {

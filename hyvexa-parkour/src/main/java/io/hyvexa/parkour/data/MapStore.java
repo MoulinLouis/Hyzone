@@ -492,20 +492,7 @@ public class MapStore {
 
         // Checkpoints will be deleted by CASCADE
         String sql = "DELETE FROM maps WHERE id = ?";
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, mapId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to delete map from database: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> stmt.setString(1, mapId));
     }
 
     private static void validateMap(Map map) {

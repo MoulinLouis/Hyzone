@@ -733,12 +733,9 @@ public class RunOrFallConfigStore {
         if (!this.db.isInitialized()) {
             return;
         }
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(UPSERT_SETTINGS_SQL)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            RunOrFallMapConfig selectedMap = getSelectedMapInternal();
-            RunOrFallLocation selectedLobby = selectedMap != null ? selectedMap.lobby : null;
-
+        RunOrFallMapConfig selectedMap = getSelectedMapInternal();
+        RunOrFallLocation selectedLobby = selectedMap != null ? selectedMap.lobby : null;
+        DatabaseManager.execute(this.db, UPSERT_SETTINGS_SQL, stmt -> {
             int i = 1;
             stmt.setInt(i++, SETTINGS_ID);
             if (selectedLobby != null && isFiniteLocation(selectedLobby)) {
@@ -769,10 +766,7 @@ public class RunOrFallConfigStore {
             stmt.setInt(i++, sanitizeFeatherReward(config.feathersPerPlayerEliminated));
             stmt.setInt(i++, sanitizeFeatherReward(config.feathersForWin));
             stmt.setString(i, selectedMap != null ? selectedMap.id : DEFAULT_MAP_ID);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to save RunOrFall settings.");
-        }
+        });
     }
 
     private synchronized void saveMapsToDatabase() {

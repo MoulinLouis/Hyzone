@@ -161,22 +161,15 @@ public class DiscordLinkStore {
      * Format: XXX-XXX
      */
     public String getActiveCode(UUID playerId) {
-        if (playerId == null || !this.db.isInitialized()) {
+        if (playerId == null) {
             return null;
         }
-        String sql = "SELECT code FROM discord_link_codes WHERE player_uuid = ? AND expires_at > NOW()";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return formatCode(rs.getString("code"));
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to check active code for " + playerId);
-        }
-        return null;
+        String code = DatabaseManager.queryOne(this.db,
+                "SELECT code FROM discord_link_codes WHERE player_uuid = ? AND expires_at > NOW()",
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> rs.getString("code"),
+                null);
+        return code != null ? formatCode(code) : null;
     }
 
     /**
@@ -291,18 +284,15 @@ public class DiscordLinkStore {
      * Only updates if the player has a linked Discord account.
      */
     public void updateRank(UUID playerId, String rankName) {
-        if (playerId == null || rankName == null || !this.db.isInitialized()) {
+        if (playerId == null || rankName == null) {
             return;
         }
-        String sql = "UPDATE discord_links SET current_rank = ? WHERE player_uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, rankName);
-            stmt.setString(2, playerId.toString());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to update rank for " + playerId);
-        }
+        DatabaseManager.execute(this.db,
+                "UPDATE discord_links SET current_rank = ? WHERE player_uuid = ?",
+                stmt -> {
+                    stmt.setString(1, rankName);
+                    stmt.setString(2, playerId.toString());
+                });
     }
 
     private void migrateGemsRewardedToVexa(Connection conn) {
@@ -354,27 +344,18 @@ public class DiscordLinkStore {
      * Returns true if a link was deleted.
      */
     public boolean unlinkPlayer(UUID playerId) {
-        if (playerId == null || !this.db.isInitialized()) {
+        if (playerId == null) {
             return false;
         }
         cache.remove(playerId);
         rewardCheckedThisSession.remove(playerId);
-        boolean deleted = false;
-        try (Connection conn = this.db.getConnection()) {
-            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
-                    "DELETE FROM discord_links WHERE player_uuid = ?")) {
-                stmt.setString(1, playerId.toString());
-                deleted = stmt.executeUpdate() > 0;
-            }
-            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
-                    "DELETE FROM discord_link_codes WHERE player_uuid = ?")) {
-                stmt.setString(1, playerId.toString());
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to unlink player " + playerId);
-        }
-        return deleted;
+        int deleted = DatabaseManager.executeCount(this.db,
+                "DELETE FROM discord_links WHERE player_uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()));
+        DatabaseManager.execute(this.db,
+                "DELETE FROM discord_link_codes WHERE player_uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()));
+        return deleted > 0;
     }
 
     /**
@@ -391,48 +372,30 @@ public class DiscordLinkStore {
      * Delete expired codes from the database.
      */
     private void cleanExpiredCodes() {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-        String sql = "DELETE FROM discord_link_codes WHERE expires_at < NOW()";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            int deleted = stmt.executeUpdate();
-            if (deleted > 0) {
-                LOGGER.atInfo().log("Cleaned " + deleted + " expired link codes");
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to clean expired link codes");
+        int deleted = DatabaseManager.executeCount(this.db,
+                "DELETE FROM discord_link_codes WHERE expires_at < NOW()");
+        if (deleted > 0) {
+            LOGGER.atInfo().log("Cleaned " + deleted + " expired link codes");
         }
     }
 
     private DiscordLink loadLink(UUID playerId) {
-        if (!this.db.isInitialized()) {
-            return null;
-        }
         DiscordLink cached = cache.get(playerId);
         if (cached != null) {
             return cached;
         }
-        String sql = "SELECT discord_id, linked_at, vexa_rewarded FROM discord_links WHERE player_uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    DiscordLink link = new DiscordLink(
-                            rs.getString("discord_id"),
-                            rs.getTimestamp("linked_at").getTime(),
-                            rs.getBoolean("vexa_rewarded")
-                    );
-                    cache.put(playerId, link);
-                    return link;
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load discord link for " + playerId);
+        DiscordLink link = DatabaseManager.queryOne(this.db,
+                "SELECT discord_id, linked_at, vexa_rewarded FROM discord_links WHERE player_uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> new DiscordLink(
+                        rs.getString("discord_id"),
+                        rs.getTimestamp("linked_at").getTime(),
+                        rs.getBoolean("vexa_rewarded")),
+                null);
+        if (link != null) {
+            cache.put(playerId, link);
         }
-        return null;
+        return link;
     }
 
     private String createRandomCode() {

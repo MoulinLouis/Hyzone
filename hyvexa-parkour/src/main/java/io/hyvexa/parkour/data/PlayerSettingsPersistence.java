@@ -8,7 +8,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.UUID;
@@ -98,67 +97,42 @@ public class PlayerSettingsPersistence {
 
     @Nonnull
     public PlayerSettings loadPlayer(@Nonnull UUID playerId) {
-        if (!this.db.isInitialized()) {
-            return new PlayerSettings();
-        }
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                return new PlayerSettings();
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(SELECT_SQL)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        PlayerSettings s = new PlayerSettings();
-                        s.resetItemEnabled = rs.getBoolean("reset_item_enabled");
-                        s.playersHidden = rs.getBoolean("players_hidden");
-                        s.duelHideOpponent = rs.getBoolean("duel_hide_opponent");
-                        s.ghostVisible = rs.getBoolean("ghost_visible");
-                        s.advancedHudEnabled = rs.getBoolean("advanced_hud_enabled");
-                        s.hudHidden = rs.getBoolean("hud_hidden");
-                        s.musicLabel = rs.getString("music_label");
-                        s.checkpointSfxEnabled = rs.getBoolean("checkpoint_sfx_enabled");
-                        s.victorySfxEnabled = rs.getBoolean("victory_sfx_enabled");
-                        s.vipSpeedMultiplier = rs.getFloat("vip_speed_multiplier");
-                        return s;
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to load player settings for " + playerId + ": " + e.getMessage());
-        }
-        return new PlayerSettings();
+        return DatabaseManager.queryOne(this.db, SELECT_SQL,
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> {
+                    PlayerSettings s = new PlayerSettings();
+                    s.resetItemEnabled = rs.getBoolean("reset_item_enabled");
+                    s.playersHidden = rs.getBoolean("players_hidden");
+                    s.duelHideOpponent = rs.getBoolean("duel_hide_opponent");
+                    s.ghostVisible = rs.getBoolean("ghost_visible");
+                    s.advancedHudEnabled = rs.getBoolean("advanced_hud_enabled");
+                    s.hudHidden = rs.getBoolean("hud_hidden");
+                    s.musicLabel = rs.getString("music_label");
+                    s.checkpointSfxEnabled = rs.getBoolean("checkpoint_sfx_enabled");
+                    s.victorySfxEnabled = rs.getBoolean("victory_sfx_enabled");
+                    s.vipSpeedMultiplier = rs.getFloat("vip_speed_multiplier");
+                    return s;
+                }, new PlayerSettings());
     }
 
     public void savePlayer(@Nonnull UUID playerId, @Nonnull PlayerSettings settings) {
         if (!this.db.isInitialized()) {
             return;
         }
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection for settings save");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(UPSERT_SQL)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                stmt.setBoolean(2, settings.resetItemEnabled);
-                stmt.setBoolean(3, settings.playersHidden);
-                stmt.setBoolean(4, settings.duelHideOpponent);
-                stmt.setBoolean(5, settings.ghostVisible);
-                stmt.setBoolean(6, settings.advancedHudEnabled);
-                stmt.setBoolean(7, settings.hudHidden);
-                stmt.setString(8, settings.musicLabel);
-                stmt.setBoolean(9, settings.checkpointSfxEnabled);
-                stmt.setBoolean(10, settings.victorySfxEnabled);
-                stmt.setFloat(11, settings.vipSpeedMultiplier);
-                stmt.setTimestamp(12, new Timestamp(System.currentTimeMillis()));
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to save player settings for " + playerId + ": " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, UPSERT_SQL, stmt -> {
+            stmt.setString(1, playerId.toString());
+            stmt.setBoolean(2, settings.resetItemEnabled);
+            stmt.setBoolean(3, settings.playersHidden);
+            stmt.setBoolean(4, settings.duelHideOpponent);
+            stmt.setBoolean(5, settings.ghostVisible);
+            stmt.setBoolean(6, settings.advancedHudEnabled);
+            stmt.setBoolean(7, settings.hudHidden);
+            stmt.setString(8, settings.musicLabel);
+            stmt.setBoolean(9, settings.checkpointSfxEnabled);
+            stmt.setBoolean(10, settings.victorySfxEnabled);
+            stmt.setFloat(11, settings.vipSpeedMultiplier);
+            stmt.setTimestamp(12, new Timestamp(System.currentTimeMillis()));
+        });
     }
 
     /**

@@ -8,7 +8,6 @@ import io.hyvexa.core.economy.CurrencyBridge;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -179,16 +178,9 @@ public class CosmeticStore {
         if (playerId == null) return;
         ownedCache.put(playerId, Collections.synchronizedList(new ArrayList<>()));
         equippedCache.put(playerId, NONE_EQUIPPED);
-        if (this.db.isInitialized()) {
-            String sql = "DELETE FROM player_cosmetics WHERE player_uuid = ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-                stmt.setString(1, playerId.toString());
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to reset cosmetics for " + playerId);
-            }
-        }
+        DatabaseManager.execute(this.db,
+                "DELETE FROM player_cosmetics WHERE player_uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()));
     }
 
     public void evictPlayer(UUID playerId) {
@@ -199,26 +191,20 @@ public class CosmeticStore {
 
     // ── DB operations ────────────────────────────────────────────────────
 
+    private record CosmeticRow(String cosmeticId, boolean equipped) {}
+
     private void loadPlayer(UUID playerId) {
+        List<CosmeticRow> rows = DatabaseManager.queryList(this.db,
+                "SELECT cosmetic_id, equipped FROM player_cosmetics WHERE player_uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> new CosmeticRow(rs.getString("cosmetic_id"), rs.getBoolean("equipped")));
+
         List<String> owned = Collections.synchronizedList(new ArrayList<>());
         String equipped = NONE_EQUIPPED;
-
-        if (this.db.isInitialized()) {
-            String sql = "SELECT cosmetic_id, equipped FROM player_cosmetics WHERE player_uuid = ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-                stmt.setString(1, playerId.toString());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        String id = rs.getString("cosmetic_id");
-                        owned.add(id);
-                        if (rs.getBoolean("equipped")) {
-                            equipped = id;
-                        }
-                    }
-                }
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to load cosmetics for " + playerId);
+        for (CosmeticRow row : rows) {
+            owned.add(row.cosmeticId);
+            if (row.equipped) {
+                equipped = row.cosmeticId;
             }
         }
 
@@ -227,29 +213,21 @@ public class CosmeticStore {
     }
 
     private void persistPurchase(UUID playerId, String cosmeticId) {
-        if (!this.db.isInitialized()) return;
-        String sql = "INSERT IGNORE INTO player_cosmetics (player_uuid, cosmetic_id, equipped) VALUES (?, ?, FALSE)";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, cosmeticId);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist cosmetic purchase for " + playerId);
-        }
+        DatabaseManager.execute(this.db,
+                "INSERT IGNORE INTO player_cosmetics (player_uuid, cosmetic_id, equipped) VALUES (?, ?, FALSE)",
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, cosmeticId);
+                });
     }
 
     private void persistEquipped(UUID playerId, String cosmeticId, boolean equipped) {
-        if (!this.db.isInitialized()) return;
-        String sql = "UPDATE player_cosmetics SET equipped = ? WHERE player_uuid = ? AND cosmetic_id = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setBoolean(1, equipped);
-            stmt.setString(2, playerId.toString());
-            stmt.setString(3, cosmeticId);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist equipped state for " + playerId);
-        }
+        DatabaseManager.execute(this.db,
+                "UPDATE player_cosmetics SET equipped = ? WHERE player_uuid = ? AND cosmetic_id = ?",
+                stmt -> {
+                    stmt.setBoolean(1, equipped);
+                    stmt.setString(2, playerId.toString());
+                    stmt.setString(3, cosmeticId);
+                });
     }
 }

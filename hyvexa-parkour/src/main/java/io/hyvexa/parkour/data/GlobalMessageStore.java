@@ -3,11 +3,9 @@ package io.hyvexa.parkour.data;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.db.RowMapper;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -63,68 +61,31 @@ public class GlobalMessageStore {
     private void loadSettings() {
         String sql = "SELECT interval_minutes FROM global_message_settings WHERE id = 1";
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                intervalMinutes = DEFAULT_INTERVAL_MINUTES;
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        intervalMinutes = clampInterval(rs.getLong("interval_minutes"));
-                    } else {
-                        intervalMinutes = DEFAULT_INTERVAL_MINUTES;
-                        insertDefaultSettings();
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to load global message settings: " + e.getMessage());
+        // Use -1 as sentinel to detect "no row found"
+        long loaded = DatabaseManager.queryOne(this.db, sql,
+                rs -> clampInterval(rs.getLong("interval_minutes")), -1L);
+        if (loaded == -1L) {
             intervalMinutes = DEFAULT_INTERVAL_MINUTES;
+            insertDefaultSettings();
+        } else {
+            intervalMinutes = loaded;
         }
     }
 
     private void insertDefaultSettings() {
         String sql = "INSERT INTO global_message_settings (id, interval_minutes) VALUES (1, ?)";
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setLong(1, intervalMinutes);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to insert default settings: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> stmt.setLong(1, intervalMinutes));
     }
 
     private void loadMessages() {
         String sql = "SELECT message FROM global_messages ORDER BY display_order, id";
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
+        RowMapper<String> mapper = rs -> normalizeMessage(rs.getString("message"));
+        List<String> loaded = DatabaseManager.queryList(this.db, sql, mapper);
+        for (String msg : loaded) {
+            if (!msg.isEmpty()) {
+                messages.add(msg);
             }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        String cleaned = normalizeMessage(rs.getString("message"));
-                        if (!cleaned.isEmpty()) {
-                            messages.add(cleaned);
-                        }
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to load global messages: " + e.getMessage());
         }
     }
 
@@ -136,20 +97,7 @@ public class GlobalMessageStore {
             INSERT INTO global_message_settings (id, interval_minutes) VALUES (1, ?)
             ON DUPLICATE KEY UPDATE interval_minutes = VALUES(interval_minutes)
             """;
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(settingsSql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setLong(1, intervalMinutes);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to save settings: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, settingsSql, stmt -> stmt.setLong(1, intervalMinutes));
 
         // Clear and re-insert messages
         String deleteSql = "DELETE FROM global_messages";
@@ -206,20 +154,7 @@ public class GlobalMessageStore {
         if (!this.db.isInitialized()) return;
 
         String sql = "UPDATE global_message_settings SET interval_minutes = ? WHERE id = 1";
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setLong(1, intervalMinutes);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to save settings: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> stmt.setLong(1, intervalMinutes));
     }
 
     public boolean addMessage(String message) {
@@ -245,21 +180,10 @@ public class GlobalMessageStore {
         if (!this.db.isInitialized()) return;
 
         String sql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, message);
-                stmt.setInt(2, order);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to add message: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, message);
+            stmt.setInt(2, order);
+        });
     }
 
     public boolean removeMessage(int index) {

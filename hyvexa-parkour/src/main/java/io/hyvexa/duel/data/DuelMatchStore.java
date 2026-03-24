@@ -61,26 +61,16 @@ public class DuelMatchStore {
                 player1_time_ms, player2_time_ms, finish_reason, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, match.getMatchId());
-                stmt.setString(2, match.getPlayer1().toString());
-                stmt.setString(3, match.getPlayer2().toString());
-                stmt.setString(4, match.getMapId());
-                stmt.setString(5, match.getWinnerId() != null ? match.getWinnerId().toString() : null);
-                stmt.setObject(6, match.getPlayer1FinishMs() > 0 ? match.getPlayer1FinishMs() : null);
-                stmt.setObject(7, match.getPlayer2FinishMs() > 0 ? match.getPlayer2FinishMs() : null);
-                stmt.setString(8, match.getFinishReason() != null ? match.getFinishReason().name() : null);
-                stmt.setTimestamp(9, new Timestamp(System.currentTimeMillis()));
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save duel match: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, match.getMatchId());
+            stmt.setString(2, match.getPlayer1().toString());
+            stmt.setString(3, match.getPlayer2().toString());
+            stmt.setString(4, match.getMapId());
+            stmt.setString(5, match.getWinnerId() != null ? match.getWinnerId().toString() : null);
+            stmt.setObject(6, match.getPlayer1FinishMs() > 0 ? match.getPlayer1FinishMs() : null);
+            stmt.setObject(7, match.getPlayer2FinishMs() > 0 ? match.getPlayer2FinishMs() : null);
+            stmt.setString(8, match.getFinishReason() != null ? match.getFinishReason().name() : null);
+            stmt.setTimestamp(9, new Timestamp(System.currentTimeMillis()));
+        });
     }
 }

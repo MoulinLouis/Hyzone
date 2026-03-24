@@ -6,9 +6,7 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -123,29 +121,18 @@ public class VoteStore {
      * Returns top N voters within a time period.
      */
     public List<VoterEntry> getTopVotersForPeriod(int limit, long sinceMs) {
-        List<VoterEntry> result = new ArrayList<>();
-        if (!connectionProvider.isInitialized()) {
-            return result;
-        }
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn,
-                     "SELECT player_uuid, player_name, COUNT(*) AS vote_count FROM player_votes "
-                     + "WHERE voted_at >= FROM_UNIXTIME(? / 1000) "
-                     + "GROUP BY player_uuid, player_name ORDER BY vote_count DESC LIMIT ?")) {
-            stmt.setLong(1, sinceMs);
-            stmt.setInt(2, limit);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(new VoterEntry(
-                            UUID.fromString(rs.getString("player_uuid")),
-                            rs.getString("player_name"),
-                            rs.getInt("vote_count")));
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to query top voters for period");
-        }
-        return result;
+        return DatabaseManager.queryList(connectionProvider,
+                "SELECT player_uuid, player_name, COUNT(*) AS vote_count FROM player_votes "
+                + "WHERE voted_at >= FROM_UNIXTIME(? / 1000) "
+                + "GROUP BY player_uuid, player_name ORDER BY vote_count DESC LIMIT ?",
+                stmt -> {
+                    stmt.setLong(1, sinceMs);
+                    stmt.setInt(2, limit);
+                },
+                rs -> new VoterEntry(
+                        UUID.fromString(rs.getString("player_uuid")),
+                        rs.getString("player_name"),
+                        rs.getInt("vote_count")));
     }
 
     public void evictPlayer(UUID playerId) {
@@ -157,44 +144,20 @@ public class VoteStore {
     // ── Internal ─────────────────────────────────────────────────────────
 
     private int loadVoteCount(UUID playerId) {
-        if (!connectionProvider.isInitialized()) {
-            return 0;
-        }
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn,
-                     "SELECT total_votes FROM player_vote_counts WHERE player_uuid = ?")) {
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("total_votes");
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load vote count for " + playerId);
-        }
-        return 0;
+        return DatabaseManager.queryOne(connectionProvider,
+                "SELECT total_votes FROM player_vote_counts WHERE player_uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> rs.getInt("total_votes"),
+                0);
     }
 
     private List<VoterEntry> queryTopVoters(String sql, int limit) {
-        List<VoterEntry> result = new ArrayList<>();
-        if (!connectionProvider.isInitialized()) {
-            return result;
-        }
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setInt(1, limit);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(new VoterEntry(
-                            UUID.fromString(rs.getString("player_uuid")),
-                            rs.getString("player_name"),
-                            rs.getInt("total_votes")));
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to query top voters");
-        }
-        return result;
+        return DatabaseManager.queryList(connectionProvider, sql,
+                stmt -> stmt.setInt(1, limit),
+                rs -> new VoterEntry(
+                        UUID.fromString(rs.getString("player_uuid")),
+                        rs.getString("player_name"),
+                        rs.getInt("total_votes")));
     }
 
     /**

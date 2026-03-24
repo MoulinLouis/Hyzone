@@ -6,10 +6,6 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import com.hypixel.hytale.server.core.HytaleServer;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -83,42 +79,27 @@ public class WeaponXpStore {
             return;
         }
         String sql = "SELECT xp, level FROM purge_weapon_xp WHERE uuid = ? AND weapon_id = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, weaponId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                ConcurrentHashMap<String, int[]> playerMap = cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
-                if (rs.next()) {
-                    playerMap.putIfAbsent(weaponId, new int[]{rs.getInt("xp"), rs.getInt("level")});
-                } else {
-                    playerMap.putIfAbsent(weaponId, new int[]{0, 0});
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load weapon XP for " + playerId + "/" + weaponId);
-        }
+        int[] data = DatabaseManager.queryOne(this.db, sql,
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, weaponId);
+                },
+                rs -> new int[]{rs.getInt("xp"), rs.getInt("level")},
+                new int[]{0, 0});
+        ConcurrentHashMap<String, int[]> playerMap = cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
+        playerMap.putIfAbsent(weaponId, data);
     }
 
     private void persistToDatabase(UUID playerId, String weaponId, int xp, int level) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
         String sql = "INSERT INTO purge_weapon_xp (uuid, weapon_id, xp, level) VALUES (?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE xp = ?, level = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db, sql, stmt -> {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, weaponId);
             stmt.setInt(3, xp);
             stmt.setInt(4, level);
             stmt.setInt(5, xp);
             stmt.setInt(6, level);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist weapon XP for " + playerId + "/" + weaponId);
-        }
+        });
     }
 }

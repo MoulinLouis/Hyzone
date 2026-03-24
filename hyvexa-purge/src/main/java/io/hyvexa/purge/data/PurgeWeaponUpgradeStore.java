@@ -7,9 +7,10 @@ import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -200,17 +201,8 @@ public class PurgeWeaponUpgradeStore {
             return;
         }
         cache.remove(playerId);
-        if (this.db.isInitialized()) {
-            String sql = "DELETE FROM purge_weapon_upgrades WHERE uuid = ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to reset weapon upgrades for " + playerId);
-            }
-        }
+        String sql = "DELETE FROM purge_weapon_upgrades WHERE uuid = ?";
+        DatabaseManager.execute(this.db, sql, stmt -> stmt.setString(1, playerId.toString()));
         if (defaultWeaponIds != null && !defaultWeaponIds.isEmpty()) {
             initializeDefaults(playerId, defaultWeaponIds);
         }
@@ -227,20 +219,14 @@ public class PurgeWeaponUpgradeStore {
             return;
         }
         String sql = "SELECT weapon_id, level FROM purge_weapon_upgrades WHERE uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                ConcurrentHashMap<String, Integer> weapons = new ConcurrentHashMap<>();
-                while (rs.next()) {
-                    weapons.put(rs.getString("weapon_id"), rs.getInt("level"));
-                }
-                cache.putIfAbsent(playerId, weapons);
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load weapon upgrades for " + playerId);
+        List<Map.Entry<String, Integer>> rows = DatabaseManager.queryList(this.db, sql,
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> Map.entry(rs.getString("weapon_id"), rs.getInt("level")));
+        ConcurrentHashMap<String, Integer> weapons = new ConcurrentHashMap<>();
+        for (Map.Entry<String, Integer> entry : rows) {
+            weapons.put(entry.getKey(), entry.getValue());
         }
+        cache.putIfAbsent(playerId, weapons);
     }
 
     private void upsertWeaponLevel(Connection conn, UUID playerId, String weaponId, int level) throws SQLException {
@@ -257,21 +243,13 @@ public class PurgeWeaponUpgradeStore {
     }
 
     private void persistToDatabase(UUID playerId, String weaponId, int level) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
         String sql = "INSERT INTO purge_weapon_upgrades (uuid, weapon_id, level) VALUES (?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE level = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db, sql, stmt -> {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, weaponId);
             stmt.setInt(3, level);
             stmt.setInt(4, level);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist weapon upgrade for " + playerId);
-        }
+        });
     }
 }

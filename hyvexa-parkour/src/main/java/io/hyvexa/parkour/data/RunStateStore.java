@@ -6,8 +6,6 @@ import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
@@ -75,8 +73,7 @@ public class RunStateStore {
                  checkpoint_times, map_updated_at, saved_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """;
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+        DatabaseManager.execute(this.db, sql, stmt -> {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, mapId);
             stmt.setLong(3, elapsedMs);
@@ -85,10 +82,7 @@ public class RunStateStore {
             stmt.setString(6, encodeCheckpointTimes(checkpointTouchTimes));
             stmt.setLong(7, mapUpdatedAt);
             stmt.setLong(8, System.currentTimeMillis());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to save run state for " + playerId);
-        }
+        });
     }
 
     public CompletableFuture<SavedRunState> loadAsync(UUID playerId) {
@@ -98,14 +92,9 @@ public class RunStateStore {
     private SavedRunState loadSync(UUID playerId) {
         String sql = "SELECT map_id, elapsed_ms, last_checkpoint, touched_checkpoints, " +
                 "checkpoint_times, map_updated_at, saved_at FROM saved_run_state WHERE player_uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next()) {
-                    return null;
-                }
-                return new SavedRunState(
+        return DatabaseManager.queryOne(this.db, sql,
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> new SavedRunState(
                         rs.getString("map_id"),
                         rs.getLong("elapsed_ms"),
                         rs.getInt("last_checkpoint"),
@@ -113,12 +102,7 @@ public class RunStateStore {
                         decodeCheckpointTimes(rs.getString("checkpoint_times")),
                         rs.getLong("map_updated_at"),
                         rs.getLong("saved_at")
-                );
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load run state for " + playerId);
-            return null;
-        }
+                ), null);
     }
 
     public void deleteAsync(UUID playerId) {
@@ -131,13 +115,7 @@ public class RunStateStore {
 
     private void deleteSync(UUID playerId) {
         String sql = "DELETE FROM saved_run_state WHERE player_uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to delete run state for " + playerId);
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> stmt.setString(1, playerId.toString()));
     }
 
     // --- Encoding/decoding ---

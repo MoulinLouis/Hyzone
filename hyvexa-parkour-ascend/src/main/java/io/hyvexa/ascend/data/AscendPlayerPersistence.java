@@ -577,7 +577,7 @@ class AscendPlayerPersistence {
     }
 
     Long loadBestTimeFromDatabase(UUID playerId, String mapId) {
-        if (playerId == null || mapId == null || !this.db.isInitialized()) {
+        if (playerId == null || mapId == null) {
             return null;
         }
 
@@ -588,26 +588,15 @@ class AscendPlayerPersistence {
             LIMIT 1
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return null;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+        return DatabaseManager.queryOne(this.db, sql,
+            stmt -> {
                 stmt.setString(1, playerId.toString());
                 stmt.setString(2, mapId);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        long value = rs.getLong("best_time_ms");
-                        return rs.wasNull() ? null : value;
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to load best_time_ms for " + playerId + " map " + mapId + ": " + e.getMessage());
-        }
-        return null;
+            },
+            rs -> {
+                long value = rs.getLong("best_time_ms");
+                return rs.wasNull() ? null : value;
+            }, null);
     }
 
     // ========================================
