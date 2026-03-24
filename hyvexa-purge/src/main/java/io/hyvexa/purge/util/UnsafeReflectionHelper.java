@@ -78,6 +78,7 @@ public final class UnsafeReflectionHelper {
         }
     }
 
+    @SuppressWarnings("removal")
     public static long resolveAggroFieldOffset(sun.misc.Unsafe unsafe, Object target, String fieldName,
                                                 ConcurrentHashMap<Class<?>, Long> cache) {
         Class<?> targetClass = target.getClass();
@@ -99,6 +100,7 @@ public final class UnsafeReflectionHelper {
         return -1;
     }
 
+    @SuppressWarnings("removal")
     public static long resolveMaxSpeedFieldOffset(sun.misc.Unsafe unsafe, Object controller) {
         Class<?> controllerClass = controller.getClass();
         Long cached = MAX_SPEED_OFFSET_CACHE.get(controllerClass);

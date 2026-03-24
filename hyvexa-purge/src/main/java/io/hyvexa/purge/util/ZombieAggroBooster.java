@@ -125,6 +125,7 @@ public final class ZombieAggroBooster {
         return modified;
     }
 
+    @SuppressWarnings("removal")
     private static boolean boostSensorRange(sun.misc.Unsafe unsafe, Object sensor) {
         long offset = UnsafeReflectionHelper.resolveAggroFieldOffset(unsafe, sensor, "range",
                 UnsafeReflectionHelper.SENSOR_RANGE_OFFSETS);
@@ -137,6 +138,7 @@ public final class ZombieAggroBooster {
         return true;
     }
 
+    @SuppressWarnings("removal")
     private static void boostSensorViewCone(sun.misc.Unsafe unsafe, Object sensor) {
         // Entity filters are stored inside SensorWithEntityFilters subclasses
         Object filters = UnsafeReflectionHelper.readFieldCached(sensor, "entityFilters");
@@ -169,6 +171,7 @@ public final class ZombieAggroBooster {
      * - switchToSteeringDistance: forces direct beeline pursuit instead of A* pathfinding,
      *   bypassing the A* node budget limits that prevent long-range path computation
      */
+    @SuppressWarnings("removal")
     private static boolean boostBodyMotionRange(sun.misc.Unsafe unsafe, Object bodyMotion) {
         boolean modified = false;
         double range = PURGE_AGGRO_RANGE;
@@ -240,6 +243,7 @@ public final class ZombieAggroBooster {
         return modified;
     }
 
+    @SuppressWarnings("removal")
     private static boolean zeroDelayRange(sun.misc.Unsafe unsafe, Object action) {
         long offset = UnsafeReflectionHelper.resolveAggroFieldOffset(unsafe, action, "delayRange",
                 UnsafeReflectionHelper.DELAY_RANGE_OFFSETS);
@@ -270,6 +274,7 @@ public final class ZombieAggroBooster {
         }
     }
 
+    @SuppressWarnings("removal")
     public static void applySpeedMultiplier(Store<EntityStore> store, Ref<EntityStore> entityRef,
                                              PurgeVariantConfig variant) {
         if (variant.speedMultiplier() == 1.0) {
