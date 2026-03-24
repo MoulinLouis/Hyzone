@@ -7,10 +7,10 @@ import io.hyvexa.core.db.DatabaseManager;
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -83,40 +83,20 @@ public class DuelPreferenceStore {
             SELECT player_uuid, easy_enabled, medium_enabled, hard_enabled, insane_enabled
             FROM duel_category_prefs
             """;
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        UUID playerId = UUID.fromString(rs.getString("player_uuid"));
-                        EnumSet<DuelCategory> enabled = EnumSet.noneOf(DuelCategory.class);
-                        if (rs.getBoolean("easy_enabled")) {
-                            enabled.add(DuelCategory.EASY);
-                        }
-                        if (rs.getBoolean("medium_enabled")) {
-                            enabled.add(DuelCategory.MEDIUM);
-                        }
-                        if (rs.getBoolean("hard_enabled")) {
-                            enabled.add(DuelCategory.HARD);
-                        }
-                        if (rs.getBoolean("insane_enabled")) {
-                            enabled.add(DuelCategory.INSANE);
-                        }
-                        if (enabled.isEmpty()) {
-                            enabled = defaultEnabled();
-                        }
-                        enabledByPlayer.put(playerId, enabled);
-                    }
-                    LOGGER.atInfo().log("DuelPreferenceStore loaded " + enabledByPlayer.size() + " player preferences");
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to load DuelPreferenceStore: " + e.getMessage());
+        List<java.util.Map.Entry<UUID, EnumSet<DuelCategory>>> rows = DatabaseManager.queryList(this.db, sql, rs -> {
+            UUID playerId = UUID.fromString(rs.getString("player_uuid"));
+            EnumSet<DuelCategory> enabled = EnumSet.noneOf(DuelCategory.class);
+            if (rs.getBoolean("easy_enabled")) enabled.add(DuelCategory.EASY);
+            if (rs.getBoolean("medium_enabled")) enabled.add(DuelCategory.MEDIUM);
+            if (rs.getBoolean("hard_enabled")) enabled.add(DuelCategory.HARD);
+            if (rs.getBoolean("insane_enabled")) enabled.add(DuelCategory.INSANE);
+            if (enabled.isEmpty()) enabled = defaultEnabled();
+            return java.util.Map.entry(playerId, enabled);
+        });
+        for (var entry : rows) {
+            enabledByPlayer.put(entry.getKey(), entry.getValue());
         }
+        LOGGER.atInfo().log("DuelPreferenceStore loaded " + enabledByPlayer.size() + " player preferences");
     }
 
     private void ensureTable() {
@@ -201,23 +181,13 @@ public class DuelPreferenceStore {
                 insane_enabled = VALUES(insane_enabled),
                 updated_at = VALUES(updated_at)
             """;
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                stmt.setBoolean(2, enabled.contains(DuelCategory.EASY));
-                stmt.setBoolean(3, enabled.contains(DuelCategory.MEDIUM));
-                stmt.setBoolean(4, enabled.contains(DuelCategory.HARD));
-                stmt.setBoolean(5, enabled.contains(DuelCategory.INSANE));
-                stmt.setTimestamp(6, new Timestamp(System.currentTimeMillis()));
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save duel preferences: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, playerId.toString());
+            stmt.setBoolean(2, enabled.contains(DuelCategory.EASY));
+            stmt.setBoolean(3, enabled.contains(DuelCategory.MEDIUM));
+            stmt.setBoolean(4, enabled.contains(DuelCategory.HARD));
+            stmt.setBoolean(5, enabled.contains(DuelCategory.INSANE));
+            stmt.setTimestamp(6, new Timestamp(System.currentTimeMillis()));
+        });
     }
 }

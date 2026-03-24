@@ -7,7 +7,6 @@ import io.hyvexa.purge.data.PurgeWaveDefinition;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -67,20 +66,17 @@ public class PurgeWaveConfigManager {
         synchronized (waves) {
             int waveNumber = waves.keySet().stream().max(Integer::compareTo).orElse(0) + 1;
             String sql = "INSERT INTO purge_waves (wave_number, spawn_delay_ms, spawn_batch_size) VALUES (?, ?, ?)";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            boolean success = DatabaseManager.execute(this.db, sql, stmt -> {
                 stmt.setInt(1, waveNumber);
                 stmt.setInt(2, DEFAULT_SPAWN_DELAY_MS);
                 stmt.setInt(3, DEFAULT_SPAWN_BATCH_SIZE);
-                stmt.executeUpdate();
-                waves.put(waveNumber, new PurgeWaveDefinition(
-                        waveNumber, new HashMap<>(), DEFAULT_SPAWN_DELAY_MS, DEFAULT_SPAWN_BATCH_SIZE));
-                return waveNumber;
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to add purge wave " + waveNumber);
+            });
+            if (!success) {
                 return -1;
             }
+            waves.put(waveNumber, new PurgeWaveDefinition(
+                    waveNumber, new HashMap<>(), DEFAULT_SPAWN_DELAY_MS, DEFAULT_SPAWN_BATCH_SIZE));
+            return waveNumber;
         }
     }
 
@@ -132,19 +128,9 @@ public class PurgeWaveConfigManager {
         if (!isPersistenceAvailable()) {
             return;
         }
-        try (Connection conn = this.db.getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM purge_wave_variant_counts")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM purge_waves")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-            waves.clear();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to clear purge waves");
-        }
+        DatabaseManager.execute(this.db, "DELETE FROM purge_wave_variant_counts");
+        DatabaseManager.execute(this.db, "DELETE FROM purge_waves");
+        waves.clear();
     }
 
     public boolean adjustVariantCount(int waveNumber, String variantKey, int delta) {
@@ -201,17 +187,11 @@ public class PurgeWaveConfigManager {
             return false;
         }
         String sql = "UPDATE purge_waves SET " + column + " = ? WHERE wave_number = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        int rows = DatabaseManager.executeCount(this.db, sql, stmt -> {
             stmt.setInt(1, value);
             stmt.setInt(2, waveNumber);
-            int rows = stmt.executeUpdate();
-            if (rows <= 0) {
-                return false;
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to update purge wave " + waveNumber + " " + column);
+        });
+        if (rows <= 0) {
             return false;
         }
         waves.put(waveNumber, updater.apply(wave));
@@ -228,33 +208,25 @@ public class PurgeWaveConfigManager {
             return false;
         }
 
+        boolean success;
         if (safeCount == 0) {
             String sql = "DELETE FROM purge_wave_variant_counts WHERE wave_number = ? AND variant_key = ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            success = DatabaseManager.execute(this.db, sql, stmt -> {
                 stmt.setInt(1, waveNumber);
                 stmt.setString(2, variantKey);
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to delete variant count for wave " + waveNumber + " " + variantKey);
-                return false;
-            }
+            });
         } else {
             String sql = "INSERT INTO purge_wave_variant_counts (wave_number, variant_key, count) VALUES (?, ?, ?) "
                     + "ON DUPLICATE KEY UPDATE count = ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            success = DatabaseManager.execute(this.db, sql, stmt -> {
                 stmt.setInt(1, waveNumber);
                 stmt.setString(2, variantKey);
                 stmt.setInt(3, safeCount);
                 stmt.setInt(4, safeCount);
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to update variant count for wave " + waveNumber + " " + variantKey);
-                return false;
-            }
+            });
+        }
+        if (!success) {
+            return false;
         }
 
         Map<String, Integer> newCounts = new HashMap<>(wave.variantCounts());
@@ -287,40 +259,27 @@ public class PurgeWaveConfigManager {
         }
         // Load wave base data
         String waveSql = "SELECT wave_number, spawn_delay_ms, spawn_batch_size FROM purge_waves ORDER BY wave_number ASC";
+        List<Map.Entry<Integer, int[]>> waveRows = DatabaseManager.queryList(this.db, waveSql,
+                rs -> Map.entry(rs.getInt("wave_number"), new int[]{
+                        Math.max(100, rs.getInt("spawn_delay_ms")),
+                        Math.max(1, rs.getInt("spawn_batch_size"))
+                }));
         Map<Integer, int[]> waveBaseData = new HashMap<>();
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(waveSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    int waveNumber = rs.getInt("wave_number");
-                    waveBaseData.put(waveNumber, new int[]{
-                            Math.max(100, rs.getInt("spawn_delay_ms")),
-                            Math.max(1, rs.getInt("spawn_batch_size"))
-                    });
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load purge waves");
+        for (Map.Entry<Integer, int[]> entry : waveRows) {
+            waveBaseData.put(entry.getKey(), entry.getValue());
+        }
+        if (waveBaseData.isEmpty()) {
             return;
         }
 
         // Load variant counts
-        Map<Integer, Map<String, Integer>> variantCountsMap = new HashMap<>();
         String countsSql = "SELECT wave_number, variant_key, count FROM purge_wave_variant_counts";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(countsSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    int waveNumber = rs.getInt("wave_number");
-                    String variantKey = rs.getString("variant_key");
-                    int count = Math.max(0, rs.getInt("count"));
-                    variantCountsMap.computeIfAbsent(waveNumber, k -> new HashMap<>()).put(variantKey, count);
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load purge wave variant counts");
+        List<Object[]> countRows = DatabaseManager.queryList(this.db, countsSql,
+                rs -> new Object[]{rs.getInt("wave_number"), rs.getString("variant_key"), Math.max(0, rs.getInt("count"))});
+        Map<Integer, Map<String, Integer>> variantCountsMap = new HashMap<>();
+        for (Object[] row : countRows) {
+            variantCountsMap.computeIfAbsent((Integer) row[0], k -> new HashMap<>())
+                    .put((String) row[1], (Integer) row[2]);
         }
 
         // Build wave definitions

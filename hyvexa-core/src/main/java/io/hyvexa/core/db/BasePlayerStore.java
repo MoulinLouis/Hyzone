@@ -103,34 +103,15 @@ public abstract class BasePlayerStore<V> {
     }
 
     private V loadFromDatabase(UUID playerId) {
-        if (!connectionProvider.isInitialized()) {
-            return defaultValue();
-        }
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, loadSql())) {
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return parseRow(rs, playerId);
-                }
-            }
-        } catch (SQLException e) {
-            logError("loading player " + playerId, e);
-        }
-        return defaultValue();
+        return DatabaseManager.queryOne(connectionProvider, loadSql(),
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> parseRow(rs, playerId),
+                defaultValue());
     }
 
     private void persistToDatabase(UUID playerId, V value) {
-        if (!connectionProvider.isInitialized()) {
-            return;
-        }
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, upsertSql())) {
-            bindUpsertParams(stmt, playerId, value);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            logError("saving player " + playerId, e);
-        }
+        DatabaseManager.execute(connectionProvider, upsertSql(),
+                stmt -> bindUpsertParams(stmt, playerId, value));
     }
 
     private void logError(String context, SQLException e) {

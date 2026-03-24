@@ -6,9 +6,9 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -142,23 +142,16 @@ public class PurgeClassStore {
             return;
         }
         String sql = "SELECT class_id FROM purge_player_classes WHERE uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                Set<PurgeClass> classes = ConcurrentHashMap.newKeySet();
-                while (rs.next()) {
-                    PurgeClass pc = PurgeClass.fromName(rs.getString("class_id"));
-                    if (pc != null) {
-                        classes.add(pc);
-                    }
-                }
-                unlockedCache.putIfAbsent(playerId, classes);
+        List<PurgeClass> loaded = DatabaseManager.queryList(this.db, sql,
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> PurgeClass.fromName(rs.getString("class_id")));
+        Set<PurgeClass> classes = ConcurrentHashMap.newKeySet();
+        for (PurgeClass pc : loaded) {
+            if (pc != null) {
+                classes.add(pc);
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load unlocked classes for " + playerId);
         }
+        unlockedCache.putIfAbsent(playerId, classes);
     }
 
     private void loadSelectedFromDatabase(UUID playerId) {
@@ -167,23 +160,14 @@ public class PurgeClassStore {
             return;
         }
         String sql = "SELECT selected_class FROM purge_player_selected_class WHERE uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
+        PurgeClass pc = DatabaseManager.queryOne(this.db, sql,
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> {
                     String classId = rs.getString("selected_class");
-                    if (classId != null) {
-                        PurgeClass pc = PurgeClass.fromName(classId);
-                        if (pc != null) {
-                            selectedCache.put(playerId, pc);
-                        }
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load selected class for " + playerId);
+                    return classId != null ? PurgeClass.fromName(classId) : null;
+                }, null);
+        if (pc != null) {
+            selectedCache.put(playerId, pc);
         }
         selectedLoaded.put(playerId, Boolean.TRUE);
     }
@@ -199,37 +183,21 @@ public class PurgeClassStore {
     }
 
     private void persistUnlock(UUID playerId, PurgeClass purgeClass) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
         String sql = "INSERT IGNORE INTO purge_player_classes (uuid, class_id) VALUES (?, ?)";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db, sql, stmt -> {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, purgeClass.name());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist class unlock for " + playerId);
-        }
+        });
     }
 
     private void persistSelected(UUID playerId, PurgeClass purgeClass) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
         String sql = "INSERT INTO purge_player_selected_class (uuid, selected_class) VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE selected_class = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        String classId = purgeClass != null ? purgeClass.name() : null;
+        DatabaseManager.execute(this.db, sql, stmt -> {
             stmt.setString(1, playerId.toString());
-            String classId = purgeClass != null ? purgeClass.name() : null;
             stmt.setString(2, classId);
             stmt.setString(3, classId);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist selected class for " + playerId);
-        }
+        });
     }
 }

@@ -6,7 +6,6 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,25 +53,19 @@ public class CosmeticShopConfigStore {
     }
 
     private void loadAll() {
-        if (!this.db.isInitialized()) return;
         // Clear stale entries so removed DB rows don't linger in cache
         configs.clear();
-        String sql = "SELECT cosmetic_id, available, price, currency FROM cosmetic_shop_config";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn,sql)) {
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String id = rs.getString("cosmetic_id");
-                    boolean available = rs.getBoolean("available");
-                    int price = rs.getInt("price");
-                    String currency = rs.getString("currency");
-                    configs.put(id, new CosmeticConfig(id, available, price, currency));
-                }
-            }
-            LOGGER.atInfo().log("Loaded " + configs.size() + " cosmetic shop configs");
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load cosmetic shop configs");
+        List<CosmeticConfig> loaded = DatabaseManager.queryList(this.db,
+                "SELECT cosmetic_id, available, price, currency FROM cosmetic_shop_config",
+                rs -> new CosmeticConfig(
+                        rs.getString("cosmetic_id"),
+                        rs.getBoolean("available"),
+                        rs.getInt("price"),
+                        rs.getString("currency")));
+        for (CosmeticConfig cfg : loaded) {
+            configs.put(cfg.cosmeticId, cfg);
         }
+        LOGGER.atInfo().log("Loaded " + configs.size() + " cosmetic shop configs");
     }
 
     public boolean isAvailable(String cosmeticId) {
@@ -133,22 +126,18 @@ public class CosmeticShopConfigStore {
     }
 
     private void persistConfig(CosmeticConfig cfg) {
-        if (!this.db.isInitialized()) return;
-        String sql = "INSERT INTO cosmetic_shop_config (cosmetic_id, available, price, currency) VALUES (?, ?, ?, ?) "
-                + "ON DUPLICATE KEY UPDATE available = ?, price = ?, currency = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn,sql)) {
-            stmt.setString(1, cfg.cosmeticId);
-            stmt.setBoolean(2, cfg.available);
-            stmt.setInt(3, cfg.price);
-            stmt.setString(4, cfg.currency);
-            stmt.setBoolean(5, cfg.available);
-            stmt.setInt(6, cfg.price);
-            stmt.setString(7, cfg.currency);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist cosmetic config for " + cfg.cosmeticId);
-        }
+        DatabaseManager.execute(this.db,
+                "INSERT INTO cosmetic_shop_config (cosmetic_id, available, price, currency) VALUES (?, ?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE available = ?, price = ?, currency = ?",
+                stmt -> {
+                    stmt.setString(1, cfg.cosmeticId);
+                    stmt.setBoolean(2, cfg.available);
+                    stmt.setInt(3, cfg.price);
+                    stmt.setString(4, cfg.currency);
+                    stmt.setBoolean(5, cfg.available);
+                    stmt.setInt(6, cfg.price);
+                    stmt.setString(7, cfg.currency);
+                });
     }
 
     public record CosmeticConfig(String cosmeticId, boolean available, int price, String currency) {}

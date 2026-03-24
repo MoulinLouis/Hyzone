@@ -9,6 +9,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /** Manages the MySQL connection pool and schema setup for parkour data. */
@@ -394,6 +396,128 @@ public class DatabaseManager implements ConnectionProvider {
         if (elapsedMs > SLOW_QUERY_THRESHOLD_MS) {
             LOGGER.atWarning().log("Slow query (" + elapsedMs + "ms): " + context);
         }
+    }
+
+    // ── JDBC Template Methods ─────────────────────────────────────────
+
+    /**
+     * Execute a query that returns a single row, mapped to a domain object.
+     * Returns {@code defaultValue} if no row is found, DB is not initialized, or an error occurs.
+     */
+    public static <T> T queryOne(ConnectionProvider db, String sql, ParamBinder binder,
+                                  RowMapper<T> mapper, T defaultValue) {
+        if (!db.isInitialized()) return defaultValue;
+        try (Connection conn = db.getConnection();
+             PreparedStatement stmt = prepare(conn, sql)) {
+            binder.bind(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapper.map(rs);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("queryOne failed: " + truncateSql(sql));
+        }
+        return defaultValue;
+    }
+
+    /**
+     * Execute a query that returns multiple rows, each mapped to a domain object.
+     * Returns an empty list if DB is not initialized or an error occurs.
+     */
+    public static <T> List<T> queryList(ConnectionProvider db, String sql, ParamBinder binder,
+                                         RowMapper<T> mapper) {
+        List<T> result = new ArrayList<>();
+        if (!db.isInitialized()) return result;
+        try (Connection conn = db.getConnection();
+             PreparedStatement stmt = prepare(conn, sql)) {
+            binder.bind(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapper.map(rs));
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("queryList failed: " + truncateSql(sql));
+        }
+        return result;
+    }
+
+    /**
+     * Execute an INSERT, UPDATE, or DELETE statement.
+     * Returns {@code true} on success, {@code false} if DB is not initialized or an error occurs.
+     */
+    public static boolean execute(ConnectionProvider db, String sql, ParamBinder binder) {
+        if (!db.isInitialized()) return false;
+        try (Connection conn = db.getConnection();
+             PreparedStatement stmt = prepare(conn, sql)) {
+            binder.bind(stmt);
+            stmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("execute failed: " + truncateSql(sql));
+            return false;
+        }
+    }
+
+    /**
+     * Execute an INSERT, UPDATE, or DELETE statement and return the number of affected rows.
+     * Returns {@code -1} if DB is not initialized or an error occurs.
+     */
+    public static int executeCount(ConnectionProvider db, String sql, ParamBinder binder) {
+        if (!db.isInitialized()) return -1;
+        try (Connection conn = db.getConnection();
+             PreparedStatement stmt = prepare(conn, sql)) {
+            binder.bind(stmt);
+            return stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("executeCount failed: " + truncateSql(sql));
+            return -1;
+        }
+    }
+
+    /**
+     * Execute a batch operation over a collection of items.
+     * Returns {@code true} on success, {@code false} if DB is not initialized or an error occurs.
+     */
+    public static <T> boolean executeBatch(ConnectionProvider db, String sql,
+                                            Iterable<T> items,
+                                            SQLBiConsumer<PreparedStatement, T> binder) {
+        if (!db.isInitialized()) return false;
+        try (Connection conn = db.getConnection();
+             PreparedStatement stmt = prepare(conn, sql)) {
+            for (T item : items) {
+                binder.accept(stmt, item);
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+            return true;
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("executeBatch failed: " + truncateSql(sql));
+            return false;
+        }
+    }
+
+    /** Convenience overload for parameterless queries. */
+    public static <T> T queryOne(ConnectionProvider db, String sql,
+                                  RowMapper<T> mapper, T defaultValue) {
+        return queryOne(db, sql, stmt -> {}, mapper, defaultValue);
+    }
+
+    /** Convenience overload for parameterless queries. */
+    public static <T> List<T> queryList(ConnectionProvider db, String sql, RowMapper<T> mapper) {
+        return queryList(db, sql, stmt -> {}, mapper);
+    }
+
+    /** Convenience overload for parameterless statements. */
+    public static boolean execute(ConnectionProvider db, String sql) {
+        return execute(db, sql, stmt -> {});
+    }
+
+    private static String truncateSql(String sql) {
+        if (sql == null) return "null";
+        String trimmed = sql.strip();
+        return trimmed.length() > 80 ? trimmed.substring(0, 80) + "..." : trimmed;
     }
 
     public record TestResult(boolean success, String message, Throwable cause) {

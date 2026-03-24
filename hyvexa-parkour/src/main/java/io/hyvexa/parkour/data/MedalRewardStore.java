@@ -6,9 +6,9 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -107,22 +107,16 @@ public class MedalRewardStore {
             return;
         }
         String sql = "SELECT category, bronze_feathers, silver_feathers, gold_feathers, emerald_feathers, insane_feathers FROM medal_rewards";
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String category = rs.getString("category");
-                    int bronze = rs.getInt("bronze_feathers");
-                    int silver = rs.getInt("silver_feathers");
-                    int gold = rs.getInt("gold_feathers");
-                    int emerald = rs.getInt("emerald_feathers");
-                    int insane = rs.getInt("insane_feathers");
-                    rewards.put(normalizeCategory(category), new MedalRewards(bronze, silver, gold, emerald, insane));
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load medal rewards");
+        List<java.util.Map.Entry<String, MedalRewards>> loaded = DatabaseManager.queryList(connectionProvider, sql, rs -> {
+            String category = rs.getString("category");
+            MedalRewards r = new MedalRewards(
+                    rs.getInt("bronze_feathers"), rs.getInt("silver_feathers"),
+                    rs.getInt("gold_feathers"), rs.getInt("emerald_feathers"),
+                    rs.getInt("insane_feathers"));
+            return java.util.Map.entry(normalizeCategory(category), r);
+        });
+        for (var entry : loaded) {
+            rewards.put(entry.getKey(), entry.getValue());
         }
     }
 
@@ -133,9 +127,7 @@ public class MedalRewardStore {
         String sql = "INSERT INTO medal_rewards (category, bronze_feathers, silver_feathers, gold_feathers, emerald_feathers, insane_feathers) "
                 + "VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE "
                 + "bronze_feathers = ?, silver_feathers = ?, gold_feathers = ?, emerald_feathers = ?, insane_feathers = ?";
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(connectionProvider, sql, stmt -> {
             stmt.setString(1, category);
             stmt.setInt(2, bronze);
             stmt.setInt(3, silver);
@@ -147,10 +139,7 @@ public class MedalRewardStore {
             stmt.setInt(9, gold);
             stmt.setInt(10, emerald);
             stmt.setInt(11, insane);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist medal rewards for " + category);
-        }
+        });
     }
 
     private static String normalizeCategory(String category) {

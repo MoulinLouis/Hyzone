@@ -6,7 +6,6 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -120,24 +119,21 @@ public class MedalStore {
             return result;
         }
         String sql = "SELECT map_id, medal FROM player_medals WHERE player_uuid = ?";
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
+        List<java.util.Map.Entry<String, Medal>> rows = DatabaseManager.queryList(connectionProvider, sql,
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> {
                     String mapId = rs.getString("map_id");
                     String medalStr = rs.getString("medal");
                     try {
-                        Medal medal = Medal.valueOf(medalStr);
-                        result.computeIfAbsent(mapId, k -> EnumSet.noneOf(Medal.class)).add(medal);
+                        return java.util.Map.entry(mapId, Medal.valueOf(medalStr));
                     } catch (IllegalArgumentException ignored) {
-                        // Skip unknown medal values
+                        return null;
                     }
-                }
+                });
+        for (var entry : rows) {
+            if (entry != null) {
+                result.computeIfAbsent(entry.getKey(), k -> EnumSet.noneOf(Medal.class)).add(entry.getValue());
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load medals for " + playerId);
         }
         return result;
     }
@@ -147,16 +143,11 @@ public class MedalStore {
             return;
         }
         String sql = "INSERT IGNORE INTO player_medals (player_uuid, map_id, medal) VALUES (?, ?, ?)";
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(connectionProvider, sql, stmt -> {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, mapId);
             stmt.setString(3, medal.name());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist medal for " + playerId + " map=" + mapId);
-        }
+        });
     }
 
     public List<MedalScoreEntry> getLeaderboardSnapshot() {
@@ -169,25 +160,25 @@ public class MedalStore {
         }
         String sql = "SELECT player_uuid, medal, COUNT(*) as cnt FROM player_medals GROUP BY player_uuid, medal";
         java.util.Map<UUID, int[]> aggregated = new HashMap<>();
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    UUID playerId = UUID.fromString(rs.getString("player_uuid"));
-                    String medalStr = rs.getString("medal");
-                    int cnt = rs.getInt("cnt");
-                    try {
-                        Medal medal = Medal.valueOf(medalStr);
-                        int[] counts = aggregated.computeIfAbsent(playerId, k -> new int[MEDAL_COUNT]);
-                        counts[medal.ordinal()] = cnt;
-                    } catch (IllegalArgumentException ignored) {
-                    }
-                }
+        List<Object[]> rows = DatabaseManager.queryList(connectionProvider, sql, rs -> {
+            try {
+                UUID playerId = UUID.fromString(rs.getString("player_uuid"));
+                String medalStr = rs.getString("medal");
+                int cnt = rs.getInt("cnt");
+                Medal medal = Medal.valueOf(medalStr);
+                return new Object[]{playerId, medal, cnt};
+            } catch (IllegalArgumentException ignored) {
+                return null;
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load leaderboard snapshot");
-            return;
+        });
+        for (Object[] row : rows) {
+            if (row != null) {
+                UUID playerId = (UUID) row[0];
+                Medal medal = (Medal) row[1];
+                int cnt = (int) row[2];
+                int[] counts = aggregated.computeIfAbsent(playerId, k -> new int[MEDAL_COUNT]);
+                counts[medal.ordinal()] = cnt;
+            }
         }
         List<MedalScoreEntry> entries = new ArrayList<>(aggregated.size());
         for (java.util.Map.Entry<UUID, int[]> e : aggregated.entrySet()) {

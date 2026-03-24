@@ -6,11 +6,6 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
 
 /**
  * Stores global Ascend settings (single row, id = 1).
@@ -59,47 +54,35 @@ public class AscendSettingsStore {
             FROM ascend_settings WHERE id = ?
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setInt(1, SETTINGS_ID);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        spawnX = rs.getDouble("spawn_x");
-                        spawnY = rs.getDouble("spawn_y");
-                        spawnZ = rs.getDouble("spawn_z");
-                        spawnRotX = rs.getFloat("spawn_rot_x");
-                        spawnRotY = rs.getFloat("spawn_rot_y");
-                        spawnRotZ = rs.getFloat("spawn_rot_z");
-                        npcX = rs.getDouble("npc_x");
-                        npcY = rs.getDouble("npc_y");
-                        npcZ = rs.getDouble("npc_z");
-                        npcRotX = rs.getFloat("npc_rot_x");
-                        npcRotY = rs.getFloat("npc_rot_y");
-                        npcRotZ = rs.getFloat("npc_rot_z");
-                        double voidY = rs.getDouble("void_y_threshold");
-                        voidYThreshold = rs.wasNull() ? null : voidY;
-                        LOGGER.atInfo().log("AscendSettingsStore loaded");
-                    } else {
-                        LOGGER.atInfo().log("No settings row found, inserting default");
-                        insertDefault();
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to load AscendSettingsStore: " + e.getMessage());
+        Boolean found = DatabaseManager.queryOne(this.db, sql,
+            stmt -> stmt.setInt(1, SETTINGS_ID),
+            rs -> {
+                spawnX = rs.getDouble("spawn_x");
+                spawnY = rs.getDouble("spawn_y");
+                spawnZ = rs.getDouble("spawn_z");
+                spawnRotX = rs.getFloat("spawn_rot_x");
+                spawnRotY = rs.getFloat("spawn_rot_y");
+                spawnRotZ = rs.getFloat("spawn_rot_z");
+                npcX = rs.getDouble("npc_x");
+                npcY = rs.getDouble("npc_y");
+                npcZ = rs.getDouble("npc_z");
+                npcRotX = rs.getFloat("npc_rot_x");
+                npcRotY = rs.getFloat("npc_rot_y");
+                npcRotZ = rs.getFloat("npc_rot_z");
+                double voidY = rs.getDouble("void_y_threshold");
+                voidYThreshold = rs.wasNull() ? null : voidY;
+                return Boolean.TRUE;
+            }, null);
+
+        if (found != null) {
+            LOGGER.atInfo().log("AscendSettingsStore loaded");
+        } else {
+            LOGGER.atInfo().log("No settings row found, inserting default");
+            insertDefault();
         }
     }
 
     private void insertDefault() {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-
         String sql = """
             INSERT INTO ascend_settings (id, spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z,
                                          npc_x, npc_y, npc_z, npc_rot_x, npc_rot_y, npc_rot_z)
@@ -107,19 +90,7 @@ public class AscendSettingsStore {
             ON DUPLICATE KEY UPDATE id = id
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setInt(1, SETTINGS_ID);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to insert default settings: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> stmt.setInt(1, SETTINGS_ID));
     }
 
     public void setSpawnPosition(double x, double y, double z, float rotX, float rotY, float rotZ) {
@@ -143,10 +114,6 @@ public class AscendSettingsStore {
     }
 
     private void saveToDatabase() {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-
         String sql = """
             INSERT INTO ascend_settings (id, spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z,
                                          npc_x, npc_y, npc_z, npc_rot_x, npc_rot_y, npc_rot_z, void_y_threshold)
@@ -159,37 +126,27 @@ public class AscendSettingsStore {
                 void_y_threshold = VALUES(void_y_threshold)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            int i = 1;
+            stmt.setInt(i++, SETTINGS_ID);
+            stmt.setDouble(i++, spawnX);
+            stmt.setDouble(i++, spawnY);
+            stmt.setDouble(i++, spawnZ);
+            stmt.setFloat(i++, spawnRotX);
+            stmt.setFloat(i++, spawnRotY);
+            stmt.setFloat(i++, spawnRotZ);
+            stmt.setDouble(i++, npcX);
+            stmt.setDouble(i++, npcY);
+            stmt.setDouble(i++, npcZ);
+            stmt.setFloat(i++, npcRotX);
+            stmt.setFloat(i++, npcRotY);
+            stmt.setFloat(i++, npcRotZ);
+            if (voidYThreshold != null) {
+                stmt.setDouble(i, voidYThreshold);
+            } else {
+                stmt.setNull(i, java.sql.Types.DOUBLE);
             }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                int i = 1;
-                stmt.setInt(i++, SETTINGS_ID);
-                stmt.setDouble(i++, spawnX);
-                stmt.setDouble(i++, spawnY);
-                stmt.setDouble(i++, spawnZ);
-                stmt.setFloat(i++, spawnRotX);
-                stmt.setFloat(i++, spawnRotY);
-                stmt.setFloat(i++, spawnRotZ);
-                stmt.setDouble(i++, npcX);
-                stmt.setDouble(i++, npcY);
-                stmt.setDouble(i++, npcZ);
-                stmt.setFloat(i++, npcRotX);
-                stmt.setFloat(i++, npcRotY);
-                stmt.setFloat(i++, npcRotZ);
-                if (voidYThreshold != null) {
-                    stmt.setDouble(i, voidYThreshold);
-                } else {
-                    stmt.setNull(i, java.sql.Types.DOUBLE);
-                }
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save settings: " + e.getMessage());
-        }
+        });
     }
 
     public Vector3d getSpawnPosition() {

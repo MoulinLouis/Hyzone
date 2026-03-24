@@ -4,10 +4,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.UUID;
@@ -94,41 +90,32 @@ public class PurgeMissionStore {
         LocalDate today = todayUtc();
         String sql = "SELECT total_kills, best_wave, best_combo, claimed_wave, claimed_kill, claimed_combo "
                 + "FROM purge_daily_missions WHERE uuid = ? AND mission_date = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, today.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                DailyMissionProgress progress = new DailyMissionProgress(today);
-                if (rs.next()) {
-                    progress.setTotalKills(rs.getInt("total_kills"));
-                    progress.setBestWave(rs.getInt("best_wave"));
-                    progress.setBestCombo(rs.getInt("best_combo"));
-                    progress.setClaimedWave(rs.getInt("claimed_wave") != 0);
-                    progress.setClaimedKill(rs.getInt("claimed_kill") != 0);
-                    progress.setClaimedCombo(rs.getInt("claimed_combo") != 0);
-                }
-                cache.putIfAbsent(playerId, progress);
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load mission progress for " + playerId);
-        }
+        DailyMissionProgress progress = DatabaseManager.queryOne(this.db, sql,
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, today.toString());
+                },
+                rs -> {
+                    DailyMissionProgress p = new DailyMissionProgress(today);
+                    p.setTotalKills(rs.getInt("total_kills"));
+                    p.setBestWave(rs.getInt("best_wave"));
+                    p.setBestCombo(rs.getInt("best_combo"));
+                    p.setClaimedWave(rs.getInt("claimed_wave") != 0);
+                    p.setClaimedKill(rs.getInt("claimed_kill") != 0);
+                    p.setClaimedCombo(rs.getInt("claimed_combo") != 0);
+                    return p;
+                }, new DailyMissionProgress(today));
+        cache.putIfAbsent(playerId, progress);
     }
 
     private void persistToDatabase(UUID playerId, DailyMissionProgress progress) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
         String sql = "INSERT INTO purge_daily_missions "
                 + "(uuid, mission_date, total_kills, best_wave, best_combo, claimed_wave, claimed_kill, claimed_combo) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE "
                 + "total_kills = VALUES(total_kills), best_wave = VALUES(best_wave), best_combo = VALUES(best_combo), "
                 + "claimed_wave = VALUES(claimed_wave), claimed_kill = VALUES(claimed_kill), claimed_combo = VALUES(claimed_combo)";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db, sql, stmt -> {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, progress.getDate().toString());
             stmt.setInt(3, progress.getTotalKills());
@@ -137,10 +124,7 @@ public class PurgeMissionStore {
             stmt.setInt(6, progress.isClaimedWave() ? 1 : 0);
             stmt.setInt(7, progress.isClaimedKill() ? 1 : 0);
             stmt.setInt(8, progress.isClaimedCombo() ? 1 : 0);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist mission progress for " + playerId);
-        }
+        });
     }
 
     private static LocalDate todayUtc() {

@@ -4,10 +4,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -46,25 +42,10 @@ public class PlayerCountStore {
         try {
             samples.clear();
 
-            try (Connection conn = this.db.getConnection()) {
-                if (conn == null) {
-                    LOGGER.atWarning().log("Failed to acquire database connection");
-                    return;
-                }
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    DatabaseManager.applyQueryTimeout(stmt);
-                    stmt.setLong(1, cutoff);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        while (rs.next()) {
-                            long timestampMs = rs.getLong("timestamp_ms");
-                            int count = Math.max(0, rs.getInt("count"));
-                            samples.add(new Sample(timestampMs, count));
-                        }
-                    }
-                }
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to load player count samples: " + e.getMessage());
-            }
+            List<Sample> loaded = DatabaseManager.queryList(this.db, sql,
+                    stmt -> stmt.setLong(1, cutoff),
+                    rs -> new Sample(rs.getLong("timestamp_ms"), Math.max(0, rs.getInt("count"))));
+            samples.addAll(loaded);
 
             lastSavedAtMs = System.currentTimeMillis();
             LOGGER.atInfo().log("PlayerCountStore loaded " + samples.size() + " samples from database");
@@ -82,22 +63,9 @@ public class PlayerCountStore {
 
         long cutoff = System.currentTimeMillis() - retentionMs;
         String sql = "DELETE FROM player_count_samples WHERE timestamp_ms < ?";
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setLong(1, cutoff);
-                int deleted = stmt.executeUpdate();
-                if (deleted > 0) {
-                    LOGGER.atInfo().log("Pruned " + deleted + " old player count samples");
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to prune old samples: " + e.getMessage());
+        int deleted = DatabaseManager.executeCount(this.db, sql, stmt -> stmt.setLong(1, cutoff));
+        if (deleted > 0) {
+            LOGGER.atInfo().log("Pruned " + deleted + " old player count samples");
         }
     }
 
@@ -134,39 +102,17 @@ public class PlayerCountStore {
         }
 
         String sql = "DELETE FROM player_count_samples";
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to clear player count samples: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql);
     }
 
     private void saveSampleToDatabase(long timestampMs, int count) {
         if (!this.db.isInitialized()) return;
 
         String sql = "INSERT INTO player_count_samples (timestamp_ms, count) VALUES (?, ?)";
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setLong(1, timestampMs);
-                stmt.setInt(2, count);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to save sample: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setLong(1, timestampMs);
+            stmt.setInt(2, count);
+        });
     }
 
     public List<Sample> getSamplesSince(long cutoffMs) {

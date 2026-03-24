@@ -328,15 +328,11 @@ public class PurgeScrapStore {
     }
 
     private ScrapBalance loadFromDatabase(UUID playerId) {
-        if (!this.db.isInitialized()) {
-            return ScrapBalance.ZERO;
-        }
-        try (Connection conn = this.db.getConnection()) {
-            return loadFromDatabase(conn, playerId, false);
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load scrap for " + playerId);
-            return ScrapBalance.ZERO;
-        }
+        String sql = "SELECT scrap, lifetime_scrap_earned FROM purge_player_scrap WHERE uuid = ?";
+        return DatabaseManager.queryOne(this.db, sql,
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> new ScrapBalance(rs.getLong("scrap"), rs.getLong("lifetime_scrap_earned")),
+                ScrapBalance.ZERO);
     }
 
     private ScrapBalance loadFromDatabase(Connection conn, UUID playerId, boolean forUpdate) throws SQLException {

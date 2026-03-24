@@ -6,7 +6,6 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -205,41 +204,22 @@ abstract class CachedCurrencyStore implements CurrencyStore {
     }
 
     long loadFromDatabase(UUID playerId) {
-        if (!this.db.isInitialized()) {
-            return 0;
-        }
-        String sql = "SELECT " + columnName() + " FROM " + tableName() + " WHERE uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getLong(columnName());
-                }
-            }
-        } catch (SQLException e) {
-            logger().atWarning().withCause(e).log("Failed to load " + currencyLabel() + " for " + playerId);
-        }
-        return 0;
+        return DatabaseManager.queryOne(this.db,
+                "SELECT " + columnName() + " FROM " + tableName() + " WHERE uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> rs.getLong(columnName()),
+                0L);
     }
 
     private boolean persistToDatabase(UUID playerId, long amount) {
-        if (!this.db.isInitialized()) {
-            return false;
-        }
-        String sql = "INSERT INTO " + tableName() + " (uuid, " + columnName() + ") VALUES (?, ?) "
-                + "ON DUPLICATE KEY UPDATE " + columnName() + " = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.setLong(2, amount);
-            stmt.setLong(3, amount);
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            logger().atWarning().withCause(e).log("Failed to persist " + currencyLabel() + " for " + playerId);
-            return false;
-        }
+        return DatabaseManager.execute(this.db,
+                "INSERT INTO " + tableName() + " (uuid, " + columnName() + ") VALUES (?, ?) "
+                + "ON DUPLICATE KEY UPDATE " + columnName() + " = ?",
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setLong(2, amount);
+                    stmt.setLong(3, amount);
+                });
     }
 
     private static final class CachedBalance {

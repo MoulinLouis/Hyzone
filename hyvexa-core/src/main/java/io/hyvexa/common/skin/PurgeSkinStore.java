@@ -7,7 +7,6 @@ import io.hyvexa.core.economy.CurrencyStore;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.ArrayList;
@@ -165,17 +164,9 @@ public class PurgeSkinStore {
         }
         ownedCache.remove(playerId);
         selectedCache.remove(playerId);
-        if (!this.db.isInitialized()) {
-            return;
-        }
-        String sql = "DELETE FROM purge_weapon_skins WHERE uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to reset skins for " + playerId);
-        }
+        DatabaseManager.execute(this.db,
+                "DELETE FROM purge_weapon_skins WHERE uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()));
     }
 
     public void evictPlayer(UUID playerId) {
@@ -185,86 +176,59 @@ public class PurgeSkinStore {
         }
     }
 
+    private record SkinRow(String weaponId, String skinId, boolean selected) {}
+
     private void loadFromDatabase(UUID playerId) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-        String sql = "SELECT weapon_id, skin_id, selected FROM purge_weapon_skins WHERE uuid = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                ConcurrentHashMap<String, List<String>> owned = new ConcurrentHashMap<>();
-                ConcurrentHashMap<String, String> selected = new ConcurrentHashMap<>();
-                while (rs.next()) {
-                    String weaponId = rs.getString("weapon_id");
-                    String skinId = rs.getString("skin_id");
-                    boolean isSelected = rs.getBoolean("selected");
-                    owned.computeIfAbsent(weaponId, k -> Collections.synchronizedList(new ArrayList<>())).add(skinId);
-                    if (isSelected) {
-                        selected.put(weaponId, skinId);
-                    }
-                }
-                ownedCache.putIfAbsent(playerId, owned);
-                selectedCache.putIfAbsent(playerId, selected);
+        List<SkinRow> rows = DatabaseManager.queryList(this.db,
+                "SELECT weapon_id, skin_id, selected FROM purge_weapon_skins WHERE uuid = ?",
+                stmt -> stmt.setString(1, playerId.toString()),
+                rs -> new SkinRow(rs.getString("weapon_id"), rs.getString("skin_id"), rs.getBoolean("selected")));
+
+        ConcurrentHashMap<String, List<String>> owned = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, String> selected = new ConcurrentHashMap<>();
+        for (SkinRow row : rows) {
+            owned.computeIfAbsent(row.weaponId, k -> Collections.synchronizedList(new ArrayList<>())).add(row.skinId);
+            if (row.selected) {
+                selected.put(row.weaponId, row.skinId);
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load weapon skins for " + playerId);
         }
+        ownedCache.putIfAbsent(playerId, owned);
+        selectedCache.putIfAbsent(playerId, selected);
     }
 
     private void persistPurchase(UUID playerId, String weaponId, String skinId) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-        String sql = "INSERT IGNORE INTO purge_weapon_skins (uuid, weapon_id, skin_id, selected) VALUES (?, ?, ?, FALSE)";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, weaponId);
-            stmt.setString(3, skinId);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist skin purchase for " + playerId);
-        }
+        DatabaseManager.execute(this.db,
+                "INSERT IGNORE INTO purge_weapon_skins (uuid, weapon_id, skin_id, selected) VALUES (?, ?, ?, FALSE)",
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, weaponId);
+                    stmt.setString(3, skinId);
+                });
     }
 
     private void persistSelection(UUID playerId, String weaponId, String skinId) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
         // Deselect all skins for this weapon, then select the chosen one
-        String deselectSql = "UPDATE purge_weapon_skins SET selected = FALSE WHERE uuid = ? AND weapon_id = ?";
-        String selectSql = "UPDATE purge_weapon_skins SET selected = TRUE WHERE uuid = ? AND weapon_id = ? AND skin_id = ?";
-        try (Connection conn = this.db.getConnection()) {
-            try (PreparedStatement stmt = DatabaseManager.prepare(conn, deselectSql)) {
-                stmt.setString(1, playerId.toString());
-                stmt.setString(2, weaponId);
-                stmt.executeUpdate();
-            }
-            try (PreparedStatement stmt = DatabaseManager.prepare(conn, selectSql)) {
-                stmt.setString(1, playerId.toString());
-                stmt.setString(2, weaponId);
-                stmt.setString(3, skinId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist skin selection for " + playerId);
-        }
+        DatabaseManager.execute(this.db,
+                "UPDATE purge_weapon_skins SET selected = FALSE WHERE uuid = ? AND weapon_id = ?",
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, weaponId);
+                });
+        DatabaseManager.execute(this.db,
+                "UPDATE purge_weapon_skins SET selected = TRUE WHERE uuid = ? AND weapon_id = ? AND skin_id = ?",
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, weaponId);
+                    stmt.setString(3, skinId);
+                });
     }
 
     private void persistDeselection(UUID playerId, String weaponId) {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-        String sql = "UPDATE purge_weapon_skins SET selected = FALSE WHERE uuid = ? AND weapon_id = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, weaponId);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist skin deselection for " + playerId);
-        }
+        DatabaseManager.execute(this.db,
+                "UPDATE purge_weapon_skins SET selected = FALSE WHERE uuid = ? AND weapon_id = ?",
+                stmt -> {
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, weaponId);
+                });
     }
 }

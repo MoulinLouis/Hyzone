@@ -443,8 +443,6 @@ public class MineConfigStore {
     }
 
     private void saveMineToDatabase(Mine mine) {
-        if (!this.db.isInitialized()) return;
-
         String sql = """
             INSERT INTO mine_definitions (id, name, display_order, unlock_cost_mantissa, unlock_cost_exp10,
                 world, spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z)
@@ -457,28 +455,21 @@ public class MineConfigStore {
                 spawn_rot_x = VALUES(spawn_rot_x), spawn_rot_y = VALUES(spawn_rot_y), spawn_rot_z = VALUES(spawn_rot_z)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                int i = 1;
-                stmt.setString(i++, mine.getId());
-                stmt.setString(i++, mine.getName());
-                stmt.setInt(i++, mine.getDisplayOrder());
-                stmt.setDouble(i++, mine.getUnlockCost().getMantissa());
-                stmt.setInt(i++, mine.getUnlockCost().getExponent());
-                stmt.setString(i++, mine.getWorld() != null ? mine.getWorld() : "");
-                stmt.setDouble(i++, mine.getSpawnX());
-                stmt.setDouble(i++, mine.getSpawnY());
-                stmt.setDouble(i++, mine.getSpawnZ());
-                stmt.setFloat(i++, mine.getSpawnRotX());
-                stmt.setFloat(i++, mine.getSpawnRotY());
-                stmt.setFloat(i, mine.getSpawnRotZ());
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save mine: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            int i = 1;
+            stmt.setString(i++, mine.getId());
+            stmt.setString(i++, mine.getName());
+            stmt.setInt(i++, mine.getDisplayOrder());
+            stmt.setDouble(i++, mine.getUnlockCost().getMantissa());
+            stmt.setInt(i++, mine.getUnlockCost().getExponent());
+            stmt.setString(i++, mine.getWorld() != null ? mine.getWorld() : "");
+            stmt.setDouble(i++, mine.getSpawnX());
+            stmt.setDouble(i++, mine.getSpawnY());
+            stmt.setDouble(i++, mine.getSpawnZ());
+            stmt.setFloat(i++, mine.getSpawnRotX());
+            stmt.setFloat(i++, mine.getSpawnRotY());
+            stmt.setFloat(i, mine.getSpawnRotZ());
+        });
     }
 
     public boolean deleteMine(String id) {
@@ -498,18 +489,8 @@ public class MineConfigStore {
     }
 
     private void deleteMineFromDatabase(String id) {
-        if (!this.db.isInitialized()) return;
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM mine_definitions WHERE id = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, id);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to delete mine: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, "DELETE FROM mine_definitions WHERE id = ?",
+            stmt -> stmt.setString(1, id));
     }
 
     // --- Zone CRUD ---
@@ -532,8 +513,6 @@ public class MineConfigStore {
     }
 
     private void saveZoneToDatabase(MineZone zone) {
-        if (!this.db.isInitialized()) return;
-
         String sql = """
             INSERT INTO mine_zones (id, mine_id, min_x, min_y, min_z, max_x, max_y, max_z,
                 block_table_json, regen_cooldown_seconds)
@@ -545,26 +524,19 @@ public class MineConfigStore {
                 regen_cooldown_seconds = VALUES(regen_cooldown_seconds)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                int i = 1;
-                stmt.setString(i++, zone.getId());
-                stmt.setString(i++, zone.getMineId());
-                stmt.setInt(i++, zone.getMinX());
-                stmt.setInt(i++, zone.getMinY());
-                stmt.setInt(i++, zone.getMinZ());
-                stmt.setInt(i++, zone.getMaxX());
-                stmt.setInt(i++, zone.getMaxY());
-                stmt.setInt(i++, zone.getMaxZ());
-                stmt.setString(i++, GSON.toJson(zone.getBlockTable()));
-                stmt.setInt(i, zone.getRegenIntervalSeconds());
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save zone: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            int i = 1;
+            stmt.setString(i++, zone.getId());
+            stmt.setString(i++, zone.getMineId());
+            stmt.setInt(i++, zone.getMinX());
+            stmt.setInt(i++, zone.getMinY());
+            stmt.setInt(i++, zone.getMinZ());
+            stmt.setInt(i++, zone.getMaxX());
+            stmt.setInt(i++, zone.getMaxY());
+            stmt.setInt(i++, zone.getMaxZ());
+            stmt.setString(i++, GSON.toJson(zone.getBlockTable()));
+            stmt.setInt(i, zone.getRegenIntervalSeconds());
+        });
     }
 
     public boolean deleteZone(String zoneId) {
@@ -588,18 +560,8 @@ public class MineConfigStore {
     }
 
     private void deleteZoneFromDatabase(String zoneId) {
-        if (!this.db.isInitialized()) return;
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM mine_zones WHERE id = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, zoneId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to delete zone: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, "DELETE FROM mine_zones WHERE id = ?",
+            stmt -> stmt.setString(1, zoneId));
     }
 
     // --- Gate ---
@@ -630,8 +592,6 @@ public class MineConfigStore {
                                     double maxX, double maxY, double maxZ,
                                     double destX, double destY, double destZ,
                                     float destRotX, float destRotY, float destRotZ) {
-        if (!this.db.isInitialized()) return;
-
         String sql = """
             INSERT INTO mine_gate (id, min_x, min_y, min_z, max_x, max_y, max_z,
                 fallback_x, fallback_y, fallback_z, fallback_rot_x, fallback_rot_y, fallback_rot_z)
@@ -644,29 +604,22 @@ public class MineConfigStore {
                 fallback_rot_z = VALUES(fallback_rot_z)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                int i = 1;
-                stmt.setInt(i++, gateId);
-                stmt.setDouble(i++, minX);
-                stmt.setDouble(i++, minY);
-                stmt.setDouble(i++, minZ);
-                stmt.setDouble(i++, maxX);
-                stmt.setDouble(i++, maxY);
-                stmt.setDouble(i++, maxZ);
-                stmt.setDouble(i++, destX);
-                stmt.setDouble(i++, destY);
-                stmt.setDouble(i++, destZ);
-                stmt.setFloat(i++, destRotX);
-                stmt.setFloat(i++, destRotY);
-                stmt.setFloat(i, destRotZ);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save mine gate (id=" + gateId + "): " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            int i = 1;
+            stmt.setInt(i++, gateId);
+            stmt.setDouble(i++, minX);
+            stmt.setDouble(i++, minY);
+            stmt.setDouble(i++, minZ);
+            stmt.setDouble(i++, maxX);
+            stmt.setDouble(i++, maxY);
+            stmt.setDouble(i++, maxZ);
+            stmt.setDouble(i++, destX);
+            stmt.setDouble(i++, destY);
+            stmt.setDouble(i++, destZ);
+            stmt.setFloat(i++, destRotX);
+            stmt.setFloat(i++, destRotY);
+            stmt.setFloat(i, destRotZ);
+        });
     }
 
     public boolean isInsideEntryGate(double x, double y, double z) {
@@ -746,17 +699,10 @@ public class MineConfigStore {
             ON DUPLICATE KEY UPDATE price = VALUES(price)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, blockTypeId);
-                stmt.setLong(2, price);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save block price: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, blockTypeId);
+            stmt.setLong(2, price);
+        });
     }
 
     public void removeBlockPrice(String blockTypeId) {
@@ -766,19 +712,8 @@ public class MineConfigStore {
     }
 
     private void removeBlockPriceFromDatabase(String blockTypeId) {
-        if (!this.db.isInitialized()) return;
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "DELETE FROM block_prices WHERE block_type_id = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, blockTypeId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to remove block price: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, "DELETE FROM block_prices WHERE block_type_id = ?",
+            stmt -> stmt.setString(1, blockTypeId));
     }
 
     public long getBlockPrice(String blockTypeId) {
@@ -826,17 +761,10 @@ public class MineConfigStore {
             ON DUPLICATE KEY UPDATE hp = VALUES(hp)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, blockTypeId);
-                stmt.setInt(2, hp);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save block hp: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, blockTypeId);
+            stmt.setInt(2, hp);
+        });
     }
 
     public void removeBlockHp(String blockTypeId) {
@@ -846,19 +774,8 @@ public class MineConfigStore {
     }
 
     private void removeBlockHpFromDatabase(String blockTypeId) {
-        if (!this.db.isInitialized()) return;
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "DELETE FROM block_hp WHERE block_type_id = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, blockTypeId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to remove block hp: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, "DELETE FROM block_hp WHERE block_type_id = ?",
+            stmt -> stmt.setString(1, blockTypeId));
     }
 
     public int getBlockHp(String blockTypeId) {
@@ -955,27 +872,20 @@ public class MineConfigStore {
                 interval_seconds = VALUES(interval_seconds), conveyor_speed = VALUES(conveyor_speed)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                int i = 1;
-                stmt.setString(i++, slot.getMineId());
-                stmt.setInt(i++, slot.getSlotIndex());
-                stmt.setDouble(i++, slot.getNpcX());
-                stmt.setDouble(i++, slot.getNpcY());
-                stmt.setDouble(i++, slot.getNpcZ());
-                stmt.setFloat(i++, slot.getNpcYaw());
-                stmt.setInt(i++, slot.getBlockX());
-                stmt.setInt(i++, slot.getBlockY());
-                stmt.setInt(i++, slot.getBlockZ());
-                stmt.setDouble(i++, slot.getIntervalSeconds());
-                stmt.setDouble(i, slot.getConveyorSpeed());
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save miner slot: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            int i = 1;
+            stmt.setString(i++, slot.getMineId());
+            stmt.setInt(i++, slot.getSlotIndex());
+            stmt.setDouble(i++, slot.getNpcX());
+            stmt.setDouble(i++, slot.getNpcY());
+            stmt.setDouble(i++, slot.getNpcZ());
+            stmt.setFloat(i++, slot.getNpcYaw());
+            stmt.setInt(i++, slot.getBlockX());
+            stmt.setInt(i++, slot.getBlockY());
+            stmt.setInt(i++, slot.getBlockZ());
+            stmt.setDouble(i++, slot.getIntervalSeconds());
+            stmt.setDouble(i, slot.getConveyorSpeed());
+        });
     }
 
     // --- Conveyor Waypoints ---
@@ -1010,22 +920,16 @@ public class MineConfigStore {
 
         if (!this.db.isInitialized()) return;
 
-        String sql = "INSERT INTO mine_conveyor_waypoints (mine_id, slot_index, waypoint_order, x, y, z) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db,
+            "INSERT INTO mine_conveyor_waypoints (mine_id, slot_index, waypoint_order, x, y, z) VALUES (?, ?, ?, ?, ?, ?)",
+            stmt -> {
                 stmt.setString(1, mineId);
                 stmt.setInt(2, slotIndex);
                 stmt.setInt(3, order);
                 stmt.setDouble(4, x);
                 stmt.setDouble(5, y);
                 stmt.setDouble(6, z);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add conveyor waypoint: " + e.getMessage());
-        }
+            });
     }
 
     public void clearConveyorWaypoints(String mineId, int slotIndex) {
@@ -1036,18 +940,12 @@ public class MineConfigStore {
 
         if (!this.db.isInitialized()) return;
 
-        String sql = "DELETE FROM mine_conveyor_waypoints WHERE mine_id = ? AND slot_index = ?";
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db,
+            "DELETE FROM mine_conveyor_waypoints WHERE mine_id = ? AND slot_index = ?",
+            stmt -> {
                 stmt.setString(1, mineId);
                 stmt.setInt(2, slotIndex);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to clear conveyor waypoints: " + e.getMessage());
-        }
+            });
     }
 
     // --- Layer CRUD ---
@@ -1075,8 +973,6 @@ public class MineConfigStore {
     }
 
     private void saveLayerToDatabase(MineZoneLayer layer) {
-        if (!this.db.isInitialized()) return;
-
         String sql = """
             INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json)
             VALUES (?, ?, ?, ?, ?)
@@ -1085,21 +981,14 @@ public class MineConfigStore {
                 block_table_json = VALUES(block_table_json)
             """;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                int i = 1;
-                stmt.setString(i++, layer.getId());
-                stmt.setString(i++, layer.getZoneId());
-                stmt.setInt(i++, layer.getMinY());
-                stmt.setInt(i++, layer.getMaxY());
-                stmt.setString(i, GSON.toJson(layer.getBlockTable()));
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save zone layer: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            int i = 1;
+            stmt.setString(i++, layer.getId());
+            stmt.setString(i++, layer.getZoneId());
+            stmt.setInt(i++, layer.getMinY());
+            stmt.setInt(i++, layer.getMaxY());
+            stmt.setString(i, GSON.toJson(layer.getBlockTable()));
+        });
     }
 
     public boolean deleteLayer(String layerId) {
@@ -1126,18 +1015,8 @@ public class MineConfigStore {
     }
 
     private void deleteLayerFromDatabase(String layerId) {
-        if (!this.db.isInitialized()) return;
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM mine_zone_layers WHERE id = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, layerId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to delete zone layer: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, "DELETE FROM mine_zone_layers WHERE id = ?",
+            stmt -> stmt.setString(1, layerId));
     }
 
     // --- Tier Recipes ---
@@ -1167,24 +1046,16 @@ public class MineConfigStore {
 
         if (!this.db.isInitialized()) return;
 
-        String sql = """
+        DatabaseManager.execute(this.db, """
             INSERT INTO pickaxe_tier_recipes (tier, block_type_id, amount)
             VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE amount = VALUES(amount)
-            """;
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            """,
+            stmt -> {
                 stmt.setInt(1, targetTier);
                 stmt.setString(2, blockTypeId);
                 stmt.setInt(3, amount);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save tier recipe: " + e.getMessage());
-        }
+            });
     }
 
     public void removeTierRecipe(int targetTier, String blockTypeId) {
@@ -1198,18 +1069,12 @@ public class MineConfigStore {
 
         if (!this.db.isInitialized()) return;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "DELETE FROM pickaxe_tier_recipes WHERE tier = ? AND block_type_id = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db,
+            "DELETE FROM pickaxe_tier_recipes WHERE tier = ? AND block_type_id = ?",
+            stmt -> {
                 stmt.setInt(1, targetTier);
                 stmt.setString(2, blockTypeId);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to remove tier recipe: " + e.getMessage());
-        }
+            });
     }
 
     public Map<String, Integer> getTierRecipe(int targetTier) {
@@ -1244,24 +1109,16 @@ public class MineConfigStore {
 
         if (!this.db.isInitialized()) return;
 
-        String sql = """
+        DatabaseManager.execute(this.db, """
             INSERT INTO pickaxe_enhance_costs (tier, level, crystal_cost)
             VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE crystal_cost = VALUES(crystal_cost)
-            """;
-
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            """,
+            stmt -> {
                 stmt.setInt(1, tier);
                 stmt.setInt(2, level);
                 stmt.setLong(3, cost);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save enhance cost: " + e.getMessage());
-        }
+            });
     }
 
     public void removeEnhanceCost(int tier, int level) {
@@ -1273,18 +1130,12 @@ public class MineConfigStore {
 
         if (!this.db.isInitialized()) return;
 
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "DELETE FROM pickaxe_enhance_costs WHERE tier = ? AND level = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db,
+            "DELETE FROM pickaxe_enhance_costs WHERE tier = ? AND level = ?",
+            stmt -> {
                 stmt.setInt(1, tier);
                 stmt.setInt(2, level);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to remove enhance cost: " + e.getMessage());
-        }
+            });
     }
 
     public long getEnhanceCost(int tier, int level) {

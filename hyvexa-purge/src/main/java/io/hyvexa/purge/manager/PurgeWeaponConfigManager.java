@@ -170,15 +170,10 @@ public class PurgeWeaponConfigManager {
         }
         if (isPersistenceAvailable()) {
             String sql = "UPDATE purge_weapon_defaults SET default_unlocked = ? WHERE weapon_id = ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            DatabaseManager.execute(this.db, sql, stmt -> {
                 stmt.setBoolean(1, val);
                 stmt.setString(2, weaponId);
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to update default_unlocked for " + weaponId);
-            }
+            });
         }
     }
 
@@ -195,15 +190,10 @@ public class PurgeWeaponConfigManager {
         unlockCosts.put(weaponId, newCost);
         if (isPersistenceAvailable()) {
             String sql = "UPDATE purge_weapon_defaults SET unlock_cost = ? WHERE weapon_id = ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            DatabaseManager.execute(this.db, sql, stmt -> {
                 stmt.setLong(1, newCost);
                 stmt.setString(2, weaponId);
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to update unlock_cost for " + weaponId);
-            }
+            });
         }
     }
 
@@ -218,26 +208,16 @@ public class PurgeWeaponConfigManager {
         String previousId = this.sessionWeaponId;
         this.sessionWeaponId = weaponId;
         if (isPersistenceAvailable()) {
-            try (Connection conn = this.db.getConnection()) {
-                // Unset previous
-                if (previousId != null && !previousId.equals(weaponId)) {
-                    try (PreparedStatement stmt = conn.prepareStatement(
-                            "UPDATE purge_weapon_defaults SET session_weapon = FALSE WHERE weapon_id = ?")) {
-                        DatabaseManager.applyQueryTimeout(stmt);
-                        stmt.setString(1, previousId);
-                        stmt.executeUpdate();
-                    }
-                }
-                // Set new
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE purge_weapon_defaults SET session_weapon = TRUE WHERE weapon_id = ?")) {
-                    DatabaseManager.applyQueryTimeout(stmt);
-                    stmt.setString(1, weaponId);
-                    stmt.executeUpdate();
-                }
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to update session weapon to " + weaponId);
+            // Unset previous
+            if (previousId != null && !previousId.equals(weaponId)) {
+                DatabaseManager.execute(this.db,
+                        "UPDATE purge_weapon_defaults SET session_weapon = FALSE WHERE weapon_id = ?",
+                        stmt -> stmt.setString(1, previousId));
             }
+            // Set new
+            DatabaseManager.execute(this.db,
+                    "UPDATE purge_weapon_defaults SET session_weapon = TRUE WHERE weapon_id = ?",
+                    stmt -> stmt.setString(1, weaponId));
         }
     }
 
@@ -324,22 +304,15 @@ public class PurgeWeaponConfigManager {
         }
         synchronized (cache) {
             String sql = "REPLACE INTO purge_weapon_levels (weapon_id, level, damage, cost) VALUES (?, ?, ?, ?)";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                for (WeaponLevelEntry row : defaults.levels()) {
-                    stmt.setString(1, weaponId);
-                    stmt.setInt(2, row.level());
-                    stmt.setInt(3, row.damage());
-                    stmt.setLong(4, row.cost());
-                    stmt.addBatch();
-                }
-                stmt.executeBatch();
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to reset weapon defaults for " + weaponId);
-                return;
+            boolean success = DatabaseManager.executeBatch(this.db, sql, defaults.levels(), (stmt, row) -> {
+                stmt.setString(1, weaponId);
+                stmt.setInt(2, row.level());
+                stmt.setInt(3, row.damage());
+                stmt.setLong(4, row.cost());
+            });
+            if (success) {
+                cacheWeaponLevels(weaponId, defaults.levels());
             }
-            cacheWeaponLevels(weaponId, defaults.levels());
         }
     }
 
@@ -349,9 +322,7 @@ public class PurgeWeaponConfigManager {
         }
         synchronized (cache) {
             String sql = "UPDATE purge_weapon_levels SET " + column + " = ? WHERE weapon_id = ? AND level = ?";
-            try (Connection conn = this.db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            int rows = DatabaseManager.executeCount(this.db, sql, stmt -> {
                 if ("damage".equals(column)) {
                     stmt.setInt(1, intValue);
                 } else {
@@ -359,12 +330,8 @@ public class PurgeWeaponConfigManager {
                 }
                 stmt.setString(2, weaponId);
                 stmt.setInt(3, level);
-                int rows = stmt.executeUpdate();
-                if (rows <= 0) {
-                    return false;
-                }
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to update " + column + " for " + weaponId + " level " + level);
+            });
+            if (rows <= 0) {
                 return false;
             }
             // Update cache
@@ -398,24 +365,21 @@ public class PurgeWeaponConfigManager {
         }
 
         // Insert only missing rows so existing admin-tuned values are preserved.
-        String insertSql = "INSERT IGNORE INTO purge_weapon_levels (weapon_id, level, damage, cost) VALUES (?, ?, ?, ?)";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(insertSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            for (Map.Entry<String, WeaponDefaults> weapon : DEFAULT_WEAPONS.entrySet()) {
-                for (WeaponLevelEntry row : weapon.getValue().levels()) {
-                    stmt.setString(1, weapon.getKey());
-                    stmt.setInt(2, row.level());
-                    stmt.setInt(3, row.damage());
-                    stmt.setLong(4, row.cost());
-                    stmt.addBatch();
-                }
+        // Build flat list of (weaponId, entry) pairs for batch
+        List<Map.Entry<String, WeaponLevelEntry>> allRows = new ArrayList<>();
+        for (Map.Entry<String, WeaponDefaults> weapon : DEFAULT_WEAPONS.entrySet()) {
+            for (WeaponLevelEntry row : weapon.getValue().levels()) {
+                allRows.add(Map.entry(weapon.getKey(), row));
             }
-            stmt.executeBatch();
-            LOGGER.atInfo().log("Ensured default weapon level seeds for " + DEFAULT_WEAPONS.size() + " Purge weapons");
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to seed default weapon levels");
         }
+        String insertSql = "INSERT IGNORE INTO purge_weapon_levels (weapon_id, level, damage, cost) VALUES (?, ?, ?, ?)";
+        DatabaseManager.executeBatch(this.db, insertSql, allRows, (stmt, pair) -> {
+            stmt.setString(1, pair.getKey());
+            stmt.setInt(2, pair.getValue().level());
+            stmt.setInt(3, pair.getValue().damage());
+            stmt.setLong(4, pair.getValue().cost());
+        });
+        LOGGER.atInfo().log("Ensured default weapon level seeds for " + DEFAULT_WEAPONS.size() + " Purge weapons");
     }
 
     private void loadAll() {
@@ -425,36 +389,26 @@ public class PurgeWeaponConfigManager {
             return;
         }
         String sql = "SELECT weapon_id, level, damage, cost FROM purge_weapon_levels ORDER BY weapon_id, level ASC";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                ConcurrentHashMap<String, List<WeaponLevelEntry>> temp = new ConcurrentHashMap<>();
-                while (rs.next()) {
-                    String weaponId = rs.getString("weapon_id");
-                    int level = rs.getInt("level");
-                    int damage = rs.getInt("damage");
-                    long cost = rs.getLong("cost");
-                    temp.computeIfAbsent(weaponId, k -> new ArrayList<>())
-                            .add(new WeaponLevelEntry(level, damage, cost));
-                }
-                if (temp.isEmpty()) {
-                    loadDefaultsIntoCache();
-                    LOGGER.atWarning().log("No weapon levels found in DB, using defaults in memory");
-                    return;
-                }
-                cache.clear();
-                cacheByLevel.clear();
-                for (Map.Entry<String, List<WeaponLevelEntry>> entry : temp.entrySet()) {
-                    cacheWeaponLevels(entry.getKey(), entry.getValue());
-                }
-            }
-            int total = cache.values().stream().mapToInt(List::size).sum();
-            LOGGER.atInfo().log("Loaded " + total + " weapon level definitions");
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load weapon levels");
+        List<Object[]> rows = DatabaseManager.queryList(this.db, sql,
+                rs -> new Object[]{rs.getString("weapon_id"), rs.getInt("level"), rs.getInt("damage"), rs.getLong("cost")});
+        if (rows.isEmpty()) {
             loadDefaultsIntoCache();
+            LOGGER.atWarning().log("No weapon levels found in DB, using defaults in memory");
+            return;
         }
+        ConcurrentHashMap<String, List<WeaponLevelEntry>> temp = new ConcurrentHashMap<>();
+        for (Object[] row : rows) {
+            String weaponId = (String) row[0];
+            temp.computeIfAbsent(weaponId, k -> new ArrayList<>())
+                    .add(new WeaponLevelEntry((int) row[1], (int) row[2], (long) row[3]));
+        }
+        cache.clear();
+        cacheByLevel.clear();
+        for (Map.Entry<String, List<WeaponLevelEntry>> entry : temp.entrySet()) {
+            cacheWeaponLevels(entry.getKey(), entry.getValue());
+        }
+        int total = cache.values().stream().mapToInt(List::size).sum();
+        LOGGER.atInfo().log("Loaded " + total + " weapon level definitions");
     }
 
     private int getDefaultDamage(String weaponId, int level) {
@@ -544,16 +498,9 @@ public class PurgeWeaponConfigManager {
         }
         // Seed all weapons with defaults, then ensure AK47/WoodSword session defaults exist.
         String insertSql = "INSERT IGNORE INTO purge_weapon_defaults (weapon_id, default_unlocked, unlock_cost, session_weapon) VALUES (?, FALSE, 500, FALSE)";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(insertSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            for (String weaponId : DEFAULT_WEAPONS.keySet()) {
-                stmt.setString(1, weaponId);
-                stmt.addBatch();
-            }
-            stmt.executeBatch();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to seed weapon defaults");
+        boolean seeded = DatabaseManager.executeBatch(this.db, insertSql, DEFAULT_WEAPONS.keySet(),
+                (stmt, weaponId) -> stmt.setString(1, weaponId));
+        if (!seeded) {
             return;
         }
         // Ensure AK47 is default unlocked and session weapon (only if no session weapon set).
@@ -606,25 +553,23 @@ public class PurgeWeaponConfigManager {
         }
 
         String sql = "SELECT weapon_id, default_unlocked, unlock_cost, session_weapon FROM purge_weapon_defaults";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String weaponId = rs.getString("weapon_id");
-                    if (rs.getBoolean("default_unlocked")) {
-                        defaultUnlocked.add(weaponId);
-                    }
-                    unlockCosts.put(weaponId, rs.getLong("unlock_cost"));
-                    if (rs.getBoolean("session_weapon")) {
-                        sessionWeaponId = weaponId;
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load weapon defaults");
+        List<Object[]> rows = DatabaseManager.queryList(this.db, sql,
+                rs -> new Object[]{rs.getString("weapon_id"), rs.getBoolean("default_unlocked"),
+                        rs.getLong("unlock_cost"), rs.getBoolean("session_weapon")});
+        if (rows.isEmpty()) {
             defaultUnlocked.add("AK47");
             defaultUnlocked.add("WoodSword");
+        } else {
+            for (Object[] row : rows) {
+                String weaponId = (String) row[0];
+                if ((boolean) row[1]) {
+                    defaultUnlocked.add(weaponId);
+                }
+                unlockCosts.put(weaponId, (long) row[2]);
+                if ((boolean) row[3]) {
+                    sessionWeaponId = weaponId;
+                }
+            }
         }
         LOGGER.atInfo().log("Loaded weapon defaults: " + defaultUnlocked.size() + " default unlocked, session weapon: " + sessionWeaponId);
     }
@@ -633,45 +578,39 @@ public class PurgeWeaponConfigManager {
         if (!isPersistenceAvailable()) {
             return;
         }
-        int skinPricesLoaded = 0;
+        int[] skinPricesLoaded = {0};
         String sql = "SELECT setting_key, setting_value FROM purge_settings";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String key = rs.getString("setting_key");
-                    String value = rs.getString("setting_value");
-                    if ("lootbox_drop_percent".equals(key)) {
-                        try {
-                            lootboxDropPercent = Math.max(0, Math.min(100, Integer.parseInt(value)));
-                        } catch (NumberFormatException ignored) {
+        List<String[]> rows = DatabaseManager.queryList(this.db, sql,
+                rs -> new String[]{rs.getString("setting_key"), rs.getString("setting_value")});
+        for (String[] row : rows) {
+            String key = row[0];
+            String value = row[1];
+            if ("lootbox_drop_percent".equals(key)) {
+                try {
+                    lootboxDropPercent = Math.max(0, Math.min(100, Integer.parseInt(value)));
+                } catch (NumberFormatException ignored) {
+                }
+            } else if ("session_melee_weapon".equals(key)) {
+                String meleeWeaponId = getMeleeWeaponId(value);
+                if (meleeWeaponId != null) {
+                    sessionMeleeWeaponId = meleeWeaponId;
+                }
+            } else if (key.startsWith("skin_price:")) {
+                String[] parts = key.split(":", 3);
+                if (parts.length == 3) {
+                    try {
+                        int price = Integer.parseInt(value);
+                        if (PurgeSkinRegistry.setSkinPrice(parts[1], parts[2], price)) {
+                            skinPricesLoaded[0]++;
                         }
-                    } else if ("session_melee_weapon".equals(key)) {
-                        String meleeWeaponId = getMeleeWeaponId(value);
-                        if (meleeWeaponId != null) {
-                            sessionMeleeWeaponId = meleeWeaponId;
-                        }
-                    } else if (key.startsWith("skin_price:")) {
-                        String[] parts = key.split(":", 3);
-                        if (parts.length == 3) {
-                            try {
-                                int price = Integer.parseInt(value);
-                                if (PurgeSkinRegistry.setSkinPrice(parts[1], parts[2], price)) {
-                                    skinPricesLoaded++;
-                                }
-                            } catch (NumberFormatException ignored) {
-                            }
-                        }
+                    } catch (NumberFormatException ignored) {
                     }
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load purge settings");
         }
         LOGGER.atInfo().log("Purge settings loaded: lootbox_drop_percent=" + lootboxDropPercent
                 + ", session_melee_weapon=" + sessionMeleeWeaponId
-                + ", skin_prices=" + skinPricesLoaded);
+                + ", skin_prices=" + skinPricesLoaded[0]);
     }
 
     private void persistSetting(String key, String value) {
@@ -680,16 +619,11 @@ public class PurgeWeaponConfigManager {
         }
         String sql = "INSERT INTO purge_settings (setting_key, setting_value) VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE setting_value = ?";
-        try (Connection conn = this.db.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        DatabaseManager.execute(this.db, sql, stmt -> {
             stmt.setString(1, key);
             stmt.setString(2, value);
             stmt.setString(3, value);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist setting " + key);
-        }
+        });
     }
 
     private void cacheWeaponLevels(String weaponId, List<WeaponLevelEntry> levels) {

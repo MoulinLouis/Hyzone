@@ -3,6 +3,7 @@ package io.hyvexa.ascend.mine.data;
 import com.google.common.flogger.FluentLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.core.db.ConnectionProvider;
+import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -184,17 +185,8 @@ public class MinePlayerStore {
     }
 
     private void ensurePlayerRow(UUID playerId) {
-        if (!this.db.isInitialized()) return;
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) return;
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT IGNORE INTO mine_players (uuid) VALUES (?)")) {
-                ps.setString(1, playerId.toString());
-                ps.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to ensure mine player row %s: %s", playerId, e.getMessage());
-        }
+        DatabaseManager.execute(this.db, "INSERT IGNORE INTO mine_players (uuid) VALUES (?)",
+            ps -> ps.setString(1, playerId.toString()));
     }
 
     private boolean flushPlayer(UUID playerId) {
