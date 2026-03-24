@@ -37,6 +37,13 @@ class DuelStatsTest {
     }
 
     @Test
+    void getWinRateReturnsZeroWithOnlyLosses() {
+        DuelStats stats = new DuelStats(UUID.randomUUID(), "Player", 0, 10);
+
+        assertEquals(0, stats.getWinRate());
+    }
+
+    @Test
     void incrementMethodsUpdateRecord() {
         DuelStats stats = new DuelStats(UUID.randomUUID(), "Player", 0, 0);
 
