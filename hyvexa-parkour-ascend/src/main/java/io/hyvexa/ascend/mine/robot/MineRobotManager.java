@@ -31,6 +31,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.common.npc.NPCHelper;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -104,12 +105,7 @@ public class MineRobotManager {
     public void start() {
         orphanCleanup.loadOrphanedUuids();
 
-        try {
-            npcPlugin = NPCPlugin.get();
-        } catch (Exception e) {
-            LOGGER.atWarning().log("NPCPlugin not available, miners will be invisible: " + e.getMessage());
-            npcPlugin = null;
-        }
+        npcPlugin = NPCHelper.initNpcPlugin(LOGGER, "miners");
 
         try {
             pickupDelayField = ItemComponent.class.getDeclaredField("pickupDelay");
@@ -221,7 +217,7 @@ public class MineRobotManager {
 
             Object result = npcPlugin.spawnNPC(store, "Kweebec_Sapling", "Miner", position, rotation);
             if (result == null) return;
-            Ref<EntityStore> entityRef = extractEntityRef(result);
+            Ref<EntityStore> entityRef = NPCHelper.extractEntityRef(result, LOGGER);
             if (entityRef == null) return;
             state.setEntityRef(entityRef);
 
@@ -232,17 +228,7 @@ public class MineRobotManager {
                 LOGGER.atWarning().log("Failed to get miner NPC UUID: " + e.getMessage());
             }
 
-            try {
-                store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-            } catch (Exception e) {
-                LOGGER.atWarning().log("Failed to make miner NPC invulnerable: " + e.getMessage());
-            }
-
-            try {
-                store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
-            } catch (Exception e) {
-                LOGGER.atWarning().log("Failed to freeze miner NPC: " + e.getMessage());
-            }
+            NPCHelper.setupNpcDefaults(store, entityRef, LOGGER);
 
             try {
                 NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
@@ -334,16 +320,8 @@ public class MineRobotManager {
 
     private void despawnNpcOnWorldThread(MinerRobotState state, Ref<EntityStore> entityRef) {
         boolean success = false;
-        try {
-            if (entityRef != null && entityRef.isValid()) {
-                Store<EntityStore> store = entityRef.getStore();
-                if (store != null) {
-                    store.removeEntity(entityRef, RemoveReason.REMOVE);
-                    success = true;
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to despawn miner NPC on world thread: " + e.getMessage());
+        if (entityRef != null && entityRef.isValid()) {
+            success = NPCHelper.despawnEntity(entityRef, LOGGER);
         }
         state.setEntityRef(null);
         if (success) {
@@ -934,27 +912,6 @@ public class MineRobotManager {
         }
         // Fallback (shouldn't happen due to floating-point, but safe)
         return blockTable.keySet().iterator().next();
-    }
-
-    @SuppressWarnings("unchecked")
-    private Ref<EntityStore> extractEntityRef(Object pairResult) {
-        if (pairResult == null) return null;
-        try {
-            for (String methodName : List.of("getFirst", "getLeft", "getKey", "first", "left")) {
-                try {
-                    java.lang.reflect.Method method = pairResult.getClass().getMethod(methodName);
-                    Object value = method.invoke(pairResult);
-                    if (value instanceof Ref<?> ref) {
-                        return (Ref<EntityStore>) ref;
-                    }
-                } catch (NoSuchMethodException ignored) {
-                    // Try next method
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to extract entity ref from miner NPC result: " + e.getMessage());
-        }
-        return null;
     }
 
     // ── Accessors ──────────────────────────────────────────────────────
