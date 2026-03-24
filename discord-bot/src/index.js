@@ -120,7 +120,7 @@ client.on('interactionCreate', async (interaction) => {
     const rawCode = interaction.options.getString('code', true);
     const code = rawCode.toUpperCase().replace(/[-\s]/g, '');
 
-    if (code.length !== 6) {
+    if (code.length !== 6 || !/^[A-Z0-9]{6}$/.test(code)) {
       await interaction.editReply('Invalid code format. Use the 6-character code from `/link` in-game (e.g. X7K-9M2).');
       return;
     }
