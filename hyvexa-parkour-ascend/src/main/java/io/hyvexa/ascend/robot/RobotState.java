@@ -5,12 +5,13 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.common.ghost.GhostRecording;
+import io.hyvexa.common.npc.NPCEntityState;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class RobotState {
+public class RobotState implements NPCEntityState {
 
     private final UUID ownerId;
     private final String mapId;
@@ -49,18 +50,22 @@ public class RobotState {
         return mapId;
     }
 
+    @Override
     public Ref<EntityStore> getEntityRef() {
         return entityRef;
     }
 
+    @Override
     public void setEntityRef(Ref<EntityStore> entityRef) {
         this.entityRef = entityRef;
     }
 
+    @Override
     public UUID getEntityUuid() {
         return entityUuid;
     }
 
+    @Override
     public void setEntityUuid(UUID entityUuid) {
         this.entityUuid = entityUuid;
     }

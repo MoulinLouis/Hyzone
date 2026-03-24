@@ -3,10 +3,11 @@ package io.hyvexa.ascend.mine.robot;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.data.MinerRarity;
+import io.hyvexa.common.npc.NPCEntityState;
 
 import java.util.UUID;
 
-public class MinerRobotState {
+public class MinerRobotState implements NPCEntityState {
 
     private final UUID ownerId;
     private final String mineId;
@@ -43,10 +44,10 @@ public class MinerRobotState {
     public long getMinerId() { return minerId; }
     public String getOriginLayerId() { return originLayerId; }
     public MinerRarity getRarity() { return rarity; }
-    public Ref<EntityStore> getEntityRef() { return entityRef; }
-    public void setEntityRef(Ref<EntityStore> entityRef) { this.entityRef = entityRef; }
-    public UUID getEntityUuid() { return entityUuid; }
-    public void setEntityUuid(UUID entityUuid) { this.entityUuid = entityUuid; }
+    @Override public Ref<EntityStore> getEntityRef() { return entityRef; }
+    @Override public void setEntityRef(Ref<EntityStore> entityRef) { this.entityRef = entityRef; }
+    @Override public UUID getEntityUuid() { return entityUuid; }
+    @Override public void setEntityUuid(UUID entityUuid) { this.entityUuid = entityUuid; }
     public String getWorldName() { return worldName; }
     public void setWorldName(String worldName) { this.worldName = worldName; }
     public int getSpeedLevel() { return speedLevel; }
