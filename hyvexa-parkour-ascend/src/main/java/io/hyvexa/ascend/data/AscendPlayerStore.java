@@ -18,11 +18,7 @@ import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.ConnectionProvider;
-import io.hyvexa.core.db.DatabaseManager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +30,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 
+/**
+ * In-memory cache and public API surface for Ascend player data.
+ *
+ * <p><b>Contract:</b> This class owns the player cache, business logic
+ * (volt operations, ascension triggers, multiplier calculations, reset flows),
+ * and the public API consumed by the rest of the Ascend module.
+ * All SQL is delegated to the package-private {@link AscendPlayerPersistence}.</p>
+ */
 public class AscendPlayerStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -1298,31 +1302,7 @@ public class AscendPlayerStore {
         // Wipe DB FIRST — if we clear in-memory caches first, another thread
         // (passive earnings, run tracker) can call getOrCreatePlayer() which
         // re-loads old data from the not-yet-wiped DB back into memory.
-        if (this.db.isInitialized()) {
-            String[] tables = {
-                "ascend_player_maps",
-                "ascend_player_summit",
-                "ascend_player_skills",
-                "ascend_player_achievements",
-                "ascend_player_cats",
-                "ascend_ghost_recordings",
-                "ascend_challenges",
-                "ascend_challenge_records",
-                "ascend_players"
-            };
-
-            boolean wiped = this.db.withTransaction(conn -> {
-                for (String table : tables) {
-                    try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + table)) {
-                        DatabaseManager.applyQueryTimeout(stmt);
-                        stmt.executeUpdate();
-                    }
-                }
-            });
-            if (wiped) {
-                LOGGER.atInfo().log("All player progress wiped from database (%d tables cleared)", tables.length);
-            }
-        }
+        persistence.deleteAllPlayerData();
 
         // Now clear in-memory caches — any subsequent getOrCreatePlayer() will
         // find an empty DB and create fresh default progress
