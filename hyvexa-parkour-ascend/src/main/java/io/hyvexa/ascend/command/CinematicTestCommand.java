@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -80,6 +81,8 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
 
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
+        NetworkId nid = store.getComponent(ref, NetworkId.getComponentType());
+        int networkId = nid != null ? nid.getId() : -1;
 
         return CompletableFuture.runAsync(() -> {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -116,7 +119,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
             }
         }, world).exceptionally(ex -> {
             AsyncExecutionHelper.logThrottledWarning("ctest.execute", "ctest command execution",
-                    "player=" + player.getNetworkId(), ex);
+                    "player=" + networkId, ex);
             return null;
         });
     }

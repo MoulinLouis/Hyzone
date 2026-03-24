@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -76,6 +77,13 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
+        Store<EntityStore> store = ref.getStore();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        UUID playerId = playerRef.getUuid();
+
         String[] args = CommandUtils.tokenize(ctx);
         if (args.length == 0) {
             sendHelp(player);
@@ -86,16 +94,16 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
         switch (sub) {
             case "help" -> sendHelp(player);
             case "list" -> sendGroupList(player);
-            case "clear" -> handleClear(player);
-            case "spawn" -> handleSpawn(player, args, 1);
-            default -> handleSpawn(player, args, 0);
+            case "clear" -> handleClear(player, playerId);
+            case "spawn" -> handleSpawn(player, playerId, args, 1);
+            default -> handleSpawn(player, playerId, args, 0);
         }
 
         return CompletableFuture.completedFuture(null);
     }
 
-    private void handleClear(Player player) {
-        int cleared = clearActiveGallery(player.getUuid());
+    private void handleClear(Player player, UUID playerId) {
+        int cleared = clearActiveGallery(playerId);
         if (cleared <= 0) {
             player.sendMessage(Message.raw("No active mob gallery to clear."));
             return;
@@ -103,7 +111,7 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw("Cleared " + cleared + " gallery mobs."));
     }
 
-    private void handleSpawn(Player player, String[] args, int groupIndex) {
+    private void handleSpawn(Player player, UUID playerId, String[] args, int groupIndex) {
         if (args.length <= groupIndex) {
             player.sendMessage(Message.raw("Usage: /mobgallery spawn <group> [page]"));
             player.sendMessage(Message.raw("Use /mobgallery list to see groups."));
@@ -157,7 +165,6 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
             return;
         }
 
-        UUID playerId = player.getUuid();
         int requestedPage = page;
         world.execute(() -> spawnGalleryOnWorldThread(playerId, group, requestedPage, roles, world, plugin));
     }

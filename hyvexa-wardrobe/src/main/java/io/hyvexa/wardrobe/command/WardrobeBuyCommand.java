@@ -1,5 +1,7 @@
 package io.hyvexa.wardrobe.command;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -7,6 +9,7 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.wardrobe.WardrobeBridge;
@@ -39,7 +42,10 @@ public class WardrobeBuyCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        PlayerRef playerRef = player.getPlayerRef();
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) return CompletableFuture.completedFuture(null);
+        Store<EntityStore> store = ref.getStore();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) return CompletableFuture.completedFuture(null);
 
         String[] args = CommandUtils.tokenize(ctx);

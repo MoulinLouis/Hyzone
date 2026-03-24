@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -113,13 +114,13 @@ public class SpectatorCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("Target player is in a different world."));
             return;
         }
-        Player targetPlayer = targetStore.getComponent(targetEntityRef, Player.getComponentType());
-        if (targetPlayer == null) {
+        NetworkId targetNid = targetStore.getComponent(targetEntityRef, NetworkId.getComponentType());
+        if (targetNid == null) {
             player.sendMessage(Message.raw("Target player entity not available."));
             return;
         }
 
-        int targetNetworkId = targetPlayer.getNetworkId();
+        int targetNetworkId = targetNid.getId();
 
         ServerCameraSettings s = new ServerCameraSettings();
         s.attachedToType = AttachedToType.EntityId;

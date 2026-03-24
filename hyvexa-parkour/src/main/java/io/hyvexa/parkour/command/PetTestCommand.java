@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
@@ -15,6 +16,7 @@ import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.pet.PetManager;
 
 import javax.annotation.Nonnull;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -81,18 +83,21 @@ public class PetTestCommand extends AbstractAsyncCommand {
 
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) return CompletableFuture.completedFuture(null);
+        UUID playerId = playerRef.getUuid();
         return CompletableFuture.runAsync(() -> {
             switch (sub) {
-                case "spawn" -> handleSpawn(ctx, ref, player, petManager, args);
-                case "despawn" -> handleDespawn(ctx, player, petManager);
-                case "scale" -> handleScale(ctx, player, petManager, args);
-                case "type" -> handleType(ctx, ref, player, petManager, args);
+                case "spawn" -> handleSpawn(ctx, ref, playerId, petManager, args);
+                case "despawn" -> handleDespawn(ctx, playerId, petManager);
+                case "scale" -> handleScale(ctx, playerId, petManager, args);
+                case "type" -> handleType(ctx, ref, playerId, petManager, args);
                 default -> sendHelp(ctx);
             }
         }, world);
     }
 
-    private void handleSpawn(CommandContext ctx, Ref<EntityStore> ref, Player player,
+    private void handleSpawn(CommandContext ctx, Ref<EntityStore> ref, UUID playerId,
                               PetManager petManager, String[] args) {
         String type = args.length > 1 ? args[1] : DEFAULT_TYPE;
         float scale = DEFAULT_SCALE;
@@ -106,22 +111,22 @@ public class PetTestCommand extends AbstractAsyncCommand {
             }
         }
 
-        petManager.spawnPet(player.getUuid(), ref, type, scale);
+        petManager.spawnPet(playerId, ref, type, scale);
         ctx.sendMessage(Message.raw("Pet spawned! Type: " + type + ", Scale: " + scale));
         ctx.sendMessage(Message.raw("Try: /pet scale 0.5 | /pet type Zombie | /pet types"));
     }
 
-    private void handleDespawn(CommandContext ctx, Player player, PetManager petManager) {
-        if (!petManager.hasPet(player.getUuid())) {
+    private void handleDespawn(CommandContext ctx, UUID playerId, PetManager petManager) {
+        if (!petManager.hasPet(playerId)) {
             ctx.sendMessage(Message.raw("You don't have a pet."));
             return;
         }
-        petManager.despawnPet(player.getUuid());
+        petManager.despawnPet(playerId);
         ctx.sendMessage(Message.raw("Pet despawned."));
     }
 
-    private void handleScale(CommandContext ctx, Player player, PetManager petManager, String[] args) {
-        if (!petManager.hasPet(player.getUuid())) {
+    private void handleScale(CommandContext ctx, UUID playerId, PetManager petManager, String[] args) {
+        if (!petManager.hasPet(playerId)) {
             ctx.sendMessage(Message.raw("You don't have a pet. Use /pet spawn first."));
             return;
         }
@@ -133,14 +138,14 @@ public class PetTestCommand extends AbstractAsyncCommand {
         try {
             float scale = Float.parseFloat(args[1]);
             scale = Math.max(0.1f, Math.min(5.0f, scale));
-            petManager.setScale(player.getUuid(), scale);
+            petManager.setScale(playerId, scale);
             ctx.sendMessage(Message.raw("Pet scale set to " + scale));
         } catch (NumberFormatException e) {
             ctx.sendMessage(Message.raw("Invalid scale. Usage: /pet scale <0.1-5.0>"));
         }
     }
 
-    private void handleType(CommandContext ctx, Ref<EntityStore> ref, Player player,
+    private void handleType(CommandContext ctx, Ref<EntityStore> ref, UUID playerId,
                              PetManager petManager, String[] args) {
         if (args.length < 2) {
             ctx.sendMessage(Message.raw("Usage: /pet type <npc_type>. See /pet types for list."));
@@ -148,9 +153,9 @@ public class PetTestCommand extends AbstractAsyncCommand {
         }
 
         String type = args[1];
-        PetManager.PetState state = petManager.getPetState(player.getUuid());
+        PetManager.PetState state = petManager.getPetState(playerId);
         float scale = state != null ? state.scale : DEFAULT_SCALE;
-        petManager.spawnPet(player.getUuid(), ref, type, scale);
+        petManager.spawnPet(playerId, ref, type, scale);
         ctx.sendMessage(Message.raw("Pet respawned as: " + type));
     }
 

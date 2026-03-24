@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncC
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.io.PacketHandler;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -40,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Test command for experimenting with player cosmetics (effects, model particles, VFX).
- * Temporary R&D command -- will be removed once cosmetic system is finalized.
+ * Temporary R&amp;D command -- will be removed once cosmetic system is finalized.
  */
 public class CosmeticTestCommand extends AbstractAsyncCommand {
 
@@ -85,6 +86,8 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
 
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
+        NetworkId nid = store.getComponent(ref, NetworkId.getComponentType());
+        int networkId = nid != null ? nid.getId() : -1;
 
         return CompletableFuture.runAsync(() -> {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -105,17 +108,17 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
             switch (args[0].toLowerCase()) {
                 case "effect" -> handleEffect(player, ph, ref, store, args);
                 case "listeffects" -> listEffects(player, args);
-                case "particle" -> handleParticle(player, ph, args);
+                case "particle" -> handleParticle(player, ph, networkId, args);
                 case "listparticles" -> listParticles(player, args);
                 case "listvfx" -> listVfx(player, args);
-                case "cycle" -> handleCycle(player, ph, ref, store, world, args);
-                case "preset" -> handlePreset(player, ph, ref, store, args);
+                case "cycle" -> handleCycle(player, ph, networkId, ref, store, world, args);
+                case "preset" -> handlePreset(player, ph, networkId, ref, store, args);
                 case "help" -> showHelp(player);
                 default -> player.sendMessage(Message.raw("[Cosmetic] Unknown: " + args[0] + ". Use /cosmetic help"));
             }
         }, world).exceptionally(ex -> {
             AsyncExecutionHelper.logThrottledWarning("cosmetic.execute", "cosmetic command execution",
-                    "player=" + player.getNetworkId(), ex);
+                    "player=" + networkId, ex);
             return null;
         });
     }
@@ -173,7 +176,8 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
         }
 
         // Send effect update directly to the player -- entity tracker only syncs to OTHER players
-        sendEffectSyncToSelf(ph, player, ctrl);
+        NetworkId nid = store.getComponent(ref, NetworkId.getComponentType());
+        if (nid != null) sendEffectSyncToSelf(ph, nid.getId(), ctrl);
     }
 
     private EntityEffect resolveEffect(String name) {
@@ -211,7 +215,8 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
             return;
         }
         ctrl.clearEffects(ref, store);
-        sendEffectSyncToSelf(ph, player, ctrl);
+        NetworkId nid = store.getComponent(ref, NetworkId.getComponentType());
+        if (nid != null) sendEffectSyncToSelf(ph, nid.getId(), ctrl);
         player.sendMessage(Message.raw("[Cosmetic] All effects cleared."));
     }
 
@@ -234,14 +239,14 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
         }
 
         ctrl.clearEffects(ref, store);
-        sendEffectSyncToSelf(ph, player, ctrl);
+        NetworkId purgeNid = store.getComponent(ref, NetworkId.getComponentType());
+        if (purgeNid != null) sendEffectSyncToSelf(ph, purgeNid.getId(), ctrl);
         player.sendMessage(Message.raw("[Cosmetic] Purged " + count + " effect slots. Reconnect to clear any remaining particles."));
     }
 
     // ── Cycle subcommand ──────────────────────────────────────────────────
 
-    private void handleCycle(Player player, PacketHandler ph, Ref<EntityStore> ref, Store<EntityStore> store, World world, String[] args) {
-        int networkId = player.getNetworkId();
+    private void handleCycle(Player player, PacketHandler ph, int networkId, Ref<EntityStore> ref, Store<EntityStore> store, World world, String[] args) {
 
         if (args.length >= 2 && args[1].equalsIgnoreCase("stop")) {
             if (activeCycles.remove(networkId)) {
@@ -304,7 +309,7 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
                         // Use timed duration instead of infinite -- effects auto-expire so they don't
                         // accumulate in the component (which causes stuck effects like poison)
                         ctrl.addEffect(ref, effectIndex, effect, effectDuration, OverlapBehavior.OVERWRITE, store);
-                        sendEffectSyncToSelf(ph, player, ctrl);
+                        sendEffectSyncToSelf(ph, networkId, ctrl);
                         player.sendMessage(Message.raw("[Cosmetic] [" + num + "/" + total + "] " + key).color("#FFD700"));
                     }, world).join();
 
@@ -321,7 +326,7 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
                         EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
                         if (ctrl != null) {
                             ctrl.clearEffects(ref, store);
-                            sendEffectSyncToSelf(ph, player, ctrl);
+                            sendEffectSyncToSelf(ph, networkId, ctrl);
                         }
                         player.sendMessage(Message.raw("[Cosmetic] Cycle complete.").color("#FFD700"));
                     }, world);
@@ -363,7 +368,7 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
 
     // ── Particle subcommand ──────────────────────────────────────────────
 
-    private void handleParticle(Player player, PacketHandler ph, String[] args) {
+    private void handleParticle(Player player, PacketHandler ph, int networkId, String[] args) {
         if (args.length < 2) {
             player.sendMessage(Message.raw("[Cosmetic] Usage: /cosmetic particle <systemId> [scale] [hexColor]"));
             player.sendMessage(Message.raw("[Cosmetic]   /cosmetic particle clear - Note: no API to remove model particles"));
@@ -397,8 +402,7 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
                 false // attached to model
         );
 
-        int entityId = player.getNetworkId();
-        ph.writeNoCache(new SpawnModelParticles(entityId, new ModelParticle[]{mp}));
+        ph.writeNoCache(new SpawnModelParticles(networkId, new ModelParticle[]{mp}));
         player.sendMessage(Message.raw("[Cosmetic] Model particle '" + systemId + "' attached (scale=" + scale + "). Only visible to you."));
     }
 
@@ -472,7 +476,7 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
 
     // ── Preset subcommand ────────────────────────────────────────────────
 
-    private void handlePreset(Player player, PacketHandler ph, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
+    private void handlePreset(Player player, PacketHandler ph, int networkId, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
         if (args.length < 2) {
             player.sendMessage(Message.raw("[Cosmetic] Usage: /cosmetic preset <name>"));
             player.sendMessage(Message.raw("[Cosmetic] Presets: fire, ice, gold, legendary, creative, intangible, heal"));
@@ -481,12 +485,12 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
 
         String preset = args[1].toLowerCase();
         switch (preset) {
-            case "fire" -> applyEffectPreset(player, ph, ref, store, "Burn", "fire");
-            case "ice" -> applyEffectPreset(player, ph, ref, store, "Freeze", "ice");
-            case "gold" -> applyEffectPreset(player, ph, ref, store, "Crown_Gold", "gold");
-            case "legendary" -> applyEffectPreset(player, ph, ref, store, "Drop_Legendary", "legendary");
-            case "creative" -> applyEffectPreset(player, ph, ref, store, "Creative", "creative");
-            case "intangible" -> applyEffectPreset(player, ph, ref, store, "Intangible_Dark", "intangible");
+            case "fire" -> applyEffectPreset(player, ph, networkId, ref, store, "Burn", "fire");
+            case "ice" -> applyEffectPreset(player, ph, networkId, ref, store, "Freeze", "ice");
+            case "gold" -> applyEffectPreset(player, ph, networkId, ref, store, "Crown_Gold", "gold");
+            case "legendary" -> applyEffectPreset(player, ph, networkId, ref, store, "Drop_Legendary", "legendary");
+            case "creative" -> applyEffectPreset(player, ph, networkId, ref, store, "Creative", "creative");
+            case "intangible" -> applyEffectPreset(player, ph, networkId, ref, store, "Intangible_Dark", "intangible");
             case "heal" -> {
                 // Heal uses a model particle instead of an entity effect
                 ModelParticle mp = new ModelParticle(
@@ -499,8 +503,7 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
                         null,
                         false
                 );
-                int entityId = player.getNetworkId();
-                ph.writeNoCache(new SpawnModelParticles(entityId, new ModelParticle[]{mp}));
+                ph.writeNoCache(new SpawnModelParticles(networkId, new ModelParticle[]{mp}));
                 player.sendMessage(Message.raw("[Cosmetic] Preset 'heal' applied (model particle). Only visible to you."));
             }
             default -> {
@@ -510,7 +513,7 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
         }
     }
 
-    private void applyEffectPreset(Player player, PacketHandler ph, Ref<EntityStore> ref, Store<EntityStore> store,
+    private void applyEffectPreset(Player player, PacketHandler ph, int networkId, Ref<EntityStore> ref, Store<EntityStore> store,
                                     String effectName, String presetLabel) {
         EntityEffect effect = resolveEffect(effectName);
         if (effect == null) {
@@ -531,13 +534,13 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
         }
 
         ctrl.addInfiniteEffect(ref, effectIndex, effect, store);
-        sendEffectSyncToSelf(ph, player, ctrl);
+        sendEffectSyncToSelf(ph, networkId, ctrl);
         player.sendMessage(Message.raw("[Cosmetic] Preset '" + presetLabel + "' applied (effect=" + effect.getId() + "). Use /cosmetic effect clear to remove."));
     }
 
     // ── Self-sync: send effect state directly to player ────────────────
 
-    private void sendEffectSyncToSelf(PacketHandler ph, Player player, EffectControllerComponent ctrl) {
+    private void sendEffectSyncToSelf(PacketHandler ph, int networkId, EffectControllerComponent ctrl) {
         try {
             EntityEffectUpdate[] updates = ctrl.createInitUpdates();
             if (updates == null || updates.length == 0) {
@@ -548,14 +551,15 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
             EntityEffectsUpdate cu = new EntityEffectsUpdate(updates);
 
             EntityUpdate eu = new EntityUpdate(
-                    player.getNetworkId(),
+                    networkId,
                     null, // no removed component types
                     new EntityEffectsUpdate[]{cu}
             );
 
             ph.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{eu}));
         } catch (Exception e) {
-            player.sendMessage(Message.raw("[Cosmetic] Warning: effect applied but visual sync failed: " + e.getMessage()));
+            AsyncExecutionHelper.logThrottledWarning("cosmetic.sync", "effect sync to self",
+                    "networkId=" + networkId, e);
         }
     }
 

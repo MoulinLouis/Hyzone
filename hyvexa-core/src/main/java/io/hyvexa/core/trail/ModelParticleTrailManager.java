@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.ModelParticle;
 import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
@@ -105,8 +106,14 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
             return;
         }
 
+        NetworkId nid = state.store.getComponent(state.ref, NetworkId.getComponentType());
+        if (nid == null) {
+            stopTrail(state.playerId);
+            return;
+        }
+
         SpawnModelParticles packet = new SpawnModelParticles(
-                source.getNetworkId(),
+                nid.getId(),
                 state.particlePayload
         );
         broadcastPacket(state.world, viewers, packet, pos[0], pos[1], pos[2]);
@@ -117,13 +124,13 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
             return;
         }
         World world = state.store.getExternalData().getWorld();
-        Player source = state.store.getComponent(state.ref, Player.getComponentType());
-        if (world == null || source == null) {
+        NetworkId nid = state.store.getComponent(state.ref, NetworkId.getComponentType());
+        if (world == null || nid == null) {
             return;
         }
 
         SpawnModelParticles clearPacket = new SpawnModelParticles(
-                source.getNetworkId(),
+                nid.getId(),
                 new ModelParticle[0]
         );
         broadcastPacket(world, collectViewersForWorld(world), clearPacket);

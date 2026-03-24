@@ -12,8 +12,8 @@ import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffec
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.OverlapBehavior;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.io.PacketHandler;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -237,9 +237,9 @@ public class CosmeticManager {
         ctrl.addEffect(ref, effectIndex, effect, durationSeconds, OverlapBehavior.OVERWRITE, store);
 
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerRef != null && player != null) {
-            sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
+        NetworkId nid = store.getComponent(ref, NetworkId.getComponentType());
+        if (playerRef != null && nid != null) {
+            sendEffectSyncToSelf(playerRef.getPacketHandler(), nid.getId(), ctrl);
         }
     }
 
@@ -314,9 +314,9 @@ public class CosmeticManager {
             ctrl.clearEffects(ref, store);
 
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (playerRef != null && player != null) {
-                sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
+            NetworkId nid = store.getComponent(ref, NetworkId.getComponentType());
+            if (playerRef != null && nid != null) {
+                sendEffectSyncToSelf(playerRef.getPacketHandler(), nid.getId(), ctrl);
             }
         }
 
@@ -370,9 +370,9 @@ public class CosmeticManager {
 
     private void syncEffectsToSelf(Ref<EntityStore> ref, Store<EntityStore> store, EffectControllerComponent ctrl) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerRef != null && player != null) {
-            sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
+        NetworkId nid = store.getComponent(ref, NetworkId.getComponentType());
+        if (playerRef != null && nid != null) {
+            sendEffectSyncToSelf(playerRef.getPacketHandler(), nid.getId(), ctrl);
         }
     }
 
@@ -405,7 +405,7 @@ public class CosmeticManager {
         return null;
     }
 
-    private void sendEffectSyncToSelf(PacketHandler ph, Player player, EffectControllerComponent ctrl) {
+    private void sendEffectSyncToSelf(PacketHandler ph, int networkId, EffectControllerComponent ctrl) {
         if (ph == null) return;
         try {
             EntityEffectUpdate[] updates = ctrl.createInitUpdates();
@@ -414,7 +414,7 @@ public class CosmeticManager {
             }
 
             EntityEffectsUpdate cu = new EntityEffectsUpdate(updates);
-            EntityUpdate eu = new EntityUpdate(player.getNetworkId(), null, new EntityEffectsUpdate[]{cu});
+            EntityUpdate eu = new EntityUpdate(networkId, null, new EntityEffectsUpdate[]{cu});
             ph.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{eu}));
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to sync effect to self");
