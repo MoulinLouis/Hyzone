@@ -138,15 +138,15 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
 
         int mapStarts = store.countEvents("map_start", days);
         int mapCompletes = store.countEvents("map_complete", days);
-        int pbs = store.countEventsWithFilter("map_complete", days, "%\"is_pb\":true%");
-        int firstCompletions = store.countEventsWithFilter("map_complete", days, "%\"first_completion\":true%");
+        int pbs = store.countEventsWithJsonFilter("map_complete", days, "$.is_pb", true);
+        int firstCompletions = store.countEventsWithJsonFilter("map_complete", days, "$.first_completion", true);
         int levelUps = store.countEvents("level_up", days);
         int uniquePlayers = store.countDistinctPlayers("map_start", days);
 
         int duels = store.countEvents("duel_finish", days);
-        int duelCompleted = store.countEventsWithFilter("duel_finish", days, "%\"reason\":\"COMPLETED\"%");
-        int duelForfeit = store.countEventsWithFilter("duel_finish", days, "%\"reason\":\"FORFEIT\"%");
-        int duelDisconnect = store.countEventsWithFilter("duel_finish", days, "%\"reason\":\"DISCONNECT\"%");
+        int duelCompleted = store.countEventsWithJsonFilter("duel_finish", days, "$.reason", "COMPLETED");
+        int duelForfeit = store.countEventsWithJsonFilter("duel_finish", days, "$.reason", "FORFEIT");
+        int duelDisconnect = store.countEventsWithJsonFilter("duel_finish", days, "$.reason", "DISCONNECT");
 
         List<Map.Entry<String, Integer>> topMaps = store.getTopJsonValues("map_complete", "map_id", days, 5);
 
