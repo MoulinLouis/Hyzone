@@ -76,7 +76,7 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
         if (playerId == null || ref == null || store == null || world == null || particleId == null || particleId.isBlank()) {
             return;
         }
-        activeTrails.put(playerId, new TrailState(
+        putTrailState(playerId, new TrailState(
                 playerId, ref, store, world, particleId, scale, intervalMs, xOffset, yOffset, zOffset
         ));
         ensureTickTask();
@@ -84,13 +84,13 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
 
     @Override
     public void stopTrail(UUID playerId) {
-        TrailState removed = activeTrails.remove(playerId);
+        TrailState removed = removeTrailState(playerId);
         if (removed != null && removed.world != null) {
             try {
                 removed.world.execute(() -> sendClearPacket(removed));
             } catch (Exception ignored) {}
         }
-        super.stopTrail(playerId);
+        cancelTickTaskIfIdle();
     }
 
     @Override
@@ -123,6 +123,7 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
         if (state == null || state.ref == null || !state.ref.isValid()) {
             return;
         }
+        if (state.store.getExternalData() == null) return;
         World world = state.store.getExternalData().getWorld();
         NetworkId nid = state.store.getComponent(state.ref, NetworkId.getComponentType());
         if (world == null || nid == null) {

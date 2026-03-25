@@ -21,6 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Shared scheduling, tick loop, viewer collection, and broadcast logic for trail managers.
@@ -36,6 +37,8 @@ abstract class AbstractTrailManager<TState> {
     static final double MOVEMENT_THRESHOLD_SQ = 0.0009d; // ~0.03 blocks
     private static final Set<AbstractTrailManager<?>> MANAGERS = ConcurrentHashMap.newKeySet();
     private static final Object SCHEDULER_LOCK = new Object();
+    /** Global count of active trails across all managers. Updated by putTrailState/removeTrailState. */
+    private static final AtomicInteger ACTIVE_TRAIL_COUNT = new AtomicInteger(0);
 
     final ConcurrentHashMap<UUID, TState> activeTrails = new ConcurrentHashMap<>();
     private static volatile ScheduledFuture<?> tickTask;
@@ -66,8 +69,33 @@ abstract class AbstractTrailManager<TState> {
      */
     protected abstract void emitTrailOnWorldThread(TState state, List<ViewerState> viewers);
 
+    /**
+     * Adds a trail state and increments the global active-trail counter.
+     * If a trail already exists for this player, the counter is not double-incremented
+     * (the old entry is replaced and counted as a single active slot).
+     */
+    protected void putTrailState(UUID playerId, TState state) {
+        TState previous = activeTrails.put(playerId, state);
+        if (previous == null) {
+            ACTIVE_TRAIL_COUNT.incrementAndGet();
+        }
+    }
+
+    /**
+     * Removes a trail state and decrements the global active-trail counter.
+     *
+     * @return the removed state, or {@code null} if there was none
+     */
+    protected TState removeTrailState(UUID playerId) {
+        TState removed = activeTrails.remove(playerId);
+        if (removed != null) {
+            ACTIVE_TRAIL_COUNT.decrementAndGet();
+        }
+        return removed;
+    }
+
     public void stopTrail(UUID playerId) {
-        activeTrails.remove(playerId);
+        removeTrailState(playerId);
         cancelTickTaskIfIdle();
     }
 
@@ -76,7 +104,11 @@ abstract class AbstractTrailManager<TState> {
     }
 
     public void shutdown() {
+        int removed = activeTrails.size();
         activeTrails.clear();
+        if (removed > 0) {
+            ACTIVE_TRAIL_COUNT.addAndGet(-removed);
+        }
         cancelTickTaskIfIdle();
     }
 
@@ -173,6 +205,10 @@ abstract class AbstractTrailManager<TState> {
                     stopTrail(playerId);
                     continue;
                 }
+                if (store.getExternalData() == null) {
+                    stopTrail(playerId);
+                    continue;
+                }
                 World currentWorld = store.getExternalData().getWorld();
                 if (currentWorld != world || currentWorld != getWorld(state)) {
                     stopTrail(playerId);
@@ -199,7 +235,7 @@ abstract class AbstractTrailManager<TState> {
                 continue;
             }
             Store<EntityStore> viewerStore = viewerRef.getStore();
-            if (viewerStore.getExternalData().getWorld() != world) {
+            if (viewerStore.getExternalData() == null || viewerStore.getExternalData().getWorld() != world) {
                 continue;
             }
             TransformComponent transform = viewerStore.getComponent(viewerRef, TransformComponent.getComponentType());
@@ -213,15 +249,10 @@ abstract class AbstractTrailManager<TState> {
     }
 
     private static boolean hasActiveTrails() {
-        for (AbstractTrailManager<?> manager : MANAGERS) {
-            if (!manager.activeTrails.isEmpty()) {
-                return true;
-            }
-        }
-        return false;
+        return ACTIVE_TRAIL_COUNT.get() > 0;
     }
 
-    private static void cancelTickTaskIfIdle() {
+    static void cancelTickTaskIfIdle() {
         synchronized (SCHEDULER_LOCK) {
             if (hasActiveTrails()) {
                 return;
@@ -267,7 +298,7 @@ abstract class AbstractTrailManager<TState> {
                 continue;
             }
             Store<EntityStore> viewerStore = viewerRef.getStore();
-            if (viewerStore.getExternalData().getWorld() != world) {
+            if (viewerStore.getExternalData() == null || viewerStore.getExternalData().getWorld() != world) {
                 continue;
             }
             PacketHandler packetHandler = playerRef.getPacketHandler();

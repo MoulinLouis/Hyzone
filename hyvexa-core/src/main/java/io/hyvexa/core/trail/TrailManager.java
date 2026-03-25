@@ -80,7 +80,7 @@ public class TrailManager extends AbstractTrailManager<TrailManager.TrailState> 
         if (playerId == null || ref == null || store == null || world == null || particleId == null || particleId.isBlank()) {
             return;
         }
-        activeTrails.put(playerId, new TrailState(playerId, ref, store, world, particleId, scale, intervalMs));
+        putTrailState(playerId, new TrailState(playerId, ref, store, world, particleId, scale, intervalMs));
         ensureTickTask();
     }
 
