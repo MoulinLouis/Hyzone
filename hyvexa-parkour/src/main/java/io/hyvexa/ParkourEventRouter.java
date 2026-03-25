@@ -28,7 +28,6 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.duel.DuelTracker;
-import io.hyvexa.manager.AnnouncementManager;
 import io.hyvexa.manager.ChatFormatter;
 import io.hyvexa.manager.CollisionManager;
 import io.hyvexa.manager.HudManager;
@@ -42,7 +41,6 @@ import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.PlayerSettingsPersistence;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.RunStateStore;
-import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.pet.PetManager;
 import io.hyvexa.parkour.tracker.RunTracker;
@@ -71,12 +69,10 @@ class ParkourEventRouter {
     // Dependencies
     private final MapStore mapStore;
     private final ProgressStore progressStore;
-    private final SettingsStore settingsStore;
     private final RunTracker runTracker;
     private final RunStateStore runStateStore;
     private final DuelTracker duelTracker;
     private final HudManager hudManager;
-    private final AnnouncementManager announcementManager;
     private final PlayerPerksManager perksManager;
     private final ChatFormatter chatFormatter;
     private final PlaytimeManager playtimeManager;
@@ -101,12 +97,10 @@ class ParkourEventRouter {
     ParkourEventRouter(
             MapStore mapStore,
             ProgressStore progressStore,
-            SettingsStore settingsStore,
             RunTracker runTracker,
             RunStateStore runStateStore,
             DuelTracker duelTracker,
             HudManager hudManager,
-            AnnouncementManager announcementManager,
             PlayerPerksManager perksManager,
             ChatFormatter chatFormatter,
             PlaytimeManager playtimeManager,
@@ -130,12 +124,10 @@ class ParkourEventRouter {
     ) {
         this.mapStore = mapStore;
         this.progressStore = progressStore;
-        this.settingsStore = settingsStore;
         this.runTracker = runTracker;
         this.runStateStore = runStateStore;
         this.duelTracker = duelTracker;
         this.hudManager = hudManager;
-        this.announcementManager = announcementManager;
         this.perksManager = perksManager;
         this.chatFormatter = chatFormatter;
         this.playtimeManager = playtimeManager;

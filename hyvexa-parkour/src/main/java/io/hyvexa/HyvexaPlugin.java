@@ -397,8 +397,8 @@ public class HyvexaPlugin extends JavaPlugin {
         HytaleServer.SCHEDULED_EXECUTOR.schedule(this::registerDeferredSystems, 1, TimeUnit.SECONDS);
 
         this.eventRouter = new ParkourEventRouter(
-                mapStore, progressStore, settingsStore, runTracker, runStateStore, duelTracker,
-                hudManager, announcementManager, perksManager, chatFormatter,
+                mapStore, progressStore, runTracker, runStateStore, duelTracker,
+                hudManager, perksManager, chatFormatter,
                 playtimeManager, cleanupManager, collisionManager, inventorySyncManager,
                 worldMapManager, analyticsStore, discordLinkStore, vexaStore, featherStore,
                 cosmeticStore, trailManager, voteStore, voteManager, medalStore,
