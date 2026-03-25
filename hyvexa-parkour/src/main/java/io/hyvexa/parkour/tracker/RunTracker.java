@@ -377,6 +377,7 @@ public class RunTracker {
         if (returnPoint == null || ref == null || store == null) {
             return true;
         }
+        if (store.getExternalData() == null) return true;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return true;
@@ -574,6 +575,7 @@ public class RunTracker {
                     if (bodyRot == null) {
                         return false;
                     }
+                    if (store.getExternalData() == null) return false;
                     Teleport tp = Teleport.createForPlayer(
                             store.getExternalData().getWorld(),
                             new com.hypixel.hytale.math.vector.Transform(rollbackPos, bodyRot));
@@ -667,6 +669,7 @@ public class RunTracker {
             return;
         }
         setActiveMap(playerRef.getUuid(), map.getId(), map.getStart());
+        if (store.getExternalData() == null) return;
         teleporter.addTeleport(ref, store, buffer,
                 new Teleport(store.getExternalData().getWorld(), map.getStart().toPosition(), map.getStart().toRotation()));
         teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.START_TRIGGER);
@@ -685,7 +688,7 @@ public class RunTracker {
             return false;
         }
         TransformData leaveTeleport = map.getLeaveTeleport();
-        if (leaveTeleport != null) {
+        if (leaveTeleport != null && store.getExternalData() != null) {
             teleporter.addTeleport(ref, store, buffer,
                     new Teleport(store.getExternalData().getWorld(), leaveTeleport.toPosition(), leaveTeleport.toRotation()));
             teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.LEAVE_TRIGGER);
@@ -1037,6 +1040,7 @@ public class RunTracker {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -1109,7 +1113,9 @@ public class RunTracker {
         }
         if (!Float.isFinite(deltaSeconds) || deltaSeconds <= 0f) {
             run.elapsedMs = Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
-            run.elapsedRemainderMs = 0.0;
+            // elapsedRemainderMs is preserved: the wall-clock correction resets the whole-ms
+            // count, but discarding the sub-ms remainder would cause accumulated drift each
+            // time a bad delta forces this fallback path.
             return;
         }
         double deltaMs = Math.max(0.0, deltaSeconds * 1000.0);
