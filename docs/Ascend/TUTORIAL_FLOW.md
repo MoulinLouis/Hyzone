@@ -281,9 +281,9 @@ Implementation:
 | First Completion | `AscendRunTracker.completeRun()` on first manual completion (`checkFirstCompletion`) |
 | New Map Unlocked | `AscendMapSelectPage.checkAndProcessMapUnlocks()` (`checkMapUnlock`) |
 | Evolution | `AscendMapSelectPage` evolution flow, on first evolution (`checkEvolution`) |
-| Elevation | `AscendPlayerStore` volt update → `checkVoltThresholds` (crosses 30K) |
-| Summit | `AscendPlayerStore` volt update → `checkVoltThresholds` (crosses 1B) |
-| Ascension | `AscendPlayerStore` volt update → `checkVoltThresholds` (crosses 1Dc) |
+| Elevation | `AscendPlayerEventHandler` volt update → `checkVoltThresholds` (crosses 30K) |
+| Summit | `AscendPlayerEventHandler` volt update → `checkVoltThresholds` (crosses 1B) |
+| Ascension | `AscendPlayerEventHandler` volt update → `checkVoltThresholds` (crosses 1Dc) |
 | Challenges | `SkillTreePage` on ASCENSION_CHALLENGES node unlock, or `AscendCommand` on first `/ascend challenge` open |
 
 ### Image Checklist

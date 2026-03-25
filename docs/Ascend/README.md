@@ -37,7 +37,8 @@ Entry point: `hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/ParkourAscend
 | Store | Purpose |
 |-------|---------|
 | `AscendMapStore` | Map definitions, triggers, checkpoints, finish areas |
-| `AscendPlayerStore` | Player progress (volt, elevation, runner levels, skills, cats) |
+| `AscendPlayerStore` | Player progress cache (volt, elevation, runner levels, skills, cats) — pure data, no side-effects |
+| `AscendPlayerEventHandler` | Gameplay side-effects: ascension flow, tutorial triggers, transcendence notifications |
 | `AscendSettingsStore` | Global settings (spawn, admin config) |
 | `GhostStore` | Ghost recording storage (table: `ascend_ghost_recordings`) |
 
