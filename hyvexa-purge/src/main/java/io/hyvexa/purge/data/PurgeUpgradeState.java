@@ -14,7 +14,7 @@ public class PurgeUpgradeState {
     }
 
     public void addValue(PurgeUpgradeType type, int amount) {
-        accumulated.merge(type, amount, Integer::sum);
+        accumulated.merge(type, amount, (old, val) -> Math.min(old + val, type.getMaxAccumulated()));
     }
 
     public int getLevel(PurgeUpgradeType type) {

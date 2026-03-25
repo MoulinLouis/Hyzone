@@ -104,7 +104,7 @@ client.once('ready', async () => {
   }
 
   if (GUILD_ID && RANK_ROLES.size > 0) {
-    setInterval(syncRankRoles, RANK_SYNC_INTERVAL_MS);
+    setInterval(() => syncRankRoles().catch(err => console.error('Rank sync failed:', err)), RANK_SYNC_INTERVAL_MS);
     console.log(`Rank role sync enabled (${RANK_ROLES.size} roles configured, polling every ${RANK_SYNC_INTERVAL_MS / 1000}s)`);
   }
 });
@@ -120,7 +120,7 @@ client.on('interactionCreate', async (interaction) => {
     const rawCode = interaction.options.getString('code', true);
     const code = rawCode.toUpperCase().replace(/[-\s]/g, '');
 
-    if (code.length !== 6) {
+    if (code.length !== 6 || !/^[A-Z0-9]{6}$/.test(code)) {
       await interaction.editReply('Invalid code format. Use the 6-character code from `/link` in-game (e.g. X7K-9M2).');
       return;
     }

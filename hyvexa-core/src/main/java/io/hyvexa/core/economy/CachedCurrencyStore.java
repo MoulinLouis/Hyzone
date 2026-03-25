@@ -104,14 +104,21 @@ abstract class CachedCurrencyStore implements CurrencyStore {
             return;
         }
         long safe = Math.max(0, amount);
-        CachedBalance previous = cache.get(playerId);
-        cache.put(playerId, new CachedBalance(safe));
+        CachedBalance[] previous = new CachedBalance[1];
+        CachedBalance[] written = new CachedBalance[1];
+        cache.compute(playerId, (uuid, cached) -> {
+            previous[0] = cached;
+            CachedBalance newEntry = new CachedBalance(safe);
+            written[0] = newEntry;
+            return newEntry;
+        });
         if (!persistToDatabase(playerId, safe)) {
-            if (previous == null) {
-                cache.remove(playerId);
-            } else {
-                cache.put(playerId, previous);
-            }
+            cache.compute(playerId, (uuid, current) -> {
+                if (current == written[0]) {
+                    return previous[0];
+                }
+                return current;
+            });
         }
     }
 
@@ -185,20 +192,26 @@ abstract class CachedCurrencyStore implements CurrencyStore {
 
     private long modifyBalance(UUID playerId, LongUnaryOperator compute) {
         long[] result = new long[1];
-        CachedBalance previous = cache.get(playerId);
+        CachedBalance[] previous = new CachedBalance[1];
+        CachedBalance[] written = new CachedBalance[1];
         cache.compute(playerId, (uuid, cached) -> {
+            previous[0] = cached;
             long current = (cached != null && !cached.isStale()) ? cached.value : loadFromDatabase(uuid);
             long newTotal = Math.max(0, compute.applyAsLong(current));
             result[0] = newTotal;
-            return new CachedBalance(newTotal);
+            CachedBalance newEntry = new CachedBalance(newTotal);
+            written[0] = newEntry;
+            return newEntry;
         });
         if (!persistToDatabase(playerId, result[0])) {
-            if (previous == null) {
-                cache.remove(playerId);
-            } else {
-                cache.put(playerId, previous);
-            }
-            return previous != null ? previous.value : 0;
+            // Only roll back if the cache still holds the value we wrote (no concurrent modification)
+            cache.compute(playerId, (uuid, current) -> {
+                if (current == written[0]) {
+                    return previous[0]; // null here correctly removes the entry
+                }
+                return current; // another thread modified it, don't clobber
+            });
+            return previous[0] != null ? previous[0].value : 0;
         }
         return result[0];
     }

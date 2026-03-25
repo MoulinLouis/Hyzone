@@ -30,6 +30,10 @@ public class HubMenuInteraction extends SimpleInteraction {
         if (playerRef == null) {
             return;
         }
-        router.openMenuOrRoute(ref, store, playerRef, store.getExternalData().getWorld());
+        var externalData = store.getExternalData();
+        if (externalData == null) {
+            return;
+        }
+        router.openMenuOrRoute(ref, store, playerRef, externalData.getWorld());
     }
 }
