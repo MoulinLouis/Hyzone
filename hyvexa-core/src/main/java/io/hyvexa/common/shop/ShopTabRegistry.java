@@ -18,6 +18,11 @@ public final class ShopTabRegistry {
         TABS.add(tab);
     }
 
+    public static void unregister(String id) {
+        TABS.removeIf(existing -> existing.getId().equals(id));
+        INDEX.remove(id);
+    }
+
     public static List<ShopTab> getTabs() {
         return TABS.stream()
                 .sorted(Comparator.comparingInt(ShopTab::getOrder))

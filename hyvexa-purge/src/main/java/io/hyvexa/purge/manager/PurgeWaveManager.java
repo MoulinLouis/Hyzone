@@ -641,10 +641,12 @@ public class PurgeWaveManager {
         List<Ref<EntityStore>> invalidRefs = null;
         for (Ref<EntityStore> zombieRef : aliveSnapshot) {
             if (zombieRef == null || !zombieRef.isValid()) {
-                if (invalidRefs == null) {
-                    invalidRefs = new ArrayList<>();
+                if (zombieRef != null) {
+                    if (invalidRefs == null) {
+                        invalidRefs = new ArrayList<>();
+                    }
+                    invalidRefs.add(zombieRef);
                 }
-                invalidRefs.add(zombieRef);
                 continue;
             }
             try {
