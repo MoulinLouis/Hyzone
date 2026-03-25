@@ -102,18 +102,35 @@ public class MineHudManager {
         }
     }
 
+    /**
+     * Removes mine HUD state and detaches from MultiHudBridge.
+     * Callers that have a known-valid Player/PlayerRef (e.g. from an event holder)
+     * should use {@link #removePlayer(UUID, Player, PlayerRef)} instead, since
+     * {@code PlayerRef.getReference()} is often null during world transitions.
+     */
     public void removePlayer(UUID playerId) {
-        huds.remove(playerId);
-        // Detach from MultiHudBridge so the mine HUD doesn't linger in the composite
-        // after world switches (e.g. game selector -> parkour). No-op if player already gone.
+        removePlayer(playerId, null, null);
+    }
+
+    /**
+     * Removes mine HUD state and detaches from MultiHudBridge.
+     * If {@code player}/{@code playerRef} are non-null, they are used directly;
+     * otherwise falls back to the playerRefLookup (best-effort).
+     */
+    public void removePlayer(UUID playerId, Player player, PlayerRef playerRef) {
+        if (huds.remove(playerId) == null) {
+            return; // never had a mine HUD — nothing to detach
+        }
         try {
-            PlayerRef playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
-            if (playerRef == null) return;
-            var ref = playerRef.getReference();
-            if (ref == null || !ref.isValid()) return;
-            var store = ref.getStore();
-            if (store == null) return;
-            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player == null || playerRef == null) {
+                playerRef = playerRefLookup != null ? playerRefLookup.apply(playerId) : null;
+                if (playerRef == null) return;
+                var ref = playerRef.getReference();
+                if (ref == null || !ref.isValid()) return;
+                var store = ref.getStore();
+                if (store == null) return;
+                player = store.getComponent(ref, Player.getComponentType());
+            }
             if (player != null) {
                 MultiHudBridge.hideCustomHud(player, playerRef, MultiHudBridge.KEY_MINE);
             }

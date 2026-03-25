@@ -625,7 +625,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
                 // Clean up Ascend state on true Ascend -> non-Ascend transitions
                 if (playerId != null && playersInAscendWorld.remove(playerId)) {
-                    cleanupAscendState(playerId);
+                    // Pass event's Player/PlayerRef — PlayerRef.getReference() is null during transitions
+                    Player player = holder.getComponent(Player.getComponentType());
+                    cleanupAscendState(playerId, player, playerRef);
                     // Clear inMine flag — player explicitly left Ascend world
                     if (minePlayerStore != null) {
                         MinePlayerProgress mp = minePlayerStore.getPlayer(playerId);
@@ -651,7 +653,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             }
 
             playersInAscendWorld.remove(playerId);
-            cleanupAscendState(playerId);
+            cleanupAscendState(playerId, null, null);
 
             // Disconnect-only cleanup (not needed on world transitions)
             runSafe(() -> AscendMapSelectPage.clearBuyAllCooldown(playerId), "Disconnect cleanup: clearBuyAllCooldown");
@@ -960,12 +962,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
      * without disconnecting (e.g. teleported to Hub). Mirrors disconnect cleanup
      * but keeps player data cached for quick re-entry.
      */
-    private void cleanupAscendState(UUID playerId) {
+    private void cleanupAscendState(UUID playerId, Player player, PlayerRef playerRef) {
         runSafe(() -> { if (passiveEarningsManager != null) passiveEarningsManager.onPlayerLeaveAscend(playerId); },
                 "Leave cleanup: passiveEarnings");
         runSafe(() -> AscendCommand.onPlayerDisconnect(playerId), "Leave cleanup: AscendCommand");
         // HUD cleanup BEFORE removeTickPlayer — removePlayer needs playerRefCache to detach from MultiHudBridge
-        runSafe(() -> { if (mineHudManager != null) mineHudManager.removePlayer(playerId); },
+        runSafe(() -> { if (mineHudManager != null) mineHudManager.removePlayer(playerId, player, playerRef); },
                 "Leave cleanup: mineHudManager");
         runSafe(() -> hudManager.removePlayer(playerId), "Leave cleanup: hudManager");
         runSafe(() -> removeTickPlayer(playerId), "Leave cleanup: playerRefCache");

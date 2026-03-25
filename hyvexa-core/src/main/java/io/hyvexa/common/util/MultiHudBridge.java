@@ -162,20 +162,27 @@ public final class MultiHudBridge {
         if (!available) {
             return;
         }
+        UUID playerId = playerRef != null ? playerRef.getUuid() : null;
         try {
             Object instance = getInstanceMethod.invoke(null);
             hideCustomHudMethod.invoke(instance, player, playerRef, key);
 
             // Update the composite cache
-            UUID playerId = playerRef.getUuid();
             if (playerId != null) {
                 CustomUIHud afterHide = player.getHudManager().getCustomHud();
                 if (afterHide != null && multipleCustomUIHudClass.isInstance(afterHide)) {
                     compositeCache.put(playerId, afterHide);
+                } else {
+                    // Engine already cleared the HUD (e.g. world switch) — evict stale cache
+                    compositeCache.remove(playerId);
                 }
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("MultipleHUD hideCustomHud failed: " + e.getMessage());
+            // Evict stale cache on failure to prevent restoring removed keys
+            if (playerId != null) {
+                compositeCache.remove(playerId);
+            }
         }
     }
 
