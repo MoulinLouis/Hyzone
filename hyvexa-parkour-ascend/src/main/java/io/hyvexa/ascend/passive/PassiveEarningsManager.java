@@ -157,11 +157,7 @@ public class PassiveEarningsManager {
         }
 
         // Apply earnings to player account (with side-effects for tutorial/ascension triggers)
-        if (eventHandler != null) {
-            eventHandler.addVoltWithEffects(playerId, totalVolt);
-        } else {
-            playerStore.atomicAddVolt(playerId, totalVolt);
-        }
+        eventHandler.addVoltWithEffects(playerId, totalVolt);
         if (!playerStore.atomicAddTotalVoltEarned(playerId, totalVolt)) {
             LOGGER.atSevere().log("Failed to add total volt earned for " + playerId + " (amount: " + totalVolt + ")");
         }

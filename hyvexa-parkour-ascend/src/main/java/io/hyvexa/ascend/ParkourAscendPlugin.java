@@ -342,7 +342,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
             ghostStore,
             this::getPlayerRef
         );
-        eventHandler.setAnalytics(analytics);
         runTracker.setEventHandler(eventHandler);
         if (robotManager != null) {
             robotManager.setEventHandler(eventHandler);

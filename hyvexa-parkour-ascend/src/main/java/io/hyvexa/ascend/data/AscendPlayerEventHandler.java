@@ -12,7 +12,6 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.math.BigNumber;
-import io.hyvexa.core.analytics.PlayerAnalytics;
 
 import java.util.List;
 import java.util.Set;
@@ -27,7 +26,7 @@ import java.util.function.Function;
  *
  * <p>Extracted from {@link AscendPlayerStore} to separate pure data operations
  * from gameplay orchestration (ascension flow, tutorial triggers, transcendence
- * notifications, analytics logging).</p>
+ * notifications).</p>
  */
 public class AscendPlayerEventHandler {
 
@@ -43,8 +42,6 @@ public class AscendPlayerEventHandler {
     private final AscendMapStore runtimeMapStore;
     private final GhostStore ghostStore;
     private final Function<UUID, PlayerRef> playerRefLookup;
-    private volatile PlayerAnalytics analytics;
-
     private final Set<UUID> ascensionCinematicActive = ConcurrentHashMap.newKeySet();
 
     public AscendPlayerEventHandler(AscendPlayerStore playerStore,
@@ -67,10 +64,6 @@ public class AscendPlayerEventHandler {
         this.runtimeMapStore = runtimeMapStore;
         this.ghostStore = ghostStore;
         this.playerRefLookup = playerRefLookup;
-    }
-
-    public void setAnalytics(PlayerAnalytics analytics) {
-        this.analytics = analytics;
     }
 
     // ========================================
@@ -103,18 +96,6 @@ public class AscendPlayerEventHandler {
                     triggerAscensionCinematic(playerId);
                 }
             }
-        }
-    }
-
-    /**
-     * Log elevation analytics event.
-     */
-    public void logElevationAnalytics(UUID playerId, int newLevel) {
-        if (analytics != null) {
-            try {
-                analytics.logEvent(playerId, "ascend_elevation_up",
-                        "{\"new_level\":" + newLevel + "}");
-            } catch (Exception e) { /* silent */ }
         }
     }
 

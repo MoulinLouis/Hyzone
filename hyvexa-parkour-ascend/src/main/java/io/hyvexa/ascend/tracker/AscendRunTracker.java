@@ -357,11 +357,7 @@ public class AscendRunTracker {
         }
 
         // Use event handler for volt + side-effects (tutorial thresholds, ascension triggers)
-        if (eventHandler != null) {
-            eventHandler.addVoltWithEffects(playerId, payout);
-        } else {
-            playerStore.atomicAddVolt(playerId, payout);
-        }
+        eventHandler.addVoltWithEffects(playerId, payout);
         if (!playerStore.atomicAddTotalVoltEarned(playerId, payout)) {
             LOGGER.atWarning().log("Failed to add total volt earned for manual run: " + playerId);
         }

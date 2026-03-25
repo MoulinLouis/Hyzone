@@ -858,11 +858,7 @@ public class RobotManager {
         BigNumber totalPayout = payoutPerRun.multiply(BigNumber.fromLong(completions));
 
         // Use event handler for volt + side-effects (tutorial thresholds, ascension triggers)
-        if (eventHandler != null) {
-            eventHandler.addVoltWithEffects(ownerId, totalPayout);
-        } else {
-            playerStore.atomicAddVolt(ownerId, totalPayout);
-        }
+        eventHandler.addVoltWithEffects(ownerId, totalPayout);
         if (!playerStore.atomicAddTotalVoltEarned(ownerId, totalPayout)) {
             LOGGER.atWarning().log("Failed to add total volt earned for " + ownerId);
         }
