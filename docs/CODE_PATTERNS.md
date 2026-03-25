@@ -617,16 +617,17 @@ Registered currencies: `"vexa"` (VexaStore), `"feathers"` (FeatherStore). To add
 Modules register named interaction handlers; other modules invoke them by key without importing the target module.
 
 ```java
-// Registration (in RunOrFallPlugin.setup()):
-GameModeBridge.register(GameModeBridge.RUNORFALL_OPEN_LEADERBOARD,
-        (ref, firstRun, time, type, ctx) -> { /* open page */ });
+// Registration (in HyvexaPlugin.setup() — parkour module):
+GameModeBridge.register(GameModeBridge.PARKOUR_RESTART_CHECKPOINT,
+        (ref, firstRun, time, type, ctx) ->
+                new RestartCheckpointInteraction().handle(ref, firstRun, time, type, ctx));
 
-// Invocation (from parkour's LeaderboardInteraction):
-GameModeBridge.invoke(GameModeBridge.RUNORFALL_OPEN_LEADERBOARD,
+// Invocation (from another module that needs to trigger a parkour restart):
+GameModeBridge.invoke(GameModeBridge.PARKOUR_RESTART_CHECKPOINT,
         ref, firstRun, time, type, interactionContext);
 ```
 
-Keys are string constants defined in `GameModeBridge` (e.g. `PARKOUR_RESTART_CHECKPOINT`, `RUNORFALL_JOIN_LOBBY`). Add new keys there when adding cross-module interactions.
+Keys are string constants defined in `GameModeBridge` (e.g. `PARKOUR_RESTART_CHECKPOINT`). Add new keys there when adding cross-module interactions.
 
 ### ModeGate + ModeMessages — World-based access control
 
@@ -638,7 +639,7 @@ if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_ASCEND, ModeMessages.MES
     return;
 }
 // Check world in interaction logic:
-if (ModeGate.isRunOrFallWorld(world)) { /* RunOrFall-specific path */ }
+if (ModeGate.isPurgeWorld(world)) { /* Purge-specific path */ }
 ```
 
 `ModeGate` lives in `hyvexa-core` (`io.hyvexa.common.util`), so any module can use it without cross-module imports.
