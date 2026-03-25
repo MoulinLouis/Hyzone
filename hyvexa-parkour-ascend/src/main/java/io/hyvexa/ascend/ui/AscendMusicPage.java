@@ -153,6 +153,7 @@ public class AscendMusicPage extends BaseAscendPage {
     private void playMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                            @Nonnull PlayerRef playerRef, int musicIndex, @Nonnull String label,
                            @Nonnull MusicSelection selection, boolean allowZero) {
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -218,6 +219,7 @@ public class AscendMusicPage extends BaseAscendPage {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

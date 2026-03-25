@@ -45,6 +45,7 @@ public class AscendFinishDetectionSystem extends EntityTickingSystem<EntityStore
         if (playerRef == null || transform == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (!plugin.isAscendWorld(world)) {
             return;

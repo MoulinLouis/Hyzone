@@ -80,6 +80,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         }
 
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return CompletableFuture.completedFuture(null);
         World world = store.getExternalData().getWorld();
         NetworkId nid = store.getComponent(ref, NetworkId.getComponentType());
         int networkId = nid != null ? nid.getId() : -1;

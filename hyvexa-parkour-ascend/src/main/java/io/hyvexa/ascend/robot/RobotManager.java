@@ -652,6 +652,7 @@ public class RobotManager {
             if (store == null) {
                 continue;
             }
+            if (store.getExternalData() == null) continue;
             World world = store.getExternalData().getWorld();
             if (!ModeGate.isAscendWorld(world)) {
                 continue;
@@ -1230,6 +1231,7 @@ public class RobotManager {
         if (store == null) {
             return false;
         }
+        if (store.getExternalData() == null) return false;
         World world = store.getExternalData().getWorld();
         return ModeGate.isAscendWorld(world);
     }

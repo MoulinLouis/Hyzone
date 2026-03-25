@@ -261,6 +261,7 @@ class RobotRefreshSystem {
             if (store == null) {
                 continue;
             }
+            if (store.getExternalData() == null) continue;
             World world = store.getExternalData().getWorld();
             if (!ModeGate.isAscendWorld(world)) {
                 continue;

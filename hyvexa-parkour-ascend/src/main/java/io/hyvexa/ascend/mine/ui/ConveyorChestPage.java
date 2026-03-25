@@ -187,6 +187,7 @@ public class ConveyorChestPage extends BaseAscendPage {
 
     private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (refreshTask != null) return;
+        if (store.getExternalData() == null) return;
         var world = store.getExternalData().getWorld();
         if (world == null) return;
         refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {

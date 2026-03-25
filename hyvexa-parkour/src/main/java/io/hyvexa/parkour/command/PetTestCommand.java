@@ -82,6 +82,7 @@ public class PetTestCommand extends AbstractAsyncCommand {
         }
 
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return CompletableFuture.completedFuture(null);
         World world = store.getExternalData().getWorld();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) return CompletableFuture.completedFuture(null);

@@ -158,6 +158,7 @@ public class PlayerMusicPage extends BaseParkourPage {
     private void playMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                            @Nonnull PlayerRef playerRef, int musicIndex, @Nonnull String label,
                            @Nonnull MusicSelection selection, boolean allowZero) {
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -228,6 +229,7 @@ public class PlayerMusicPage extends BaseParkourPage {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -242,6 +244,7 @@ public class PlayerMusicPage extends BaseParkourPage {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

@@ -54,6 +54,7 @@ public class ParkourMusicDebugCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return CompletableFuture.completedFuture(null);
         World world = store.getExternalData().getWorld();
         if (ModeGate.denyIfNot(commandContext, world, WorldConstants.WORLD_PARKOUR, ModeMessages.MESSAGE_ENTER_PARKOUR)) {
             return CompletableFuture.completedFuture(null);

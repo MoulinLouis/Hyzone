@@ -114,6 +114,7 @@ public class PurgePartyMenuPage extends InteractiveCustomUIPage<PurgePartyMenuPa
 
     private void handlePlaySolo(Ref<EntityStore> ref, Store<EntityStore> store) {
         close();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -127,6 +128,7 @@ public class PurgePartyMenuPage extends InteractiveCustomUIPage<PurgePartyMenuPa
             return;
         }
         close();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

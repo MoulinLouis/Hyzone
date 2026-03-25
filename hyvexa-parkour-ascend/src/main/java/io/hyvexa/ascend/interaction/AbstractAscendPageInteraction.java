@@ -34,6 +34,7 @@ public abstract class AbstractAscendPageInteraction extends SimpleInteraction {
             return;
         }
         if (requiresAscendWorld()) {
+            if (store.getExternalData() == null) return;
             World world = store.getExternalData().getWorld();
             if (!ModeGate.isAscendWorld(world)) {
                 player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);

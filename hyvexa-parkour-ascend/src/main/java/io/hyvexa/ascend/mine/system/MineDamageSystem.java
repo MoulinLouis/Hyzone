@@ -108,6 +108,7 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         }
 
         // Remove the block (set to air)
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
         var worldChunk = world.getChunkIfInMemory(chunkIndex);

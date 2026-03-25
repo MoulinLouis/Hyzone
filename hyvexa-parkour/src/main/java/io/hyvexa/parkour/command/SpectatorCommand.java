@@ -58,6 +58,7 @@ public class SpectatorCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return CompletableFuture.completedFuture(null);
         World world = store.getExternalData().getWorld();
 
         return CompletableFuture.runAsync(() -> {
@@ -108,6 +109,10 @@ public class SpectatorCommand extends AbstractAsyncCommand {
         }
 
         Store<EntityStore> targetStore = targetEntityRef.getStore();
+        if (targetStore.getExternalData() == null || store.getExternalData() == null) {
+            player.sendMessage(Message.raw("Target player is in a different world."));
+            return;
+        }
         World targetWorld = targetStore.getExternalData().getWorld();
         World spectatorWorld = store.getExternalData().getWorld();
         if (targetWorld == null || spectatorWorld == null || !targetWorld.getName().equals(spectatorWorld.getName())) {

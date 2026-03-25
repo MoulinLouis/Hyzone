@@ -61,6 +61,7 @@ public class InventorySyncManager {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -84,6 +85,7 @@ public class InventorySyncManager {
     }
 
     public void syncRunInventoryOnConnect(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -118,6 +120,7 @@ public class InventorySyncManager {
         if (progressStore == null || playerRef == null || !progressStore.shouldShowWelcome(playerRef.getUuid())) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -148,6 +151,7 @@ public class InventorySyncManager {
         if (ref == null || store == null || playerRef == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

@@ -686,6 +686,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (refreshTask != null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

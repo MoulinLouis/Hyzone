@@ -80,6 +80,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return CompletableFuture.completedFuture(null);
         World world = store.getExternalData().getWorld();
         return CompletableFuture.runAsync(() -> handleCommand(ctx, player, ref, store), world);
     }
@@ -174,7 +175,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         map.setId(id);
         map.setName(name);
         map.setDisplayOrder(order);
-        World world = store.getExternalData().getWorld();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
         map.setWorld(world != null ? world.getName() : "Ascend");
         mapStore.saveMap(map);
 
@@ -215,7 +216,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         map.setStartRotX(rot.getX());
         map.setStartRotY(rot.getY());
         map.setStartRotZ(rot.getZ());
-        World world = store.getExternalData().getWorld();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
         map.setWorld(world != null ? world.getName() : map.getWorld());
         mapStore.saveMap(map);
         player.sendMessage(Message.raw("Start set for map: " + map.getId()));
@@ -437,6 +438,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     }
 
     private String resolveWorldName(Store<EntityStore> store) {
+        if (store.getExternalData() == null) return null;
         World world = store.getExternalData().getWorld();
         return world != null ? world.getName() : null;
     }

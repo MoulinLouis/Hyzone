@@ -232,6 +232,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
             } else if (BUTTON_SPEED_X4.equals(data.getButton())) {
                 multiplier = 4.0f;
             }
+            if (store.getExternalData() == null) return;
             World world = store.getExternalData().getWorld();
             if (world == null) {
                 return;

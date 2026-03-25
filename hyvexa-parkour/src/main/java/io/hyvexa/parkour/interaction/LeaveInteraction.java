@@ -53,6 +53,7 @@ public class LeaveInteraction extends SimpleInteraction {
         if (player == null || playerRef == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             player.sendMessage(Message.raw("World not available."));
@@ -83,6 +84,7 @@ public class LeaveInteraction extends SimpleInteraction {
         if (leaveTeleport != null) {
             Vector3d position = leaveTeleport.toPosition();
             Vector3f rotation = leaveTeleport.toRotation();
+            if (store.getExternalData() == null) return;
             store.addComponent(ref, Teleport.getComponentType(),
                     new Teleport(store.getExternalData().getWorld(), position, rotation));
         } else {

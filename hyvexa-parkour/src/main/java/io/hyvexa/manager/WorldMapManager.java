@@ -29,6 +29,7 @@ public class WorldMapManager {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

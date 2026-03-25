@@ -210,7 +210,7 @@ public class MineGateChecker {
         if (denyMineAccess(playerId, player)) {
             return false;
         }
-
+        if (store.getExternalData() == null) return false;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return false;
@@ -240,6 +240,7 @@ public class MineGateChecker {
         if (respectCooldown && isOnCooldown(playerId)) {
             return false;
         }
+        if (store.getExternalData() == null) return false;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return false;

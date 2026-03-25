@@ -123,6 +123,7 @@ public final class TrackerUtils {
 
     public static void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform,
                                 CommandBuffer<EntityStore> buffer) {
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

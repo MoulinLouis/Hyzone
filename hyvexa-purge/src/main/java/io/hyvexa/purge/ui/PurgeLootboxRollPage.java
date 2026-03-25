@@ -81,7 +81,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
                       @Nonnull UIEventBuilder uiEventBuilder,
                       @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Purge_LootboxRoll.ui");
-        this.world = store.getExternalData().getWorld();
+        this.world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
 
         // Hide buttons until spin completes
         uiCommandBuilder.set("#AcceptButton.Visible", false);

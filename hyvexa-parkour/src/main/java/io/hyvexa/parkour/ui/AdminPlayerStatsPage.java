@@ -159,6 +159,10 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
         if (target == null) {
             return;
         }
+        if (target.store().getExternalData() == null) {
+            setStatus("Player world unavailable.");
+            return;
+        }
         World targetWorld = target.store().getExternalData().getWorld();
         if (targetWorld == null) {
             setStatus("Player world unavailable.");
@@ -192,6 +196,7 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
             setStatus("Your position unavailable.");
             return;
         }
+        if (store.getExternalData() == null) return;
         World adminWorld = store.getExternalData().getWorld();
         if (adminWorld == null) {
             return;

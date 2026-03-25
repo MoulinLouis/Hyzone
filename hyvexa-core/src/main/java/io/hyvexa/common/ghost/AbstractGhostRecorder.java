@@ -146,6 +146,7 @@ public abstract class AbstractGhostRecorder<TSample, TRecording> implements Auto
             return;
         }
 
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
