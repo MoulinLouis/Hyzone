@@ -32,10 +32,15 @@ import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.pet.PetManager;
 import io.hyvexa.parkour.tracker.RunTracker;
 
+import io.hyvexa.common.util.AsyncExecutionHelper;
+import io.hyvexa.common.util.ModeGate;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
@@ -137,5 +142,160 @@ class ParkourEventRouter {
         this.ghostNpcManager = ghostNpcManager;
         this.playerSettingsPersistence = playerSettingsPersistence;
         this.parkourModeCheck = parkourModeCheck;
+    }
+
+    // ── HUD player tracking ─────────────────────────────────────────────
+
+    void cacheHudPlayer(PlayerRef playerRef) {
+        if (playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        playerRefCache.put(playerId, playerRef);
+        syncHudPlayerWorld(playerRef, playerId);
+    }
+
+    private void syncHudPlayerWorld(PlayerRef playerRef, UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        com.hypixel.hytale.component.Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
+        if (ref == null || !ref.isValid()) {
+            removeHudPlayerFromWorld(playerId);
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        if (store == null || store.getExternalData() == null) {
+            removeHudPlayerFromWorld(playerId);
+            return;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            removeHudPlayerFromWorld(playerId);
+            return;
+        }
+        World previousWorld = playerHudWorlds.put(playerId, world);
+        if (previousWorld != null && previousWorld != world) {
+            removeHudPlayerFromWorld(previousWorld, playerId);
+        }
+        hudPlayersByWorld.computeIfAbsent(world, ignored -> ConcurrentHashMap.newKeySet()).add(playerId);
+    }
+
+    void removeHudPlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        playerRefCache.remove(playerId);
+        removeHudPlayerFromWorld(playerId);
+    }
+
+    private void removeHudPlayerFromWorld(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        World previousWorld = playerHudWorlds.remove(playerId);
+        if (previousWorld != null) {
+            removeHudPlayerFromWorld(previousWorld, playerId);
+        }
+    }
+
+    private void removeHudPlayerFromWorld(World world, UUID playerId) {
+        if (world == null || playerId == null) {
+            return;
+        }
+        Set<UUID> playerIds = hudPlayersByWorld.get(world);
+        if (playerIds == null) {
+            return;
+        }
+        playerIds.remove(playerId);
+        if (playerIds.isEmpty()) {
+            hudPlayersByWorld.remove(world, playerIds);
+        }
+    }
+
+    void tickHudUpdates() {
+        for (Map.Entry<World, Set<UUID>> entry : hudPlayersByWorld.entrySet()) {
+            World world = entry.getKey();
+            if (!ModeGate.isParkourWorld(world)) {
+                continue;
+            }
+            Set<UUID> playerIds = entry.getValue();
+            if (playerIds == null) {
+                continue;
+            }
+            if (playerIds.isEmpty()) {
+                hudPlayersByWorld.remove(world, playerIds);
+                continue;
+            }
+            String worldName = world.getName() != null ? world.getName() : "unknown";
+            String contextText = "world=" + worldName + ", players=" + playerIds.size();
+            AtomicBoolean inFlight = hudTickInFlight.computeIfAbsent(world, ignored -> new AtomicBoolean(false));
+            if (!inFlight.compareAndSet(false, true)) {
+                continue;
+            }
+            try {
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        for (UUID playerId : playerIds) {
+                            PlayerRef playerRef = playerRefCache.get(playerId);
+                            if (playerRef == null) {
+                                removeHudPlayer(playerId);
+                                continue;
+                            }
+                            com.hypixel.hytale.component.Ref<EntityStore> ref = playerRef.getReference();
+                            if (ref == null || !ref.isValid()) {
+                                removeHudPlayerFromWorld(playerId);
+                                continue;
+                            }
+                            Store<EntityStore> store = ref.getStore();
+                            if (store == null || store.getExternalData() == null) {
+                                removeHudPlayerFromWorld(playerId);
+                                continue;
+                            }
+                            World playerWorld = store.getExternalData().getWorld();
+                            if (playerWorld != world) {
+                                syncHudPlayerWorld(playerRef, playerId);
+                                continue;
+                            }
+                            if (!ModeGate.isParkourWorld(world)) {
+                                continue;
+                            }
+                            if (hudManager != null) {
+                                hudManager.ensureRunHudNow(ref, store, playerRef);
+                                hudManager.updateRunHud(ref, store);
+                            }
+                        }
+                    } finally {
+                        inFlight.set(false);
+                    }
+                }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
+                    inFlight.set(false);
+                    AsyncExecutionHelper.logThrottledWarning(
+                            "parkour.hud.tick",
+                            "parkour HUD tick update",
+                            contextText,
+                            ex
+                    );
+                    return null;
+                });
+            } catch (Exception e) {
+                inFlight.set(false);
+                AsyncExecutionHelper.logThrottledWarning(
+                        "parkour.hud.tick",
+                        "parkour HUD tick update",
+                        contextText,
+                        e
+                );
+            }
+        }
+    }
+
+    void clearHudTracking() {
+        playerRefCache.clear();
+        hudPlayersByWorld.clear();
+        playerHudWorlds.clear();
     }
 }

@@ -199,10 +199,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private io.hyvexa.core.economy.CurrencyStore vexaStore;
     private io.hyvexa.core.economy.CurrencyStore featherStore;
     private CosmeticStore cosmeticStore;
-    private final Map<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
-    private final Map<World, AtomicBoolean> hudTickInFlight = new ConcurrentHashMap<>();
-    private final Map<World, Set<UUID>> hudPlayersByWorld = new ConcurrentHashMap<>();
-    private final Map<UUID, World> playerHudWorlds = new ConcurrentHashMap<>();
+    private ParkourEventRouter eventRouter;
 
     public HyvexaPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -431,7 +428,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     Store<EntityStore> store = ref.getStore();
                     Player player = store.getComponent(ref, Player.getComponentType());
                     PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-                    cacheHudPlayer(playerRef);
+                    if (eventRouter != null) { eventRouter.cacheHudPlayer(playerRef); }
                     // Single DB load, distribute to all stores
                     PlayerSettingsPersistence.PlayerSettings savedSettings = null;
                     if (playerRef != null) {
@@ -532,7 +529,7 @@ public class HyvexaPlugin extends JavaPlugin {
         collisionManager.disableAllCollisions();
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            cacheHudPlayer(playerRef);
+            if (eventRouter != null) { eventRouter.cacheHudPlayer(playerRef); }
             if (playerRef != null) {
                 PlayerSettingsPersistence.PlayerSettings ps = playerSettingsPersistence != null
                         ? playerSettingsPersistence.loadPlayer(playerRef.getUuid()) : null;
@@ -559,8 +556,8 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 event.setBroadcastJoinMessage(false);
                 var holder = event.getHolder();
-                if (holder != null) {
-                    cacheHudPlayer(holder.getComponent(PlayerRef.getComponentType()));
+                if (holder != null && eventRouter != null) {
+                    eventRouter.cacheHudPlayer(holder.getComponent(PlayerRef.getComponentType()));
                 }
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Exception in AddPlayerToWorldEvent");
@@ -604,7 +601,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { if (voteStore != null) { voteStore.evictPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteStore"); }
 
-                try { removeHudPlayer(playerId); }
+                try { if (eventRouter != null) { eventRouter.removeHudPlayer(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: HUD buckets"); }
 
                 try {
@@ -996,79 +993,8 @@ public class HyvexaPlugin extends JavaPlugin {
     }
 
     private void tickHudUpdates() {
-        for (Map.Entry<World, Set<UUID>> entry : hudPlayersByWorld.entrySet()) {
-            World world = entry.getKey();
-            if (!isParkourWorld(world)) {
-                continue;
-            }
-            Set<UUID> playerIds = entry.getValue();
-            if (playerIds == null) {
-                continue;
-            }
-            if (playerIds.isEmpty()) {
-                hudPlayersByWorld.remove(world, playerIds);
-                continue;
-            }
-            String worldName = world.getName() != null ? world.getName() : "unknown";
-            String contextText = "world=" + worldName + ", players=" + playerIds.size();
-            AtomicBoolean inFlight = hudTickInFlight.computeIfAbsent(world, ignored -> new AtomicBoolean(false));
-            if (!inFlight.compareAndSet(false, true)) {
-                continue;
-            }
-            try {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        for (UUID playerId : playerIds) {
-                            PlayerRef playerRef = playerRefCache.get(playerId);
-                            if (playerRef == null) {
-                                removeHudPlayer(playerId);
-                                continue;
-                            }
-                            Ref<EntityStore> ref = playerRef.getReference();
-                            if (ref == null || !ref.isValid()) {
-                                removeHudPlayerFromWorld(playerId);
-                                continue;
-                            }
-                            Store<EntityStore> store = ref.getStore();
-                            if (store == null || store.getExternalData() == null) {
-                                removeHudPlayerFromWorld(playerId);
-                                continue;
-                            }
-                            World playerWorld = store.getExternalData().getWorld();
-                            if (playerWorld != world) {
-                                syncHudPlayerWorld(playerRef, playerId);
-                                continue;
-                            }
-                            if (!shouldApplyParkourMode(world)) {
-                                continue;
-                            }
-                            if (hudManager != null) {
-                                hudManager.ensureRunHudNow(ref, store, playerRef);
-                                hudManager.updateRunHud(ref, store);
-                            }
-                        }
-                    } finally {
-                        inFlight.set(false);
-                    }
-                }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
-                    inFlight.set(false);
-                    AsyncExecutionHelper.logThrottledWarning(
-                            "parkour.hud.tick",
-                            "parkour HUD tick update",
-                            contextText,
-                            ex
-                    );
-                    return null;
-                });
-            } catch (Exception e) {
-                inFlight.set(false);
-                AsyncExecutionHelper.logThrottledWarning(
-                        "parkour.hud.tick",
-                        "parkour HUD tick update",
-                        contextText,
-                        e
-                );
-            }
+        if (eventRouter != null) {
+            eventRouter.tickHudUpdates();
         }
     }
 
@@ -1082,7 +1008,7 @@ public class HyvexaPlugin extends JavaPlugin {
 
     private void handlePlayerConnect(PlayerConnectEvent event) {
         PlayerRef playerRef = event.getPlayerRef();
-        cacheHudPlayer(playerRef);
+        if (eventRouter != null) { eventRouter.cacheHudPlayer(playerRef); }
         try {
             collisionManager.disablePlayerCollision(playerRef);
         } catch (Exception e) {
@@ -1115,76 +1041,6 @@ public class HyvexaPlugin extends JavaPlugin {
             analyticsStore.updatePlayerTimestamps(playerId, isNew);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Analytics: player_join");
-        }
-    }
-
-    private void cacheHudPlayer(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
-        }
-        playerRefCache.put(playerId, playerRef);
-        syncHudPlayerWorld(playerRef, playerId);
-    }
-
-    private void syncHudPlayerWorld(PlayerRef playerRef, UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
-        if (ref == null || !ref.isValid()) {
-            removeHudPlayerFromWorld(playerId);
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        if (store == null || store.getExternalData() == null) {
-            removeHudPlayerFromWorld(playerId);
-            return;
-        }
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            removeHudPlayerFromWorld(playerId);
-            return;
-        }
-        World previousWorld = playerHudWorlds.put(playerId, world);
-        if (previousWorld != null && previousWorld != world) {
-            removeHudPlayerFromWorld(previousWorld, playerId);
-        }
-        hudPlayersByWorld.computeIfAbsent(world, ignored -> ConcurrentHashMap.newKeySet()).add(playerId);
-    }
-
-    private void removeHudPlayer(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        playerRefCache.remove(playerId);
-        removeHudPlayerFromWorld(playerId);
-    }
-
-    private void removeHudPlayerFromWorld(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        World previousWorld = playerHudWorlds.remove(playerId);
-        if (previousWorld != null) {
-            removeHudPlayerFromWorld(previousWorld, playerId);
-        }
-    }
-
-    private void removeHudPlayerFromWorld(World world, UUID playerId) {
-        if (world == null || playerId == null) {
-            return;
-        }
-        Set<UUID> playerIds = hudPlayersByWorld.get(world);
-        if (playerIds == null) {
-            return;
-        }
-        playerIds.remove(playerId);
-        if (playerIds.isEmpty()) {
-            hudPlayersByWorld.remove(world, playerIds);
         }
     }
 
@@ -1390,9 +1246,7 @@ public class HyvexaPlugin extends JavaPlugin {
         try { if (shutdownHook != null) { Runtime.getRuntime().removeShutdownHook(shutdownHook); } }
         catch (Exception ignored) { }
         shutdownSafe("saveAllActiveRuns", () -> { if (runTracker != null && runStateStore != null) runTracker.saveAllActiveRuns(runStateStore); });
-        shutdownSafe("playerRefCache", () -> playerRefCache.clear());
-        shutdownSafe("hudPlayersByWorld", () -> hudPlayersByWorld.clear());
-        shutdownSafe("playerHudWorlds", () -> playerHudWorlds.clear());
+        shutdownSafe("eventRouter HUD tracking", () -> { if (eventRouter != null) eventRouter.clearHudTracking(); });
         shutdownSafe("progressStore flush", () -> { if (progressStore != null) progressStore.flushPendingSave(); });
         shutdownSafe("analytics aggregation", () -> analyticsStore.computeDailyAggregates(java.time.LocalDate.now()));
         shutdownSafe("AdminPageUtils", AdminPageUtils::clear);
