@@ -31,6 +31,22 @@ public class EconomyState {
 
     public void addVolt(BigNumber amount) { volt.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO)); }
 
+    /**
+     * Atomically adds the given amount to volt and returns both old and new values.
+     * Uses a CAS loop to guarantee the returned old value is the true pre-update value.
+     *
+     * @return array of [oldValue, newValue]
+     */
+    public BigNumber[] addVoltAndCapture(BigNumber amount) {
+        while (true) {
+            BigNumber oldValue = volt.get();
+            BigNumber newValue = oldValue.add(amount).max(BigNumber.ZERO);
+            if (volt.compareAndSet(oldValue, newValue)) {
+                return new BigNumber[] { oldValue, newValue };
+            }
+        }
+    }
+
     // ── Total Volt Earned ────────────────────────────────────────────────
 
     public BigNumber getTotalVoltEarned() { return totalVoltEarned.get(); }

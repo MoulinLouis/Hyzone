@@ -282,7 +282,9 @@ public class CosmeticManager {
             case WORLD_PARTICLE_TRAIL ->
                     startWorldTrail(playerRef, ref, store, def.getParticleId(), def.getScale(), def.getIntervalMs());
             case MODEL_PARTICLE_TRAIL -> {
-                World world = store.getExternalData().getWorld();
+                var ext = store.getExternalData();
+                if (ext == null) return;
+                World world = ext.getWorld();
                 if (world == null) return;
                 modelParticleTrailManager.startTrail(playerRef.getUuid(), ref, store, world,
                         def.getParticleId(), def.getScale(), def.getIntervalMs(),
@@ -297,7 +299,9 @@ public class CosmeticManager {
         if (particleId == null || particleId.isBlank()) return;
         String resolvedParticleId = resolveParticleId(particleId);
         String finalParticleId = resolvedParticleId != null ? resolvedParticleId : particleId;
-        World world = store.getExternalData().getWorld();
+        var ext = store.getExternalData();
+        if (ext == null) return;
+        World world = ext.getWorld();
         if (world == null) return;
         trailManager.startTrail(playerRef.getUuid(), ref, store, world,
                 finalParticleId, scale, intervalMs);

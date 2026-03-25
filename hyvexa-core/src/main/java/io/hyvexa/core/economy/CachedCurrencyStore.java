@@ -22,6 +22,7 @@ import java.util.function.LongUnaryOperator;
 abstract class CachedCurrencyStore implements CurrencyStore {
 
     private static final long CACHE_TTL_MS = 30 * 60 * 1_000L;
+    private static final int BALANCE_LOCK_STRIPE_COUNT = 64;
     private static final AtomicInteger REFRESH_THREAD_ID = new AtomicInteger(1);
     private static final ExecutorService DB_REFRESH_EXECUTOR = Executors.newFixedThreadPool(2, runnable -> {
         Thread t = new Thread(runnable, "CurrencyRefresh-" + REFRESH_THREAD_ID.getAndIncrement());
@@ -32,6 +33,7 @@ abstract class CachedCurrencyStore implements CurrencyStore {
     protected final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, CachedBalance> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> refreshInFlight = new ConcurrentHashMap<>();
+    private final Object[] balanceLocks = createBalanceLocks();
 
     protected CachedCurrencyStore(ConnectionProvider db) {
         this.db = db;
@@ -104,13 +106,11 @@ abstract class CachedCurrencyStore implements CurrencyStore {
             return;
         }
         long safe = Math.max(0, amount);
-        CachedBalance previous = cache.get(playerId);
-        cache.put(playerId, new CachedBalance(safe));
-        if (!persistToDatabase(playerId, safe)) {
-            if (previous == null) {
-                cache.remove(playerId);
-            } else {
-                cache.put(playerId, previous);
+        synchronized (balanceLock(playerId)) {
+            CachedBalance previous = cache.get(playerId);
+            cache.put(playerId, freshBalance(safe));
+            if (!persistToDatabase(playerId, safe)) {
+                restoreAfterSetFailure(playerId, previous);
             }
         }
     }
@@ -131,8 +131,10 @@ abstract class CachedCurrencyStore implements CurrencyStore {
 
     public void evictPlayer(UUID playerId) {
         if (playerId != null) {
-            cache.remove(playerId);
-            refreshInFlight.remove(playerId);
+            synchronized (balanceLock(playerId)) {
+                cache.remove(playerId);
+                refreshInFlight.remove(playerId);
+            }
         }
     }
 
@@ -144,15 +146,42 @@ abstract class CachedCurrencyStore implements CurrencyStore {
         if (cached != null) {
             return cached.value;
         }
-        return loadAndCacheBalance(playerId);
+        synchronized (balanceLock(playerId)) {
+            CachedBalance existing = cache.get(playerId);
+            if (existing != null) {
+                return existing.value;
+            }
+            long fromDb = loadFromDatabase(playerId);
+            cache.put(playerId, freshBalance(fromDb));
+            return fromDb;
+        }
     }
 
     // ── Internal ─────────────────────────────────────────────────────────
 
-    private long loadAndCacheBalance(UUID playerId) {
-        long fromDb = loadFromDatabase(playerId);
-        cache.put(playerId, new CachedBalance(fromDb));
-        return fromDb;
+    private void restoreAfterSetFailure(UUID playerId, CachedBalance previous) {
+        if (previous != null && !previous.isStale()) {
+            cache.put(playerId, previous);
+            return;
+        }
+        long current = loadFromDatabase(playerId);
+        cache.put(playerId, freshBalance(current));
+    }
+
+    private CachedBalance freshBalance(long value) {
+        return new CachedBalance(value);
+    }
+
+    private static Object[] createBalanceLocks() {
+        Object[] locks = new Object[BALANCE_LOCK_STRIPE_COUNT];
+        for (int i = 0; i < locks.length; i++) {
+            locks[i] = new Object();
+        }
+        return locks;
+    }
+
+    private Object balanceLock(UUID playerId) {
+        return balanceLocks[Math.floorMod(playerId.hashCode(), balanceLocks.length)];
     }
 
     private void refreshFromDatabaseAsync(UUID playerId, long staleCachedAt) {
@@ -174,7 +203,7 @@ abstract class CachedCurrencyStore implements CurrencyStore {
                             if (current.cachedAt > staleCachedAt) {
                                 return current;
                             }
-                            return new CachedBalance(value);
+                            return freshBalance(value);
                         });
                         return null;
                     } finally {
@@ -184,23 +213,21 @@ abstract class CachedCurrencyStore implements CurrencyStore {
     }
 
     private long modifyBalance(UUID playerId, LongUnaryOperator compute) {
-        long[] result = new long[1];
-        CachedBalance previous = cache.get(playerId);
-        cache.compute(playerId, (uuid, cached) -> {
-            long current = (cached != null && !cached.isStale()) ? cached.value : loadFromDatabase(uuid);
+        synchronized (balanceLock(playerId)) {
+            CachedBalance cached = cache.get(playerId);
+            long current = (cached != null && !cached.isStale()) ? cached.value : loadFromDatabase(playerId);
+            CachedBalance rollback = (cached != null && !cached.isStale())
+                    ? cached
+                    : freshBalance(current);
             long newTotal = Math.max(0, compute.applyAsLong(current));
-            result[0] = newTotal;
-            return new CachedBalance(newTotal);
-        });
-        if (!persistToDatabase(playerId, result[0])) {
-            if (previous == null) {
-                cache.remove(playerId);
-            } else {
-                cache.put(playerId, previous);
+
+            cache.put(playerId, freshBalance(newTotal));
+            if (!persistToDatabase(playerId, newTotal)) {
+                cache.put(playerId, rollback);
+                return rollback.value;
             }
-            return previous != null ? previous.value : 0;
+            return newTotal;
         }
-        return result[0];
     }
 
     long loadFromDatabase(UUID playerId) {

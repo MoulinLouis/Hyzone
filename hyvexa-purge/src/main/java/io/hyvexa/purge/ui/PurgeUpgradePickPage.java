@@ -19,7 +19,6 @@ import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeUpgradeOffer;
 import io.hyvexa.purge.data.PurgeUpgradeRarity;
 import io.hyvexa.purge.data.PurgeUpgradeState;
-import io.hyvexa.purge.data.PurgeUpgradeType;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.manager.PurgeUpgradeManager;
 
@@ -71,9 +70,13 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
 
         // Set up each upgrade card
         PurgeUpgradeState upgradeState = session.getUpgradeState(playerId);
+        for (int cardNum = 1; cardNum <= 3; cardNum++) {
+            uiCommandBuilder.set("#Card" + cardNum + ".Visible", false);
+        }
         for (int i = 0; i < offered.size() && i < 3; i++) {
             PurgeUpgradeOffer offer = offered.get(i);
             int cardNum = i + 1;
+            uiCommandBuilder.set("#Card" + cardNum + ".Visible", true);
 
             // Name and description
             uiCommandBuilder.set("#Card" + cardNum + "Name.Text", offer.type().getDisplayName());
@@ -95,8 +98,8 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
                 }
             }
 
-            // Encode type:rarity in choice string
-            String choiceKey = offer.type().name() + ":" + offer.rarity().name();
+            // Encode the selected card index so near-cap offers preserve their clamped value.
+            String choiceKey = Integer.toString(i);
             uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#Card" + cardNum + "Button",
                     EventData.of(PurgeUpgradePickData.KEY_CHOICE, choiceKey), false);
         }
@@ -112,11 +115,9 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
 
         if (!CHOICE_SKIP.equals(data.choice)) {
             try {
-                String[] parts = data.choice.split(":", 2);
-                if (parts.length == 2) {
-                    PurgeUpgradeType type = PurgeUpgradeType.valueOf(parts[0]);
-                    PurgeUpgradeRarity rarity = PurgeUpgradeRarity.valueOf(parts[1]);
-                    PurgeUpgradeOffer offer = new PurgeUpgradeOffer(type, rarity);
+                int offerIndex = Integer.parseInt(data.choice);
+                if (offerIndex >= 0 && offerIndex < offered.size()) {
+                    PurgeUpgradeOffer offer = offered.get(offerIndex);
                     Player player = store.getComponent(ref, Player.getComponentType());
                     upgradeManager.applyUpgrade(session, playerId, offer, ref, store, player);
                     PurgeUpgradeState state = session.getUpgradeState(playerId);
@@ -124,9 +125,9 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
                         hudManager.updateUpgradeLevels(playerId, state);
                     }
                 } else {
-                    LOGGER.atWarning().log("Invalid upgrade choice format: " + data.choice);
+                    LOGGER.atWarning().log("Invalid upgrade choice index: " + data.choice);
                 }
-            } catch (IllegalArgumentException e) {
+            } catch (NumberFormatException e) {
                 LOGGER.atWarning().log("Invalid upgrade choice: " + data.choice);
             }
         }

@@ -413,7 +413,7 @@ public class MineConfigStore {
         List<Mine> cached = sortedCache;
         if (cached != null) return cached;
 
-        lock.readLock().lock();
+        lock.writeLock().lock();
         try {
             if (sortedCache != null) return sortedCache;
             List<Mine> sorted = new ArrayList<>(mines.values());
@@ -424,7 +424,7 @@ public class MineConfigStore {
             sortedCache = unmodifiable;
             return unmodifiable;
         } finally {
-            lock.readLock().unlock();
+            lock.writeLock().unlock();
         }
     }
 

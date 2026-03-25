@@ -25,6 +25,8 @@ public final class ZombieAggroBooster {
     private static final double[] PURGE_NO_DELAY = {0.0, 0.0};
     /** Omni-directional view cone so zombies detect players in all directions. */
     private static final float PURGE_VIEW_CONE = 360.0f;
+    /** Maximum recursion depth for instruction tree traversal to prevent StackOverflowError. */
+    private static final int MAX_INSTRUCTION_DEPTH = 20;
 
     private ZombieAggroBooster() {
     }
@@ -56,7 +58,7 @@ public final class ZombieAggroBooster {
     }
 
     private static int traverseAndBoost(sun.misc.Unsafe unsafe, Object instruction, int depth) {
-        if (instruction == null) return 0;
+        if (instruction == null || depth > MAX_INSTRUCTION_DEPTH) return 0;
         int modified = 0;
 
         Object sensor = UnsafeReflectionHelper.readFieldCached(instruction, "sensor");

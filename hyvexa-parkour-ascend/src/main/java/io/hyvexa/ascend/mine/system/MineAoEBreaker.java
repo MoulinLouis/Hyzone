@@ -127,7 +127,7 @@ public final class MineAoEBreaker {
 
             // Cashback
             if (cashbackLevel > 0) {
-                double cashbackAmount = Math.floor(blockPrice * blocksGained * cashbackPercent / 100.0 * 100.0) / 100.0;
+                double cashbackAmount = MineRewardHelper.calculateCashbackAmount(blockPrice, blocksGained, cashbackPercent);
                 if (cashbackAmount > 0) {
                     progress.addCrystals(cashbackAmount);
                 }

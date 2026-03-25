@@ -84,6 +84,9 @@
   - Whitelist status persisted in JSON file (`enabled: true/false`, defaults to `false`)
 
 ### Changed
+- **Global: Currency cache writes now serialize per player** - Prevents concurrent balance updates or cache misses from persisting stale currency values after newer writes.
+- **Purge: Upgrade picks now skip capped stats** - Upgrade cards clamp near-cap rewards to the actual remaining gain, and players with no valid upgrades skip the pick phase.
+- **Mine: AoE cashback now uses the same cent-precise rounding** - Jackhammer, Stomp, and Blast cashback payouts now match the single-block mining formula.
 - **Purge: Melee swords now use Purge-owned item assets** - Wood Sword, Katana, and Scarab Sword now use plugin item IDs with local models/textures/icons, so later melee visual or behavior changes no longer depend on vanilla item IDs.
 - **Purge: Daily kill/combo missions rebalanced** - Kill missions now require 150/300/500 zombies for 100/200/300 scrap, and combo missions now require 5x/10x/15x combos for 100/200/300 scrap.
 - **Purge: Melee weapons added to loadouts and lootboxes** - Purge sessions now grant a secondary melee slot, lootboxes can roll melee or gun swaps, and melee mastery/damage/admin config use the same upgrade pipeline as ranged weapons.

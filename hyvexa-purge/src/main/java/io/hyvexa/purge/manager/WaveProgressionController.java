@@ -129,7 +129,10 @@ class WaveProgressionController {
                     // Per-player random upgrade selection with luck-adjusted rarity
                     PurgeUpgradeState upgradeState = session.getUpgradeState(pid);
                     int playerLuck = upgradeState != null ? upgradeState.getLuck() : 0;
-                    List<PurgeUpgradeOffer> offered = um.selectRandomOffers(3, playerLuck);
+                    List<PurgeUpgradeOffer> offered = um.selectRandomOffers(3, playerLuck, upgradeState);
+                    if (offered.isEmpty()) {
+                        continue;
+                    }
 
                     Runnable onComplete = () -> {
                         if (session.getState() == SessionState.ENDED) {

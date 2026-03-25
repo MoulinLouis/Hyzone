@@ -371,11 +371,9 @@ public class AscendPlayerStore {
      */
     public boolean atomicAddVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        BigNumber oldBalance = progress.economy().getVolt();
-        progress.economy().addVolt(amount);
-        BigNumber newBalance = progress.economy().getVolt();
+        BigNumber[] result = progress.economy().addVoltAndCapture(amount);
         markDirty(playerId);
-        checkVoltTutorialThresholds(playerId, oldBalance, newBalance);
+        checkVoltTutorialThresholds(playerId, result[0], result[1]);
         // Always succeeds; return value is vestigial
         return true;
     }

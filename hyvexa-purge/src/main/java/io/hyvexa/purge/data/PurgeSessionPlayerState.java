@@ -78,7 +78,7 @@ public class PurgeSessionPlayerState {
      * Records a kill and returns the current streak level (unbounded).
      * Streak resets to 1 if more than {@code streakWindowMs} has passed since last kill.
      */
-    public int recordKillStreak(long streakWindowMs) {
+    public synchronized int recordKillStreak(long streakWindowMs) {
         long now = System.currentTimeMillis();
         if (now - lastKillTimeMs <= streakWindowMs && killStreak > 0) {
             killStreak++;
