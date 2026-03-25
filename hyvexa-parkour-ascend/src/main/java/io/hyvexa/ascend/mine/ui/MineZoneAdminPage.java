@@ -400,6 +400,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             return;
         }
 
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             player.sendMessage(Message.raw("Unable to get world."));

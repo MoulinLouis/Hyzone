@@ -159,6 +159,10 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("No entity store available."));
             return;
         }
+        if (store.getExternalData() == null) {
+            player.sendMessage(Message.raw("No world available."));
+            return;
+        }
         World world = store.getExternalData().getWorld();
         if (world == null) {
             player.sendMessage(Message.raw("No world available."));

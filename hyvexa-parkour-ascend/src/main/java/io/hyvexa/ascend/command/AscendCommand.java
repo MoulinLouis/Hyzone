@@ -190,6 +190,7 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
 
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return CompletableFuture.completedFuture(null);
         World world = store.getExternalData().getWorld();
 
         return CompletableFuture.runAsync(() -> {

@@ -34,6 +34,7 @@ public class AscendResetInteraction extends SimpleInteraction {
         if (player == null || playerRef == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (!ModeGate.isAscendWorld(world)) {
             player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);

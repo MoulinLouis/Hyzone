@@ -49,15 +49,15 @@ public class AscendPlayerStore {
 
     private final ConnectionProvider db;
     private final AscendPlayerPersistence persistence;
-    private volatile ChallengeManager challengeManager;
-    private volatile TutorialTriggerService tutorialTriggerService;
-    private volatile AscensionManager ascensionManager;
-    private volatile AscendHudManager hudManager;
-    private volatile RobotManager robotManager;
-    private volatile AchievementManager achievementManager;
-    private volatile AscendMapStore runtimeMapStore;
-    private volatile GhostStore ghostStore;
-    private volatile Function<UUID, PlayerRef> playerRefLookup;
+    private ChallengeManager challengeManager;
+    private TutorialTriggerService tutorialTriggerService;
+    private AscensionManager ascensionManager;
+    private AscendHudManager hudManager;
+    private RobotManager robotManager;
+    private AchievementManager achievementManager;
+    private AscendMapStore runtimeMapStore;
+    private GhostStore ghostStore;
+    private Function<UUID, PlayerRef> playerRefLookup;
     private volatile PlayerAnalytics analytics;
 
     public AscendPlayerStore(ConnectionProvider db) {
@@ -472,6 +472,10 @@ public class AscendPlayerStore {
             return;
         }
 
+        if (store.getExternalData() == null) {
+            onFailure.run();
+            return;
+        }
         com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
         if (world == null) {
             onFailure.run();
@@ -630,6 +634,7 @@ public class AscendPlayerStore {
             if (newCount == 1) {
                 HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
                     if (ref == null || !ref.isValid()) return;
+                    if (store.getExternalData() == null) return;
                     com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
                     if (world == null) return;
                     java.util.concurrent.CompletableFuture.runAsync(() -> {

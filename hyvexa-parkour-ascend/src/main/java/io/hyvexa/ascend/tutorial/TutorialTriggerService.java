@@ -124,6 +124,7 @@ public class TutorialTriggerService {
                 Ref<EntityStore> ref = playerRef.getReference();
                 if (ref == null || !ref.isValid()) return;
                 Store<EntityStore> store = ref.getStore();
+                if (store.getExternalData() == null) return;
                 World world = store.getExternalData().getWorld();
                 if (world == null) return;
                 CompletableFuture.runAsync(() -> {
@@ -184,6 +185,7 @@ public class TutorialTriggerService {
                 return;
             }
             Store<EntityStore> store = ref.getStore();
+            if (store.getExternalData() == null) return;
             World world = store.getExternalData().getWorld();
             if (world == null) {
                 return;

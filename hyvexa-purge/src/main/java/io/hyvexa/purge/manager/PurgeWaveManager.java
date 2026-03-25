@@ -637,8 +637,18 @@ public class PurgeWaveManager {
     }
 
     private void retargetZombies(PurgeSession session, Store<EntityStore> store) {
-        for (Ref<EntityStore> zombieRef : session.getAliveZombies()) {
-            if (zombieRef == null || !zombieRef.isValid()) continue;
+        List<Ref<EntityStore>> aliveSnapshot = new ArrayList<>(session.getAliveZombies());
+        List<Ref<EntityStore>> invalidRefs = null;
+        for (Ref<EntityStore> zombieRef : aliveSnapshot) {
+            if (zombieRef == null || !zombieRef.isValid()) {
+                if (zombieRef != null) {
+                    if (invalidRefs == null) {
+                        invalidRefs = new ArrayList<>();
+                    }
+                    invalidRefs.add(zombieRef);
+                }
+                continue;
+            }
             try {
                 NPCEntity npc = store.getComponent(zombieRef, NPCEntity.getComponentType());
                 if (npc != null && npc.getRole() != null) {
@@ -649,6 +659,11 @@ public class PurgeWaveManager {
                 }
             } catch (Exception e) {
                 LOGGER.atFine().log("Failed to retarget zombie: " + e.getMessage());
+            }
+        }
+        if (invalidRefs != null) {
+            for (Ref<EntityStore> invalidRef : invalidRefs) {
+                session.removeAliveZombie(invalidRef);
             }
         }
     }

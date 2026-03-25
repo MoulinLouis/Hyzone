@@ -269,6 +269,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         if (refreshTask != null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;

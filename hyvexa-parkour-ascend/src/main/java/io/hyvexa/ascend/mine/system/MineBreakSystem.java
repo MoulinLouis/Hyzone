@@ -97,6 +97,7 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             return;
         }
 
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
 
         // For non-OP: manually remove the block (set to air) — we can't rely on setCancelled(false)

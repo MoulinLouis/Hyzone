@@ -104,6 +104,7 @@ public class PetManager {
         Store<EntityStore> store = playerRef.getStore();
         if (store == null) return;
 
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) return;
 
@@ -129,6 +130,7 @@ public class PetManager {
         if (entityRef == null || !entityRef.isValid()) return;
         Store<EntityStore> store = entityRef.getStore();
         if (store == null) return;
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) return;
 
@@ -325,7 +327,7 @@ public class PetManager {
         try {
             Store<EntityStore> store = entityRef.getStore();
             if (store == null) return;
-            World world = store.getExternalData().getWorld();
+            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
             if (world != null) {
                 world.execute(() -> {
                     try {

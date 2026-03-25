@@ -42,6 +42,7 @@ public class RunTrackerTickSystem extends EntityTickingSystem<EntityStore> {
         if (playerRef == null || player == null || transform == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         UUID playerId = playerRef.getUuid();
         if (!plugin.shouldApplyParkourMode(world)) {

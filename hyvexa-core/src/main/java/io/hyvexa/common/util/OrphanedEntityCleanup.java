@@ -135,6 +135,10 @@ public class OrphanedEntityCleanup {
                 markCleaned(entityUuid);
                 continue;
             }
+            if (store.getExternalData() == null) {
+                removeOrphanDirect(entityUuid, ref, store);
+                continue;
+            }
             World world = store.getExternalData().getWorld();
             if (world == null) {
                 removeOrphanDirect(entityUuid, ref, store);

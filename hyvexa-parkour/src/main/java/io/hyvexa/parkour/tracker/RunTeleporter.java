@@ -62,6 +62,7 @@ class RunTeleporter {
         if (spawn == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), spawn.toPosition(), spawn.toRotation()));
     }
 
@@ -88,6 +89,7 @@ class RunTeleporter {
         if (checkpoint == null) {
             return false;
         }
+        if (store.getExternalData() == null) return false;
         store.addComponent(ref, Teleport.getComponentType(),
                 new Teleport(store.getExternalData().getWorld(), checkpoint.toPosition(), checkpoint.toRotation()));
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
@@ -104,6 +106,7 @@ class RunTeleporter {
         }
         Vector3d position = run.practiceCheckpoint.toPosition();
         Vector3f rotation = run.practiceCheckpoint.toRotation();
+        if (store.getExternalData() == null) return false;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return false;
@@ -123,6 +126,10 @@ class RunTeleporter {
     boolean resetRunToStart(Ref<EntityStore> ref, Store<EntityStore> store, Player player, PlayerRef playerRef,
                             RunTracker runTracker) {
         if (playerRef == null || player == null) {
+            return false;
+        }
+        if (store.getExternalData() == null) {
+            player.sendMessage(SystemMessageUtils.parkourError("World not available."));
             return false;
         }
         World world = store.getExternalData().getWorld();

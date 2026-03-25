@@ -150,6 +150,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         map.setId(id);
         map.setName(name.isEmpty() ? id : name);
         map.setDisplayOrder(order);
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         map.setWorld(world != null ? world.getName() : "Ascend");
         mapStore.saveMap(map);
@@ -190,6 +191,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         map.setStartRotX(rot.getX());
         map.setStartRotY(rot.getY());
         map.setStartRotZ(rot.getZ());
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         map.setWorld(world != null ? world.getName() : map.getWorld());
         mapStore.saveMap(map);
@@ -565,6 +567,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
     }
 
     private String resolveWorldName(Store<EntityStore> store) {
+        if (store.getExternalData() == null) return null;
         World world = store.getExternalData().getWorld();
         return world != null ? world.getName() : null;
     }

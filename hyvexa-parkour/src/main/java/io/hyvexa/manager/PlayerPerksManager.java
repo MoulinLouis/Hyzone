@@ -192,7 +192,8 @@ public class PlayerPerksManager {
         if (position == null) {
             return false;
         }
-        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (store.getExternalData() == null) return false;
+        World world = store.getExternalData().getWorld();
         if (world == null || world.getName() == null || world.getName().isBlank()) {
             return false;
         }

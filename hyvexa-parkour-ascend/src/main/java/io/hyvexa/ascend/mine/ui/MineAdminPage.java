@@ -206,7 +206,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         mine.setSpawnRotX(rot.getX());
         mine.setSpawnRotY(rot.getY());
         mine.setSpawnRotZ(rot.getZ());
-        World world = store.getExternalData().getWorld();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
         mine.setWorld(world != null ? world.getName() : "");
         mineConfigStore.saveMine(mine);
         player.sendMessage(Message.raw("Spawn set for mine: " + mine.getId()));

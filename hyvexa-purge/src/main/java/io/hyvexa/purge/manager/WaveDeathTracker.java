@@ -53,7 +53,8 @@ public class WaveDeathTracker {
     public void checkZombieDeaths(PurgeSession session, Store<EntityStore> store) {
         Set<Ref<EntityStore>> dead = null;
         int healthIndex = DefaultEntityStatTypes.getHealth();
-        for (Ref<EntityStore> ref : session.getAliveZombies()) {
+        Set<Ref<EntityStore>> aliveSnapshot = new LinkedHashSet<>(session.getAliveZombies());
+        for (Ref<EntityStore> ref : aliveSnapshot) {
             if (ref == null || !ref.isValid()) {
                 if (dead == null) {
                     dead = new LinkedHashSet<>();

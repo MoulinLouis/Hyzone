@@ -441,8 +441,10 @@ public class AscendRunTracker {
 
         Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
         Vector3f startRot = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
-        store.addComponent(ref, Teleport.getComponentType(),
-            new Teleport(store.getExternalData().getWorld(), startPos, startRot));
+        if (store.getExternalData() != null) {
+            store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(store.getExternalData().getWorld(), startPos, startRot));
+        }
 
         // Freeze player briefly after completion (skip processing during this window)
         frozenPlayers.put(playerId, new FreezeData(
@@ -465,6 +467,9 @@ public class AscendRunTracker {
         Vector3d pos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
         Vector3f rot = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
 
+        if (store.getExternalData() == null) {
+            return;
+        }
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), pos, rot));
 
@@ -485,7 +490,7 @@ public class AscendRunTracker {
                 // Check if map is blocked by active challenge
                 if (challengeManager != null && challengeManager.isMapBlocked(playerId, map.getDisplayOrder())) {
                     // Teleport player back to spawn
-                    if (settingsStore != null && settingsStore.hasSpawnPosition()) {
+                    if (settingsStore != null && settingsStore.hasSpawnPosition() && store.getExternalData() != null) {
                         Vector3d spawnPos = settingsStore.getSpawnPosition();
                         Vector3f spawnRot = settingsStore.getSpawnRotation();
                         store.addComponent(ref, Teleport.getComponentType(),
@@ -501,7 +506,7 @@ public class AscendRunTracker {
                     playerId, map, playerStore, mapStore, challengeManager);
                 if (!unlockResult.unlocked) {
                     // Map not unlocked - teleport player back to spawn
-                    if (settingsStore != null && settingsStore.hasSpawnPosition()) {
+                    if (settingsStore != null && settingsStore.hasSpawnPosition() && store.getExternalData() != null) {
                         Vector3d spawnPos = settingsStore.getSpawnPosition();
                         Vector3f spawnRot = settingsStore.getSpawnRotation();
                         store.addComponent(ref, Teleport.getComponentType(),
@@ -597,6 +602,9 @@ public class AscendRunTracker {
 
     private void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (settingsStore == null || !settingsStore.hasSpawnPosition()) {
+            return;
+        }
+        if (store.getExternalData() == null) {
             return;
         }
         Vector3d spawnPos = settingsStore.getSpawnPosition();

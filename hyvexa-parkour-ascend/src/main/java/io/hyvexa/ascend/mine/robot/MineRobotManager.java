@@ -304,6 +304,7 @@ public class MineRobotManager {
         try {
             Store<EntityStore> store = entityRef.getStore();
             if (store != null) {
+                if (store.getExternalData() == null) return;
                 World world = store.getExternalData().getWorld();
                 if (world != null) {
                     world.execute(() -> despawnNpcOnWorldThread(state, entityRef));

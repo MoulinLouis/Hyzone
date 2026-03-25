@@ -861,8 +861,8 @@ public class RunOrFallGameManager {
         Ref<EntityStore> ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) return;
         Store<EntityStore> store = ref.getStore();
-        World currentWorld = store.getExternalData() != null
-                ? store.getExternalData().getWorld() : null;
+        if (store.getExternalData() == null) return;
+        World currentWorld = store.getExternalData().getWorld();
         if (currentWorld == null) return;
 
         RunOrFallLocation lobby = resolveLobbyLocation();

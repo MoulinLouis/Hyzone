@@ -65,6 +65,7 @@ public class LeaderboardHologramManager {
         if (store == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (!isParkourWorld(world)) {
             return;
@@ -76,7 +77,7 @@ public class LeaderboardHologramManager {
         if (mapId == null || mapId.isBlank() || store == null || progressStore == null) {
             return;
         }
-        World storeWorld = store.getExternalData().getWorld();
+        World storeWorld = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
         String storeWorldName = storeWorld != null ? storeWorld.getName() : "unknown";
         LOGGER.atFine().log("Map holo refresh requested for '" + mapId + "' from world '" + storeWorldName + "'.");
         if (!HylogramsBridge.isAvailable()) {
@@ -95,7 +96,7 @@ public class LeaderboardHologramManager {
             targetWorld = resolveWorldByName(holo.getWorldName());
         }
         if (targetWorld == null) {
-            targetWorld = store.getExternalData().getWorld();
+            targetWorld = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
         }
         if (targetWorld != null) {
             LOGGER.atFine().log("Map holo '" + holoName + "' target world resolved to '"

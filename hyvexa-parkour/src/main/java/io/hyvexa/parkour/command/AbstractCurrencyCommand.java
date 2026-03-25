@@ -69,6 +69,7 @@ public abstract class AbstractCurrencyCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return CompletableFuture.completedFuture(null);
         World world = store.getExternalData().getWorld();
         return CompletableFuture.runAsync(() -> handleCommand(ctx, player), world);
     }

@@ -98,6 +98,7 @@ public class CosmeticManager {
         // world.execute() can still run in the same tick, so we use a real time delay.
         // If the player rapidly switches cosmetics, only the latest one is applied.
         pendingCosmeticId.put(playerId, cosmeticId);
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) return;
 
@@ -148,6 +149,7 @@ public class CosmeticManager {
         clearCosmeticChannels(ref, store, playerId);
 
         // Delay needed: clearEffects + addEffect in same tick loses the effect
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) return;
 

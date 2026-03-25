@@ -494,6 +494,7 @@ public class HyvexaPlugin extends JavaPlugin {
                                 runStateStore.deleteAsync(pid);
                                 return;
                             }
+                            if (fStore.getExternalData() == null) { runStateStore.deleteAsync(pid); return; }
                             World world = fStore.getExternalData().getWorld();
                             if (world == null) {
                                 runStateStore.deleteAsync(pid);
@@ -1218,6 +1219,7 @@ public class HyvexaPlugin extends JavaPlugin {
         if (playerId == null) {
             return false;
         }
+        if (store.getExternalData() == null) return false;
         World world = store.getExternalData().getWorld();
         return isParkourWorld(world);
     }

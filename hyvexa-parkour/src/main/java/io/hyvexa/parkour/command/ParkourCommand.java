@@ -90,6 +90,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
         Ref<EntityStore> ref = player.getReference();
         if (ref != null && ref.isValid()) {
             Store<EntityStore> store = ref.getStore();
+            if (store.getExternalData() == null) return CompletableFuture.completedFuture(null);
             World world = store.getExternalData().getWorld();
             return CompletableFuture.runAsync(() -> {
                 handleCommand(commandContext, player, ref, store, world);

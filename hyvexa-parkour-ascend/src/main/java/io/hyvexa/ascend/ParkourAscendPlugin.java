@@ -472,6 +472,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     return;
                 }
                 Store<EntityStore> store = ref.getStore();
+                if (store == null || store.getExternalData() == null) {
+                    return;
+                }
                 World world = store.getExternalData().getWorld();
 
                 if (world == null || !isAscendWorld(world)) {

@@ -50,6 +50,7 @@ public class AscendLeaveInteraction extends SimpleInteraction {
         if (player == null || playerRef == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (!ModeGate.isAscendWorld(world)) {
             player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);
@@ -90,7 +91,7 @@ public class AscendLeaveInteraction extends SimpleInteraction {
 
         // Teleport to spawn
         AscendSettingsStore settingsStore = services.settingsStore();
-        World world = store.getExternalData().getWorld();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
         if (settingsStore != null && settingsStore.hasSpawnPosition() && world != null) {
             Vector3d pos = settingsStore.getSpawnPosition();
             Vector3f rot = settingsStore.getSpawnRotation();

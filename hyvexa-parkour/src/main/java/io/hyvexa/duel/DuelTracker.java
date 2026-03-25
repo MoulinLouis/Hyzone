@@ -457,6 +457,10 @@ public class DuelTracker {
         if (state != null) {
             state.resetForRestart();
         }
+        if (store.getExternalData() == null) {
+            player.sendMessage(SystemMessageUtils.duelError("World not available."));
+            return false;
+        }
         World world = store.getExternalData().getWorld();
         if (world == null) {
             player.sendMessage(SystemMessageUtils.duelError("World not available."));
@@ -491,6 +495,7 @@ public class DuelTracker {
         if (checkpoint == null) {
             return false;
         }
+        if (store.getExternalData() == null) return false;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return false;
@@ -568,6 +573,7 @@ public class DuelTracker {
         if (distanceSq <= 0.04) {
             return;
         }
+        if (context.store.getExternalData() == null) return;
         World world = context.store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -615,6 +621,7 @@ public class DuelTracker {
         if (spawn == null) {
             return;
         }
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -632,6 +639,7 @@ public class DuelTracker {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -746,6 +754,7 @@ public class DuelTracker {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -882,6 +891,7 @@ public class DuelTracker {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store.getExternalData() == null) return;
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
