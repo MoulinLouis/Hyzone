@@ -2,14 +2,17 @@
 
 Canonical reference for the Hyvexa development setup. All other docs use `mods/...` logical paths — this page has the concrete details.
 
-## Hybrid Layout
+## Layout
 
 | What | Where | Filesystem |
 |------|-------|------------|
 | Source code + repo | `~/dev/Hytale/hyvexa_plugin/` (WSL2) | ext4 |
-| Hytale install + server runtime | `C:\Users\<user>\hyvexa_server\` (Windows) | NTFS |
+| Server runtime (`run/`) | `~/dev/Hytale/hyvexa_plugin/run/` (WSL2) | ext4 |
+| Assets.zip | `~/dev/Hytale/assets/Assets.zip` (WSL2) | ext4 |
+| HytaleServer.jar | `libs/HytaleServer.jar` (in repo) | ext4 |
+| Hytale install (Windows) | `C:\Users\<user>\AppData\Roaming\Hytale\` | NTFS |
 
-The repo lives on native Linux ext4 for fast builds. The Hytale server runs on Windows because it is a Windows binary.
+Everything runs on native Linux ext4 for performance. The Windows Hytale install is only the source for `sync-hytale.sh`.
 
 ## Build & Deploy
 
@@ -17,26 +20,30 @@ All commands run from the repo root in WSL2:
 
 ```bash
 ./gradlew build            # Compile + shade all modules
-./gradlew stagePlugins     # Copy JARs to stageModsDir (see below)
-./gradlew collectPlugins   # Copy JARs to build/libs (CI-friendly, no Windows dependency)
+./gradlew stagePlugins     # Copy JARs to run/mods/ (default)
+./gradlew collectPlugins   # Copy JARs to build/libs (CI-friendly)
 ./gradlew test             # Run unit tests
 ```
 
 ### stagePlugins target directory
 
-`stagePlugins` copies plugin JARs to the directory set in `~/.gradle/gradle.properties`:
+By default, `stagePlugins` copies plugin JARs to `run/mods/` (ext4). This can be overridden via `~/.gradle/gradle.properties`:
 
 ```properties
-stageModsDir=/mnt/c/Users/<user>/hyvexa_server/mods
+stageModsDir=/some/other/path
 ```
 
-This is a per-machine setting and is **not committed** to the repository. Each developer configures it to point at their local Hytale server `mods/` directory.
+This is a per-machine setting and is **not committed** to the repository.
 
-`collectPlugins` has no external dependency — it always copies to `build/libs`.
+## Syncing from Windows
+
+After a Hytale update, run `./sync-hytale.sh` from the repo root to copy the latest `Assets.zip` and `HytaleServer.jar` from the Windows Hytale install to WSL2 ext4.
+
+Third-party mods and their configs live in `run/mods/` and must be copied manually if updated.
 
 ## Runtime Paths
 
-The Hytale server's working directory is where the server binary runs from. All runtime paths are relative to that directory:
+The server's working directory is `run/`. All runtime paths are relative to it:
 
 | Logical path | Purpose |
 |--------------|---------|
@@ -45,27 +52,30 @@ The Hytale server's working directory is where the server binary runs from. All 
 | `mods/Parkour/tebex.json` | Tebex secret key (gitignored) |
 | `mods/Hyguns/` | HyGuns modpack (weapons, ammo, assets) |
 
-**Concrete example (Windows):**
-
 ```
-C:\Users\<user>\hyvexa_server\
-  mods\
-    Parkour\
+run/
+  auth.enc
+  config.json
+  permissions.json
+  mods/
+    Parkour/
       database.json
       ascend.properties
       tebex.json
-    Hyguns\
-      manifest.json
+    Hyguns/
       ...
-  HytaleServer.jar
+    HyvexaParkour-1.1.0.jar   (built by stagePlugins)
+    hylograms-1.0.7.jar        (third-party)
+    ...
 ```
 
-All other documentation uses `mods/...` as a logical path relative to the server working directory.
+The `run/` directory is gitignored. It contains credentials, runtime data, and third-party binaries.
 
 ## IntelliJ Setup
 
 The `hyvexa-launch` module provides a classpath anchor for running the Hytale server from IntelliJ:
 
-- Use the `HytaleServerLaunch` run configuration (generated from `hyvexa-launch`)
-- Or set an existing `HytaleServer` config to module `hyvexa-launch.main`
-- The Hytale server JAR is resolved from `%USERPROFILE%/AppData/Roaming/Hytale/install/<patchline>/package/game/latest/Server/HytaleServer.jar` where `<patchline>` is set in `gradle.properties`
+- Use the `HytaleServerWSL` run configuration (manual, points to ext4 paths)
+- Or the generated `HytaleServerLaunch` config (from `hyvexa-launch/build.gradle`)
+- Both use `run/` as working directory and `libs/HytaleServer.jar` on the classpath
+- The pre-run task `stagePlugins` builds and copies all plugin JARs to `run/mods/`
