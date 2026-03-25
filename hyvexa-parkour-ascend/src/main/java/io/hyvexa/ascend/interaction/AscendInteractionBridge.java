@@ -4,6 +4,7 @@ import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
@@ -68,6 +69,7 @@ public final class AscendInteractionBridge {
         MineRobotManager mineRobotManager,
         MineGateChecker mineGateChecker,
         AscendMenuNavigator menuNavigator,
-        PlayerAnalytics analytics
+        PlayerAnalytics analytics,
+        AscendPlayerEventHandler eventHandler
     ) {}
 }

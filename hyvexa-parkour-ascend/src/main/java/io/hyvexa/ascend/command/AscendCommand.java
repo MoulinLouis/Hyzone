@@ -20,6 +20,7 @@ import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
@@ -89,6 +90,7 @@ public class AscendCommand extends AbstractAsyncCommand {
     private final RunnerSpeedCalculator runnerSpeedCalculator;
     private final PlayerAnalytics analytics;
     private final String npcToken;
+    private volatile AscendPlayerEventHandler eventHandler;
 
     /**
      * Close any existing page for the player before opening a new one.
@@ -161,6 +163,10 @@ public class AscendCommand extends AbstractAsyncCommand {
         this.npcToken = resolveNpcToken(runtimeConfig);
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
+    }
+
+    public void setEventHandler(AscendPlayerEventHandler eventHandler) {
+        this.eventHandler = eventHandler;
     }
 
     private static String resolveNpcToken(AscendRuntimeConfig runtimeConfig) {
@@ -391,7 +397,8 @@ public class AscendCommand extends AbstractAsyncCommand {
             playerRef,
             playerStore,
             challengeManager,
-            robotManager
+            robotManager,
+            eventHandler
         );
         openTrackedPage(player, playerRef, ref, store, page);
     }
@@ -425,7 +432,7 @@ public class AscendCommand extends AbstractAsyncCommand {
             mapStore, runTracker, robotManager, ghostStore,
             ascensionManager, challengeManager, summitManager, transcendenceManager,
             achievementManager, tutorialTriggerService, runnerSpeedCalculator,
-            analytics);
+            analytics, eventHandler);
         openUntrackedPage(player, playerRef, ref, store, page);
     }
 
@@ -456,7 +463,7 @@ public class AscendCommand extends AbstractAsyncCommand {
             summitManager,
             transcendenceManager, achievementManager,
             tutorialTriggerService, runnerSpeedCalculator,
-            analytics);
+            analytics, eventHandler);
         openTrackedPage(player, playerRef, ref, store, page);
     }
 

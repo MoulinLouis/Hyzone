@@ -22,6 +22,7 @@ import io.hyvexa.ascend.command.SkillCommand;
 import io.hyvexa.ascend.command.SummitCommand;
 import io.hyvexa.ascend.command.TranscendCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
@@ -137,6 +138,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private MineHudManager mineHudManager;
     private MineAchievementTracker mineAchievementTracker;
     private io.hyvexa.ascend.mine.egg.EggOpenService eggOpenService;
+    private AscendPlayerEventHandler eventHandler;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
@@ -266,7 +268,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Pass ghost dependencies to managers
         analytics = AnalyticsStore.getInstance();
-        playerStore.setAnalytics(analytics);
         runTracker = new AscendRunTracker(
             mapStore,
             playerStore,
@@ -327,7 +328,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize robot manager");
         }
-        playerStore.setRuntimeServices(
+        playerStore.setRuntimeServices(challengeManager, robotManager);
+
+        eventHandler = new AscendPlayerEventHandler(
+            playerStore,
             challengeManager,
             tutorialTriggerService,
             ascensionManager,
@@ -338,11 +342,17 @@ public class ParkourAscendPlugin extends JavaPlugin {
             ghostStore,
             this::getPlayerRef
         );
+        eventHandler.setAnalytics(analytics);
+        runTracker.setEventHandler(eventHandler);
+        if (robotManager != null) {
+            robotManager.setEventHandler(eventHandler);
+        }
 
         // Initialize passive earnings manager
         passiveEarningsManager = new PassiveEarningsManager(
             playerStore, mapStore, ghostStore, runnerSpeedCalculator, summitManager, this::getPlayerRef
         );
+        passiveEarningsManager.setEventHandler(eventHandler);
 
         try {
             if (HylogramsBridge.isAvailable()) {
@@ -368,7 +378,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineManager,
             hologramManager
         );
-        getCommandRegistry().registerCommand(new AscendCommand(
+        AscendCommand ascendCommand = new AscendCommand(
             playerStore,
             mapStore,
             ghostStore,
@@ -384,7 +394,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             runnerSpeedCalculator,
             analytics,
             runtimeConfig
-        ));
+        );
+        ascendCommand.setEventHandler(eventHandler);
+        getCommandRegistry().registerCommand(ascendCommand);
         getCommandRegistry().registerCommand(new AscendAdminCommand(
             adminNavigator,
             mapStore,
@@ -429,7 +441,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineRobotManager,
             mineGateChecker,
             createMenuNavigator(),
-            analytics
+            analytics,
+            eventHandler
         ));
         registerInteractionCodecs();
 
@@ -655,6 +668,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             playersInAscendWorld.remove(playerId);
             cleanupAscendState(playerId, null, null);
 
+            // Clean up event handler state
+            runSafe(() -> { if (eventHandler != null) eventHandler.cleanupPlayer(playerId); },
+                    "Disconnect cleanup: eventHandler");
             // Disconnect-only cleanup (not needed on world transitions)
             runSafe(() -> AscendMapSelectPage.clearBuyAllCooldown(playerId), "Disconnect cleanup: clearBuyAllCooldown");
             // Evict player from cache (lazy loading - saves memory)
@@ -732,6 +748,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public AscendRuntimeConfig getRuntimeConfig() {
         return runtimeConfig;
+    }
+
+    public AscendPlayerEventHandler getEventHandler() {
+        return eventHandler;
     }
 
     /**
@@ -998,7 +1018,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     services.ascensionManager(), services.challengeManager(), services.summitManager(),
                     services.transcendenceManager(), services.achievementManager(),
                     services.tutorialTriggerService(), services.runnerSpeedCalculator(),
-                    services.analytics()),
+                    services.analytics(), services.eventHandler()),
                 (services, player) -> {
                     if (services.mapStore() == null || services.playerStore() == null
                             || services.runTracker() == null || services.ghostStore() == null) {

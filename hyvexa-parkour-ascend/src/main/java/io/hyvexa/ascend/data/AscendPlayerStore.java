@@ -1,22 +1,14 @@
 package io.hyvexa.ascend.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
-import io.hyvexa.ascend.achievement.AchievementManager;
-import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
-import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.robot.RobotManager;
-import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.util.MapUnlockHelper;
-import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.math.BigNumber;
-import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.ConnectionProvider;
 
 import java.util.EnumSet;
@@ -26,16 +18,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 
 /**
  * In-memory cache and public API surface for Ascend player data.
  *
- * <p><b>Contract:</b> This class owns the player cache, business logic
- * (volt operations, ascension triggers, multiplier calculations, reset flows),
+ * <p><b>Contract:</b> This class owns the player cache, pure data operations
+ * (volt storage, multiplier calculations, reset flows),
  * and the public API consumed by the rest of the Ascend module.
+ * Gameplay side-effects (ascension flow, tutorials, analytics) live in
+ * {@link AscendPlayerEventHandler}.
  * All SQL is delegated to the package-private {@link AscendPlayerPersistence}.</p>
  */
 public class AscendPlayerStore {
@@ -45,48 +37,20 @@ public class AscendPlayerStore {
     private final Map<UUID, AscendPlayerProgress> players = new ConcurrentHashMap<>();
     private final Map<UUID, String> playerNames = new ConcurrentHashMap<>();
     private final Set<UUID> resetPendingPlayers = ConcurrentHashMap.newKeySet();
-    private final Set<UUID> ascensionCinematicActive = ConcurrentHashMap.newKeySet();
 
     private final ConnectionProvider db;
     private final AscendPlayerPersistence persistence;
     private ChallengeManager challengeManager;
-    private TutorialTriggerService tutorialTriggerService;
-    private AscensionManager ascensionManager;
-    private AscendHudManager hudManager;
     private RobotManager robotManager;
-    private AchievementManager achievementManager;
-    private AscendMapStore runtimeMapStore;
-    private GhostStore ghostStore;
-    private Function<UUID, PlayerRef> playerRefLookup;
-    private volatile PlayerAnalytics analytics;
 
     public AscendPlayerStore(ConnectionProvider db) {
         this.db = db;
         this.persistence = new AscendPlayerPersistence(db, players, playerNames, resetPendingPlayers);
     }
 
-    public void setAnalytics(PlayerAnalytics analytics) {
-        this.analytics = analytics;
-    }
-
-    public void setRuntimeServices(ChallengeManager challengeManager,
-                                   TutorialTriggerService tutorialTriggerService,
-                                   AscensionManager ascensionManager,
-                                   AscendHudManager hudManager,
-                                   RobotManager robotManager,
-                                   AchievementManager achievementManager,
-                                   AscendMapStore runtimeMapStore,
-                                   GhostStore ghostStore,
-                                   Function<UUID, PlayerRef> playerRefLookup) {
+    public void setRuntimeServices(ChallengeManager challengeManager, RobotManager robotManager) {
         this.challengeManager = challengeManager;
-        this.tutorialTriggerService = tutorialTriggerService;
-        this.ascensionManager = ascensionManager;
-        this.hudManager = hudManager;
         this.robotManager = robotManager;
-        this.achievementManager = achievementManager;
-        this.runtimeMapStore = runtimeMapStore;
-        this.ghostStore = ghostStore;
-        this.playerRefLookup = playerRefLookup;
     }
 
     public record LeaderboardEntry(UUID playerId, String playerName,
@@ -284,12 +248,6 @@ public class AscendPlayerStore {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         int value = progress.economy().addElevationMultiplier(amount);
         markDirty(playerId);
-        if (analytics != null) {
-            try {
-                analytics.logEvent(playerId, "ascend_elevation_up",
-                        "{\"new_level\":" + value + "}");
-            } catch (Exception e) { /* silent */ }
-        }
         return value;
     }
 
@@ -369,288 +327,15 @@ public class AscendPlayerStore {
      * @param amount the amount to add (can be negative to subtract)
      * @return true if the operation succeeded
      */
-    public boolean atomicAddVolt(UUID playerId, BigNumber amount) {
+    /**
+     * Add volt to a player atomically. Returns [oldBalance, newBalance] for callers
+     * that need to trigger side-effects based on threshold crossings.
+     */
+    public BigNumber[] atomicAddVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         BigNumber[] result = progress.economy().addVoltAndCapture(amount);
         markDirty(playerId);
-        checkVoltTutorialThresholds(playerId, result[0], result[1]);
-        // Always succeeds; return value is vestigial
-        return true;
-    }
-
-    private void checkVoltTutorialThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
-        boolean crossedAscension = oldBalance.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)
-                && newBalance.gte(AscendConstants.ASCENSION_VOLT_THRESHOLD);
-
-        // Mark the ascension tutorial as seen BEFORE the tutorial check,
-        // so the tutorial popup is suppressed in favor of the cinematic
-        if (crossedAscension) {
-            markTutorialSeen(playerId, TutorialTriggerService.ASCENSION);
-        }
-
-        if (tutorialTriggerService != null) {
-            tutorialTriggerService.checkVoltThresholds(playerId, oldBalance, newBalance);
-        }
-
-        AscendPlayerProgress progress = getPlayer(playerId);
-
-        // Trigger ascension every time the threshold is crossed
-        if (crossedAscension) {
-            if (progress != null && progress.automation().isBreakAscensionEnabled() && progress.gameplay().hasAllChallengeRewards()) {
-                // Check for transcendence eligibility notification
-                checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
-                return; // Break mode active — suppress auto-ascension
-            }
-            // Auto Ascend skill + toggle: skip popup and cinematic, ascend immediately
-            if (ascensionManager != null && ascensionManager.hasAutoAscend(playerId)
-                    && isAutoAscendEnabled(playerId)) {
-                performInstantAscension(playerId);
-            } else {
-                showAscensionExplainer(playerId);
-            }
-        }
-
-        // Also check transcendence threshold when break ascension is active
-        if (progress != null && progress.automation().isBreakAscensionEnabled() && progress.gameplay().hasAllChallengeRewards()) {
-            checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
-        }
-    }
-
-    private void checkTranscendenceNotification(UUID playerId, BigNumber oldBalance, BigNumber newBalance, AscendPlayerProgress progress) {
-        boolean crossedTranscendence = oldBalance.lt(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
-                && newBalance.gte(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD);
-        if (!crossedTranscendence) {
-            return;
-        }
-
-        if (hudManager != null) {
-            hudManager.showToast(playerId, io.hyvexa.ascend.hud.ToastType.ECONOMY,
-                "Transcendence available! Talk to the NPC.");
-        }
-    }
-
-    private void clearAscensionCinematicState(UUID playerId) {
-        if (playerId != null) {
-            ascensionCinematicActive.remove(playerId);
-        }
-    }
-
-    private record ResolvedPlayerContext(
-        com.hypixel.hytale.server.core.universe.PlayerRef playerRef,
-        com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref,
-        com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store,
-        com.hypixel.hytale.server.core.universe.world.World world,
-        com.hypixel.hytale.server.core.entity.entities.Player player
-    ) {}
-
-    private void resolvePlayerContext(UUID playerId,
-                                      Runnable onFailure,
-                                      java.util.function.Consumer<ResolvedPlayerContext> onResolved) {
-        Function<UUID, PlayerRef> playerRefLookup = this.playerRefLookup;
-        if (playerRefLookup == null) {
-            onFailure.run();
-            return;
-        }
-
-        com.hypixel.hytale.server.core.universe.PlayerRef playerRef = playerRefLookup.apply(playerId);
-        if (playerRef == null) {
-            onFailure.run();
-            return;
-        }
-
-        com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref =
-            playerRef.getReference();
-        if (ref == null || !ref.isValid()) {
-            onFailure.run();
-            return;
-        }
-
-        com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store =
-            ref.getStore();
-        if (store == null) {
-            onFailure.run();
-            return;
-        }
-
-        if (store.getExternalData() == null) {
-            onFailure.run();
-            return;
-        }
-        com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
-        if (world == null) {
-            onFailure.run();
-            return;
-        }
-
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            if (!ref.isValid()) {
-                onFailure.run();
-                return;
-            }
-            com.hypixel.hytale.server.core.entity.entities.Player player =
-                store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-            if (player == null) {
-                onFailure.run();
-                return;
-            }
-            onResolved.accept(new ResolvedPlayerContext(playerRef, ref, store, world, player));
-        }, world);
-    }
-
-    private void showAscensionExplainer(UUID playerId) {
-        if (!ascensionCinematicActive.add(playerId)) {
-            return; // Already in progress for this player
-        }
-        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            resolvePlayerContext(
-                playerId,
-                () -> clearAscensionCinematicState(playerId),
-                ctx -> ctx.player().getPageManager().openCustomPage(
-                    ctx.ref(),
-                    ctx.store(),
-                    new io.hyvexa.ascend.ui.AscendAscensionExplainerPage(ctx.playerRef(), this)
-                )
-            );
-        }, 500, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Performs an instant ascension (no popup, no cinematic) for players with AUTO_ASCEND skill.
-     */
-    private void performInstantAscension(UUID playerId) {
-        if (!ascensionCinematicActive.add(playerId)) {
-            return; // Already in progress
-        }
-        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            resolvePlayerContext(
-                playerId,
-                () -> clearAscensionCinematicState(playerId),
-                ctx -> performAutoAscension(playerId, ctx.player(), ctx.playerRef(), ctx.ref(), ctx.store())
-            );
-        }, 500, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Called by AscendAscensionExplainerPage when the player clicks Continue (or dismisses).
-     * Proceeds with the cinematic and auto-ascension.
-     */
-    public void proceedWithAscensionCinematic(UUID playerId) {
-        // The player is already in ascensionCinematicActive from showAscensionExplainer
-        triggerAscensionCinematic(playerId);
-    }
-
-    private void triggerAscensionCinematic(UUID playerId) {
-        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            resolvePlayerContext(playerId, () -> clearAscensionCinematicState(playerId), ctx -> {
-                com.hypixel.hytale.server.core.io.PacketHandler ph = ctx.playerRef().getPacketHandler();
-                if (ph == null) {
-                    clearAscensionCinematicState(playerId);
-                    return;
-                }
-
-                // Auto-ascend after cinematic completes
-                Runnable onComplete = () ->
-                    performAutoAscension(playerId, ctx.player(), ctx.playerRef(), ctx.ref(), ctx.store());
-
-                io.hyvexa.ascend.ascension.AscensionCinematic.play(
-                    ctx.player(),
-                    ph,
-                    ctx.playerRef(),
-                    ctx.store(),
-                    ctx.ref(),
-                    ctx.world(),
-                    onComplete
-                );
-            });
-        }, 1500, TimeUnit.MILLISECONDS);
-    }
-
-    private void performAutoAscension(UUID playerId,
-                                      com.hypixel.hytale.server.core.entity.entities.Player player,
-                                      com.hypixel.hytale.server.core.universe.PlayerRef playerRef,
-                                      com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref,
-                                      com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store) {
-        try {
-            if (ascensionManager == null) return;
-
-            if (!ascensionManager.canAscend(playerId)) return;
-
-            // Route to challenge completion if in a challenge
-            if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
-                AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
-                long elapsedMs = challengeManager.completeChallenge(playerId);
-                if (elapsedMs >= 0) {
-                    String timeStr = io.hyvexa.common.util.FormatUtils.formatDurationLong(elapsedMs);
-                    player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                        "[Challenge] " + (type != null ? type.getDisplayName() : "Challenge") + " completed in " + timeStr + "!")
-                        .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-                    player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                        "[Challenge] Your progress has been restored. Permanent reward unlocked!")
-                        .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-                }
-                return;
-            }
-
-            // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-            if (robotManager != null) {
-                robotManager.despawnRobotsForPlayer(playerId);
-            }
-
-            int newCount = ascensionManager.performAscension(playerId);
-            if (newCount < 0) return;
-
-            // Auto-buy map 1 runner so the player doesn't need any manual action
-            if (runtimeMapStore != null) {
-                List<AscendMap> maps = runtimeMapStore.listMapsSorted();
-                if (!maps.isEmpty()) {
-                    String firstMapId = maps.get(0).getId();
-                    setMapUnlocked(playerId, firstMapId, true);
-                    // Auto-buy runner if player has completed map 1 before (ghost or best time)
-                    boolean hasGhost = ghostStore != null && ghostStore.getRecording(playerId, firstMapId) != null;
-                    boolean hasBestTime = getBestTimeMs(playerId, firstMapId) != null;
-                    if (hasGhost || hasBestTime) {
-                        setHasRobot(playerId, firstMapId, true);
-                    }
-                }
-            }
-
-            // Chat messages
-            player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                "[Ascension] You have Ascended! (x" + newCount + ")")
-                .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-            player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                "[Ascension] +1 AP. All progress has been reset.")
-                .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-            player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                "[Ascension] Use /ascend skills to unlock abilities.")
-                .color(io.hyvexa.common.util.SystemMessageUtils.SECONDARY));
-
-            // Check achievements
-            if (achievementManager != null) {
-                achievementManager.checkAndUnlockAchievements(playerId, player);
-            }
-
-            // Show ascension tutorial page only on first ascension
-            if (newCount == 1) {
-                HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-                    if (ref == null || !ref.isValid()) return;
-                    if (store.getExternalData() == null) return;
-                    com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
-                    if (world == null) return;
-                    java.util.concurrent.CompletableFuture.runAsync(() -> {
-                        if (!ref.isValid()) return;
-                        com.hypixel.hytale.server.core.entity.entities.Player p =
-                            store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-                        if (p == null) return;
-                        p.getPageManager().openCustomPage(ref, store,
-                            new io.hyvexa.ascend.ui.AscendTutorialPage(playerRef,
-                                io.hyvexa.ascend.ui.AscendTutorialPage.Tutorial.ASCENSION));
-                    }, world);
-                }, 500, TimeUnit.MILLISECONDS);
-            }
-        } finally {
-            ascensionCinematicActive.remove(playerId);
-        }
+        return result;
     }
 
     /**
@@ -1335,7 +1020,6 @@ public class AscendPlayerStore {
         // Remove from cache
         players.remove(playerId);
         resetPendingPlayers.remove(playerId);
-        ascensionCinematicActive.remove(playerId);
     }
 
     public void flushPendingSave() {
@@ -1560,17 +1244,6 @@ public class AscendPlayerStore {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.automation().setBreakAscensionEnabled(enabled);
         markDirty(playerId);
-
-        // If disabling break mode while above threshold, trigger ascension
-        if (!enabled && progress.economy().getVolt().gte(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
-            if (ascensionManager != null
-                    && ascensionManager.hasAutoAscend(playerId)
-                    && isAutoAscendEnabled(playerId)) {
-                performInstantAscension(playerId);
-            } else {
-                triggerAscensionCinematic(playerId);
-            }
-        }
     }
 
     // ========================================

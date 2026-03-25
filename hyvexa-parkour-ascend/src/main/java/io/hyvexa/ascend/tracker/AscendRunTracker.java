@@ -31,6 +31,7 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.ascend.data.AscendSettingsStore;
@@ -75,6 +76,7 @@ public class AscendRunTracker {
     private volatile SummitManager summitManager;
     private volatile TutorialTriggerService tutorialTriggerService;
     private volatile RobotManager robotManager;
+    private volatile AscendPlayerEventHandler eventHandler;
 
     public AscendRunTracker(AscendMapStore mapStore,
                             AscendPlayerStore playerStore,
@@ -107,6 +109,10 @@ public class AscendRunTracker {
 
     public void setRobotManager(RobotManager robotManager) {
         this.robotManager = robotManager;
+    }
+
+    public void setEventHandler(AscendPlayerEventHandler eventHandler) {
+        this.eventHandler = eventHandler;
     }
 
     public void onMapStoreChanged() {
@@ -350,9 +356,11 @@ public class AscendRunTracker {
             }
         }
 
-        // Use atomic operations to prevent race conditions
-        if (!playerStore.atomicAddVolt(playerId, payout)) {
-            LOGGER.atWarning().log("Failed to add volt for manual run: " + playerId);
+        // Use event handler for volt + side-effects (tutorial thresholds, ascension triggers)
+        if (eventHandler != null) {
+            eventHandler.addVoltWithEffects(playerId, payout);
+        } else {
+            playerStore.atomicAddVolt(playerId, payout);
         }
         if (!playerStore.atomicAddTotalVoltEarned(playerId, payout)) {
             LOGGER.atWarning().log("Failed to add total volt earned for manual run: " + playerId);

@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.GameplayState;
@@ -34,6 +35,7 @@ public class PassiveEarningsManager {
     private final RunnerSpeedCalculator speedCalculator;
     private final SummitManager summitManager;
     private final Function<UUID, PlayerRef> playerRefLookup;
+    private volatile AscendPlayerEventHandler eventHandler;
 
     public PassiveEarningsManager(AscendPlayerStore playerStore, AscendMapStore mapStore,
                                  GhostStore ghostStore, RunnerSpeedCalculator speedCalculator,
@@ -45,6 +47,10 @@ public class PassiveEarningsManager {
         this.speedCalculator = speedCalculator;
         this.summitManager = summitManager;
         this.playerRefLookup = playerRefLookup;
+    }
+
+    public void setEventHandler(AscendPlayerEventHandler eventHandler) {
+        this.eventHandler = eventHandler;
     }
 
     /**
@@ -150,9 +156,11 @@ public class PassiveEarningsManager {
             return null; // No earnings (no runners)
         }
 
-        // Apply earnings to player account
-        if (!playerStore.atomicAddVolt(playerId, totalVolt)) {
-            LOGGER.atSevere().log("Failed to add passive volt for " + playerId + " (amount: " + totalVolt + ")");
+        // Apply earnings to player account (with side-effects for tutorial/ascension triggers)
+        if (eventHandler != null) {
+            eventHandler.addVoltWithEffects(playerId, totalVolt);
+        } else {
+            playerStore.atomicAddVolt(playerId, totalVolt);
         }
         if (!playerStore.atomicAddTotalVoltEarned(playerId, totalVolt)) {
             LOGGER.atSevere().log("Failed to add total volt earned for " + playerId + " (amount: " + totalVolt + ")");

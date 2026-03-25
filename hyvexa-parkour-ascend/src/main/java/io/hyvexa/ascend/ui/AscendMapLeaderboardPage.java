@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendPlayerStore.MapLeaderboardEntry;
 import io.hyvexa.ascend.achievement.AchievementManager;
@@ -65,11 +66,12 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
     private final TutorialTriggerService tutorialTriggerService;
     private final RunnerSpeedCalculator speedCalculator;
     private final PlayerAnalytics analytics;
+    private final AscendPlayerEventHandler eventHandler;
     private final List<AscendMap> maps;
     private int currentTabIndex = 0;
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore) {
-        this(playerRef, playerStore, mapStore, null, null, null, null, null, null, null, null, null, null, null);
+        this(playerRef, playerStore, mapStore, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore,
@@ -79,7 +81,8 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
                                     TranscendenceManager transcendenceManager, AchievementManager achievementManager,
                                     TutorialTriggerService tutorialTriggerService,
                                     RunnerSpeedCalculator speedCalculator,
-                                    PlayerAnalytics analytics) {
+                                    PlayerAnalytics analytics,
+                                    AscendPlayerEventHandler eventHandler) {
         super(playerRef, 50);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
@@ -94,6 +97,7 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
         this.tutorialTriggerService = tutorialTriggerService;
         this.speedCalculator = speedCalculator;
         this.analytics = analytics;
+        this.eventHandler = eventHandler;
         this.maps = new ArrayList<>(mapStore.listMapsSorted());
     }
 
@@ -165,7 +169,7 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
                 player.getPageManager().openCustomPage(ref, store,
                     new AscendMapSelectPage(pRef, mapStore, playerStore, runTracker, robotManager, ghostStore,
                         ascensionManager, challengeManager, summitManager, transcendenceManager,
-                        achievementManager, tutorialTriggerService, speedCalculator, analytics));
+                        achievementManager, tutorialTriggerService, speedCalculator, analytics, eventHandler));
                 return;
             }
         }

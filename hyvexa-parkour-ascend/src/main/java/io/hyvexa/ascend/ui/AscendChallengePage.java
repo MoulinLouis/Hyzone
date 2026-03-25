@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ascension.ChallengeManager;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -53,14 +54,17 @@ public class AscendChallengePage extends BaseAscendPage {
     private final AscendPlayerStore playerStore;
     private final ChallengeManager challengeManager;
     private final RobotManager robotManager;
+    private final AscendPlayerEventHandler eventHandler;
     private ScheduledFuture<?> timerTask;
 
     public AscendChallengePage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                               ChallengeManager challengeManager, RobotManager robotManager) {
+                               ChallengeManager challengeManager, RobotManager robotManager,
+                               AscendPlayerEventHandler eventHandler) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.challengeManager = challengeManager;
         this.robotManager = robotManager;
+        this.eventHandler = eventHandler;
     }
 
     @Override
@@ -248,7 +252,7 @@ public class AscendChallengePage extends BaseAscendPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new ChallengeLeaderboardPage(playerRef, playerStore, challengeManager, robotManager));
+            new ChallengeLeaderboardPage(playerRef, playerStore, challengeManager, robotManager, eventHandler));
     }
 
     private void handleQuit(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -318,7 +322,7 @@ public class AscendChallengePage extends BaseAscendPage {
         }
 
         boolean newState = !progress.automation().isBreakAscensionEnabled();
-        playerStore.setBreakAscensionEnabled(playerId, newState);
+        eventHandler.setBreakAscensionWithEffects(playerId, newState);
 
         if (newState) {
             player.sendMessage(Message.raw("[Challenge] Break Ascension enabled. Auto-ascension at 1Dc is now suppressed.")

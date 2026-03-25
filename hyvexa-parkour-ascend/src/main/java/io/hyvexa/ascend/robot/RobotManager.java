@@ -19,6 +19,7 @@ import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AutomationConfig;
@@ -86,6 +87,7 @@ public class RobotManager {
     private final SummitManager summitManager;
     private final AchievementManager achievementManager;
     private final Function<UUID, PlayerRef> playerRefResolver;
+    private volatile AscendPlayerEventHandler eventHandler;
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> activeEntityUuids = ConcurrentHashMap.newKeySet();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
@@ -178,6 +180,10 @@ public class RobotManager {
             // Despawn all robots for this player
             removeTrackedRobotsForPlayer(playerId);
         }
+    }
+
+    public void setEventHandler(AscendPlayerEventHandler eventHandler) {
+        this.eventHandler = eventHandler;
     }
 
     public void markPlayerDirty(UUID playerId) {
@@ -851,9 +857,11 @@ public class RobotManager {
 
         BigNumber totalPayout = payoutPerRun.multiply(BigNumber.fromLong(completions));
 
-        // Use atomic operations to prevent race conditions
-        if (!playerStore.atomicAddVolt(ownerId, totalPayout)) {
-            LOGGER.atWarning().log("Failed to add runner volt for " + ownerId + " on map " + mapId);
+        // Use event handler for volt + side-effects (tutorial thresholds, ascension triggers)
+        if (eventHandler != null) {
+            eventHandler.addVoltWithEffects(ownerId, totalPayout);
+        } else {
+            playerStore.atomicAddVolt(ownerId, totalPayout);
         }
         if (!playerStore.atomicAddTotalVoltEarned(ownerId, totalPayout)) {
             LOGGER.atWarning().log("Failed to add total volt earned for " + ownerId);

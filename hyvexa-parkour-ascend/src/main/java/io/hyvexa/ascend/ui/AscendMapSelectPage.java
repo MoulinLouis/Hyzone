@@ -35,6 +35,7 @@ import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.GameplayState;
@@ -89,6 +90,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final TutorialTriggerService tutorialTriggerService;
     private final RunnerSpeedCalculator speedCalculator;
     private final PlayerAnalytics analytics;
+    private final AscendPlayerEventHandler eventHandler;
     private ScheduledFuture<?> refreshTask;
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
     private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
@@ -106,7 +108,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
                                AchievementManager achievementManager,
                                TutorialTriggerService tutorialTriggerService,
                                RunnerSpeedCalculator speedCalculator,
-                               PlayerAnalytics analytics) {
+                               PlayerAnalytics analytics,
+                               AscendPlayerEventHandler eventHandler) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.playerStore = playerStore;
@@ -121,6 +124,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         this.analytics = analytics;
         this.tutorialTriggerService = tutorialTriggerService;
         this.speedCalculator = speedCalculator;
+        this.eventHandler = eventHandler;
     }
 
     @Override
@@ -1197,7 +1201,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         player.getPageManager().openCustomPage(ref, store,
             new AscendMapLeaderboardPage(playerRef, playerStore, mapStore, runTracker, robotManager, ghostStore,
                 ascensionManager, challengeManager, summitManager, transcendenceManager,
-                achievementManager, tutorialTriggerService, speedCalculator, analytics));
+                achievementManager, tutorialTriggerService, speedCalculator, analytics, eventHandler));
     }
 
     private void handleOpenChallenge(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -1218,7 +1222,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new AscendChallengePage(playerRef, playerStore, challengeManager, robotManager));
+            new AscendChallengePage(playerRef, playerStore, challengeManager, robotManager, eventHandler));
     }
 
     private void handleOpenTranscendence(Ref<EntityStore> ref, Store<EntityStore> store) {

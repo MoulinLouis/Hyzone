@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import java.util.UUID;
@@ -22,13 +22,13 @@ public class AscendAscensionExplainerPage extends BaseAscendPage {
     private static final String BUTTON_CONTINUE = "Continue";
 
     private final UUID playerId;
-    private final AscendPlayerStore playerStore;
+    private final AscendPlayerEventHandler eventHandler;
     private volatile boolean proceeded = false;
 
-    public AscendAscensionExplainerPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore) {
+    public AscendAscensionExplainerPage(@Nonnull PlayerRef playerRef, AscendPlayerEventHandler eventHandler) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerId = playerRef.getUuid();
-        this.playerStore = playerStore;
+        this.eventHandler = eventHandler;
     }
 
     @Override
@@ -63,8 +63,8 @@ public class AscendAscensionExplainerPage extends BaseAscendPage {
     private void proceed() {
         if (proceeded) return;
         proceeded = true;
-        if (playerStore != null) {
-            playerStore.proceedWithAscensionCinematic(playerId);
+        if (eventHandler != null) {
+            eventHandler.proceedWithAscensionCinematic(playerId);
         }
     }
 }
