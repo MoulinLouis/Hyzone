@@ -16,8 +16,11 @@ Entry point: `hyvexa-parkour/src/main/java/io/hyvexa/HyvexaPlugin.java`
 - Loads parkour stores (`MapStore`, `SettingsStore`, `ProgressStore`, `PlayerCountStore`, `GlobalMessageStore`).
 - Creates gameplay trackers (`RunTracker`, duel tracker, ghost systems).
 - Creates managers (HUD, perks, playtime, announcements, collision, cleanup, holograms).
+- Creates `ParkourEventRouter` and delegates all event handling via `router.registerAll()`.
 - Registers commands, interaction codecs, and ECS systems.
 - Starts scheduled ticks (HUD, playtime, duel, cleanup, player count sampling).
+
+`ParkourEventRouter` handles all player events (connect, ready, disconnect, chat, world add, votes) and owns HUD player tracking. It receives all dependencies via constructor injection.
 
 Important tick timings are in `hyvexa-parkour/src/main/java/io/hyvexa/parkour/ParkourTimingConstants.java`.
 
@@ -80,6 +83,8 @@ Shared tables (in `hyvexa-core`):
 - `analytics_events` / `analytics_daily` -- analytics
 
 ## Where To Edit What
+- Event handling (connect, disconnect, ready, chat):
+  `hyvexa-parkour/src/main/java/io/hyvexa/ParkourEventRouter.java`
 - Run logic/checkpoint behavior:
   `hyvexa-parkour/src/main/java/io/hyvexa/parkour/tracker/`
 - HUD behavior:
