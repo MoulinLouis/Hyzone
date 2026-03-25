@@ -411,6 +411,187 @@ public void syncLoad() { /* Load from MySQL on startup */ }
 public void save(Data d) { cache.put(d.id, d); /* + MySQL write */ }
 ```
 
+Most player-bound stores in this repo use one of two patterns:
+- `BasePlayerStore<V>` for module-owned typed player data (`PurgePlayerStore`, `DuelStatsStore`, `RunOrFallStatsStore`)
+- `CachedCurrencyStore` for global core currencies (`VexaStore`, `FeatherStore`)
+
+## Creating a New Store (End-to-End)
+
+Use `PurgePlayerStore` as the smallest direct `BasePlayerStore<V>` example. Use `VexaStore` when you need the core singleton currency-store variant.
+
+### 1. Extend `BasePlayerStore<V>`
+
+Every `BasePlayerStore<V>` subclass must implement these 5 template methods:
+
+```java
+public class PurgePlayerStore extends BasePlayerStore<PurgePlayerStats> {
+
+    public PurgePlayerStore(ConnectionProvider db) {
+        super(db);
+    }
+
+    @Override
+    protected String loadSql() {
+        return "SELECT best_wave, total_kills, total_sessions FROM purge_player_stats WHERE uuid = ?";
+    }
+
+    @Override
+    protected String upsertSql() {
+        return "INSERT INTO purge_player_stats (uuid, best_wave, total_kills, total_sessions) VALUES (?, ?, ?, ?) "
+             + "ON DUPLICATE KEY UPDATE best_wave = ?, total_kills = ?, total_sessions = ?";
+    }
+
+    @Override
+    protected PurgePlayerStats parseRow(ResultSet rs, UUID playerId) throws SQLException {
+        return new PurgePlayerStats(rs.getInt("best_wave"), rs.getInt("total_kills"), rs.getInt("total_sessions"));
+    }
+
+    @Override
+    protected void bindUpsertParams(PreparedStatement stmt, UUID id, PurgePlayerStats s) throws SQLException {
+        stmt.setString(1, id.toString());
+        stmt.setInt(2, s.getBestWave());
+        stmt.setInt(3, s.getTotalKills());
+        stmt.setInt(4, s.getTotalSessions());
+        stmt.setInt(5, s.getBestWave());
+        stmt.setInt(6, s.getTotalKills());
+        stmt.setInt(7, s.getTotalSessions());
+    }
+
+    @Override
+    protected PurgePlayerStats defaultValue() {
+        return new PurgePlayerStats(0, 0, 0);
+    }
+}
+```
+
+What each override is responsible for:
+1. `loadSql()` returns a single-row `SELECT` with one UUID placeholder. `BasePlayerStore.getOrLoad()` binds that UUID for you.
+2. `upsertSql()` returns the full insert/update statement used by `save()`.
+3. `parseRow()` maps one `ResultSet` row into your value object.
+4. `bindUpsertParams()` binds every parameter required by `upsertSql()`.
+5. `defaultValue()` is returned when no row exists yet, the DB is unavailable, or the caller passes `null`.
+
+`BasePlayerStore` already provides the cache lifecycle:
+- `getOrLoad(playerId)` uses `cache.computeIfAbsent(...)` and falls back to SQL only on a miss
+- `save(playerId, value)` updates cache first, then writes through to MySQL
+- `evict(playerId)` removes only the in-memory entry
+
+If the store needs extra behavior such as startup bulk-loads or read models for leaderboards, add them on top of the base contract the way `DuelStatsStore.syncLoad()` and `RunOrFallStatsStore.syncLoad()` do.
+
+### 2. Implement SQL Around the Real Table
+
+Keep the SQL and the Java value object in lockstep:
+- `loadSql()` and `parseRow()` must read the same columns
+- `upsertSql()` and `bindUpsertParams()` must write the same columns in the same order
+- `defaultValue()` must represent a valid "player has no row yet" state
+
+Examples already in the repo:
+- `DuelStatsStore` reads and writes `duel_player_stats`
+- `PurgePlayerStore` reads and writes `purge_player_stats`
+- `RunOrFallStatsStore` reads and writes `runorfall_player_stats`
+
+### 3. Add Table Creation in the Right Startup Owner
+
+For new module-owned stores, prefer centralizing schema creation in the module's `*DatabaseSetup.java`.
+
+`PurgeDatabaseSetup.ensureTables()` is the clearest example:
+
+```java
+stmt.executeUpdate("CREATE TABLE IF NOT EXISTS purge_player_stats ("
+        + "uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
+        + "best_wave INT NOT NULL DEFAULT 0, "
+        + "total_kills INT NOT NULL DEFAULT 0, "
+        + "total_sessions INT NOT NULL DEFAULT 0"
+        + ") ENGINE=InnoDB");
+```
+
+For core singleton stores, the store owns its own table setup during `initialize()`. `VexaStore` inherits that from `CachedCurrencyStore.initialize()`, which creates `player_vexa` before registering the store with `CurrencyBridge`.
+
+Older module stores such as `DuelStatsStore` and `RunOrFallStatsStore` still call `ensureTable()` inside the store itself. That works, but new work should prefer the centralized `*DatabaseSetup` path for module schemas.
+
+### 4. Wire Startup in `Plugin.setup()`
+
+There are 2 valid startup paths in the current codebase:
+
+1. Core singleton store with an explicit `initialize()`:
+
+```java
+initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
+this.vexaStore = VexaStore.getInstance();
+```
+
+2. Module `BasePlayerStore` after DB setup and table creation:
+
+```java
+RunOrFallDatabaseSetup.ensureTables();
+statsStore = new RunOrFallStatsStore(DatabaseManager.getInstance());
+```
+
+Rule of thumb:
+- If the store exposes `initialize()`, call it from `Plugin.setup()` behind the module's safe-init wrapper (`initSafe(...)` in Parkour, `StoreInitializer.initialize(...)` in other modules).
+- If the store is a plain `BasePlayerStore<V>` with no startup hook, instantiate it only after `DatabaseManager` and the relevant `*DatabaseSetup.ensureTables()` have run.
+
+### 5. Evict on `PlayerDisconnectEvent`
+
+Every player-cached store needs explicit disconnect cleanup.
+
+Example from `HyvexaPurgePlugin`:
+
+```java
+PlayerCleanupHelper.cleanup(playerId, LOGGER,
+        id -> VexaStore.getInstance().evictPlayer(id),
+        id -> DiscordLinkStore.getInstance().evictPlayer(id),
+        id -> PurgePlayerStore.getInstance().evict(id),
+        id -> PurgeScrapStore.getInstance().evictPlayer(id)
+);
+```
+
+Example from `HyvexaPlugin` (Parkour):
+
+```java
+try { if (vexaStore != null) { vexaStore.evictPlayer(playerId); } }
+catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
+```
+
+If you add a new store and forget the disconnect eviction path, reconnects can read stale in-memory state instead of the latest DB row.
+
+### 6. Add the Schema to `docs/DATABASE.md`
+
+When you add a new table:
+1. Add the `CREATE TABLE` block under the correct module section in `docs/DATABASE.md`
+2. Name the owning store or setup class directly below it
+3. Keep the docs in sync with the actual SQL in `*DatabaseSetup.java` or `initialize()`
+
+Existing examples:
+- `player_vexa` -> `VexaStore`
+- `duel_player_stats` -> `DuelStatsStore`
+- `purge_player_stats` -> `PurgePlayerStore`
+- `runorfall_player_stats` -> `RunOrFallStatsStore`
+
+### 7. Understand the Full Lifecycle
+
+For `BasePlayerStore<V>`, the real lifecycle is:
+
+1. Player connects. The plugin has already initialized the DB and created the store instance in `setup()`.
+2. Nothing is loaded just because the player connected. The first call to `getOrLoad(playerId)` is the load boundary.
+3. On a cache miss, `BasePlayerStore.getOrLoad()` runs `cache.computeIfAbsent(playerId, this::loadFromDatabase)`, executes `loadSql()`, and falls back to `defaultValue()` when no row exists.
+4. On a cache hit, the value comes straight from memory and no SQL runs.
+5. Your gameplay code mutates the value and calls `save(playerId, value)`. `BasePlayerStore.save()` updates the cache and then executes `upsertSql()`.
+6. On disconnect, the plugin must call `evict(playerId)` to remove the cached copy.
+7. On the next session, the first `getOrLoad()` reads the fresh DB state again.
+
+Concrete example from `PurgeSessionManager.persistResults()`:
+
+```java
+PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrLoad(playerId);
+stats.updateBestWave(session.getCurrentWave());
+stats.incrementKills(kills);
+stats.incrementSessions();
+PurgePlayerStore.getInstance().save(playerId, stats);
+```
+
+Core singleton currency stores follow the same cache -> persist -> evict shape, but the public API is `getBalance()/setBalance()/addBalance()/evictPlayer()` instead of `getOrLoad()/save()/evict()`.
+
 ## Threading
 
 ```java
