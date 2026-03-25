@@ -78,7 +78,10 @@ public class HubRouter {
                 analytics.logEvent(
                         playerRef.getUuid(), "mode_switch",
                         "{\"to\":\"" + targetWorldName + "\"}");
-            } catch (Exception e) { /* silent */ }
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Failed to log analytics event for player %s (mode_switch to %s)",
+                        playerIdText, targetWorldName);
+            }
             Teleport teleport = createTeleport(targetWorld, playerRef.getUuid());
             store.addComponent(ref, Teleport.getComponentType(), teleport);
         }, "hub.route.world", "hub route to world",
