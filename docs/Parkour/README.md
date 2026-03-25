@@ -126,5 +126,5 @@ Staff/admin-heavy:
 
 ## Related Docs
 - Architecture overview: `docs/ARCHITECTURE.md`
-- Database schema details: `docs/DATABASE.md`
+- Database schema: `docs/Parkour/DATABASE.md`
 - UI rules/pitfalls: `CLAUDE.md` + `docs/hytale-custom-ui/`

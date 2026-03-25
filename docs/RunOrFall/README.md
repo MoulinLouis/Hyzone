@@ -79,4 +79,4 @@ Legacy migration:
 ## Related Docs
 
 - Architecture overview: `docs/ARCHITECTURE.md`
-- Database schema: `docs/DATABASE.md`
+- Database schema: `docs/RunOrFall/DATABASE.md`

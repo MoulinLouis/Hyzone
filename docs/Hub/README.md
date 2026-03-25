@@ -78,4 +78,4 @@ None. The Hub module uses shared stores from `hyvexa-core` (VexaStore, DiscordLi
 ## Related Docs
 - Architecture overview: `docs/ARCHITECTURE.md`
 - Core module stores: `docs/Core/README.md`
-- Database schema: `docs/DATABASE.md`
+- Database schema: `docs/DATABASE.md` (Hub has no tables)

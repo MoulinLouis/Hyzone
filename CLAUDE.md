@@ -49,7 +49,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 1. **Update CHANGELOG.md** for significant changes only (new features, balance changes, bug fixes) - keep entries brief (1-2 lines), no implementation details
 2. **Update docs when you change code** — keep the source of truth accurate:
    - Economy change (cost, reward, multiplier, formula) → `docs/Ascend/ECONOMY_BALANCE.md`
-   - Schema change (table/column add, remove, rename) → `docs/DATABASE.md`
+   - Schema change (table/column add, remove, rename) → `docs/<Module>/DATABASE.md` (+ update index in `docs/DATABASE.md` if new table)
    - Architecture change (new module, changed boundary, new integration) → `docs/ARCHITECTURE.md`
    - New manager/store/major class → relevant module README in `docs/<Module>/README.md`
    - New or removed command → relevant module README
@@ -75,7 +75,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 
 - Config: `hyvexa_server/mods/Parkour/database.json` (on Windows, outside this repo)
 - Pattern: In-memory cache + MySQL persistence
-- See `docs/DATABASE.md` for schema details
+- See `docs/DATABASE.md` for schema index, `docs/<Module>/DATABASE.md` for per-module schemas
 
 ## Discord Bot (`discord-bot/`)
 
@@ -90,7 +90,7 @@ Node.js bot for Discord account linking + rank sync. See `docs/DiscordBot/README
 | **Hytale Custom UI** | `docs/hytale-custom-ui/` — **consult BEFORE writing .ui files** |
 | Architecture | `docs/ARCHITECTURE.md` |
 | Architecture diagrams | `docs/ARCHITECTURE_DIAGRAMS.md` |
-| Database schema | `docs/DATABASE.md` |
+| Database schema | `docs/DATABASE.md` (index) + `docs/<Module>/DATABASE.md` |
 | grepai reference | `docs/GREPAI.md` — primary code search tool, falls back to Grep/Glob |
 | Economy balance | `docs/Ascend/ECONOMY_BALANCE.md` |
 | Feature history | `CHANGELOG.md` |

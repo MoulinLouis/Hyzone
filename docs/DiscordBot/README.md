@@ -100,5 +100,5 @@ The bot reads and writes these tables (owned by `DiscordLinkStore` in `hyvexa-co
 
 ## Related Docs
 - Core module (DiscordLinkStore details): `docs/Core/README.md`
-- Database schema: `docs/DATABASE.md`
+- Database schema: `docs/Core/DATABASE.md` (uses shared `discord_links` + `discord_link_codes`)
 - Architecture overview: `docs/ARCHITECTURE.md`

@@ -127,7 +127,7 @@ Quick reference for `hyvexa-core`.
 - `hyvexa-core/src/test/java/` -- unit tests for pure-logic classes
 
 ## Related Docs
-- Database schema: `docs/DATABASE.md`
+- Database schema: `docs/Core/DATABASE.md`
 - Architecture overview: `docs/ARCHITECTURE.md`
 - Wardrobe details: `docs/WARDROBE_MOD.md`
 - Discord bot integration: `docs/DiscordBot/README.md`

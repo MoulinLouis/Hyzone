@@ -70,4 +70,4 @@ The wardrobe module uses tables defined in `hyvexa-core`:
 
 - Wardrobe integration guide: `docs/WARDROBE_MOD.md` (cosmetic asset structure, JSON format, variant system)
 - Architecture overview: `docs/ARCHITECTURE.md`
-- Database schema: `docs/DATABASE.md`
+- Database schema: `docs/Core/DATABASE.md` (uses shared `player_cosmetics` + `cosmetic_shop_config`)

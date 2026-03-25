@@ -126,4 +126,4 @@ Zones can have depth layers defined by Y-ranges. Each layer has its own block pr
 - Tutorial flow: `docs/Ascend/TUTORIAL_FLOW.md`
 - Economy simulation: `docs/Ascend/economy_sim.py`
 - Architecture overview: `docs/ARCHITECTURE.md`
-- Database schema: `docs/DATABASE.md`
+- Database schema: `docs/Ascend/DATABASE.md`
