@@ -78,14 +78,18 @@ public abstract class BasePlayerStore<V> {
              PreparedStatement stmt = DatabaseManager.prepare(conn, loadAllSql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
+                UUID key = null;
                 try {
-                    UUID key = keyExtractor.apply(rs);
+                    key = keyExtractor.apply(rs);
                     V value = parseRow(rs, key);
                     if (key != null && value != null) {
                         cache.put(key, value);
                     }
                 } catch (Exception e) {
                     skipped++;
+                    HytaleLogger.forEnclosingClass().atWarning().withCause(e)
+                        .log("[%s] Failed to parse row for player %s during bulk load",
+                             getClass().getSimpleName(), key);
                 }
             }
         } catch (SQLException e) {

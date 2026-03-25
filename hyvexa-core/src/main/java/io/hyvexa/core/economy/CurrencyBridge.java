@@ -40,11 +40,7 @@ public class CurrencyBridge {
             LOGGER.atWarning().log("CurrencyBridge: unknown currency '" + currency + "'");
             return false;
         }
-        if (provider.getBalance(playerId) < amount) {
-            return false;
-        }
-        provider.removeBalance(playerId, amount);
-        return true;
+        return provider.deductIfSufficient(playerId, amount);
     }
 
     private CurrencyBridge() {}
