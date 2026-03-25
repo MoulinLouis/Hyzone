@@ -404,22 +404,15 @@ This is an intentional workaround, not dead code.
 
 ## Data Stores
 
-```java
-// Memory-first with MySQL persistence
-private final ConcurrentHashMap<UUID, Data> cache = new ConcurrentHashMap<>();
-public void syncLoad() { /* Load from MySQL on startup */ }
-public void save(Data d) { cache.put(d.id, d); /* + MySQL write */ }
-```
-
-Most player-bound stores in this repo use one of two patterns:
+All stores follow the memory-first with MySQL persistence pattern. Player-bound stores use one of two base classes:
 - `BasePlayerStore<V>` for module-owned typed player data (`PurgePlayerStore`, `DuelStatsStore`, `RunOrFallStatsStore`)
 - `CachedCurrencyStore` for global core currencies (`VexaStore`, `FeatherStore`)
 
-## Creating a New Store (End-to-End)
+### Creating a New Store (End-to-End)
 
 Use `PurgePlayerStore` as the smallest direct `BasePlayerStore<V>` example. Use `VexaStore` when you need the core singleton currency-store variant.
 
-### 1. Extend `BasePlayerStore<V>`
+#### 1. Extend `BasePlayerStore<V>`
 
 Every `BasePlayerStore<V>` subclass must implement these 5 template methods:
 
@@ -478,7 +471,7 @@ What each override is responsible for:
 
 If the store needs extra behavior such as startup bulk-loads or read models for leaderboards, add them on top of the base contract the way `DuelStatsStore.syncLoad()` and `RunOrFallStatsStore.syncLoad()` do.
 
-### 2. Implement SQL Around the Real Table
+#### 2. Implement SQL Around the Real Table
 
 Keep the SQL and the Java value object in lockstep:
 - `loadSql()` and `parseRow()` must read the same columns
@@ -490,7 +483,7 @@ Examples already in the repo:
 - `PurgePlayerStore` reads and writes `purge_player_stats`
 - `RunOrFallStatsStore` reads and writes `runorfall_player_stats`
 
-### 3. Add Table Creation in the Right Startup Owner
+#### 3. Add Table Creation in the Right Startup Owner
 
 For new module-owned stores, prefer centralizing schema creation in the module's `*DatabaseSetup.java`.
 
@@ -507,9 +500,9 @@ stmt.executeUpdate("CREATE TABLE IF NOT EXISTS purge_player_stats ("
 
 For core singleton stores, the store owns its own table setup during `initialize()`. `VexaStore` inherits that from `CachedCurrencyStore.initialize()`, which creates `player_vexa` before registering the store with `CurrencyBridge`.
 
-Older module stores such as `DuelStatsStore` and `RunOrFallStatsStore` still call `ensureTable()` inside the store itself. That works, but new work should prefer the centralized `*DatabaseSetup` path for module schemas.
+Older module stores such as `DuelStatsStore` and `RunOrFallStatsStore` still call `ensureTable()` inside the store itself. That works, but do not add `ensureTable()` to new `BasePlayerStore` subclasses — new work must use the centralized `*DatabaseSetup` path for module schemas.
 
-### 4. Wire Startup in `Plugin.setup()`
+#### 4. Wire Startup in `Plugin.setup()`
 
 There are 2 valid startup paths in the current codebase:
 
@@ -531,11 +524,13 @@ Rule of thumb:
 - If the store exposes `initialize()`, call it from `Plugin.setup()` behind the module's safe-init wrapper (`initSafe(...)` in Parkour, `StoreInitializer.initialize(...)` in other modules).
 - If the store is a plain `BasePlayerStore<V>` with no startup hook, instantiate it only after `DatabaseManager` and the relevant `*DatabaseSetup.ensureTables()` have run.
 
-### 5. Evict on `PlayerDisconnectEvent`
+#### 5. Evict on `PlayerDisconnectEvent`
 
 Every player-cached store needs explicit disconnect cleanup.
 
-Example from `HyvexaPurgePlugin`:
+Core singleton stores (e.g. `VexaStore`, `DiscordLinkStore`) are accessed via `getInstance()`. Module-owned `BasePlayerStore` instances are held as fields on the plugin class — use whichever reference your module has.
+
+Example from `HyvexaPurgePlugin` (mix of singletons and instance fields):
 
 ```java
 PlayerCleanupHelper.cleanup(playerId, LOGGER,
@@ -555,12 +550,13 @@ catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: V
 
 If you add a new store and forget the disconnect eviction path, reconnects can read stale in-memory state instead of the latest DB row.
 
-### 6. Add the Schema to `docs/DATABASE.md`
+#### 6. Add the Schema to Docs
 
 When you add a new table:
-1. Add the `CREATE TABLE` block under the correct module section in `docs/DATABASE.md`
+1. Add the `CREATE TABLE` block to the module-specific schema file (`docs/<Module>/DATABASE.md`)
 2. Name the owning store or setup class directly below it
-3. Keep the docs in sync with the actual SQL in `*DatabaseSetup.java` or `initialize()`
+3. Update the index in `docs/DATABASE.md` if it is a new table
+4. Keep the docs in sync with the actual SQL in `*DatabaseSetup.java` or `initialize()`
 
 Existing examples:
 - `player_vexa` -> `VexaStore`
@@ -568,7 +564,7 @@ Existing examples:
 - `purge_player_stats` -> `PurgePlayerStore`
 - `runorfall_player_stats` -> `RunOrFallStatsStore`
 
-### 7. Understand the Full Lifecycle
+#### 7. Understand the Full Lifecycle
 
 For `BasePlayerStore<V>`, the real lifecycle is:
 
@@ -591,6 +587,77 @@ PurgePlayerStore.getInstance().save(playerId, stats);
 ```
 
 Core singleton currency stores follow the same cache -> persist -> evict shape, but the public API is `getBalance()/setBalance()/addBalance()/evictPlayer()` instead of `getOrLoad()/save()/evict()`.
+
+#### Testing
+
+Stores depend on `ConnectionProvider` / MySQL and cannot be unit-tested in isolation. Pure-logic value objects (e.g. `PurgePlayerStats`) are testable — put assertions on mutation methods there. For the store itself, verify correctness through integration testing or manual gameplay.
+
+## Cross-Module Communication
+
+**Rule:** Gameplay modules never import from each other. All cross-cutting communication goes through `hyvexa-core` bridges.
+
+### CurrencyBridge — Currency access from any module
+
+Currency stores register themselves at startup; any module queries/deducts by name.
+
+```java
+// Registration (in store's initialize/registerBridge):
+CurrencyBridge.register("vexa", this);       // VexaStore
+CurrencyBridge.register("feathers", this);   // FeatherStore
+
+// Usage from any module (e.g. wardrobe purchasing):
+long balance = CurrencyBridge.getBalance("vexa", playerId);
+boolean ok = CurrencyBridge.deduct("vexa", playerId, 500);
+```
+
+Registered currencies: `"vexa"` (VexaStore), `"feathers"` (FeatherStore). To add a new currency, implement `CurrencyStore` and call `CurrencyBridge.register()` during setup.
+
+### GameModeBridge — Cross-module interactions
+
+Modules register named interaction handlers; other modules invoke them by key without importing the target module.
+
+```java
+// Registration (in RunOrFallPlugin.setup()):
+GameModeBridge.register(GameModeBridge.RUNORFALL_OPEN_LEADERBOARD,
+        (ref, firstRun, time, type, ctx) -> { /* open page */ });
+
+// Invocation (from parkour's LeaderboardInteraction):
+GameModeBridge.invoke(GameModeBridge.RUNORFALL_OPEN_LEADERBOARD,
+        ref, firstRun, time, type, interactionContext);
+```
+
+Keys are string constants defined in `GameModeBridge` (e.g. `PARKOUR_RESTART_CHECKPOINT`, `RUNORFALL_JOIN_LOBBY`). Add new keys there when adding cross-module interactions.
+
+### ModeGate + ModeMessages — World-based access control
+
+Commands and interactions that only apply in a specific world use `ModeGate` to reject players in the wrong world, with `ModeMessages` providing the denial text.
+
+```java
+// Guard a command to Ascend world only:
+if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_ASCEND, ModeMessages.MESSAGE_ENTER_ASCEND)) {
+    return;
+}
+// Check world in interaction logic:
+if (ModeGate.isRunOrFallWorld(world)) { /* RunOrFall-specific path */ }
+```
+
+`ModeGate` lives in `hyvexa-core` (`io.hyvexa.common.util`), so any module can use it without cross-module imports.
+
+### Anti-patterns
+
+```java
+// ❌ WRONG: Direct cross-module access — creates hard dependency
+ParkourAscendPlugin.getInstance().getRobotManager().despawnAll();
+
+// ❌ WRONG: Importing from a sibling module
+import io.hyvexa.ascend.data.AscendPlayerStore;
+
+// ✅ CORRECT: Use a core bridge or move shared logic to hyvexa-core
+CurrencyBridge.getBalance("vexa", playerId);
+GameModeBridge.invoke(GameModeBridge.PARKOUR_RESTART_CHECKPOINT, ...);
+```
+
+If two modules need to share behavior, extract it into `hyvexa-core` as a bridge, utility, or shared store — never have one gameplay module import another.
 
 ## Threading
 
