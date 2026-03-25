@@ -34,15 +34,23 @@ public class PurgeUpgradeManager {
     private static final String PURGE_HP_UPGRADE_MODIFIER = "purge_upgrade_hp";
     private static final short SLOT_WEAPON = 0;
 
-    public List<PurgeUpgradeOffer> selectRandomOffers(int count, int luck) {
+    public List<PurgeUpgradeOffer> selectRandomOffers(int count, int luck, PurgeUpgradeState state) {
         List<PurgeUpgradeType> pool = new ArrayList<>(List.of(PurgeUpgradeType.values()));
+        if (state != null) {
+            pool.removeIf(state::isAtCap);
+        }
         Collections.shuffle(pool);
         List<PurgeUpgradeType> picked = pool.subList(0, Math.min(count, pool.size()));
 
         List<PurgeUpgradeOffer> offers = new ArrayList<>(picked.size());
         for (PurgeUpgradeType type : picked) {
             PurgeUpgradeRarity rarity = rollRarity(luck);
-            offers.add(new PurgeUpgradeOffer(type, rarity));
+            int rawValue = type.getBaseValue() * rarity.getMultiplier();
+            int remaining = state != null ? state.getRemaining(type) : type.getMaxAccumulated();
+            int value = Math.min(rawValue, remaining);
+            if (value > 0) {
+                offers.add(new PurgeUpgradeOffer(type, rarity, value));
+            }
         }
         return offers;
     }

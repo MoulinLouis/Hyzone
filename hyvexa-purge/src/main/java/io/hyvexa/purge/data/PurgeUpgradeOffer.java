@@ -1,8 +1,8 @@
 package io.hyvexa.purge.data;
 
-public record PurgeUpgradeOffer(PurgeUpgradeType type, PurgeUpgradeRarity rarity) {
+public record PurgeUpgradeOffer(PurgeUpgradeType type, PurgeUpgradeRarity rarity, int value) {
 
-    public int value() {
-        return type.getBaseValue() * rarity.getMultiplier();
+    public PurgeUpgradeOffer(PurgeUpgradeType type, PurgeUpgradeRarity rarity) {
+        this(type, rarity, type.getBaseValue() * rarity.getMultiplier());
     }
 }

@@ -10,7 +10,6 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
@@ -29,6 +28,17 @@ public final class MineRewardHelper {
         if (roll < tripleChance) return 3;
         if (roll < tripleChance + doubleChance) return 2;
         return 1;
+    }
+
+    static double calculateCashbackAmount(long blockPrice, int blocksGained, double cashbackPercent) {
+        if (blockPrice <= 0 || blocksGained <= 0 || cashbackPercent <= 0.0) {
+            return 0.0;
+        }
+        return BigDecimal.valueOf(blockPrice)
+                .multiply(BigDecimal.valueOf(blocksGained))
+                .multiply(BigDecimal.valueOf(cashbackPercent))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.FLOOR)
+                .doubleValue();
     }
 
     /**
@@ -56,11 +66,7 @@ public final class MineRewardHelper {
             MineConfigStore configStore = mineManager.getConfigStore();
             long blockPrice = configStore.getBlockPrice(blockTypeName);
             double cashbackPercent = MineUpgradeType.CASHBACK.getEffect(cashbackLevel);
-            double cashbackAmount = BigDecimal.valueOf(blockPrice)
-                    .multiply(BigDecimal.valueOf(blocksGained))
-                    .multiply(BigDecimal.valueOf(cashbackPercent))
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.FLOOR)
-                    .doubleValue();
+            double cashbackAmount = calculateCashbackAmount(blockPrice, blocksGained, cashbackPercent);
             if (cashbackAmount > 0) {
                 mineProgress.addCrystals(cashbackAmount);
             }
