@@ -20,12 +20,17 @@ tasks.named('jar') { enabled = false }
 tasks.named('sourcesJar') { enabled = false }
 tasks.named('javadocJar') { enabled = false }
 
+// Resolve assets path: prefer hytaleHome install path, fall back to sibling assets/ directory.
+def localAssets = file("$hytaleHome/install/$patchline/package/game/latest/Assets.zip")
+def fallbackAssets = rootProject.file("../assets/Assets.zip")
+def assetsPath = localAssets.exists() ? localAssets.absolutePath : fallbackAssets.absolutePath
+
 if (project.extensions.findByName('idea') != null && idea.project != null) {
     idea.project.settings.runConfigurations {
         'HytaleServerLaunch'(org.jetbrains.gradle.ext.Application) {
             mainClass = 'com.hypixel.hytale.Main'
             moduleName = project.idea.module.name + '.main'
-            programParameters = "--allow-op --assets=$hytaleHome/install/$patchline/package/game/latest/Assets.zip"
+            programParameters = "--allow-op --assets=$assetsPath"
             if (load_user_mods.toBoolean()) {
                 programParameters += " --mods=$hytaleHome/UserData/Mods"
             }
@@ -37,9 +42,9 @@ if (project.extensions.findByName('idea') != null && idea.project != null) {
 tasks.register('HytaleServer', JavaExec) {
     group = 'application'
     description = 'Runs the Hytale server from the launcher module classpath.'
-    classpath = files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    classpath = hytaleServerJar
     mainClass = 'com.hypixel.hytale.Main'
-    args "--allow-op", "--assets=$hytaleHome/install/$patchline/package/game/latest/Assets.zip"
+    args "--allow-op", "--assets=$assetsPath"
     if (load_user_mods.toBoolean()) {
         args "--mods=$hytaleHome/UserData/Mods"
     }
