@@ -16,6 +16,9 @@
 - Conveyor chest now has an upgradeable capacity limit (base 1000, +200/level, max 6000 at level 25). Miners stop when the buffer is full.
 - Added Cashback upgrade: earn a percentage of each mined block's value as crystals (max 10% at level 20). Crystals now support decimal values.
 
+### Removed
+- **Ascend: Offline earnings** - Runners no longer accumulate volt or multiplier while the player is disconnected
+
 ### Added
 - **Parkour: Persist in-progress runs across disconnects and restarts** - Active parkour runs survive player disconnects and server restarts
 - **Core: Persist player settings across reconnections** - Player settings now survive reconnects

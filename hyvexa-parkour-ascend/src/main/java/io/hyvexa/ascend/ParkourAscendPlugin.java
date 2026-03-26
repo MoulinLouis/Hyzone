@@ -68,7 +68,6 @@ import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
-import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ui.AscendHelpPage;
 import io.hyvexa.ascend.ui.AscendLeaderboardPage;
@@ -124,7 +123,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private TranscendenceManager transcendenceManager;
     private ChallengeManager challengeManager;
     private AchievementManager achievementManager;
-    private PassiveEarningsManager passiveEarningsManager;
     private TutorialTriggerService tutorialTriggerService;
     private PlayerAnalytics analytics;
     private RunnerSpeedCalculator runnerSpeedCalculator;
@@ -348,12 +346,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
             robotManager.setEventHandler(eventHandler);
         }
 
-        // Initialize passive earnings manager
-        passiveEarningsManager = new PassiveEarningsManager(
-            playerStore, mapStore, ghostStore, runnerSpeedCalculator, summitManager, this::getPlayerRef
-        );
-        passiveEarningsManager.setEventHandler(eventHandler);
-
         try {
             if (HylogramsBridge.isAvailable()) {
                 hologramManager = new AscendHologramManager();
@@ -534,11 +526,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     }
 
                     playerStore.markDirty(playerId);
-
-                    // Check for passive earnings
-                    if (passiveEarningsManager != null) {
-                        passiveEarningsManager.checkPassiveEarningsOnJoin(playerId);
-                    }
 
                     // Restore active challenge from DB (crash recovery)
                     if (challengeManager != null) {
@@ -992,8 +979,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
      * but keeps player data cached for quick re-entry.
      */
     private void cleanupAscendState(UUID playerId, Player player, PlayerRef playerRef) {
-        runSafe(() -> { if (passiveEarningsManager != null) passiveEarningsManager.onPlayerLeaveAscend(playerId); },
-                "Leave cleanup: passiveEarnings");
         runSafe(() -> AscendCommand.onPlayerDisconnect(playerId), "Leave cleanup: AscendCommand");
         // HUD cleanup BEFORE removeTickPlayer — removePlayer needs playerRefCache to detach from MultiHudBridge
         runSafe(() -> { if (mineHudManager != null) mineHudManager.removePlayer(playerId, player, playerRef); },

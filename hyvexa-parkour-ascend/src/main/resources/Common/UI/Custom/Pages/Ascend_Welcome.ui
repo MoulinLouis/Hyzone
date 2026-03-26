@@ -97,7 +97,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you - even while you're offline.";
+        Text: "Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you.";
       }
 
       // Feature list with accent dots

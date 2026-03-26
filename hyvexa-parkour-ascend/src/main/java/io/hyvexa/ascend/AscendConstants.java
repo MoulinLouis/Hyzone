@@ -49,11 +49,6 @@ public final class AscendConstants {
     public static final int MULTIPLIER_SLOTS = 5;
     public static final int MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 5; // Runner level required to unlock next map
 
-    // Passive Earnings
-    public static final long PASSIVE_OFFLINE_RATE_PERCENT = 10L; // 10% of normal production
-    public static final long PASSIVE_MAX_TIME_MS = 24 * 60 * 60 * 1000L; // 24 hours
-    public static final long PASSIVE_MIN_TIME_MS = 60 * 1000L; // 1 minute
-
     // Speed upgrade multiplier: uniform +10% per level for all maps
     public static final double MAP_SPEED_MULTIPLIER = 0.10;
 

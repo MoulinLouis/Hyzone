@@ -35,7 +35,7 @@ _Idea: Overview of the Ascend island/world._
 **Title:** Welcome to Ascend
 
 **Text:**
-> Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you - even while you're offline.
+> Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you.
 
 ### Step 2 — Your Shortcuts
 
@@ -87,7 +87,7 @@ _Idea: "Buy Runner" button in map select, or a Kweebec NPC on a map._
 **Title:** Automate It
 
 **Text:**
-> Open **`/ascend`** and click **Buy Runner**. It replays the map automatically, earning multiplier while you're away.
+> Open **`/ascend`** and click **Buy Runner**. It replays the map automatically, earning multiplier for you.
 
 ---
 

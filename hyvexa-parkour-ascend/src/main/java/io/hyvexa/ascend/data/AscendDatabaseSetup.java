@@ -812,16 +812,6 @@ public final class AscendDatabaseSetup {
             }
         }
 
-        // Last active timestamp for passive earnings
-        if (!columnExists(conn, "ascend_players", "last_active_timestamp")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN last_active_timestamp BIGINT DEFAULT NULL");
-                LOGGER.atInfo().log("Added last_active_timestamp column");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add last_active_timestamp: " + e.getMessage());
-            }
-        }
-
         // Summit accumulated volt (volt earned since last Summit/Elevation)
         if (!columnExists(conn, "ascend_players", "summit_accumulated_coins")
                 && !columnExists(conn, "ascend_players", "summit_accumulated_coins_mantissa")
@@ -832,16 +822,6 @@ public final class AscendDatabaseSetup {
                 LOGGER.atInfo().log("Added summit_accumulated_coins column to ascend_players");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add summit_accumulated_coins column: " + e.getMessage());
-            }
-        }
-
-        // Has unclaimed passive flag
-        if (!columnExists(conn, "ascend_players", "has_unclaimed_passive")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN has_unclaimed_passive BOOLEAN NOT NULL DEFAULT FALSE");
-                LOGGER.atInfo().log("Added has_unclaimed_passive column");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add has_unclaimed_passive: " + e.getMessage());
             }
         }
 

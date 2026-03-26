@@ -713,8 +713,6 @@ Economy, progression, and system constants for Ascend mode. Key values:
 | `ELEVATION_COST_CURVE` | 0.72 | Elevation cost exponent (early game) |
 | `ELEVATION_BASE_COST` | 30,000 | Starting elevation cost |
 | `ASCENSION_VOLT_THRESHOLD` | 10^33 | Volt needed to Ascend |
-| `PASSIVE_OFFLINE_RATE_PERCENT` | 10% | Offline earning rate |
-| `PASSIVE_MAX_TIME_MS` | 24h | Max offline earning window |
 
 Also defines `SkillTreeNode` enum (19 nodes with AP costs 1-1000) and `SummitCategory` enum (3 categories with scaling factors). See `docs/Ascend/ECONOMY_BALANCE.md` for full formulas.
 

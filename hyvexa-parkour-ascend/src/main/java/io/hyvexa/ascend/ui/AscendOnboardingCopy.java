@@ -39,11 +39,11 @@ public final class AscendOnboardingCopy {
             new String[]{"Nice Run!", "Automate It"},
             new String[]{
                 "You earned volt and your map multiplier went up! Manual runs give 5x the runner's multiplier gain.",
-                "Open /ascend and click Buy Runner. It replays the map automatically, earning multiplier while you're away."
+                "Open /ascend and click Buy Runner. It replays the map automatically, earning multiplier for you."
             },
             new String[][]{
                 {"Volt earned on every manual completion", "Multiplier gain = 5x the runner's gain", "Higher multiplier means bigger rewards"},
-                {"Runners replay maps automatically for you", "They earn multiplier even while you're offline", "Buy runners from the map select menu"}
+                {"Runners replay maps automatically for you", "They earn multiplier while you play", "Buy runners from the map select menu"}
             },
             new String[][]{
                 {"#10b981", "#3b82f6", "#a855f7"},
@@ -179,7 +179,7 @@ public final class AscendOnboardingCopy {
     };
 
     private static final String[] WELCOME_DESCRIPTIONS = {
-        "Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you - even while you're offline.",
+        "Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you.",
         "You have 5 items in your inventory that open menus instantly - no need to type commands. Here's what each one does:",
         "Open the map menu and pick a map. Complete it to earn your first volt and unlock new features along the way!"
     };

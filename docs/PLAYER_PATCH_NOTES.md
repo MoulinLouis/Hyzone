@@ -135,7 +135,6 @@ What's new in Hyvexa? All player-facing changes, newest first.
 - **Star Evolution** - Max out a runner at Lv.20 to evolve it (up to 5 stars). Each star doubles your multiplier gain per run and changes the runner's appearance.
 - **Ascension Challenges** - Timed challenge runs where your progress is snapped, reset, and malus effects apply. Beat an ascension during a challenge for bonus Summit XP.
 - **30 Achievements** - 6 categories (Milestones, Runners, Prestige, Skills, Challenges, Secret) with hidden achievements and a Completionist meta-achievement.
-- **Passive Earnings** - Runners generate Vexa at 25% rate while you're offline or in another mode. Accumulates up to 24 hours with a detailed welcome-back breakdown.
 - **Auto-Elevation** - Unlock the Auto-Elevation skill node to set multiplier targets and let elevation happen automatically.
 - **Leaderboards** - Global rankings for Vexa, Ascensions, and Manual Runs with search and pagination. Plus per-map leaderboards for best times.
 - **My Profile** - Access your Stats, Achievements, and Settings from one hub page.

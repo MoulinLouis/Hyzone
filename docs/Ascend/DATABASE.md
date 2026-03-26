@@ -31,8 +31,6 @@ CREATE TABLE IF NOT EXISTS ascend_players (
   -- Migration columns (added via ALTER TABLE):
   ascension_started_at BIGINT DEFAULT NULL,
   fastest_ascension_ms BIGINT DEFAULT NULL,
-  last_active_timestamp BIGINT DEFAULT NULL,
-  has_unclaimed_passive BOOLEAN NOT NULL DEFAULT FALSE,
   auto_upgrade_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   auto_evolution_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   auto_elevation_enabled BOOLEAN NOT NULL DEFAULT FALSE,

@@ -121,7 +121,6 @@ graph LR
         A_TRA[TranscendenceManager]
         A_CHL[ChallengeManager]
         A_ACH[AchievementManager]
-        A_PAS[PassiveEarningsManager]
         A_TUT[TutorialTriggerService]
         A_MINE[MineManager<br>MineHudManager<br>MineRobotManager]
     end

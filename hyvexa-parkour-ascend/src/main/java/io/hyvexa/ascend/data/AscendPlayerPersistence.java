@@ -273,7 +273,7 @@ class AscendPlayerPersistence {
         String playerSql = """
             INSERT INTO ascend_players (uuid, player_name, volt_mantissa, volt_exp10, elevation_multiplier, ascension_count,
                 skill_tree_points, total_volt_earned_mantissa, total_volt_earned_exp10, total_manual_runs, active_title,
-                ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
+                ascension_started_at, fastest_ascension_ms,
                 summit_accumulated_volt_mantissa, summit_accumulated_volt_exp10,
                 elevation_accumulated_volt_mantissa, elevation_accumulated_volt_exp10,
                 auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
@@ -281,7 +281,7 @@ class AscendPlayerPersistence {
                 auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
                 auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
                 transcendence_count, auto_ascend_enabled, hud_hidden, players_hidden)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 volt_mantissa = VALUES(volt_mantissa), volt_exp10 = VALUES(volt_exp10),
@@ -292,8 +292,6 @@ class AscendPlayerPersistence {
                 total_manual_runs = VALUES(total_manual_runs),
                 active_title = VALUES(active_title), ascension_started_at = VALUES(ascension_started_at),
                 fastest_ascension_ms = VALUES(fastest_ascension_ms),
-                last_active_timestamp = VALUES(last_active_timestamp),
-                has_unclaimed_passive = VALUES(has_unclaimed_passive),
                 summit_accumulated_volt_mantissa = VALUES(summit_accumulated_volt_mantissa),
                 summit_accumulated_volt_exp10 = VALUES(summit_accumulated_volt_exp10),
                 elevation_accumulated_volt_mantissa = VALUES(elevation_accumulated_volt_mantissa),
@@ -442,33 +440,27 @@ class AscendPlayerPersistence {
                     } else {
                         playerStmt.setNull(13, java.sql.Types.BIGINT);
                     }
-                    if (progress.session().getLastActiveTimestamp() != null) {
-                        playerStmt.setLong(14, progress.session().getLastActiveTimestamp());
-                    } else {
-                        playerStmt.setNull(14, java.sql.Types.BIGINT);
-                    }
-                    playerStmt.setBoolean(15, progress.session().hasUnclaimedPassive());
-                    playerStmt.setDouble(16, progress.economy().getSummitAccumulatedVolt().getMantissa());
-                    playerStmt.setInt(17, progress.economy().getSummitAccumulatedVolt().getExponent());
-                    playerStmt.setDouble(18, progress.economy().getElevationAccumulatedVolt().getMantissa());
-                    playerStmt.setInt(19, progress.economy().getElevationAccumulatedVolt().getExponent());
-                    playerStmt.setBoolean(20, progress.automation().isAutoUpgradeEnabled());
-                    playerStmt.setBoolean(21, progress.automation().isAutoEvolutionEnabled());
-                    playerStmt.setInt(22, progress.gameplay().getSeenTutorials());
-                    playerStmt.setBoolean(23, progress.automation().isHideOtherRunners());
-                    playerStmt.setBoolean(24, progress.automation().isBreakAscensionEnabled());
-                    playerStmt.setBoolean(25, progress.automation().isAutoElevationEnabled());
-                    playerStmt.setInt(26, progress.automation().getAutoElevationTimerSeconds());
-                    playerStmt.setString(27, serializeTargets(progress.automation().getAutoElevationTargets()));
-                    playerStmt.setInt(28, progress.automation().getAutoElevationTargetIndex());
-                    playerStmt.setBoolean(29, progress.automation().isAutoSummitEnabled());
-                    playerStmt.setInt(30, progress.automation().getAutoSummitTimerSeconds());
-                    playerStmt.setString(31, serializeAutoSummitConfig(progress.automation().getAutoSummitConfig()));
-                    playerStmt.setInt(32, progress.automation().getAutoSummitRotationIndex());
-                    playerStmt.setInt(33, progress.gameplay().getTranscendenceCount());
-                    playerStmt.setBoolean(34, progress.automation().isAutoAscendEnabled());
-                    playerStmt.setBoolean(35, progress.session().isHudHidden());
-                    playerStmt.setBoolean(36, progress.session().isPlayersHidden());
+                    playerStmt.setDouble(14, progress.economy().getSummitAccumulatedVolt().getMantissa());
+                    playerStmt.setInt(15, progress.economy().getSummitAccumulatedVolt().getExponent());
+                    playerStmt.setDouble(16, progress.economy().getElevationAccumulatedVolt().getMantissa());
+                    playerStmt.setInt(17, progress.economy().getElevationAccumulatedVolt().getExponent());
+                    playerStmt.setBoolean(18, progress.automation().isAutoUpgradeEnabled());
+                    playerStmt.setBoolean(19, progress.automation().isAutoEvolutionEnabled());
+                    playerStmt.setInt(20, progress.gameplay().getSeenTutorials());
+                    playerStmt.setBoolean(21, progress.automation().isHideOtherRunners());
+                    playerStmt.setBoolean(22, progress.automation().isBreakAscensionEnabled());
+                    playerStmt.setBoolean(23, progress.automation().isAutoElevationEnabled());
+                    playerStmt.setInt(24, progress.automation().getAutoElevationTimerSeconds());
+                    playerStmt.setString(25, serializeTargets(progress.automation().getAutoElevationTargets()));
+                    playerStmt.setInt(26, progress.automation().getAutoElevationTargetIndex());
+                    playerStmt.setBoolean(27, progress.automation().isAutoSummitEnabled());
+                    playerStmt.setInt(28, progress.automation().getAutoSummitTimerSeconds());
+                    playerStmt.setString(29, serializeAutoSummitConfig(progress.automation().getAutoSummitConfig()));
+                    playerStmt.setInt(30, progress.automation().getAutoSummitRotationIndex());
+                    playerStmt.setInt(31, progress.gameplay().getTranscendenceCount());
+                    playerStmt.setBoolean(32, progress.automation().isAutoAscendEnabled());
+                    playerStmt.setBoolean(33, progress.session().isHudHidden());
+                    playerStmt.setBoolean(34, progress.session().isPlayersHidden());
                     playerStmt.addBatch();
 
                     // Save map progress
@@ -645,7 +637,6 @@ class AscendPlayerPersistence {
             SELECT player_name, volt_mantissa, volt_exp10, elevation_multiplier, ascension_count, skill_tree_points,
                    total_volt_earned_mantissa, total_volt_earned_exp10, total_manual_runs, active_title,
                    ascension_started_at, fastest_ascension_ms,
-                   last_active_timestamp, has_unclaimed_passive,
                    summit_accumulated_volt_mantissa, summit_accumulated_volt_exp10,
                    elevation_accumulated_volt_mantissa, elevation_accumulated_volt_exp10,
                    auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
@@ -690,13 +681,6 @@ class AscendPlayerPersistence {
                         if (fastestAscensionMs != null) {
                             progress.gameplay().setFastestAscensionMs(fastestAscensionMs);
                         }
-
-                        Long timestamp = safeGetLong(rs, "last_active_timestamp");
-                        if (timestamp != null) {
-                            progress.session().setLastActiveTimestamp(timestamp);
-                        }
-
-                        progress.session().setHasUnclaimedPassive(safeGetBoolean(rs, "has_unclaimed_passive", false));
 
                         BigNumber summitAccumulated = safeGetBigNumber(rs, "summit_accumulated_volt_mantissa", "summit_accumulated_volt_exp10");
                         if (!summitAccumulated.isZero()) {

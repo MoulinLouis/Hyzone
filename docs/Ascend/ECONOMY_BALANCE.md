@@ -229,7 +229,7 @@ At low levels this behaves almost identically to `1.15^level`. At high levels th
 
 Elevation uses **accumulated volt** (total volt earned since last reset) instead of the player's current volt balance. This means spending volt on runner upgrades does NOT reduce your elevation potential — only earning matters.
 
-**Increment:** Every time volt is earned (manual runs, runner completions, passive earnings, admin adds), the accumulated counter increases.
+**Increment:** Every time volt is earned (manual runs, runner completions, admin adds), the accumulated counter increases.
 
 **Reset to 0 on:**
 - Elevation (after purchasing levels)
@@ -300,29 +300,6 @@ Runners have no volt cost after map unlock. They can be purchased for free once:
 | Gold | 5 | 68 seconds | 22.7 seconds |
 
 **Actual run time:** Uses player's personal best (ghost recording) as baseline, modified by speed upgrades.
-
----
-
-## Passive Earnings
-
-### Offline Production
-
-When a player disconnects or switches worlds, their runners continue to earn volt at a reduced rate.
-
-**Base offline rate:** 10% of normal production
-**Maximum accumulation time:** 24 hours
-**Minimum offline time:** 1 minute
-
-**How it works:**
-- Passive earnings are calculated based on runner production rates at the time of disconnect
-- Volt and map multiplier gains accumulate at the reduced rate
-- Players receive a summary popup on reconnect showing total passive earnings
-- There is no Ascendancy Tree node that boosts offline rate. Base rate is 10%.
-
-**Design rationale:**
-- Rewards consistent play without punishing casual players
-- 10% base rate is generous enough to feel worthwhile but not so high that it competes with active play
-- 24-hour cap prevents extreme accumulation from long absences
 
 ---
 

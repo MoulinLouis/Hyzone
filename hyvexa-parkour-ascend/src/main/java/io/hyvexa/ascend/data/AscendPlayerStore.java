@@ -1055,32 +1055,6 @@ public class AscendPlayerStore {
         return persistence.getMapLeaderboard(mapId);
     }
 
-    // ========================================
-    // Passive Earnings
-    // ========================================
-
-    public Long getLastActiveTimestamp(UUID playerId) {
-        AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.session().getLastActiveTimestamp() : null;
-    }
-
-    public void setLastActiveTimestamp(UUID playerId, Long timestamp) {
-        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.session().setLastActiveTimestamp(timestamp);
-        markDirty(playerId);
-    }
-
-    public boolean hasUnclaimedPassive(UUID playerId) {
-        AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.session().hasUnclaimedPassive();
-    }
-
-    public void setHasUnclaimedPassive(UUID playerId, boolean hasUnclaimed) {
-        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.session().setHasUnclaimedPassive(hasUnclaimed);
-        markDirty(playerId);
-    }
-
     public boolean isAutoUpgradeEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.automation().isAutoUpgradeEnabled();
