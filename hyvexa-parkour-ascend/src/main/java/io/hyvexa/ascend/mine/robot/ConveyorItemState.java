@@ -6,6 +6,11 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 
 public class ConveyorItemState {
+    /** Y offset to elevate conveyor items above rail blocks and prevent collision glitches. */
+    private static final double Y_OFFSET = 0.35;
+    /** Complete slightly before reaching the final waypoint to avoid collision with the chest block. */
+    private static final double ARRIVAL_THRESHOLD = 0.92;
+
     private final UUID ownerId;
     private final String mineId;
     private final String blockType;
@@ -49,7 +54,7 @@ public class ConveyorItemState {
     }
 
     public boolean isComplete(long now) {
-        return getProgress(now) >= 1.0;
+        return getProgress(now) >= ARRIVAL_THRESHOLD;
     }
 
     /** Get interpolated position along the waypoint path. */
@@ -72,7 +77,7 @@ public class ConveyorItemState {
     }
 
     public double getX(long now) { return getPosition(now)[0]; }
-    public double getY(long now) { return getPosition(now)[1]; }
+    public double getY(long now) { return getPosition(now)[1] + Y_OFFSET; }
     public double getZ(long now) { return getPosition(now)[2]; }
 
     private static double[] lerp(double[] a, double[] b, double t) {

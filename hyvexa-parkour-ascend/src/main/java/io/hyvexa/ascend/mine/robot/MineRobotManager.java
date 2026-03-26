@@ -61,7 +61,7 @@ public class MineRobotManager {
      * - miners: ConcurrentHashMap (thread-safe by construction).
      * - orphanCleanup: owns orphan UUID + pending-removal concurrency state.
      * - npcPlugin: volatile, set once in start(), thereafter read-only.
-     * - tickTask: only accessed in start()/stop() (single-threaded lifecycle).
+     * - tickTask / conveyorTickTask: only accessed in start()/stop() (single-threaded lifecycle).
      *
      * Entity operations (spawn/despawn) must run on the World thread via world.execute().
      */
@@ -69,6 +69,7 @@ public class MineRobotManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String MINER_UUIDS_FILE = "miner_uuids.txt";
     private static final long TICK_INTERVAL_MS = 50L;
+    private static final long CONVEYOR_TICK_MS = 20L;
     private static final long ANIM_REPLAY_MS = 500L;
     private static final long STOPPED_RECHECK_MS = 2000L;
 
@@ -85,6 +86,7 @@ public class MineRobotManager {
     private final Set<String> startupCleanupWorlds = ConcurrentHashMap.newKeySet();
 
     private ScheduledFuture<?> tickTask;
+    private ScheduledFuture<?> conveyorTickTask;
     private volatile NPCPlugin npcPlugin;
     private volatile Query<EntityStore> orphanSweepQuery;
 
@@ -124,12 +126,23 @@ public class MineRobotManager {
                 TICK_INTERVAL_MS,
                 TimeUnit.MILLISECONDS
         );
+
+        conveyorTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
+                () -> tickConveyorItems(System.currentTimeMillis()),
+                CONVEYOR_TICK_MS,
+                CONVEYOR_TICK_MS,
+                TimeUnit.MILLISECONDS
+        );
     }
 
     public void stop() {
         if (tickTask != null) {
             tickTask.cancel(false);
             tickTask = null;
+        }
+        if (conveyorTickTask != null) {
+            conveyorTickTask.cancel(false);
+            conveyorTickTask = null;
         }
 
         orphanCleanup.saveUuidsForCleanup(getActiveEntityUuids());
@@ -546,7 +559,6 @@ public class MineRobotManager {
             }
 
             orphanCleanup.processPendingRemovals();
-            tickConveyorItems(now);
         } catch (Exception e) {
             LOGGER.atWarning().log("Miner tick error: " + e.getMessage());
         }
@@ -711,6 +723,11 @@ public class MineRobotManager {
                 // Scale down to half size
                 store.addComponent(itemRef, EntityScaleComponent.getComponentType(),
                         new EntityScaleComponent(0.5f));
+
+                // Freeze entity to prevent physics/collision with world blocks (e.g. rails)
+                try {
+                    store.addComponent(itemRef, Frozen.getComponentType(), Frozen.get());
+                } catch (Exception ignored) {}
             } catch (Exception e) {
                 LOGGER.atWarning().log("Failed to spawn conveyor item: " + e.getMessage());
             }
