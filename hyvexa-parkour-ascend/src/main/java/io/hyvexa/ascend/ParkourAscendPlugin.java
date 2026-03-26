@@ -60,6 +60,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.ascend.mine.system.BlockVisualHelper;
 import io.hyvexa.ascend.mine.system.MineBreakSystem;
 import io.hyvexa.ascend.mine.system.MineDamageSystem;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
@@ -679,6 +680,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: minePlayerStore");
             runSafe(() -> { if (mineManager != null) mineManager.getBlockDamageTracker().evict(playerId); },
                     "Disconnect cleanup: blockDamageTracker");
+            runSafe(() -> { World w = mineManager != null ? mineManager.getWorld() : null;
+                            if (w != null) BlockVisualHelper.evictPlayer(playerId, w); },
+                    "Disconnect cleanup: blockVisualHelper");
             runSafe(() -> { if (mineBreakSystem != null) mineBreakSystem.evict(playerId); },
                     "Disconnect cleanup: mineBreakSystem");
             runSafe(() -> { if (mineDamageSystem != null) mineDamageSystem.evict(playerId); },
@@ -717,7 +721,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         if (mineManager != null) {
             mineTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
-                () -> mineManager.tick(),
+                () -> {
+                    mineManager.tick();
+                    World w = mineManager.getWorld();
+                    if (w != null) BlockVisualHelper.cleanupIdleNpcs(w);
+                },
                 1000, 1000, TimeUnit.MILLISECONDS
             );
         }

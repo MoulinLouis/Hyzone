@@ -290,6 +290,9 @@ public class MineManager {
 
         brokenBlocks.remove(zone.getId());
 
+        // Despawn all damage text NPCs before regen
+        BlockVisualHelper.despawnAllNpcs(world);
+
         // Clear per-player crack visuals (block damage tracker state)
         Map<UUID, List<int[]>> staleEntries = blockDamageTracker.clearAllAndCollect();
         if (staleEntries != null) {
