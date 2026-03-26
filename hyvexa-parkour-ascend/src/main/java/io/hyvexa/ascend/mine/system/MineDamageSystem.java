@@ -101,13 +101,16 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
                 mineHudManager.showBlockHealth(playerId, blockTypeName, hitResult.remainingHp(), hitResult.maxHp());
             }
 
-            // Show crack overlay on the block (per-player)
+            // Show crack overlay + damage text on the block (per-player)
             if (store.getExternalData() != null) {
                 World world = store.getExternalData().getWorld();
                 float remaining = hitResult.healthFraction();
                 float delta = -(float) totalDamage / blockHp;
                 BlockVisualHelper.sendBlockCracks(world, playerId, bx, by, bz, remaining, delta);
+                BlockVisualHelper.showDamageText(world, playerRef, bx, by, bz,
+                    totalDamage, hitResult.remainingHp(), hitResult.maxHp());
             }
+
             return;
         }
 
@@ -124,6 +127,8 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (worldChunk == null) worldChunk = world.loadChunkIfInMemory(chunkIndex);
         if (worldChunk == null) return;
         worldChunk.setBlock(bx, by, bz, 0);
+
+        BlockVisualHelper.showDamageText(world, playerRef, bx, by, bz, totalDamage, 0, blockHp);
 
         // Hide block health HUD
         if (mineHudManager != null) {
@@ -151,7 +156,7 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         // AoE upgrades (Jackhammer, Stomp, Blast)
         if (world != null) {
             MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager,
-                mineHudManager, mineAchievementTracker, minePlayerStore, damageTracker);
+                mineHudManager, mineAchievementTracker, minePlayerStore, damageTracker, playerRef);
         }
     }
 

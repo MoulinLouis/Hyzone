@@ -13,6 +13,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 
 
 import java.util.ArrayList;
@@ -36,7 +37,7 @@ public final class MineAoEBreaker {
                                    World world, int centerX, int centerY, int centerZ,
                                    MineManager mineManager, MineHudManager mineHudManager,
                                    MineAchievementTracker achievementTracker, MinePlayerStore minePlayerStore,
-                                   BlockDamageTracker damageTracker) {
+                                   BlockDamageTracker damageTracker, PlayerRef playerRef) {
         int fortuneLevel = progress.getUpgradeLevel(MineUpgradeType.FORTUNE);
 
         // Collect all AoE positions (deduplicated)
@@ -76,13 +77,14 @@ public final class MineAoEBreaker {
         if (allPositions.isEmpty()) return;
 
         breakBlocksAt(allPositions, zone, progress, playerId, world, mineManager, fortuneLevel,
-            mineHudManager, achievementTracker, minePlayerStore, damageTracker);
+            mineHudManager, achievementTracker, minePlayerStore, damageTracker, playerRef);
     }
 
     private static int breakBlocksAt(List<Vector3i> positions, MineZone zone, MinePlayerProgress progress,
                                       UUID playerId, World world, MineManager mineManager, int fortuneLevel,
                                       MineHudManager mineHudManager, MineAchievementTracker achievementTracker,
-                                      MinePlayerStore minePlayerStore, BlockDamageTracker damageTracker) {
+                                      MinePlayerStore minePlayerStore, BlockDamageTracker damageTracker,
+                                      PlayerRef playerRef) {
         int totalBroken = 0;
         MineConfigStore configStore = mineManager.getConfigStore();
         int cashbackLevel = progress.getUpgradeLevel(MineUpgradeType.CASHBACK);
@@ -111,6 +113,8 @@ public final class MineAoEBreaker {
                     hitResult.healthFraction(), -(float) (aoeDamage / blockHp));
 
                 if (!hitResult.shouldBreak()) {
+                    BlockVisualHelper.showDamageText(world, playerRef, x, y, z,
+                        aoeDamage, hitResult.remainingHp(), hitResult.maxHp());
                     continue; // block survives — cracks shown, no reward
                 }
                 // Fall through to break logic
@@ -128,6 +132,8 @@ public final class MineAoEBreaker {
                 continue;
             }
             worldChunk.setBlock(x, y, z, 0);
+
+            BlockVisualHelper.showDamageText(world, playerRef, x, y, z, aoeDamage, 0, blockHp);
 
             // Fortune roll for each AoE block
             int blocksGained = MineRewardHelper.rollFortune(fortuneLevel);

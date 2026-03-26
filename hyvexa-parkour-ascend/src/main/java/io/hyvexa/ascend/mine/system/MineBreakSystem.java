@@ -134,7 +134,7 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         if (world != null) {
             MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager,
                 mineHudManager, mineAchievementTracker, minePlayerStore,
-                mineManager.getBlockDamageTracker());
+                mineManager.getBlockDamageTracker(), null);
         }
     }
 
