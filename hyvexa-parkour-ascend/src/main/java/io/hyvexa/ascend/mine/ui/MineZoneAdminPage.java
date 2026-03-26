@@ -54,6 +54,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private String selectedLayerId = "";
     private String layerMinY = "";
     private String layerMaxY = "";
+    private String layerDisplayName = "";
     private String activeTab = TAB_ZONES;
 
     public MineZoneAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore,
@@ -119,6 +120,9 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         if (data.layerMaxY != null) {
             layerMaxY = data.layerMaxY.trim();
         }
+        if (data.layerDisplayName != null) {
+            layerDisplayName = data.layerDisplayName.trim();
+        }
         if (data.button == null) {
             return;
         }
@@ -174,12 +178,18 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             handleAddLayer(ref, store);
             return;
         }
+        if (data.button.equals(ZoneData.BUTTON_RENAME_LAYER)) {
+            handleRenameLayer(ref, store);
+            return;
+        }
         if (data.button.startsWith(ZoneData.BUTTON_DELETE_LAYER_PREFIX)) {
             handleDeleteLayer(ref, store, data.button.substring(ZoneData.BUTTON_DELETE_LAYER_PREFIX.length()));
             return;
         }
         if (data.button.startsWith(ZoneData.BUTTON_SELECT_LAYER_PREFIX)) {
             selectedLayerId = data.button.substring(ZoneData.BUTTON_SELECT_LAYER_PREFIX.length());
+            MineZoneLayer selectedLayer = findLayer(selectedLayerId);
+            layerDisplayName = selectedLayer != null ? selectedLayer.getDisplayName() : "";
             activeTab = TAB_BLOCKS;
             sendRefresh(ref, store);
             return;
@@ -467,6 +477,24 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         sendRefresh(ref, store);
     }
 
+    private void handleRenameLayer(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        if (selectedLayerId.isEmpty()) {
+            player.sendMessage(Message.raw("Select a layer first."));
+            return;
+        }
+        MineZoneLayer layer = findLayer(selectedLayerId);
+        if (layer == null) {
+            player.sendMessage(Message.raw("Layer not found."));
+            return;
+        }
+        layer.setDisplayName(layerDisplayName);
+        mineConfigStore.saveLayer(layer);
+        player.sendMessage(Message.raw("Layer renamed to: " + (layerDisplayName.isEmpty() ? "(cleared)" : layerDisplayName)));
+        sendRefresh(ref, store);
+    }
+
     private boolean rangesOverlap(int minA, int maxA, int minB, int maxB) {
         return Math.max(minA, minB) <= Math.min(maxA, maxB);
     }
@@ -595,8 +623,12 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_ADD_BLOCK), false);
 
         // Layers tab buttons
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#LayerDisplayNameField",
+            EventData.of(ZoneData.KEY_LAYER_DISPLAY_NAME, "#LayerDisplayNameField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddLayerButton",
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_ADD_LAYER), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RenameLayerButton",
+            EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_RENAME_LAYER), false);
 
         // Back button
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
@@ -616,6 +648,10 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         commandBuilder.set("#CooldownField.Value", cooldown);
         commandBuilder.set("#LayerMinYField.Value", layerMinY);
         commandBuilder.set("#LayerMaxYField.Value", layerMaxY);
+        commandBuilder.set("#LayerDisplayNameField.Value", layerDisplayName);
+
+        boolean hasSelectedLayer = !selectedLayerId.isEmpty() && findLayer(selectedLayerId) != null;
+        commandBuilder.set("#LayerRenameRow.Visible", hasSelectedLayer);
 
         // Selected block display
         String selectedBlockDisplay = blockId.isEmpty() ? "(none)" : MineBlockRegistry.getDisplayName(blockId);
@@ -779,7 +815,9 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
                 commandBuilder.set(sel + " #AccentBar.Visible", true);
             }
 
-            String nameLabel = "Y " + layer.getMinY() + " - " + layer.getMaxY();
+            String nameLabel = layer.getDisplayName().isEmpty()
+                ? "Y " + layer.getMinY() + " - " + layer.getMaxY()
+                : layer.getDisplayName() + "  (Y " + layer.getMinY() + "-" + layer.getMaxY() + ")";
             commandBuilder.set(sel + " #LayerName.Text", nameLabel);
             commandBuilder.set(sel + " #LayerDetails.Text",
                 layer.getBlockTable().size() + " block types");
@@ -820,6 +858,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         static final String KEY_COOLDOWN = "@Cooldown";
         static final String KEY_LAYER_MIN_Y = "@LayerMinY";
         static final String KEY_LAYER_MAX_Y = "@LayerMaxY";
+        static final String KEY_LAYER_DISPLAY_NAME = "@LayerDisplayName";
         static final String BUTTON_SELECT_PREFIX = "Select:";
         static final String BUTTON_POS1 = "Pos1";
         static final String BUTTON_POS2 = "Pos2";
@@ -833,6 +872,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         static final String BUTTON_REGEN = "Regen";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_ADD_LAYER = "AddLayer";
+        static final String BUTTON_RENAME_LAYER = "RenameLayer";
         static final String BUTTON_DELETE_LAYER_PREFIX = "DeleteLayer:";
         static final String BUTTON_SELECT_LAYER_PREFIX = "SelectLayer:";
         static final String BUTTON_TAB_ZONES = "TabZones";
@@ -847,6 +887,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             .addField(new KeyedCodec<>(KEY_COOLDOWN, Codec.STRING), (data, value) -> data.cooldown = value, data -> data.cooldown)
             .addField(new KeyedCodec<>(KEY_LAYER_MIN_Y, Codec.STRING), (data, value) -> data.layerMinY = value, data -> data.layerMinY)
             .addField(new KeyedCodec<>(KEY_LAYER_MAX_Y, Codec.STRING), (data, value) -> data.layerMaxY = value, data -> data.layerMaxY)
+            .addField(new KeyedCodec<>(KEY_LAYER_DISPLAY_NAME, Codec.STRING), (data, value) -> data.layerDisplayName = value, data -> data.layerDisplayName)
             .build();
 
         private String button;
@@ -856,5 +897,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         private String cooldown;
         private String layerMinY;
         private String layerMaxY;
+        private String layerDisplayName;
     }
 }

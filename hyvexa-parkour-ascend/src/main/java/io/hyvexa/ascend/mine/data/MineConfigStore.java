@@ -974,11 +974,13 @@ public class MineConfigStore {
 
     private void saveLayerToDatabase(MineZoneLayer layer) {
         String sql = """
-            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json, egg_drop_chance, display_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 min_y = VALUES(min_y), max_y = VALUES(max_y),
-                block_table_json = VALUES(block_table_json)
+                block_table_json = VALUES(block_table_json),
+                egg_drop_chance = VALUES(egg_drop_chance),
+                display_name = VALUES(display_name)
             """;
 
         DatabaseManager.execute(this.db, sql, stmt -> {
@@ -987,7 +989,9 @@ public class MineConfigStore {
             stmt.setString(i++, layer.getZoneId());
             stmt.setInt(i++, layer.getMinY());
             stmt.setInt(i++, layer.getMaxY());
-            stmt.setString(i, GSON.toJson(layer.getBlockTable()));
+            stmt.setString(i++, GSON.toJson(layer.getBlockTable()));
+            stmt.setDouble(i++, layer.getEggDropChance());
+            stmt.setString(i, layer.getDisplayName());
         });
     }
 

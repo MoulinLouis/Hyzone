@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -37,6 +38,7 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.data.MinerSlot;
 import io.hyvexa.common.util.OrphanedEntityCleanup;
 
@@ -229,6 +231,19 @@ public class MineRobotManager {
             }
 
             NPCHelper.setupNpcDefaults(store, entityRef, LOGGER);
+
+            try {
+                Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
+                if (nameplate != null) {
+                    String rarityName = state.getRarity().getDisplayName();
+                    MineZoneLayer layer = configStore.getLayerById(state.getOriginLayerId());
+                    String layerName = (layer != null && !layer.getDisplayName().isEmpty())
+                            ? layer.getDisplayName() : state.getOriginLayerId();
+                    nameplate.setText(rarityName + " Miner - " + layerName);
+                }
+            } catch (Exception e) {
+                LOGGER.atFine().log("Failed to set miner nameplate: " + e.getMessage());
+            }
 
             try {
                 NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());

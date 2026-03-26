@@ -647,6 +647,44 @@ $C.@PageOverlay {
           }
         }
 
+        // Layer rename row (visible when a layer is selected)
+        Group #LayerRenameRow {
+          Anchor: (Left: 0, Right: 0, Top: 6, Height: 30);
+          LayoutMode: Left;
+          Visible: false;
+
+          Label {
+            Anchor: (Width: 80, Height: 28);
+            Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+            Text: "Display Name";
+          }
+
+          $C.@TextField #LayerDisplayNameField {
+            Anchor: (Width: 160, Height: 28);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          TextButton #RenameLayerButton {
+            Anchor: (Left: 8, Width: 80, Height: 28);
+            Text: "Rename";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #8b5cf6,
+                LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #a78bfa,
+                LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #7c3aed,
+                LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
         // Layer info label
         Label #LayerInfoLabel {
           Anchor: (Top: 4);
