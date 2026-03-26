@@ -1,72 +1,101 @@
 $C = "../Common.ui";
 
 Group {
-  LayoutMode: Left;
-  Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 44);
-  Background: #1a2530(0.95);
+  Anchor: (Width: 114, Height: 130);
 
-  Group #RarityBar {
-    Anchor: (Width: 6, Top: 0, Bottom: 0);
+  Group #CardBorder {
+    Anchor: (Left: 0, Top: 0, Width: 108, Height: 130);
 
-    Group #AccentGray { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #aaaaaa; Visible: true; }
+    Group #AccentGray { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #aaaaaa; Visible: false; }
     Group #AccentGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
     Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
     Group #AccentPurple { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #a855f7; Visible: false; }
     Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
-  }
 
-  Group #ContentZone {
-    FlexWeight: 1;
-    Anchor: (Top: 0, Bottom: 0);
-    Padding: (Left: 10, Top: 6, Bottom: 6);
-    LayoutMode: Top;
+    Group #CardBody {
+      Anchor: (Left: 2, Right: 2, Top: 2, Bottom: 2);
+      Background: #1a2530;
+      LayoutMode: Top;
 
-    Group #TopRow {
-      Anchor: (Left: 0, Right: 0, Height: 16);
-      LayoutMode: Left;
+      Group #RarityBanner {
+        Anchor: (Left: 0, Right: 0, Height: 16);
+        Background: #ffffff(0.04);
 
-      Label #RarityLabel {
-        Style: (FontSize: 13, RenderBold: true, TextColor: #aaaaaa);
-        Text: "Common";
+        Group #BannerGray { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #aaaaaa(0.15); Visible: false; }
+        Group #BannerGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981(0.15); Visible: false; }
+        Group #BannerBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6(0.15); Visible: false; }
+        Group #BannerPurple { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #a855f7(0.15); Visible: false; }
+        Group #BannerOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b(0.15); Visible: false; }
+
+        Label #RarityLabel {
+          Anchor: (Left: 0, Right: 0, Top: 1, Bottom: 0);
+          Style: (FontSize: 10, RenderBold: true, TextColor: #aaaaaa, HorizontalAlignment: Center);
+          Text: "Common";
+        }
       }
 
-      Label #LayerLabel {
-        Anchor: (Left: 6);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
+      Group #PortraitZone {
+        Anchor: (Left: 0, Right: 0);
+        FlexWeight: 1;
+        LayoutMode: CenterMiddle;
+
+        Group #PortraitEmpty { Anchor: (Width: 48, Height: 48); Background: (TexturePath: "../Textures/miners/miner_empty.png"); Visible: false; }
+
+        Group #PortraitCommon1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_common_1.png"); Visible: false; }
+        Group #PortraitCommon2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_common_2.png"); Visible: false; }
+        Group #PortraitCommon3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_common_3.png"); Visible: false; }
+
+        Group #PortraitUncommon1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_uncommon_1.png"); Visible: false; }
+        Group #PortraitUncommon2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_uncommon_2.png"); Visible: false; }
+        Group #PortraitUncommon3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_uncommon_3.png"); Visible: false; }
+
+        Group #PortraitRare1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_rare_1.png"); Visible: false; }
+        Group #PortraitRare2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_rare_2.png"); Visible: false; }
+        Group #PortraitRare3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_rare_3.png"); Visible: false; }
+
+        Group #PortraitEpic1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_epic_1.png"); Visible: false; }
+        Group #PortraitEpic2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_epic_2.png"); Visible: false; }
+        Group #PortraitEpic3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_epic_3.png"); Visible: false; }
+
+        Group #PortraitLegendary1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_legendary_1.png"); Visible: false; }
+        Group #PortraitLegendary2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_legendary_2.png"); Visible: false; }
+        Group #PortraitLegendary3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_legendary_3.png"); Visible: false; }
+      }
+
+      Label #NameLabel {
+        Anchor: (Left: 0, Right: 0);
+        Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center);
+        Text: "";
+      }
+
+      Label #StatsLabel {
+        Anchor: (Left: 0, Right: 0);
+        Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center);
         Text: "";
       }
     }
 
-    Label #SpeedLabel {
-      Style: (FontSize: 11, TextColor: #9fb0ba);
-      Text: "Lv.0 | 6.0 b/m";
+    Group #AssignedOverlay {
+      Anchor: (Left: 2, Right: 2, Top: 2, Bottom: 2);
+      Background: #000000(0.6);
+      LayoutMode: CenterMiddle;
+      Visible: false;
+
+      Label #AssignedLabel {
+        Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center);
+        Text: "In Slot #1";
+      }
     }
   }
 
-  Group #SelectBtnWrap {
-    Anchor: (Width: 70, Top: 0, Bottom: 0);
-
-    Group #SelectBtnBg {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Background: #3b82f6(0.85);
-    }
-
-    Button #SelectButton {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Background: #00000000;
-      Style: ButtonStyle(
-        Default: (Background: #00000000),
-        Hovered: (Background: #ffffff(0.15)),
-        Pressed: (Background: #000000(0.15)),
-        Sounds: $C.@ButtonSounds,
-      );
-      LayoutMode: Top;
-
-      Label #SelectText {
-        Anchor: (Left: 0, Right: 0, Top: 8);
-        Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center);
-        Text: "Select";
-      }
-    }
+  TextButton #SelectButton {
+    Anchor: (Left: 0, Top: 0, Width: 108, Height: 130);
+    Text: "";
+    Style: TextButtonStyle(
+      Default: (Background: #000000(0)),
+      Hovered: (Background: #ffffff(0.08)),
+      Pressed: (Background: #ffffff(0.04)),
+      Sounds: $C.@ButtonSounds,
+    );
   }
 }
