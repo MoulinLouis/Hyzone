@@ -30,6 +30,7 @@ public final class ShopTabRegistry {
     }
 
     public static ShopTab getTab(String id) {
+        if (id == null) return null;
         return INDEX.get(id);
     }
 }
