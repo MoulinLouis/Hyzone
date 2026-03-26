@@ -71,6 +71,7 @@ public class MineRobotManager {
     private static final long TICK_INTERVAL_MS = 50L;
     private static final long CONVEYOR_TICK_MS = 20L;
     private static final long ANIM_REPLAY_MS = 500L;
+    private static final long MOVEMENT_STOP_MS = 150L;
     private static final long STOPPED_RECHECK_MS = 2000L;
 
     private final MineConfigStore configStore;
@@ -587,6 +588,11 @@ public class MineRobotManager {
                     state.setAnimating(false);
                 }
             }
+            // Keep suppressing movement animation while stopped
+            if (now - state.getLastMovStopTime() >= MOVEMENT_STOP_MS) {
+                suppressMovementAnimation(state);
+                state.setLastMovStopTime(now);
+            }
             if (now - state.getLastBreakTime() >= STOPPED_RECHECK_MS) {
                 state.setLastBreakTime(now);
             }
@@ -602,6 +608,12 @@ public class MineRobotManager {
             replayMineAnimation(state);
             state.setLastBreakTime(now);
             return;
+        }
+
+        // --- Suppress movement animation more frequently than action replay ---
+        if (now - state.getLastMovStopTime() >= MOVEMENT_STOP_MS) {
+            suppressMovementAnimation(state);
+            state.setLastMovStopTime(now);
         }
 
         // --- Replay mine animation to keep it looping ---
@@ -922,6 +934,22 @@ public class MineRobotManager {
             Store<EntityStore> store = world.getEntityStore().getStore();
             if (store != null) {
                 AnimationUtils.stopAnimation(ref, AnimationSlot.Action, store);
+                AnimationUtils.stopAnimation(ref, AnimationSlot.Movement, store);
+            }
+        });
+    }
+
+    private void suppressMovementAnimation(MinerRobotState state) {
+        Ref<EntityStore> ref = state.getEntityRef();
+        if (ref == null || !ref.isValid()) return;
+        String worldName = state.getWorldName();
+        World world = Universe.get().getWorld(worldName);
+        if (world == null) return;
+        world.execute(() -> {
+            if (!ref.isValid()) return;
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            if (store != null) {
+                AnimationUtils.stopAnimation(ref, AnimationSlot.Movement, store);
             }
         });
     }

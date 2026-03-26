@@ -20,6 +20,7 @@ public class MinerRobotState implements NPCEntityState {
     private String worldName;
     private long lastBreakTime;        // last time a block was broken
     private long lastAnimTime;         // last time mine anim was replayed
+    private long lastMovStopTime;     // last time movement animation was suppressed
     private boolean animating;         // whether mine animation is playing
     private String currentBlockType;   // block type currently placed (for correct loot)
     private boolean stopped;           // true when bag is full (pause mining)
@@ -56,6 +57,8 @@ public class MinerRobotState implements NPCEntityState {
     public void setLastBreakTime(long lastBreakTime) { this.lastBreakTime = lastBreakTime; }
     public long getLastAnimTime() { return lastAnimTime; }
     public void setLastAnimTime(long lastAnimTime) { this.lastAnimTime = lastAnimTime; }
+    public long getLastMovStopTime() { return lastMovStopTime; }
+    public void setLastMovStopTime(long lastMovStopTime) { this.lastMovStopTime = lastMovStopTime; }
     public boolean isAnimating() { return animating; }
     public void setAnimating(boolean animating) { this.animating = animating; }
     public String getCurrentBlockType() { return currentBlockType; }
