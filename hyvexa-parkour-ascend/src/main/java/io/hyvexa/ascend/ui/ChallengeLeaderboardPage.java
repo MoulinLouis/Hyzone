@@ -13,6 +13,7 @@ import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.ascension.ChallengeManager.ChallengeLeaderboardEntry;
+import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
@@ -37,15 +38,18 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
     private final AscendPlayerStore playerStore;
     private final ChallengeManager challengeManager;
     private final RobotManager robotManager;
+    private final AscendPlayerEventHandler eventHandler;
     private final ChallengeType[] challengeTypes;
     private int currentTabIndex = 0;
 
     public ChallengeLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
-                                    ChallengeManager challengeManager, RobotManager robotManager) {
+                                    ChallengeManager challengeManager, RobotManager robotManager,
+                                    AscendPlayerEventHandler eventHandler) {
         super(playerRef, 50);
         this.playerStore = playerStore;
         this.challengeManager = challengeManager;
         this.robotManager = robotManager;
+        this.eventHandler = eventHandler;
         this.challengeTypes = ChallengeType.values();
     }
 
@@ -114,7 +118,7 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (pRef != null && player != null) {
             player.getPageManager().openCustomPage(ref, store,
-                new AscendChallengePage(pRef, playerStore, challengeManager, robotManager));
+                new AscendChallengePage(pRef, playerStore, challengeManager, robotManager, eventHandler));
             return;
         }
         this.close();

@@ -51,6 +51,7 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - `ParkourAscendPlugin.setup()` is the composition root for Ascend: it creates stores/managers/services and passes dependencies down through constructors.
 - Ensures Ascend DB tables on startup (`AscendDatabaseSetup`).
 - Loads map store and player store into memory (`AscendMapStore`, `AscendPlayerStore`).
+- Creates `AscendPlayerEventHandler` for gameplay side-effects (ascension flow, tutorial triggers, transcendence notifications). The player store is pure data/cache; the handler orchestrates reactions.
 - Starts `AscendRunTracker` for manual completion detection.
 - Starts `RobotManager` for runner ghost replay.
 - Registers `/ascend` and `/as` commands.
