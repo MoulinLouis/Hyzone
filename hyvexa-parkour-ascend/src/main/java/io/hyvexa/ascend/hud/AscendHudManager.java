@@ -189,7 +189,6 @@ public class AscendHudManager {
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
         hud.resetCache();
         MultiHudBridge.showIfNeeded(hud);
-        hud.applyStaticText();
         hudAttached.put(playerRef.getUuid(), true);
         ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
     }
