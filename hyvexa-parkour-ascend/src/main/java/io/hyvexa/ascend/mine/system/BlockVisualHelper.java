@@ -6,6 +6,9 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.CombatTextUpdate;
 import com.hypixel.hytale.protocol.ComponentUpdate;
+import com.hypixel.hytale.protocol.EntityStatOp;
+import com.hypixel.hytale.protocol.EntityStatUpdate;
+import com.hypixel.hytale.protocol.EntityStatsUpdate;
 import com.hypixel.hytale.protocol.EntityUpdate;
 import com.hypixel.hytale.protocol.UIComponentsUpdate;
 import com.hypixel.hytale.protocol.packets.entities.EntityUpdates;
@@ -72,12 +75,15 @@ public final class BlockVisualHelper {
 
     private static final Field COMPONENT_IDS_FIELD;
     private static final Field REGEN_VALUES_FIELD;
+    private static final java.lang.reflect.Method STAT_VALUE_SET;
     static {
         try {
             COMPONENT_IDS_FIELD = UIComponentList.class.getDeclaredField("componentIds");
             COMPONENT_IDS_FIELD.setAccessible(true);
             REGEN_VALUES_FIELD = EntityStatValue.class.getDeclaredField("regeneratingValues");
             REGEN_VALUES_FIELD.setAccessible(true);
+            STAT_VALUE_SET = EntityStatValue.class.getDeclaredMethod("set", float.class);
+            STAT_VALUE_SET.setAccessible(true);
         } catch (Exception e) {
             throw new RuntimeException("Failed to access reflection fields", e);
         }
@@ -224,22 +230,22 @@ public final class BlockVisualHelper {
             try {
                 Store<EntityStore> wStore = world.getEntityStore().getStore();
                 if (blockSurvives) {
-                    // Ensure full UI (bar + text) is active and update health
                     setComponentIds(wStore, npc.ref, npc.fullIds);
                     updateNpcHealth(wStore, npc.ref, remainingHp, maxHp);
+                    // Send health bar update manually (bypassed addChange in updateNpcHealth)
+                    sendHealthToClient(playerRef, npc.networkId, wStore, npc.ref);
                 } else {
-                    // Switch to combat-text-only (hide health bar)
                     setComponentIds(wStore, npc.ref, npc.combatTextOnlyIds);
                 }
             } catch (Exception ignored) {}
-        });
 
-        // NPC already tracked by client: push componentIds + combat text directly
-        try {
-            int[] ids = blockSurvives ? npc.fullIds : npc.combatTextOnlyIds;
-            sendComponentIdsToClient(playerRef, npc.networkId, ids);
-            sendCombatText(playerRef, npc.networkId, damage);
-        } catch (Exception ignored) {}
+            // NPC already tracked by client: push componentIds + combat text
+            try {
+                int[] ids = blockSurvives ? npc.fullIds : npc.combatTextOnlyIds;
+                sendComponentIdsToClient(playerRef, npc.networkId, ids);
+                sendCombatText(playerRef, npc.networkId, damage);
+            } catch (Exception ignored) {}
+        });
 
         if (!blockSurvives) {
             scheduleDespawn(key, npc.ref, world);
@@ -248,6 +254,16 @@ public final class BlockVisualHelper {
 
     // --- Helpers ---
 
+    /**
+     * Set NPC health silently via reflection. Bypasses EntityStatMap.setStatValue() which
+     * calls addChange() and queues an EntityStatUpdate delta for the entity tracker.
+     * That delta causes the client to show a native floating damage number on top of
+     * our explicit CombatTextUpdate — resulting in duplicate text.
+     *
+     * By using EntityStatValue.set() directly, no delta is queued. The entity tracker
+     * syncs the current value naturally on initial entity visibility.
+     * For already-tracked NPCs, the caller must send an EntityStatsUpdate packet manually.
+     */
     private static void updateNpcHealth(Store<EntityStore> wStore, Ref<EntityStore> npcRef,
                                          double remainingHp, int maxHp) {
         try {
@@ -256,11 +272,11 @@ public final class BlockVisualHelper {
                 int healthIdx = DefaultEntityStatTypes.getHealth();
                 EntityStatValue healthStat = statMap.get(healthIdx);
                 if (healthStat != null) {
-                    // Disable native HP regen so the bar stays at the target value
                     disableRegen(healthStat);
                     float nativeMax = healthStat.getMax();
-                    float targetHp = nativeMax * (float) (remainingHp / maxHp);
-                    statMap.setStatValue(healthIdx, Math.max(0.1f, targetHp));
+                    float targetHp = Math.max(0.1f, nativeMax * (float) (remainingHp / maxHp));
+                    // Set value directly — no addChange, no entity tracker delta
+                    STAT_VALUE_SET.invoke(healthStat, targetHp);
                 }
             }
         } catch (Exception ignored) {}
@@ -269,6 +285,30 @@ public final class BlockVisualHelper {
     private static void disableRegen(EntityStatValue stat) {
         try {
             REGEN_VALUES_FIELD.set(stat, null);
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * Send a manual EntityStatsUpdate packet to push the current NPC health to the client.
+     * Only needed for already-tracked NPCs (reuse path) since we bypass addChange.
+     */
+    private static void sendHealthToClient(PlayerRef playerRef, int networkId,
+                                            Store<EntityStore> wStore, Ref<EntityStore> npcRef) {
+        try {
+            EntityStatMap statMap = wStore.getComponent(npcRef, EntityStatMap.getComponentType());
+            if (statMap == null) return;
+            int healthIdx = DefaultEntityStatTypes.getHealth();
+            EntityStatValue healthStat = statMap.get(healthIdx);
+            if (healthStat == null) return;
+
+            EntityStatUpdate esu = new EntityStatUpdate(
+                EntityStatOp.Set, false, healthStat.get(), null, null, null);
+            java.util.Map<Integer, EntityStatUpdate[]> updates = java.util.Map.of(
+                healthIdx, new EntityStatUpdate[]{esu});
+            EntityStatsUpdate statsUpdate = new EntityStatsUpdate(updates);
+
+            EntityUpdate eu = new EntityUpdate(networkId, null, new ComponentUpdate[]{statsUpdate});
+            playerRef.getPacketHandler().writeNoCache(new EntityUpdates(null, new EntityUpdate[]{eu}));
         } catch (Exception ignored) {}
     }
 

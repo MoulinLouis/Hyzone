@@ -130,12 +130,9 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         EggDropHelper.tryDropEgg(playerId, player, zone, by, mineProgress, minePlayerStore,
             mineHudManager, mineAchievementTracker);
 
-        // AoE upgrades (Jackhammer, Stomp, Blast)
-        if (world != null) {
-            MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager,
-                mineHudManager, mineAchievementTracker, minePlayerStore,
-                mineManager.getBlockDamageTracker(), null);
-        }
+        // AoE is intentionally NOT triggered here. Only MineDamageSystem (pickaxe hit)
+        // should roll AoE probabilities — otherwise BreakBlockEvents from AoE-broken
+        // blocks would cascade into further AoE procs.
     }
 
     public void evict(UUID playerId) {
