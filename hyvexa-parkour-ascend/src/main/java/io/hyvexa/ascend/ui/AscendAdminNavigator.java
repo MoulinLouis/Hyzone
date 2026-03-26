@@ -12,6 +12,7 @@ import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.mine.ui.MineAdminPage;
+import io.hyvexa.ascend.mine.ui.MinerDefAdminPage;
 import io.hyvexa.ascend.mine.ui.PickaxeAdminPage;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 
@@ -81,6 +82,11 @@ public class AscendAdminNavigator {
 
     public MineAdminPage createMineAdminPage(@Nonnull PlayerRef playerRef) {
         return mineConfigStore != null ? new MineAdminPage(playerRef, mineConfigStore, mineManager, this) : null;
+    }
+
+    public MinerDefAdminPage createMinerDefAdminPage(@Nonnull PlayerRef playerRef, String mineId) {
+        return mineConfigStore != null
+            ? new MinerDefAdminPage(playerRef, mineConfigStore, mineManager, this, mineId) : null;
     }
 
     public PickaxeAdminPage createPickaxeAdminPage(@Nonnull PlayerRef playerRef) {

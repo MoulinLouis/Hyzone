@@ -711,6 +711,25 @@ Notes:
 - Admin-configured or auto-seeded from zone layer data
 - Auto-created by `AscendDatabaseSetup.ensureTables()` on startup
 
+## mine_layer_miner_defs
+Stores admin-configurable miner display names and portraits per layer per rarity.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_layer_miner_defs (
+  layer_id VARCHAR(64) NOT NULL,
+  rarity VARCHAR(16) NOT NULL,
+  display_name VARCHAR(64) NOT NULL,
+  portrait_id VARCHAR(32) NOT NULL,
+  PRIMARY KEY (layer_id, rarity)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- One row per layer×rarity combination
+- `portrait_id` references a UI portrait element ID (e.g. `PortraitCommon1`)
+- When no row exists, `MinerVariant` falls back to hardcoded defaults (variant 0)
+- Managed via Mine Admin -> Miners admin page
+
 ## pickaxe_tier_recipes
 Stores block requirements for pickaxe tier upgrades.
 

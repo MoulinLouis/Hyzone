@@ -167,11 +167,11 @@ public class MinePage extends BaseAscendPage {
             applyBanner(cmd, sel + " #RarityBanner", assigned.getRarity());
 
             // Portrait
-            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", assigned);
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", configStore, assigned);
 
             // Info banner — show name + stats, hide slot label
             cmd.set(sel + " #MinerName.Visible", true);
-            cmd.set(sel + " #MinerName.Text", MinerVariant.getDisplayName(assigned));
+            cmd.set(sel + " #MinerName.Text", MinerVariant.getDisplayName(configStore, assigned));
             cmd.set(sel + " #MinerStats.Visible", true);
             cmd.set(sel + " #MinerStats.Text",
                 "Lv." + assigned.getSpeedLevel() + " \u2014 " +
@@ -236,10 +236,10 @@ public class MinePage extends BaseAscendPage {
             cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
 
             // Portrait
-            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", miner);
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", configStore, miner);
 
             // Name + stats
-            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(miner));
+            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(configStore, miner));
             cmd.set(sel + " #StatsLabel.Text",
                 "Lv." + miner.getSpeedLevel() + " \u2014 " +
                 String.format("%.1f", miner.getProductionRate()) + " b/m");
@@ -299,10 +299,10 @@ public class MinePage extends BaseAscendPage {
             cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
 
             // Portrait
-            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", miner);
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", configStore, miner);
 
             // Name + stats
-            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(miner));
+            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(configStore, miner));
             cmd.set(sel + " #StatsLabel.Text",
                 "Lv." + miner.getSpeedLevel() + " \u2014 " +
                 String.format("%.1f", miner.getProductionRate()) + " b/m");
@@ -531,7 +531,7 @@ public class MinePage extends BaseAscendPage {
             mineRobotManager.syncAssignedMiner(playerRef.getUuid(), slotIndex, store.getExternalData().getWorld());
         }
 
-        String minerName = MinerVariant.getDisplayName(miner);
+        String minerName = MinerVariant.getDisplayName(configStore, miner);
         player.sendMessage(Message.raw("Assigned " + minerName + " to Slot #" + (slotIndex + 1) + "!"));
         hidePicker();
         sendRefresh(ref, store);

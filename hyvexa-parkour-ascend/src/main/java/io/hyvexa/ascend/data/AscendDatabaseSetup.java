@@ -491,6 +491,17 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Miner definitions per layer (admin-configurable names/portraits)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_layer_miner_defs (
+                    layer_id VARCHAR(64) NOT NULL,
+                    rarity VARCHAR(16) NOT NULL,
+                    display_name VARCHAR(64) NOT NULL,
+                    portrait_id VARCHAR(32) NOT NULL,
+                    PRIMARY KEY (layer_id, rarity)
+                ) ENGINE=InnoDB
+                """);
+
             ensureManualBlocksMinedColumn(conn);
 
             LOGGER.atInfo().log("Ascend database tables ensured");

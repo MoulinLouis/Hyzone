@@ -66,6 +66,9 @@ public class MineConfigStore {
     // mineId -> { slotIndex -> [[x,y,z], ...] }  slotIndex=-1 for main line
     private final Map<String, Map<Integer, List<double[]>>> conveyorWaypoints = new ConcurrentHashMap<>();
 
+    // layerId -> { MinerRarity -> MinerDefinition } (admin-configured miner names/portraits)
+    private final Map<String, Map<MinerRarity, MinerDefinition>> minerDefs = new ConcurrentHashMap<>();
+
     private volatile GateConfig entryGate;
     private volatile GateConfig exitGate;
 
@@ -97,6 +100,7 @@ public class MineConfigStore {
                 loadConveyorWaypoints(conn);
                 loadTierRecipes(conn);
                 loadEnhanceCosts(conn);
+                loadMinerDefinitions(conn);
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to load MineConfigStore: " + e.getMessage());
             }
@@ -1145,6 +1149,65 @@ public class MineConfigStore {
     public long getEnhanceCost(int tier, int level) {
         Map<Integer, Long> costs = enhanceCosts.get(tier);
         return costs != null ? costs.getOrDefault(level, 0L) : 0L;
+    }
+
+    // --- Miner definitions (admin-configurable per layer) ---
+
+    private void loadMinerDefinitions(Connection conn) throws SQLException {
+        minerDefs.clear();
+        String sql = "SELECT layer_id, rarity, display_name, portrait_id FROM mine_layer_miner_defs";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String layerId = rs.getString("layer_id");
+                    MinerRarity rarity = MinerRarity.fromName(rs.getString("rarity"));
+                    if (rarity == null) continue;
+                    MinerDefinition def = new MinerDefinition(
+                        layerId, rarity,
+                        rs.getString("display_name"),
+                        rs.getString("portrait_id")
+                    );
+                    minerDefs.computeIfAbsent(layerId, k -> new ConcurrentHashMap<>())
+                        .put(rarity, def);
+                }
+            }
+        }
+    }
+
+    public MinerDefinition getMinerDefinition(String layerId, MinerRarity rarity) {
+        if (layerId == null || rarity == null) return null;
+        Map<MinerRarity, MinerDefinition> defs = minerDefs.get(layerId);
+        return defs != null ? defs.get(rarity) : null;
+    }
+
+    public Map<MinerRarity, MinerDefinition> getMinerDefinitions(String layerId) {
+        if (layerId == null) return Collections.emptyMap();
+        Map<MinerRarity, MinerDefinition> defs = minerDefs.get(layerId);
+        return defs != null ? Collections.unmodifiableMap(defs) : Collections.emptyMap();
+    }
+
+    public void saveMinerDefinition(MinerDefinition def) {
+        if (def == null || def.layerId() == null || def.rarity() == null) return;
+
+        minerDefs.computeIfAbsent(def.layerId(), k -> new ConcurrentHashMap<>())
+            .put(def.rarity(), def);
+
+        if (!this.db.isInitialized()) return;
+
+        String sql = """
+            INSERT INTO mine_layer_miner_defs (layer_id, rarity, display_name, portrait_id)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                display_name = VALUES(display_name), portrait_id = VALUES(portrait_id)
+            """;
+
+        DatabaseManager.execute(this.db, sql, stmt -> {
+            stmt.setString(1, def.layerId());
+            stmt.setString(2, def.rarity().name());
+            stmt.setString(3, def.displayName());
+            stmt.setString(4, def.portraitId());
+        });
     }
 
     private void sortLayers(MineZone zone) {

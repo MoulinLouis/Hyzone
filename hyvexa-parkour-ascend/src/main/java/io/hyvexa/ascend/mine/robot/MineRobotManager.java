@@ -36,6 +36,7 @@ import io.hyvexa.common.npc.NPCHelper;
 import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinerDefinition;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
@@ -250,11 +251,12 @@ public class MineRobotManager {
             try {
                 Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
                 if (nameplate != null) {
-                    String rarityName = state.getRarity().getDisplayName();
+                    MinerDefinition def = configStore.getMinerDefinition(state.getOriginLayerId(), state.getRarity());
+                    String minerName = def != null ? def.displayName() : state.getRarity().getDisplayName() + " Miner";
                     MineZoneLayer layer = configStore.getLayerById(state.getOriginLayerId());
                     String layerName = (layer != null && !layer.getDisplayName().isEmpty())
                             ? layer.getDisplayName() : state.getOriginLayerId();
-                    nameplate.setText(rarityName + " Miner - " + layerName);
+                    nameplate.setText(minerName + " - " + layerName + " (" + state.getRarity().getDisplayName() + ")");
                 }
             } catch (Exception e) {
                 LOGGER.atFine().log("Failed to set miner nameplate: " + e.getMessage());
@@ -264,9 +266,9 @@ public class MineRobotManager {
                 NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
                 if (npcEntity != null) {
                     Inventory inv = npcEntity.getInventory();
-                    if (inv == null) { inv = new Inventory(); npcEntity.setInventory(inv); }
+                    if (inv == null) { throw new IllegalStateException("NPC has no inventory"); }
                     inv.getHotbar().setItemStackForSlot((short) 0, new ItemStack("Tool_Pickaxe_Wood"));
-                    inv.setActiveHotbarSlot((byte) 0);
+                    inv.setActiveHotbarSlot(entityRef, (byte) 0, store);
                     npcEntity.invalidateEquipmentNetwork();
                 }
             } catch (Exception e) {

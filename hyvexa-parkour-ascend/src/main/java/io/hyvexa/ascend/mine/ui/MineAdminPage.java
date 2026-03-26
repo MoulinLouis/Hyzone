@@ -115,6 +115,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             case MineData.BUTTON_ZONES -> handleZones(ref, store);
             case MineData.BUTTON_GATE -> handleGate(ref, store);
             case MineData.BUTTON_BLOCK_CONFIG -> handleBlockConfig(ref, store);
+            case MineData.BUTTON_MINERS -> handleMiners(ref, store);
             case MineData.BUTTON_SET_MINER_POS -> handleSetMinerPos(ref, store);
             case MineData.BUTTON_SLOT_NEXT -> handleSlotNext(ref, store);
             case MineData.BUTTON_SLOT_PREV -> handleSlotPrev(ref, store);
@@ -289,6 +290,21 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             new MineBlockHpPage(pRef, mineConfigStore, adminNavigator));
     }
 
+    private void handleMiners(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        if (selectedMineId.isEmpty()) {
+            player.sendMessage(com.hypixel.hytale.server.core.Message.raw("Select a mine first."));
+            return;
+        }
+        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (pRef == null) return;
+        MinerDefAdminPage page = adminNavigator.createMinerDefAdminPage(pRef, selectedMineId);
+        if (page != null) {
+            player.getPageManager().openCustomPage(ref, store, page);
+        }
+    }
+
     private void handleSetMinerPos(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
@@ -447,6 +463,8 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_GATE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BlockConfigButton",
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BLOCK_CONFIG), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MinersButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_MINERS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetMinerPosButton",
             EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SET_MINER_POS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SlotNextButton",
@@ -562,6 +580,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         static final String BUTTON_ADD_MAIN_WP = "AddMainWp";
         static final String BUTTON_CLEAR_SLOT_WP = "ClearSlotWp";
         static final String BUTTON_CLEAR_MAIN_WP = "ClearMainWp";
+        static final String BUTTON_MINERS = "Miners";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 

@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Mine
+- Miner names and portraits are now configurable per layer via Mine Admin -> Miners page, replacing the hardcoded variant system
 - Added pickaxe tier system (Wood -> Stone -> Iron -> Crystal -> Void -> Prismatic) with increasing speed multipliers
 - Mine zones now support depth layers -- each Y-range can have its own block distribution
 - Mine name now shows on the HUD when inside a mine zone
