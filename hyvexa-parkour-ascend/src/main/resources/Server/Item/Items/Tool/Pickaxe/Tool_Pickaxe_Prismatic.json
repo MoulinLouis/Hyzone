@@ -6,10 +6,6 @@
   "Icon": "Icons/ItemsGenerated/Tool_Pickaxe_Mithril.png",
   "Model": "Items/Tools/Pickaxe/Mithril.blockymodel",
   "Texture": "Items/Tools/Pickaxe/Mithril_Texture.png",
-  "Recipe": {
-    "Input": [],
-    "BenchRequirement": []
-  },
   "Tool": {
     "Specs": [
       {

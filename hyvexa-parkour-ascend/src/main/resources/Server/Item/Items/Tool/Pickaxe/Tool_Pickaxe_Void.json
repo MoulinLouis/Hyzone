@@ -6,10 +6,6 @@
   "Icon": "Icons/ItemsGenerated/Tool_Pickaxe_Onyxium.png",
   "Model": "Items/Tools/Pickaxe/Onyxium.blockymodel",
   "Texture": "Items/Tools/Pickaxe/Onyxium_Texture.png",
-  "Recipe": {
-    "Input": [],
-    "BenchRequirement": []
-  },
   "Tool": {
     "Specs": [
       {

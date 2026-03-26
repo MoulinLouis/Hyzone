@@ -6,10 +6,6 @@
   "Icon": "Icons/ItemsGenerated/Tool_Pickaxe_Iron.png",
   "Model": "Items/Tools/Pickaxe/Iron.blockymodel",
   "Texture": "Items/Tools/Pickaxe/Iron_Texture.png",
-  "Recipe": {
-    "Input": [],
-    "BenchRequirement": []
-  },
   "Tool": {
     "Specs": [
       {

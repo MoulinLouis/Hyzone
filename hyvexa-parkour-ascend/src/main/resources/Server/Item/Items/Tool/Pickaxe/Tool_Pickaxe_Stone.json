@@ -6,10 +6,6 @@
   "Icon": "Icons/ItemsGenerated/Tool_Pickaxe_Copper.png",
   "Model": "Items/Tools/Pickaxe/Copper.blockymodel",
   "Texture": "Items/Tools/Pickaxe/Copper_Texture.png",
-  "Recipe": {
-    "Input": [],
-    "BenchRequirement": []
-  },
   "Tool": {
     "Specs": [
       {

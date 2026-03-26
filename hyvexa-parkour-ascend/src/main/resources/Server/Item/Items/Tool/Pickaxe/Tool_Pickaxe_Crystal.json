@@ -6,10 +6,6 @@
   "Icon": "Icons/ItemsGenerated/Tool_Pickaxe_Cobalt.png",
   "Model": "Items/Tools/Pickaxe/Cobalt.blockymodel",
   "Texture": "Items/Tools/Pickaxe/Cobalt_Texture.png",
-  "Recipe": {
-    "Input": [],
-    "BenchRequirement": []
-  },
   "Tool": {
     "Specs": [
       {
