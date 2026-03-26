@@ -133,7 +133,8 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         // AoE upgrades (Jackhammer, Stomp, Blast)
         if (world != null) {
             MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager,
-                mineHudManager, mineAchievementTracker, minePlayerStore);
+                mineHudManager, mineAchievementTracker, minePlayerStore,
+                mineManager.getBlockDamageTracker());
         }
     }
 

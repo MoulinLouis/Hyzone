@@ -3,6 +3,8 @@ package io.hyvexa.ascend.mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
+import io.hyvexa.ascend.mine.system.BlockDamageTracker;
+import io.hyvexa.ascend.mine.system.BlockVisualHelper;
 import io.hyvexa.ascend.mine.util.MinePositionUtils;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -19,6 +21,7 @@ import io.hyvexa.ascend.mine.hud.MineHudManager;
 import com.hypixel.hytale.math.vector.Vector3d;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -29,6 +32,7 @@ import java.util.function.Function;
 public class MineManager {
     private final MineConfigStore configStore;
     private final Function<UUID, PlayerRef> playerRefResolver;
+    private final BlockDamageTracker blockDamageTracker = new BlockDamageTracker();
 
     // zoneId -> set of broken block positions (packed as long: x<<38 | y<<26 | z)
     private final Map<String, Set<Long>> brokenBlocks = new ConcurrentHashMap<>();
@@ -145,6 +149,12 @@ public class MineManager {
     public MineConfigStore getConfigStore() {
         return configStore;
     }
+
+    public BlockDamageTracker getBlockDamageTracker() {
+        return blockDamageTracker;
+    }
+
+    public World getWorld() { return mineWorld; }
 
     public void setWorld(World world) { this.mineWorld = world; }
 
@@ -279,6 +289,18 @@ public class MineManager {
         }
 
         brokenBlocks.remove(zone.getId());
+
+        // Clear per-player crack visuals (block damage tracker state)
+        Map<UUID, List<int[]>> staleEntries = blockDamageTracker.clearAllAndCollect();
+        if (staleEntries != null) {
+            for (var crackEntry : staleEntries.entrySet()) {
+                UUID pid = crackEntry.getKey();
+                for (int[] pos : crackEntry.getValue()) {
+                    BlockVisualHelper.clearBlockCracks(world, pid, pos[0], pos[1], pos[2]);
+                }
+            }
+        }
+
         return true;
     }
 

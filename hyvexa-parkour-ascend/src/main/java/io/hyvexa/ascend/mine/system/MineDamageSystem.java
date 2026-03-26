@@ -36,7 +36,7 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
     private final MineConfigStore configStore;
     private final MineHudManager mineHudManager;
     private final MineAchievementTracker mineAchievementTracker;
-    private final BlockDamageTracker damageTracker = new BlockDamageTracker();
+    private final BlockDamageTracker damageTracker;
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
 
@@ -49,6 +49,7 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         this.configStore = configStore;
         this.mineHudManager = mineHudManager;
         this.mineAchievementTracker = mineAchievementTracker;
+        this.damageTracker = mineManager.getBlockDamageTracker();
     }
 
     @Override
@@ -99,6 +100,14 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
             if (mineHudManager != null) {
                 mineHudManager.showBlockHealth(playerId, blockTypeName, hitResult.remainingHp(), hitResult.maxHp());
             }
+
+            // Show crack overlay on the block (per-player)
+            if (store.getExternalData() != null) {
+                World world = store.getExternalData().getWorld();
+                float remaining = hitResult.healthFraction();
+                float delta = -(float) totalDamage / blockHp;
+                BlockVisualHelper.sendBlockCracks(world, playerId, bx, by, bz, remaining, delta);
+            }
             return;
         }
 
@@ -142,18 +151,13 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         // AoE upgrades (Jackhammer, Stomp, Blast)
         if (world != null) {
             MineAoEBreaker.triggerAoE(playerId, mineProgress, zone, world, bx, by, bz, mineManager,
-                mineHudManager, mineAchievementTracker, minePlayerStore);
+                mineHudManager, mineAchievementTracker, minePlayerStore, damageTracker);
         }
     }
 
     public void evict(UUID playerId) {
         lastBagFullMessage.remove(playerId);
         lastRegenMessage.remove(playerId);
-        damageTracker.evict(playerId);
-    }
-
-    public BlockDamageTracker getDamageTracker() {
-        return damageTracker;
     }
 
     @Override

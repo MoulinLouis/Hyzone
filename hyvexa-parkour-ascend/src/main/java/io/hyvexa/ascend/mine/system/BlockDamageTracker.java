@@ -2,19 +2,21 @@ package io.hyvexa.ascend.mine.system;
 
 import io.hyvexa.ascend.mine.util.MinePositionUtils;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Tracks per-player block damage for multi-HP blocks.
  * Each player has independent damage progress on each block position.
- * HP values are read from global block_hp config.
+ * Damage persists until the block breaks or the zone regenerates.
  */
 public class BlockDamageTracker {
-
-    /** How long before damage progress resets if the player stops hitting (ms). */
-    private static final long DAMAGE_TIMEOUT_MS = 3000;
 
     // playerId -> (packedPos -> state)
     private final Map<UUID, Map<Long, BlockDamageState>> playerDamage = new ConcurrentHashMap<>();
@@ -35,17 +37,15 @@ public class BlockDamageTracker {
         }
 
         long packedPos = MinePositionUtils.packPosition(x, y, z);
-        long now = System.currentTimeMillis();
 
         Map<Long, BlockDamageState> blocks = playerDamage.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
         BlockDamageState state = blocks.get(packedPos);
 
-        if (state == null || now - state.lastHitMs > DAMAGE_TIMEOUT_MS || !blockTypeId.equals(state.blockTypeId)) {
-            state = new BlockDamageState(blockTypeId, maxHp, maxHp, now);
+        if (state == null || !blockTypeId.equals(state.blockTypeId)) {
+            state = new BlockDamageState(blockTypeId, maxHp, maxHp);
             blocks.put(packedPos, state);
         }
 
-        state.lastHitMs = now;
         double damage = Math.max(1.0, damageMultiplier);
         state.currentHp -= damage;
 
@@ -65,29 +65,54 @@ public class BlockDamageTracker {
     }
 
     /**
-     * Cleans up expired entries for a player.
+     * Clear damage state for ALL players at a given position (zone regen).
+     * Returns the set of player UUIDs that had damage state (for crack clear packets).
      */
-    public void cleanupExpired(UUID playerId) {
-        Map<Long, BlockDamageState> blocks = playerDamage.get(playerId);
-        if (blocks == null) return;
-        long now = System.currentTimeMillis();
-        blocks.entrySet().removeIf(e -> now - e.getValue().lastHitMs > DAMAGE_TIMEOUT_MS);
-        if (blocks.isEmpty()) {
-            playerDamage.remove(playerId);
+    public Set<UUID> clearPosition(int x, int y, int z) {
+        long packedPos = MinePositionUtils.packPosition(x, y, z);
+        Set<UUID> affected = null;
+        for (var entry : playerDamage.entrySet()) {
+            if (entry.getValue().remove(packedPos) != null) {
+                if (affected == null) affected = new HashSet<>();
+                affected.add(entry.getKey());
+            }
         }
+        return affected;
+    }
+
+    /**
+     * Clear ALL damage state and return player -> position mappings for crack visual clears.
+     * Used during zone regen when all blocks are replaced.
+     */
+    public Map<UUID, List<int[]>> clearAllAndCollect() {
+        Map<UUID, List<int[]>> result = null;
+        var it = playerDamage.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            UUID playerId = entry.getKey();
+            Map<Long, BlockDamageState> blocks = entry.getValue();
+            if (!blocks.isEmpty()) {
+                if (result == null) result = new HashMap<>();
+                List<int[]> positions = new ArrayList<>(blocks.size());
+                for (long packed : blocks.keySet()) {
+                    positions.add(MinePositionUtils.unpackPosition(packed));
+                }
+                result.put(playerId, positions);
+            }
+            it.remove();
+        }
+        return result;
     }
 
     public static class BlockDamageState {
         public final String blockTypeId;
         public final int maxHp;
         public double currentHp;
-        public long lastHitMs;
 
-        BlockDamageState(String blockTypeId, int maxHp, double currentHp, long lastHitMs) {
+        BlockDamageState(String blockTypeId, int maxHp, double currentHp) {
             this.blockTypeId = blockTypeId;
             this.maxHp = maxHp;
             this.currentHp = currentHp;
-            this.lastHitMs = lastHitMs;
         }
     }
 

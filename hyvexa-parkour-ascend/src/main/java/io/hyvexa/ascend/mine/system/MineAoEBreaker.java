@@ -35,7 +35,8 @@ public final class MineAoEBreaker {
     public static void triggerAoE(UUID playerId, MinePlayerProgress progress, MineZone zone,
                                    World world, int centerX, int centerY, int centerZ,
                                    MineManager mineManager, MineHudManager mineHudManager,
-                                   MineAchievementTracker achievementTracker, MinePlayerStore minePlayerStore) {
+                                   MineAchievementTracker achievementTracker, MinePlayerStore minePlayerStore,
+                                   BlockDamageTracker damageTracker) {
         int fortuneLevel = progress.getUpgradeLevel(MineUpgradeType.FORTUNE);
 
         // Collect all AoE positions (deduplicated)
@@ -75,17 +76,18 @@ public final class MineAoEBreaker {
         if (allPositions.isEmpty()) return;
 
         breakBlocksAt(allPositions, zone, progress, playerId, world, mineManager, fortuneLevel,
-            mineHudManager, achievementTracker, minePlayerStore);
+            mineHudManager, achievementTracker, minePlayerStore, damageTracker);
     }
 
     private static int breakBlocksAt(List<Vector3i> positions, MineZone zone, MinePlayerProgress progress,
                                       UUID playerId, World world, MineManager mineManager, int fortuneLevel,
                                       MineHudManager mineHudManager, MineAchievementTracker achievementTracker,
-                                      MinePlayerStore minePlayerStore) {
+                                      MinePlayerStore minePlayerStore, BlockDamageTracker damageTracker) {
         int totalBroken = 0;
         MineConfigStore configStore = mineManager.getConfigStore();
         int cashbackLevel = progress.getUpgradeLevel(MineUpgradeType.CASHBACK);
         double cashbackPercent = cashbackLevel > 0 ? MineUpgradeType.CASHBACK.getEffect(cashbackLevel) : 0;
+        double aoeDamage = progress.getPickaxeDamage() * progress.getMomentumMultiplier();
 
         for (Vector3i pos : positions) {
             int x = pos.getX(), y = pos.getY(), z = pos.getZ();
@@ -97,9 +99,22 @@ public final class MineAoEBreaker {
             String blockTypeId = getBlockTypeAt(world, x, y, z);
             if (blockTypeId == null) continue; // already air or unloaded
 
-            // Skip multi-HP blocks (AoE only breaks 1-HP blocks)
             int blockHp = configStore.getBlockHp(blockTypeId);
-            if (blockHp > 1) continue;
+
+            // Multi-HP blocks: apply damage via tracker
+            if (blockHp > 1) {
+                BlockDamageTracker.HitResult hitResult = damageTracker.recordHit(
+                    playerId, x, y, z, blockTypeId, blockHp, aoeDamage);
+
+                // Send crack visuals to this player only
+                BlockVisualHelper.sendBlockCracks(world, playerId, x, y, z,
+                    hitResult.healthFraction(), -(float) (aoeDamage / blockHp));
+
+                if (!hitResult.shouldBreak()) {
+                    continue; // block survives — cracks shown, no reward
+                }
+                // Fall through to break logic
+            }
 
             // Atomically claim
             if (!mineManager.tryClaimBlock(zone.getId(), x, y, z)) continue;

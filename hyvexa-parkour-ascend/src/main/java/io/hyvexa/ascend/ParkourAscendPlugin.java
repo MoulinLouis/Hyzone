@@ -677,6 +677,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: playerStore");
             runSafe(() -> { if (minePlayerStore != null) minePlayerStore.evict(playerId); },
                     "Disconnect cleanup: minePlayerStore");
+            runSafe(() -> { if (mineManager != null) mineManager.getBlockDamageTracker().evict(playerId); },
+                    "Disconnect cleanup: blockDamageTracker");
             runSafe(() -> { if (mineBreakSystem != null) mineBreakSystem.evict(playerId); },
                     "Disconnect cleanup: mineBreakSystem");
             runSafe(() -> { if (mineDamageSystem != null) mineDamageSystem.evict(playerId); },
