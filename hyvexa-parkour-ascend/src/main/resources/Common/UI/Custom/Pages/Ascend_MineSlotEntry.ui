@@ -1,12 +1,10 @@
 $C = "../Common.ui";
 
 Group {
-  LayoutMode: Left;
-  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 70);
-  Background: #1a2530(0.95);
+  Anchor: (Width: 156, Height: 156);
 
-  Group #AccentBar {
-    Anchor: (Width: 8, Top: 0, Bottom: 0);
+  Group #CardBorder {
+    Anchor: (Left: 0, Top: 0, Width: 146, Height: 156);
 
     Group #AccentEmpty { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #4a5568; Visible: true; }
     Group #AccentGray { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #aaaaaa; Visible: false; }
@@ -14,104 +12,161 @@ Group {
     Group #AccentBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6; Visible: false; }
     Group #AccentPurple { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #a855f7; Visible: false; }
     Group #AccentOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
-  }
 
-  Group #ContentZone {
-    FlexWeight: 1;
-    Anchor: (Top: 0, Bottom: 0);
-    Padding: (Left: 12, Top: 8, Bottom: 8);
-    LayoutMode: Top;
+    Group #CardBody {
+      Anchor: (Left: 2, Right: 2, Top: 2, Bottom: 2);
+      Background: #1a2530;
+      LayoutMode: Top;
 
-    Label #SlotTitle {
-      Style: (FontSize: 15, RenderBold: true, TextColor: #f0f4f8);
-      Text: "Slot #1";
-    }
+      Group #RarityBanner {
+        Anchor: (Left: 0, Right: 0, Height: 18);
+        Background: #ffffff(0.04);
 
-    Label #MinerInfo {
-      Anchor: (Top: 4);
-      Style: (FontSize: 13, TextColor: #9fb0ba);
-      Text: "Empty";
-    }
+        Group #BannerGray { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #aaaaaa(0.15); Visible: false; }
+        Group #BannerGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #10b981(0.15); Visible: false; }
+        Group #BannerBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #3b82f6(0.15); Visible: false; }
+        Group #BannerPurple { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #a855f7(0.15); Visible: false; }
+        Group #BannerOrange { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b(0.15); Visible: false; }
 
-    Label #ProductionInfo {
-      Anchor: (Top: 2);
-      Style: (FontSize: 12, TextColor: #9fb0ba);
-      Text: "";
-    }
-  }
-
-  Group #ButtonZone {
-    Anchor: (Width: 110, Top: 0, Bottom: 0);
-    LayoutMode: Top;
-    Padding: (Top: 4, Bottom: 4, Left: 4, Right: 4);
-
-    Group #AssignBtnWrap {
-      Anchor: (Left: 0, Right: 0, Height: 28);
-
-      Group #AssignBtnBg {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-        Background: #3b82f6(0.85);
+        Label #RarityLabel {
+          Anchor: (Left: 0, Right: 0, Top: 2, Bottom: 0);
+          Style: (FontSize: 11, RenderBold: true, TextColor: #4a5568, HorizontalAlignment: Center);
+          Text: "";
+        }
       }
 
-      Group #RemoveBtnBg {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-        Background: #ef4444(0.85);
-        Visible: false;
+      Group #PortraitZone {
+        Anchor: (Left: 0, Right: 0);
+        FlexWeight: 1;
+        LayoutMode: CenterMiddle;
+
+        Group #PortraitEmpty { Anchor: (Width: 48, Height: 48); Background: (TexturePath: "../Textures/miners/miner_empty.png"); }
+
+        Group #PortraitCommon1 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_common_1.png"); Visible: false; }
+        Group #PortraitCommon2 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_common_2.png"); Visible: false; }
+        Group #PortraitCommon3 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_common_3.png"); Visible: false; }
+
+        Group #PortraitUncommon1 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_uncommon_1.png"); Visible: false; }
+        Group #PortraitUncommon2 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_uncommon_2.png"); Visible: false; }
+        Group #PortraitUncommon3 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_uncommon_3.png"); Visible: false; }
+
+        Group #PortraitRare1 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_rare_1.png"); Visible: false; }
+        Group #PortraitRare2 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_rare_2.png"); Visible: false; }
+        Group #PortraitRare3 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_rare_3.png"); Visible: false; }
+
+        Group #PortraitEpic1 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_epic_1.png"); Visible: false; }
+        Group #PortraitEpic2 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_epic_2.png"); Visible: false; }
+        Group #PortraitEpic3 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_epic_3.png"); Visible: false; }
+
+        Group #PortraitLegendary1 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_legendary_1.png"); Visible: false; }
+        Group #PortraitLegendary2 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_legendary_2.png"); Visible: false; }
+        Group #PortraitLegendary3 { Anchor: (Width: 64, Height: 64); Background: (TexturePath: "../Textures/miners/miner_legendary_3.png"); Visible: false; }
       }
 
-      Button #AssignButton {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-        Background: #00000000;
-        Style: ButtonStyle(
-          Default: (Background: #00000000),
-          Hovered: (Background: #ffffff(0.15)),
-          Pressed: (Background: #000000(0.15)),
-          Sounds: $C.@ButtonSounds,
-        );
+      Group #InfoBanner {
+        Anchor: (Left: 0, Right: 0, Height: 28);
+        Background: #0a1018(0.8);
         LayoutMode: Top;
+        Padding: (Left: 4, Right: 4, Top: 2);
 
-        Label #AssignText {
-          Anchor: (Left: 0, Right: 0, Top: 4);
-          Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center);
-          Text: "Assign";
+        Label #MinerName {
+          Style: (FontSize: 11, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center);
+          Text: "";
+          Visible: false;
+        }
+
+        Label #MinerStats {
+          Style: (FontSize: 10, TextColor: #9fb0ba, HorizontalAlignment: Center);
+          Text: "";
+          Visible: false;
+        }
+
+        Label #SlotLabel {
+          Style: (FontSize: 11, TextColor: #4a5568, HorizontalAlignment: Center);
+          Text: "Slot #1";
+        }
+      }
+
+      Group #ButtonRow {
+        Anchor: (Left: 0, Right: 0, Height: 26);
+        LayoutMode: Left;
+        Visible: false;
+
+        Group #SpeedBtnWrap {
+          FlexWeight: 1;
+          Anchor: (Top: 0, Bottom: 0);
+
+          Group #SpeedBtnBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #10b981(0.85);
+          }
+
+          Group #SpeedDisabledOverlay {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #000000(0.7);
+            Visible: false;
+          }
+
+          Button #SpeedButton {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #00000000;
+            Style: ButtonStyle(
+              Default: (Background: #00000000),
+              Hovered: (Background: #ffffff(0.15)),
+              Pressed: (Background: #000000(0.15)),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+
+            Label #SpeedText {
+              Anchor: (Left: 0, Right: 0, Top: 4);
+              Style: (FontSize: 10, TextColor: #f0f4f8, HorizontalAlignment: Center);
+              Text: "Speed 50c";
+            }
+          }
+        }
+
+        Group { Anchor: (Width: 2); }
+
+        Group #RemoveBtnWrap {
+          FlexWeight: 1;
+          Anchor: (Top: 0, Bottom: 0);
+
+          Group #RemoveBtnBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #ef4444(0.85);
+          }
+
+          Button #RemoveButton {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #00000000;
+            Style: ButtonStyle(
+              Default: (Background: #00000000),
+              Hovered: (Background: #ffffff(0.15)),
+              Pressed: (Background: #000000(0.15)),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+
+            Label #RemoveText {
+              Anchor: (Left: 0, Right: 0, Top: 4);
+              Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center);
+              Text: "Remove";
+            }
+          }
         }
       }
     }
+  }
 
-    Group { Anchor: (Height: 4); }
-
-    Group #SpeedBtnWrap {
-      Anchor: (Left: 0, Right: 0, Height: 28);
-      Visible: false;
-
-      Group #SpeedBtnBg {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-        Background: #10b981(0.85);
-      }
-
-      Group #SpeedDisabledOverlay {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-        Background: #000000(0.7);
-        Visible: false;
-      }
-
-      Button #SpeedButton {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-        Background: #00000000;
-        Style: ButtonStyle(
-          Default: (Background: #00000000),
-          Hovered: (Background: #ffffff(0.15)),
-          Pressed: (Background: #000000(0.15)),
-          Sounds: $C.@ButtonSounds,
-        );
-        LayoutMode: Top;
-
-        Label #SpeedText {
-          Anchor: (Left: 0, Right: 0, Top: 4);
-          Style: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center);
-          Text: "Speed 50c";
-        }
-      }
-    }
+  TextButton #SlotButton {
+    Anchor: (Left: 0, Top: 0, Width: 146, Height: 156);
+    Text: "";
+    Style: TextButtonStyle(
+      Default: (Background: #000000(0)),
+      Hovered: (Background: #ffffff(0.08)),
+      Pressed: (Background: #ffffff(0.04)),
+      Sounds: $C.@ButtonSounds,
+    );
   }
 }

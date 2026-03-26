@@ -19,6 +19,7 @@ import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinerVariant;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
@@ -59,6 +60,11 @@ public class MinePage extends BaseAscendPage {
     private static final String BUTTON_REMOVE_SLOT_PREFIX = "RemoveSlot_";
     private static final String BUTTON_SPEED_SLOT_PREFIX = "SpeedSlot_";
     private static final String BUTTON_PICK_MINER_PREFIX = "PickMiner_";
+    private static final String BUTTON_BACK_PICKER = "BackPicker";
+
+    private static final int SLOT_GRID_COLUMNS = 3;
+    private static final int PICKER_GRID_COLUMNS = 4;
+    private static final int COLLECTION_GRID_COLUMNS = 4;
 
     private static final MineUpgradeType[] GRID_UPGRADE_ORDER = {
         MineUpgradeType.MOMENTUM,
@@ -109,6 +115,8 @@ public class MinePage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_SLOTS), false);
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#TabCollection",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_COLLECTION), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK_PICKER), false);
 
         if (PermissionUtils.isOp(playerRef.getUuid())) {
             cmd.set("#ResetWrap.Visible", true);
@@ -127,45 +135,51 @@ public class MinePage extends BaseAscendPage {
         if (configStore == null) return;
 
         List<io.hyvexa.ascend.mine.data.MinerSlot> slots = configStore.getMinerSlots();
-        int i = 0;
-        for (io.hyvexa.ascend.mine.data.MinerSlot slot : slots) {
-            addSlotEntry(cmd, evt, i, slot.getSlotIndex());
-            i++;
-        }
-        if (slots.isEmpty()) {
-            addSlotEntry(cmd, evt, 0, 0);
+        int slotCount = Math.max(slots.size(), 1);
+
+        int row = -1;
+        for (int i = 0; i < slotCount; i++) {
+            if (i % SLOT_GRID_COLUMNS == 0) {
+                cmd.append("#SlotGrid", "Pages/Ascend_MineSlotRow.ui");
+                row++;
+            }
+            String rowSel = "#SlotGrid[" + row + "]";
+            cmd.append(rowSel, "Pages/Ascend_MineSlotEntry.ui");
+            int col = i % SLOT_GRID_COLUMNS;
+            String sel = rowSel + "[" + col + "]";
+            int slotIndex = i < slots.size() ? slots.get(i).getSlotIndex() : 0;
+            addSlotEntry(cmd, evt, sel, slotIndex);
         }
     }
 
-    private void addSlotEntry(UICommandBuilder cmd, UIEventBuilder evt, int i, int slotIndex) {
-        cmd.append("#SlotEntries", "Pages/Ascend_MineSlotEntry.ui");
-        String sel = "#SlotEntries[" + i + "]";
-
-        cmd.set(sel + " #SlotTitle.Text", "Slot #" + (slotIndex + 1));
-
+    private void addSlotEntry(UICommandBuilder cmd, UIEventBuilder evt, String sel, int slotIndex) {
         CollectedMiner assigned = mineProgress.getAssignedMiner(slotIndex);
+
         if (assigned != null) {
+            // Border: rarity color
             cmd.set(sel + " #AccentEmpty.Visible", false);
-            AccentOverlayUtils.applyAccent(cmd, sel + " #AccentBar",
+            AccentOverlayUtils.applyAccent(cmd, sel + " #CardBorder",
                     assigned.getRarity().getColor(), AccentOverlayUtils.RARITY_ACCENTS);
 
-            MineZoneLayer layer = configStore != null ? configStore.getLayerById(assigned.getLayerId()) : null;
-            String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : assigned.getLayerId();
+            // Rarity banner
+            cmd.set(sel + " #RarityLabel.Text", assigned.getRarity().getDisplayName());
+            cmd.set(sel + " #RarityLabel.Style.TextColor", assigned.getRarity().getColor());
+            applyBanner(cmd, sel + " #RarityBanner", assigned.getRarity());
 
-            cmd.set(sel + " #MinerInfo.Text", assigned.getRarity().getDisplayName() + " - " + layerName);
-            cmd.set(sel + " #MinerInfo.Style.TextColor", assigned.getRarity().getColor());
-            cmd.set(sel + " #ProductionInfo.Text",
-                "Lv." + assigned.getSpeedLevel() + " | " +
+            // Portrait
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", assigned);
+
+            // Info banner — show name + stats, hide slot label
+            cmd.set(sel + " #MinerName.Visible", true);
+            cmd.set(sel + " #MinerName.Text", MinerVariant.getDisplayName(assigned));
+            cmd.set(sel + " #MinerStats.Visible", true);
+            cmd.set(sel + " #MinerStats.Text",
+                "Lv." + assigned.getSpeedLevel() + " \u2014 " +
                 String.format("%.1f", assigned.getProductionRate()) + " b/m");
+            cmd.set(sel + " #SlotLabel.Visible", false);
 
-            cmd.set(sel + " #AssignText.Text", "Remove");
-            cmd.set(sel + " #AssignBtnBg.Visible", false);
-            cmd.set(sel + " #RemoveBtnBg.Visible", true);
-            evt.addEventBinding(CustomUIEventBindingType.Activating,
-                sel + " #AssignButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_REMOVE_SLOT_PREFIX + slotIndex), false);
-
-            cmd.set(sel + " #SpeedBtnWrap.Visible", true);
+            // Button row
+            cmd.set(sel + " #ButtonRow.Visible", true);
             long speedCost = CollectedMiner.getSpeedUpgradeCost(assigned.getSpeedLevel());
             cmd.set(sel + " #SpeedText.Text", "Speed " + speedCost + "c");
             boolean canAfford = mineProgress.getCrystals() >= speedCost;
@@ -173,9 +187,17 @@ public class MinePage extends BaseAscendPage {
             evt.addEventBinding(CustomUIEventBindingType.Activating,
                 sel + " #SpeedButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPEED_SLOT_PREFIX + slotIndex), false);
-        } else {
             evt.addEventBinding(CustomUIEventBindingType.Activating,
-                sel + " #AssignButton",
+                sel + " #RemoveButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_REMOVE_SLOT_PREFIX + slotIndex), false);
+
+            // Hide click overlay when assigned (buttons handle interaction)
+            cmd.set(sel + " #SlotButton.Visible", false);
+        } else {
+            // Empty slot — default template state is correct, just set label + click handler
+            cmd.set(sel + " #SlotLabel.Text", "Slot #" + (slotIndex + 1));
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #SlotButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASSIGN_SLOT_PREFIX + slotIndex), false);
         }
     }
@@ -191,29 +213,43 @@ public class MinePage extends BaseAscendPage {
         }
         cmd.set("#NoMinersLabel.Visible", false);
 
-        int i = 0;
-        for (CollectedMiner miner : miners) {
-            cmd.append("#CollectionEntries", "Pages/Ascend_MineCollectionEntry.ui");
-            String sel = "#CollectionEntries[" + i + "]";
+        Map<Integer, Long> assignments = mineProgress.getSlotAssignments();
+        int row = -1;
+        for (int i = 0; i < miners.size(); i++) {
+            if (i % COLLECTION_GRID_COLUMNS == 0) {
+                cmd.append("#CollectionGrid", "Pages/Ascend_MinePickerRow.ui");
+                row++;
+            }
+            CollectedMiner miner = miners.get(i);
+            String rowSel = "#CollectionGrid[" + row + "]";
+            cmd.append(rowSel, "Pages/Ascend_MineCollectionEntry.ui");
+            int col = i % COLLECTION_GRID_COLUMNS;
+            String sel = rowSel + "[" + col + "]";
 
-            AccentOverlayUtils.applyAccent(cmd, sel + " #RarityBar",
+            // Border + banner
+            AccentOverlayUtils.applyAccent(cmd, sel + " #CardBorder",
                     miner.getRarity().getColor(), AccentOverlayUtils.RARITY_ACCENTS);
+            applyBanner(cmd, sel + " #RarityBanner", miner.getRarity());
+
+            // Rarity label
             cmd.set(sel + " #RarityLabel.Text", miner.getRarity().getDisplayName());
             cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
 
-            MineZoneLayer layer = configStore != null ? configStore.getLayerById(miner.getLayerId()) : null;
-            String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : "";
-            cmd.set(sel + " #LayerLabel.Text", layerName);
+            // Portrait
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", miner);
 
-            cmd.set(sel + " #SpeedLabel.Text",
-                "Speed Lv." + miner.getSpeedLevel() + " | " +
+            // Name + stats
+            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(miner));
+            cmd.set(sel + " #StatsLabel.Text",
+                "Lv." + miner.getSpeedLevel() + " \u2014 " +
                 String.format("%.1f", miner.getProductionRate()) + " b/m");
 
-            if (mineProgress.isMinerAssigned(miner.getId())) {
-                cmd.set(sel + " #AssignedText.Visible", true);
-                cmd.set(sel + " #AssignedText.Text", "Assigned");
+            // Assigned badge
+            int assignedSlot = getAssignedSlotIndex(assignments, miner.getId());
+            if (assignedSlot >= 0) {
+                cmd.set(sel + " #AssignedBadge.Visible", true);
+                cmd.set(sel + " #AssignedLabel.Text", "Slot #" + (assignedSlot + 1));
             }
-            i++;
         }
     }
 
@@ -225,36 +261,62 @@ public class MinePage extends BaseAscendPage {
         UICommandBuilder cmd = new UICommandBuilder();
         UIEventBuilder evt = new UIEventBuilder();
 
-        cmd.set("#SlotEntries.Visible", false);
+        cmd.set("#SlotGrid.Visible", false);
         cmd.set("#PickerOverlay.Visible", true);
-        cmd.set("#PickerTitle.Text", "Select a miner for Slot #" + (slotIndex + 1) + ":");
-        cmd.clear("#PickerEntries");
+        cmd.set("#PickerTitle.Text", "Select a miner for Slot #" + (slotIndex + 1));
+        cmd.clear("#PickerGrid");
 
-        List<CollectedMiner> miners = mineProgress.getMinerCollection();
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK_PICKER), false);
 
-        int i = 0;
-        for (CollectedMiner miner : miners) {
-            if (mineProgress.isMinerAssigned(miner.getId())) continue;
+        // Show all miners (including assigned), sorted by rarity desc then level desc
+        List<CollectedMiner> miners = new java.util.ArrayList<>(mineProgress.getMinerCollection());
+        miners.sort((a, b) -> {
+            int cmp = Integer.compare(b.getRarity().ordinal(), a.getRarity().ordinal());
+            return cmp != 0 ? cmp : Integer.compare(b.getSpeedLevel(), a.getSpeedLevel());
+        });
 
-            cmd.append("#PickerEntries", "Pages/Ascend_MineMinerPicker.ui");
-            String sel = "#PickerEntries[" + i + "]";
+        Map<Integer, Long> assignments = mineProgress.getSlotAssignments();
+        int row = -1;
+        for (int i = 0; i < miners.size(); i++) {
+            if (i % PICKER_GRID_COLUMNS == 0) {
+                cmd.append("#PickerGrid", "Pages/Ascend_MinePickerRow.ui");
+                row++;
+            }
+            CollectedMiner miner = miners.get(i);
+            String rowSel = "#PickerGrid[" + row + "]";
+            cmd.append(rowSel, "Pages/Ascend_MineMinerPicker.ui");
+            int col = i % PICKER_GRID_COLUMNS;
+            String sel = rowSel + "[" + col + "]";
 
-            AccentOverlayUtils.applyAccent(cmd, sel + " #RarityBar",
+            // Border + banner
+            AccentOverlayUtils.applyAccent(cmd, sel + " #CardBorder",
                     miner.getRarity().getColor(), AccentOverlayUtils.RARITY_ACCENTS);
+            applyBanner(cmd, sel + " #RarityBanner", miner.getRarity());
+
+            // Rarity label
             cmd.set(sel + " #RarityLabel.Text", miner.getRarity().getDisplayName());
             cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
 
-            MineZoneLayer layer = configStore != null ? configStore.getLayerById(miner.getLayerId()) : null;
-            String layerName = layer != null && !layer.getDisplayName().isEmpty() ? layer.getDisplayName() : "";
-            cmd.set(sel + " #LayerLabel.Text", layerName);
-            cmd.set(sel + " #SpeedLabel.Text",
-                "Lv." + miner.getSpeedLevel() + " | " +
+            // Portrait
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", miner);
+
+            // Name + stats
+            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(miner));
+            cmd.set(sel + " #StatsLabel.Text",
+                "Lv." + miner.getSpeedLevel() + " \u2014 " +
                 String.format("%.1f", miner.getProductionRate()) + " b/m");
+
+            // Assigned overlay
+            int assignedSlot = getAssignedSlotIndex(assignments, miner.getId());
+            if (assignedSlot >= 0) {
+                cmd.set(sel + " #AssignedOverlay.Visible", true);
+                cmd.set(sel + " #AssignedLabel.Text", "In Slot #" + (assignedSlot + 1));
+            }
 
             evt.addEventBinding(CustomUIEventBindingType.Activating,
                 sel + " #SelectButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PICK_MINER_PREFIX + miner.getId()), false);
-            i++;
         }
 
         this.sendUpdate(cmd, evt, false);
@@ -263,9 +325,16 @@ public class MinePage extends BaseAscendPage {
     private void hidePicker() {
         pickerSlotIndex = -1;
         UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set("#SlotEntries.Visible", true);
+        cmd.set("#SlotGrid.Visible", true);
         cmd.set("#PickerOverlay.Visible", false);
         this.sendUpdate(cmd, new UIEventBuilder(), false);
+    }
+
+    private static int getAssignedSlotIndex(Map<Integer, Long> assignments, long minerId) {
+        for (var entry : assignments.entrySet()) {
+            if (entry.getValue() == minerId) return entry.getKey();
+        }
+        return -1;
     }
 
     // ==================== Upgrade Tab ====================
@@ -381,7 +450,7 @@ public class MinePage extends BaseAscendPage {
         cmd.set("#UpgradeContent.Visible", "Upgrade".equals(tabName));
         cmd.set("#SlotsContent.Visible", "Slots".equals(tabName));
         cmd.set("#CollectionContent.Visible", "Collection".equals(tabName));
-        cmd.set("#SlotEntries.Visible", true);
+        cmd.set("#SlotGrid.Visible", true);
         cmd.set("#PickerOverlay.Visible", false);
 
         this.sendUpdate(cmd, new UIEventBuilder(), false);
@@ -430,6 +499,8 @@ public class MinePage extends BaseAscendPage {
             handleSlotSpeed(ref, store, Integer.parseInt(button.substring(BUTTON_SPEED_SLOT_PREFIX.length())));
         } else if (button.startsWith(BUTTON_PICK_MINER_PREFIX)) {
             handlePickMiner(ref, store, Long.parseLong(button.substring(BUTTON_PICK_MINER_PREFIX.length())));
+        } else if (button.equals(BUTTON_BACK_PICKER)) {
+            hidePicker();
         }
     }
 
@@ -440,9 +511,19 @@ public class MinePage extends BaseAscendPage {
         if (player == null || pickerSlotIndex < 0) return;
 
         CollectedMiner miner = mineProgress.getMinerById(minerId);
-        if (miner == null || mineProgress.isMinerAssigned(minerId)) return;
+        if (miner == null) return;
 
         int slotIndex = pickerSlotIndex;
+
+        // If miner is assigned to another slot, unassign it first (reassignment)
+        int oldSlot = getAssignedSlotIndex(mineProgress.getSlotAssignments(), minerId);
+        if (oldSlot >= 0) {
+            mineProgress.unassignSlot(oldSlot);
+            if (mineRobotManager != null) {
+                mineRobotManager.syncUnassignedMiner(playerRef.getUuid(), oldSlot);
+            }
+        }
+
         mineProgress.assignMinerToSlot(slotIndex, minerId);
         markDirty();
 
@@ -450,7 +531,8 @@ public class MinePage extends BaseAscendPage {
             mineRobotManager.syncAssignedMiner(playerRef.getUuid(), slotIndex, store.getExternalData().getWorld());
         }
 
-        player.sendMessage(Message.raw("Assigned " + miner.getRarity().getDisplayName() + " miner to Slot #" + (slotIndex + 1) + "!"));
+        String minerName = MinerVariant.getDisplayName(miner);
+        player.sendMessage(Message.raw("Assigned " + minerName + " to Slot #" + (slotIndex + 1) + "!"));
         hidePicker();
         sendRefresh(ref, store);
     }
@@ -606,6 +688,17 @@ public class MinePage extends BaseAscendPage {
         sendRefresh(ref, store);
     }
 
+    // ==================== Banner Accents ====================
+
+    private static final String[] BANNER_IDS = {"BannerGray", "BannerGreen", "BannerBlue", "BannerPurple", "BannerOrange"};
+
+    private static void applyBanner(UICommandBuilder cmd, String selector, io.hyvexa.ascend.mine.data.MinerRarity rarity) {
+        String target = BANNER_IDS[rarity.ordinal()];
+        for (String id : BANNER_IDS) {
+            cmd.set(selector + " #" + id + ".Visible", id.equals(target));
+        }
+    }
+
     // ==================== Helpers ====================
 
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -613,9 +706,9 @@ public class MinePage extends BaseAscendPage {
         UIEventBuilder evt = new UIEventBuilder();
         cmd.clear("#PickaxeRow");
         for (int slot = 0; slot < GRID_UPGRADE_ORDER.length; slot++) cmd.clear("#Slot" + slot);
-        cmd.clear("#SlotEntries");
-        cmd.clear("#CollectionEntries");
-        cmd.clear("#PickerEntries");
+        cmd.clear("#SlotGrid");
+        cmd.clear("#CollectionGrid");
+        cmd.clear("#PickerGrid");
         populateUpgradeTab(cmd, evt);
         populateSlotsTab(cmd, evt);
         populateCollectionTab(cmd, evt);
