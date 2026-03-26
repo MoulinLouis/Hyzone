@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Static utility for AoE block breaking: Jackhammer (column), Stomp (layer), Blast (sphere).
@@ -41,9 +42,9 @@ public final class MineAoEBreaker {
         Set<Long> seen = new HashSet<>();
         List<Vector3i> allPositions = new ArrayList<>();
 
-        // Jackhammer: column below
+        // Jackhammer: column below (probability-based)
         int jackhammerLevel = progress.getUpgradeLevel(MineUpgradeType.JACKHAMMER);
-        if (jackhammerLevel > 0) {
+        if (jackhammerLevel > 0 && ThreadLocalRandom.current().nextDouble() < MineUpgradeType.JACKHAMMER.getChance(jackhammerLevel)) {
             int depth = jackhammerLevel; // depth = level
             for (Vector3i pos : buildJackhammerPositions(centerX, centerY, centerZ, depth)) {
                 long key = MinePositionUtils.packPosition(pos.getX(), pos.getY(), pos.getZ());
@@ -51,9 +52,9 @@ public final class MineAoEBreaker {
             }
         }
 
-        // Stomp: horizontal layer
+        // Stomp: horizontal layer (probability-based)
         int stompLevel = progress.getUpgradeLevel(MineUpgradeType.STOMP);
-        if (stompLevel > 0) {
+        if (stompLevel > 0 && ThreadLocalRandom.current().nextDouble() < MineUpgradeType.STOMP.getChance(stompLevel)) {
             int radius = (int) MineUpgradeType.STOMP.getEffect(stompLevel);
             for (Vector3i pos : buildStompPositions(centerX, centerY, centerZ, radius)) {
                 long key = MinePositionUtils.packPosition(pos.getX(), pos.getY(), pos.getZ());
@@ -61,9 +62,9 @@ public final class MineAoEBreaker {
             }
         }
 
-        // Blast: sphere
+        // Blast: sphere (probability-based)
         int blastLevel = progress.getUpgradeLevel(MineUpgradeType.BLAST);
-        if (blastLevel > 0) {
+        if (blastLevel > 0 && ThreadLocalRandom.current().nextDouble() < MineUpgradeType.BLAST.getChance(blastLevel)) {
             int radius = (int) MineUpgradeType.BLAST.getEffect(blastLevel);
             for (Vector3i pos : buildBlastPositions(centerX, centerY, centerZ, radius)) {
                 long key = MinePositionUtils.packPosition(pos.getX(), pos.getY(), pos.getZ());
