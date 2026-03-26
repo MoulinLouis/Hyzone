@@ -33,6 +33,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.common.npc.NPCHelper;
+import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -623,7 +624,8 @@ public class MineRobotManager {
         }
 
         // --- Check if it's time to break the block ---
-        long intervalMs = (long) (slot.getIntervalSeconds() * 1000);
+        double blocksPerMinute = CollectedMiner.getProductionRate(state.getSpeedLevel());
+        long intervalMs = (long) ((60.0 / blocksPerMinute) * 1000);
         if (now - state.getLastBreakTime() < intervalMs) return;
         state.setLastBreakTime(now);
 

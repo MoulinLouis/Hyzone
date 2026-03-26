@@ -25,7 +25,7 @@ public class CollectedMiner {
     }
 
     public static double getProductionRate(int speedLevel) {
-        return 6.0 * (1.0 + speedLevel * 0.10);
+        return 12.0 * (1.0 + speedLevel * 0.10);
     }
 
     public static long getSpeedUpgradeCost(int speedLevel) {
