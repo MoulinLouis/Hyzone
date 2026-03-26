@@ -40,23 +40,18 @@ Group {
         LayoutMode: CenterMiddle;
 
         Group #PortraitEmpty { Anchor: (Width: 48, Height: 48); Background: (TexturePath: "../Textures/miners/miner_empty.png"); Visible: false; }
-
         Group #PortraitCommon1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_common_1.png"); Visible: false; }
         Group #PortraitCommon2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_common_2.png"); Visible: false; }
         Group #PortraitCommon3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_common_3.png"); Visible: false; }
-
         Group #PortraitUncommon1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_uncommon_1.png"); Visible: false; }
         Group #PortraitUncommon2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_uncommon_2.png"); Visible: false; }
         Group #PortraitUncommon3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_uncommon_3.png"); Visible: false; }
-
         Group #PortraitRare1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_rare_1.png"); Visible: false; }
         Group #PortraitRare2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_rare_2.png"); Visible: false; }
         Group #PortraitRare3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_rare_3.png"); Visible: false; }
-
         Group #PortraitEpic1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_epic_1.png"); Visible: false; }
         Group #PortraitEpic2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_epic_2.png"); Visible: false; }
         Group #PortraitEpic3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_epic_3.png"); Visible: false; }
-
         Group #PortraitLegendary1 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_legendary_1.png"); Visible: false; }
         Group #PortraitLegendary2 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_legendary_2.png"); Visible: false; }
         Group #PortraitLegendary3 { Anchor: (Width: 56, Height: 56); Background: (TexturePath: "../Textures/miners/miner_legendary_3.png"); Visible: false; }
