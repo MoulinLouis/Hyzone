@@ -199,9 +199,9 @@ public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
             String accentColor = i < MAP_TAB_COLORS.length ? MAP_TAB_COLORS[i] : MAP_TAB_COLORS[MAP_TAB_COLORS.length - 1];
             if (active) {
                 AccentOverlayUtils.applyAccent(commandBuilder, "#Tab" + i + "Accent",
-                        accentColor, AccentOverlayUtils.TAB_ACCENTS);
+                        accentColor, AccentOverlayUtils.MAP_TAB_ACCENTS);
             } else {
-                for (String id : AccentOverlayUtils.TAB_ACCENTS) {
+                for (String id : AccentOverlayUtils.MAP_TAB_ACCENTS) {
                     commandBuilder.set("#Tab" + i + "Accent #" + id + ".Visible", false);
                 }
             }

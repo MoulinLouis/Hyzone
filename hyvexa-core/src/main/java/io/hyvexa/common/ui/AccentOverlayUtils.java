@@ -94,6 +94,17 @@ public final class AccentOverlayUtils {
         "AccentBlue", "AccentViolet", "AccentPink", "AccentCyan"
     };
 
+    /** Map leaderboard tabs: only 5 colors (no violet/pink/cyan). */
+    public static final String[] MAP_TAB_ACCENTS = {
+        "AccentRed", "AccentOrange", "AccentYellow", "AccentGreen", "AccentBlue"
+    };
+
+    /** Challenge leaderboard tabs: 7 colors (no yellow). */
+    public static final String[] CHALLENGE_TAB_ACCENTS = {
+        "AccentRed", "AccentBlue", "AccentGreen", "AccentOrange",
+        "AccentViolet", "AccentPink", "AccentCyan"
+    };
+
     public static final String[] SHOP_TAB_ACCENTS = {
         "AccentFuchsia", "AccentIndigo", "AccentOrange", "AccentDefault"
     };

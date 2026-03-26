@@ -143,9 +143,9 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
             commandBuilder.set("#Tab" + i + "Wrap #TabActive.Visible", active);
             if (active) {
                 AccentOverlayUtils.applyAccent(commandBuilder, "#Tab" + i + "Accent",
-                        challengeTypes[i].getAccentColor(), AccentOverlayUtils.TAB_ACCENTS);
+                        challengeTypes[i].getAccentColor(), AccentOverlayUtils.CHALLENGE_TAB_ACCENTS);
             } else {
-                for (String id : AccentOverlayUtils.TAB_ACCENTS) {
+                for (String id : AccentOverlayUtils.CHALLENGE_TAB_ACCENTS) {
                     commandBuilder.set("#Tab" + i + "Accent #" + id + ".Visible", false);
                 }
             }
