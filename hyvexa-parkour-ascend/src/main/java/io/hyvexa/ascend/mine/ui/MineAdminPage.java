@@ -284,7 +284,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
         MineZoneAdminPage page = new MineZoneAdminPage(
-            pRef, hierarchyStore, mineManager, adminNavigator, selectedMineId);
+            pRef, hierarchyStore, blockConfigStore, mineManager, adminNavigator, selectedMineId);
         player.getPageManager().openCustomPage(ref, store, page);
     }
 

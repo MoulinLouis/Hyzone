@@ -22,6 +22,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.mine.MineBlockRegistry;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
 import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
@@ -42,6 +43,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private static Map<UUID, int[]> pos2Selections() { return io.hyvexa.ascend.command.AscendAdminCommand.minePos2; }
 
     private final MineHierarchyStore hierarchyStore;
+    private final BlockConfigStore blockConfigStore;
     private final MineManager mineManager;
     private final AscendAdminNavigator adminNavigator;
     private final String mineId;
@@ -59,10 +61,12 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private String activeTab = TAB_ZONES;
 
     public MineZoneAdminPage(@Nonnull PlayerRef playerRef, MineHierarchyStore hierarchyStore,
+                             BlockConfigStore blockConfigStore,
                              MineManager mineManager, AscendAdminNavigator adminNavigator,
                              String mineId) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ZoneData.CODEC);
         this.hierarchyStore = hierarchyStore;
+        this.blockConfigStore = blockConfigStore;
         this.mineManager = mineManager;
         this.adminNavigator = adminNavigator;
         this.mineId = mineId;
@@ -208,7 +212,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 MineBlockPickerPage picker = new MineBlockPickerPage(
-                    playerRef, hierarchyStore, mineManager,
+                    playerRef, hierarchyStore, blockConfigStore, mineManager,
                     selectedZoneId, selectedLayerId, blockId, adminNavigator
                 );
                 player.getPageManager().openCustomPage(ref, store, picker);
@@ -815,7 +819,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             commandBuilder.set(sel + " #BlockName.Text", displayName);
             commandBuilder.set(sel + " #BlockProb.Text", formatProb(entry.getValue()));
 
-            int hp = hierarchyStore.getBlockHp(entry.getKey());
+            int hp = blockConfigStore.getBlockHp(entry.getKey());
             commandBuilder.set(sel + " #BlockHp.Text", hp + " HP");
             if (hp > 1) {
                 commandBuilder.set(sel + " #BlockHp.Style.TextColor", "#ef4444");
