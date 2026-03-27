@@ -671,20 +671,37 @@ public class MinePage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null || !PermissionUtils.isOp(playerRef.getUuid())) return;
 
+        UUID uuid = playerRef.getUuid();
+
+        // Reset upgrades + pickaxe
         for (MineUpgradeType type : MineUpgradeType.values()) mineProgress.setUpgradeLevel(type, 0);
         mineProgress.setPickaxeTier(0);
         mineProgress.setPickaxeEnhancement(0);
         swapPickaxeItem(player);
 
-        UUID uuid = playerRef.getUuid();
-
+        // Despawn and unassign all slot miners
         for (var entry : mineProgress.getSlotAssignments().entrySet()) {
             if (mineRobotManager != null) mineRobotManager.despawnMiner(uuid, entry.getKey());
             mineProgress.unassignSlot(entry.getKey());
         }
 
+        // Clear miner collection (in-memory + DB)
+        mineProgress.clearMinerCollection();
+        if (minePlayerStore != null) minePlayerStore.deleteAllMiners(uuid);
+
+        // Clear egg inventory + hotbar chest items
+        mineProgress.clearEggInventory();
+        mineProgress.clearChestSlots();
+        Inventory inventory = player.getInventory();
+        ItemContainer hotbar = inventory != null ? inventory.getHotbar() : null;
+        if (hotbar != null) {
+            for (short slot = 3; slot <= 6; slot++) {
+                hotbar.setItemStackForSlot(slot, null, false);
+            }
+        }
+
         markDirty();
-        player.sendMessage(Message.raw("All upgrades and miners have been reset."));
+        player.sendMessage(Message.raw("All upgrades, miners, and eggs have been reset."));
         sendRefresh(ref, store);
     }
 

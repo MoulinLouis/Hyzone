@@ -404,6 +404,14 @@ public class MinePlayerProgress {
         return new ArrayList<>(minerCollection);
     }
 
+    public synchronized void clearMinerCollection() {
+        minerCollection.clear();
+    }
+
+    public synchronized void clearEggInventory() {
+        eggInventory.clear();
+    }
+
     // --- Slot assignments ---
 
     public synchronized void assignMinerToSlot(int slotIndex, long minerId) {

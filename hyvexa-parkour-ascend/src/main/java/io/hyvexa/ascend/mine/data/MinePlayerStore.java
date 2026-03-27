@@ -226,6 +226,20 @@ public class MinePlayerStore {
         return -1;
     }
 
+    public void deleteAllMiners(UUID playerId) {
+        if (!this.db.isInitialized()) return;
+        try (Connection conn = this.db.getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM mine_player_miners_v2 WHERE player_uuid = ?")) {
+                ps.setString(1, playerId.toString());
+                ps.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to delete miners for %s: %s", playerId, e.getMessage());
+        }
+    }
+
     private boolean savePlayerSync(UUID playerId) {
         MinePlayerProgress progress = players.get(playerId);
         if (progress == null) return true;
