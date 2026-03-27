@@ -65,11 +65,6 @@ public class PurgeHudManager extends AbstractHudManager<PurgeHud> {
         MultiHudBridge.showIfNeeded(hud);
     }
 
-    @Override
-    public PurgeHud getHud(UUID playerId) {
-        return playerId != null ? super.getHud(playerId) : null;
-    }
-
     public Ref<EntityStore> getPlayerRef(UUID playerId) {
         if (playerId == null) {
             return null;
@@ -88,11 +83,6 @@ public class PurgeHudManager extends AbstractHudManager<PurgeHud> {
             comboPlayers.remove(playerId);
             killMeterPlayers.remove(playerId);
         }
-    }
-
-    @Override
-    protected void onRemove(UUID playerId, PurgeHud hud) {
-        // No additional cleanup needed — HUD lifecycle managed by engine
     }
 
     public void registerComboPlayer(UUID playerId, PurgeSessionPlayerState state) {

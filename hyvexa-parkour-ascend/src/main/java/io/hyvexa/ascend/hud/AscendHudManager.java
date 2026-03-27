@@ -279,11 +279,6 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
         runnerBarCache.remove(playerId);
     }
 
-    @Override
-    protected void onRemove(UUID playerId, AscendHud hud) {
-        // No additional cleanup needed — auxiliary maps handled by removePlayer override
-    }
-
     public void showScreenFade(UUID playerId, boolean visible) {
         UICommandBuilder cb = new UICommandBuilder();
         cb.set("#ScreenFade.Visible", visible);

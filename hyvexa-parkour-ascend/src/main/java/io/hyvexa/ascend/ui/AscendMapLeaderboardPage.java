@@ -132,13 +132,6 @@ public class AscendMapLeaderboardPage extends AbstractLeaderboardPage {
     }
 
     @Override
-    protected void renderRow(UICommandBuilder cmd, String cardPrefix, LeaderboardRow row) {
-        cmd.set(cardPrefix + " #Rank.Text", "#" + row.rank());
-        cmd.set(cardPrefix + " #PlayerName.Text", row.name());
-        cmd.set(cardPrefix + " #Value.Text", row.formattedValue());
-    }
-
-    @Override
     protected void bindCustomEvents(UIEventBuilder eventBuilder) {
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);

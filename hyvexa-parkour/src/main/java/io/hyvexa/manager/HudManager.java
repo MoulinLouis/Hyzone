@@ -373,11 +373,6 @@ public class HudManager extends AbstractHudManager<HudManager.PlayerHudState> {
         removePlayer(playerId);
     }
 
-    @Override
-    protected void onRemove(UUID playerId, PlayerHudState hud) {
-        // No additional cleanup needed — engine handles HUD lifecycle
-    }
-
     public void setAdvancedHudVisible(PlayerRef playerRef, boolean visible) {
         if (playerRef == null) {
             return;

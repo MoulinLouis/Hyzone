@@ -142,11 +142,6 @@ public class MineHudManager extends AbstractHudManager<MineHudManager.MineHudSta
         }
     }
 
-    @Override
-    protected void onRemove(UUID playerId, MineHudState hud) {
-        // Handled by removePlayer(UUID, Player, PlayerRef) overload
-    }
-
     private void updateCrystals(MineHudState state, MinePlayerProgress progress) {
         double crystals = progress.getCrystals();
         if (crystals == state.lastCrystals) {

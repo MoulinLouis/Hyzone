@@ -53,7 +53,7 @@ public abstract class AbstractHudManager<H> {
     // --- Queries ---
 
     public H getHud(UUID playerId) {
-        return huds.get(playerId);
+        return playerId != null ? huds.get(playerId) : null;
     }
 
     public boolean hasHud(UUID playerId) {
@@ -66,5 +66,6 @@ public abstract class AbstractHudManager<H> {
 
     // --- Abstract ---
 
-    protected abstract void onRemove(UUID playerId, H hud);
+    protected void onRemove(UUID playerId, H hud) {
+    }
 }
