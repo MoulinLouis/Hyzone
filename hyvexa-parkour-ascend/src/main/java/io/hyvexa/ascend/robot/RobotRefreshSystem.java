@@ -18,6 +18,7 @@ import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.visibility.EntityVisibilityManager;
 
 import java.util.HashSet;
 import java.util.List;
@@ -336,7 +337,7 @@ class RobotRefreshSystem {
             return;
         }
         UUID entityUuid = robot.getEntityUuid();
-        manager.clearTeleportWarning(robot);
+        manager.getMovementController().clearTeleportWarning(robot);
         manager.getSpawner().despawnNpcForRobot(robot);
         manager.queueOrphanIfDespawnFailed(entityUuid, robot);
     }
@@ -363,6 +364,29 @@ class RobotRefreshSystem {
         LOGGER.atInfo().log("Runner health: robots=%d, visibleNpcs=%d, online=%d, dirty=%d, withGhost=%d, npc=%s",
                 robots.size(), visibleNpcCount, onlinePlayers.size(), dirtyPlayers.size(),
                 ghostCount, manager.getSpawner().isNpcAvailable() ? "available" : "NULL");
+    }
+
+    void applyRunnerVisibility(UUID viewerId) {
+        if (viewerId == null) {
+            return;
+        }
+        AscendPlayerStore playerStore = manager.getPlayerStore();
+        boolean hide = playerStore.isHideOtherRunners(viewerId);
+        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
+        for (RobotState state : manager.getRobots().values()) {
+            if (state.getOwnerId().equals(viewerId)) {
+                continue; // Skip own runners
+            }
+            UUID entityUuid = state.getEntityUuid();
+            if (entityUuid == null) {
+                continue;
+            }
+            if (hide) {
+                visibilityManager.hideEntity(viewerId, entityUuid);
+            } else {
+                visibilityManager.showEntity(viewerId, entityUuid);
+            }
+        }
     }
 
     void resetViewerContext() {
