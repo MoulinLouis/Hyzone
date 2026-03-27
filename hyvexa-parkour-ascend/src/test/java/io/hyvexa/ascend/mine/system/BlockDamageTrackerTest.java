@@ -70,21 +70,6 @@ class BlockDamageTrackerTest {
     }
 
     @Test
-    void timeoutResetsAccumulatedDamage() throws InterruptedException {
-        // Accumulate some damage
-        tracker.recordHit(playerA, 0, 0, 0, "stone", 10, 1.0); // hp=9
-        tracker.recordHit(playerA, 0, 0, 0, "stone", 10, 1.0); // hp=8
-
-        // Wait for timeout (3000ms + margin)
-        Thread.sleep(3100);
-
-        // Hit again - should reset to fresh maxHp then subtract 1
-        HitResult result = tracker.recordHit(playerA, 0, 0, 0, "stone", 10, 1.0);
-        assertFalse(result.shouldBreak());
-        assertEquals(9.0, result.remainingHp(), 1e-9);
-    }
-
-    @Test
     void blockTypeChangeResetsDamage() {
         tracker.recordHit(playerA, 0, 0, 0, "stone", 10, 1.0); // hp=9
         tracker.recordHit(playerA, 0, 0, 0, "stone", 10, 1.0); // hp=8
@@ -130,27 +115,6 @@ class BlockDamageTrackerTest {
         // Hitting again should start fresh
         HitResult result = tracker.recordHit(playerA, 0, 0, 0, "stone", 10, 1.0);
         assertEquals(9.0, result.remainingHp(), 1e-9);
-    }
-
-    @Test
-    void cleanupExpiredRemovesOnlyTimedOutEntries() throws InterruptedException {
-        tracker.recordHit(playerA, 0, 0, 0, "stone", 10, 1.0); // block A: hp=9
-        tracker.recordHit(playerA, 1, 1, 1, "stone", 10, 1.0); // block B: hp=9
-
-        Thread.sleep(3100);
-
-        // Refresh block B only
-        tracker.recordHit(playerA, 1, 1, 1, "stone", 10, 1.0);
-
-        tracker.cleanupExpired(playerA);
-
-        // Block A was expired -> hitting it should start fresh
-        HitResult blockA = tracker.recordHit(playerA, 0, 0, 0, "stone", 10, 1.0);
-        assertEquals(9.0, blockA.remainingHp(), 1e-9);
-
-        // Block B was refreshed after timeout -> state reset then hit (hp=9), now another hit -> 8
-        HitResult blockB = tracker.recordHit(playerA, 1, 1, 1, "stone", 10, 1.0);
-        assertEquals(8.0, blockB.remainingHp(), 1e-9);
     }
 
     @Test

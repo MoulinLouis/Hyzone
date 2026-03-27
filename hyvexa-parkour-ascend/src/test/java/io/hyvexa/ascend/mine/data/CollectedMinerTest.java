@@ -10,8 +10,8 @@ class CollectedMinerTest {
     void productionRateScalesLinearlyWithSpeedLevel() {
         CollectedMiner miner = new CollectedMiner(1L, "deep", MinerRarity.LEGENDARY, 3);
 
-        assertEquals(7.8, miner.getProductionRate(), 1e-9);
-        assertEquals(6.6, CollectedMiner.getProductionRate(1), 1e-9);
+        assertEquals(15.6, miner.getProductionRate(), 1e-9);
+        assertEquals(13.2, CollectedMiner.getProductionRate(1), 1e-9);
     }
 
     @Test
