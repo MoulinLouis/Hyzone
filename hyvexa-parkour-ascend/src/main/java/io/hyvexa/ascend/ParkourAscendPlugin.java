@@ -86,6 +86,7 @@ import io.hyvexa.ascend.ui.AscendSettingsPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.whitelist.WhitelistRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -694,6 +695,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
             playersInAscendWorld.remove(playerId);
             cleanupAscendState(playerId, null, null);
+            MultiHudBridge.evictPlayer(playerId);
 
             // Clean up event handler state
             runSafe(() -> { if (eventHandler != null) eventHandler.cleanupPlayer(playerId); },

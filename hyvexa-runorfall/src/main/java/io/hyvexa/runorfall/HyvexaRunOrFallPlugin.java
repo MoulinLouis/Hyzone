@@ -238,6 +238,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             UUID playerId = playerRef.getUuid();
             gameManager.handleDisconnect(playerId);
             cleanupHudForPlayer(playerId);
+            MultiHudBridge.evictPlayer(playerId);
             hiddenHudPlayers.remove(playerId);
             RunOrFallAdminPage.clearSelection(playerId);
             RunOrFallMusicPage.clearPlayer(playerId);
