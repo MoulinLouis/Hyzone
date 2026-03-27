@@ -29,7 +29,7 @@ Entry point: `hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/ParkourAscend
 | `TierConfigStore` | Mine tier definitions and unlock costs |
 | `MinerConfigStore` | Automated miner configuration |
 | `ConveyorConfigStore` | Conveyor chest buffer configuration |
-| `GateConfigStore` | Entry/exit gate bounds and teleport destinations |
+| `GateConfigStore` | Entry/exit gate AABB bounds and teleport destinations |
 | `MinePlayerStore` | Per-player mine progress (crystals, inventory, upgrades, miners) |
 | `MineRobotManager` | Automated miner NPCs that mine while the player is online |
 | `MineHudManager` | HUD for the mine area (crystals, inventory, toasts) |
