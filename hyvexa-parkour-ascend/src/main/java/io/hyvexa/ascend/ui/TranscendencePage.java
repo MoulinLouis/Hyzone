@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -87,7 +87,7 @@ public class TranscendencePage extends BaseAscendPage {
 
         if (!transcendenceManager.isEligible(playerId)) {
             BigNumber volt = playerStore.volt().getVolt(playerId);
-            player.sendMessage(Message.raw("[Transcendence] Need " + FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
+            player.sendMessage(Message.raw("[Transcendence] Need " + FormatUtils.formatBigNumber(AscensionConstants.TRANSCENDENCE_VOLT_THRESHOLD)
                 + " volt with BREAK_ASCENSION active. You have: " + FormatUtils.formatBigNumber(volt))
                 .color(SystemMessageUtils.SECONDARY));
             return;
@@ -134,7 +134,7 @@ public class TranscendencePage extends BaseAscendPage {
         boolean eligible = transcendenceManager.isEligible(playerId);
 
         commandBuilder.set("#CurrentVolt.Text", FormatUtils.formatBigNumber(volt));
-        commandBuilder.set("#RequiredVolt.Text", FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD));
+        commandBuilder.set("#RequiredVolt.Text", FormatUtils.formatBigNumber(AscensionConstants.TRANSCENDENCE_VOLT_THRESHOLD));
         commandBuilder.set("#TranscendenceCountValue.Text", "x" + transcendenceCount);
 
         // Milestone 1 status
@@ -146,7 +146,7 @@ public class TranscendencePage extends BaseAscendPage {
         if (eligible) {
             commandBuilder.set("#TranscendButton.Text", "TRANSCEND");
         } else {
-            commandBuilder.set("#TranscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD));
+            commandBuilder.set("#TranscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscensionConstants.TRANSCENDENCE_VOLT_THRESHOLD));
         }
     }
 }

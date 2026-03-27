@@ -1,7 +1,7 @@
 package io.hyvexa.ascend.ascension;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.SummitConstants;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.GameplayState;
 import io.hyvexa.common.math.BigNumber;
@@ -72,7 +72,7 @@ public class ChallengeSnapshot {
 
         // Capture summit XP
         snapshot.summitXp = new HashMap<>();
-        for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
+        for (SummitConstants.SummitCategory cat : SummitConstants.SummitCategory.values()) {
             snapshot.summitXp.put(cat.name(), progress.economy().getSummitXp(cat));
         }
 
@@ -138,7 +138,7 @@ public class ChallengeSnapshot {
         if (summitXp != null) {
             for (Map.Entry<String, Double> entry : summitXp.entrySet()) {
                 try {
-                    AscendConstants.SummitCategory cat = AscendConstants.SummitCategory.valueOf(entry.getKey());
+                    SummitConstants.SummitCategory cat = SummitConstants.SummitCategory.valueOf(entry.getKey());
                     progress.economy().setSummitXp(cat, entry.getValue());
                 } catch (IllegalArgumentException ignored) {
                 }

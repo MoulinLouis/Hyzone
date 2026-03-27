@@ -7,7 +7,9 @@ import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
+import io.hyvexa.ascend.SummitConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -164,7 +166,7 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
                 return;
             }
             List<AscendMap> maps = mapStore.listMapsSorted();
-            float[] bars = new float[AscendConstants.MULTIPLIER_SLOTS];
+            float[] bars = new float[RunnerEconomyConstants.MULTIPLIER_SLOTS];
             for (int i = 0; i < maps.size() && i < bars.length; i++) {
                 double progress = robotManager.getRunnerProgress(playerId, maps.get(i).getId());
                 if (progress >= 0) {
@@ -378,21 +380,21 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
         List<AscendMap> mapList = mapStore != null ? mapStore.listMapsSorted() : List.of();
 
         // Single-pass multiplier computation
-        AscendPlayerStore.MultiplierResult mr = playerStore.progression().getMultiplierProductAndValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+        AscendPlayerStore.MultiplierResult mr = playerStore.progression().getMultiplierProductAndValues(playerId, mapList, RunnerEconomyConstants.MULTIPLIER_SLOTS);
 
         BigNumber volt = playerStore.volt().getVolt(playerId);
         int elevationLevel = playerStore.progression().getElevationLevel(playerId);
         BigNumber accumulatedVolt = playerStore.progression().getElevationAccumulatedVolt(playerId);
-        AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVolt);
+        ElevationConstants.ElevationPurchaseResult purchase = ElevationConstants.calculateElevationPurchase(elevationLevel, accumulatedVolt);
         int potentialElevation = elevationLevel + purchase.levels;
         boolean showElevation = elevationLevel > 1 || purchase.levels > 0;
 
-        Map<AscendConstants.SummitCategory, Integer> summitLevels = playerStore.progression().getSummitLevels(playerId);
+        Map<SummitConstants.SummitCategory, Integer> summitLevels = playerStore.progression().getSummitLevels(playerId);
         int ascensionCount = playerStore.progression().getAscensionCount(playerId);
         int skillPoints = playerStore.gameplay().getAvailableSkillPoints(playerId);
-        SummitManager.SummitPreview multPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.MULTIPLIER_GAIN) : null;
-        SummitManager.SummitPreview speedPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.RUNNER_SPEED) : null;
-        SummitManager.SummitPreview evoPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.EVOLUTION_POWER) : null;
+        SummitManager.SummitPreview multPreview = summitManager != null ? summitManager.previewSummit(playerId, SummitConstants.SummitCategory.MULTIPLIER_GAIN) : null;
+        SummitManager.SummitPreview speedPreview = summitManager != null ? summitManager.previewSummit(playerId, SummitConstants.SummitCategory.RUNNER_SPEED) : null;
+        SummitManager.SummitPreview evoPreview = summitManager != null ? summitManager.previewSummit(playerId, SummitConstants.SummitCategory.EVOLUTION_POWER) : null;
 
         long vexa = vexaStore.getBalance(playerId);
 
@@ -412,7 +414,7 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
         final int elevationLevel;
         final int potentialElevation;
         final boolean showElevation;
-        final Map<AscendConstants.SummitCategory, Integer> summitLevels;
+        final Map<SummitConstants.SummitCategory, Integer> summitLevels;
         final int ascensionCount;
         final int skillPoints;
         final SummitManager.SummitPreview multPreview;
@@ -422,7 +424,7 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
 
         CachedEconomyData(long timestamp, BigNumber volt, BigNumber product, BigNumber[] digits,
                           int elevationLevel, int potentialElevation, boolean showElevation,
-                          Map<AscendConstants.SummitCategory, Integer> summitLevels,
+                          Map<SummitConstants.SummitCategory, Integer> summitLevels,
                           int ascensionCount, int skillPoints,
                           SummitManager.SummitPreview multPreview,
                           SummitManager.SummitPreview speedPreview,

@@ -19,7 +19,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.holo.AscendHologramManager;
@@ -421,10 +421,10 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         balanceTable.append("Lv: Unlock / Runner / Reward / Time\n");
         for (int i = 0; i < 5; i++) {
             String color = i < LEVEL_COLORS.length ? LEVEL_COLORS[i] : "Lv" + i;
-            long unlock = AscendConstants.getMapUnlockPrice(i);
+            long unlock = RunnerEconomyConstants.getMapUnlockPrice(i);
             long runner = 0L; // Runners are free
-            long reward = AscendConstants.getMapBaseReward(i);
-            long timeMs = AscendConstants.getMapBaseRunTimeMs(i);
+            long reward = RunnerEconomyConstants.getMapBaseReward(i);
+            long timeMs = RunnerEconomyConstants.getMapBaseRunTimeMs(i);
             String timeStr = formatTimeShort(timeMs);
             balanceTable.append(i).append(" ").append(color).append(": ")
                 .append(unlock).append(" / ").append(runner).append(" / ").append(reward).append(" / ").append(timeStr);
@@ -436,7 +436,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
 
         // Multiplier info
         String multiplierInfo = "Manual: 5x runner gain/run\n"
-            + "Runner: +" + formatDouble(AscendConstants.RUNNER_MULTIPLIER_INCREMENT) + "/run (base)\n"
+            + "Runner: +" + formatDouble(RunnerEconomyConstants.RUNNER_MULTIPLIER_INCREMENT) + "/run (base)\n"
             + "Speed upgrade: +10%/level";
         commandBuilder.set("#MultiplierInfoText.Text", multiplierInfo);
     }

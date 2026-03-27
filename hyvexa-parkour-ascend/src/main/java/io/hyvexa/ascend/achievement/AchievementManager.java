@@ -3,9 +3,11 @@ package io.hyvexa.ascend.achievement;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.AchievementType;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.AscensionConstants;
+import io.hyvexa.ascend.AscensionConstants.AchievementType;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.GameplayState;
@@ -80,7 +82,7 @@ public class AchievementManager {
     }
 
     private long getVisibleElevationMultiplier(AscendPlayerProgress progress) {
-        return Math.round(AscendConstants.getElevationMultiplier(progress.economy().getElevationMultiplier()));
+        return Math.round(ElevationConstants.getElevationMultiplier(progress.economy().getElevationMultiplier()));
     }
 
     private boolean hasAnyRobot(AscendPlayerProgress progress) {
@@ -113,7 +115,7 @@ public class AchievementManager {
 
     private boolean hasMaxStarRobot(AscendPlayerProgress progress) {
         for (var mapProgress : progress.gameplay().getMapProgress().values()) {
-            if (mapProgress.hasRobot() && mapProgress.getRobotStars() >= AscendConstants.MAX_ROBOT_STARS) {
+            if (mapProgress.hasRobot() && mapProgress.getRobotStars() >= RunnerEconomyConstants.MAX_ROBOT_STARS) {
                 return true;
             }
         }
@@ -149,11 +151,11 @@ public class AchievementManager {
     }
 
     private boolean allMapsMaxStars(AscendPlayerProgress progress) {
-        if (progress.gameplay().getMapProgress().size() < AscendConstants.MULTIPLIER_SLOTS) {
+        if (progress.gameplay().getMapProgress().size() < RunnerEconomyConstants.MULTIPLIER_SLOTS) {
             return false;
         }
         for (var mapProgress : progress.gameplay().getMapProgress().values()) {
-            if (!mapProgress.hasRobot() || mapProgress.getRobotStars() < AscendConstants.MAX_ROBOT_STARS) {
+            if (!mapProgress.hasRobot() || mapProgress.getRobotStars() < RunnerEconomyConstants.MAX_ROBOT_STARS) {
                 return false;
             }
         }
@@ -210,28 +212,28 @@ public class AchievementManager {
                 required = 1;
             }
             case WARMING_UP -> {
-                current = Math.min(progress.gameplay().getTotalManualRuns(), AscendConstants.ACHIEVEMENT_MANUAL_RUNS_10);
-                required = AscendConstants.ACHIEVEMENT_MANUAL_RUNS_10;
+                current = Math.min(progress.gameplay().getTotalManualRuns(), AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_10);
+                required = AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_10;
             }
             case DEDICATED -> {
-                current = Math.min(progress.gameplay().getTotalManualRuns(), AscendConstants.ACHIEVEMENT_MANUAL_RUNS_100);
-                required = AscendConstants.ACHIEVEMENT_MANUAL_RUNS_100;
+                current = Math.min(progress.gameplay().getTotalManualRuns(), AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_100);
+                required = AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_100;
             }
             case HALFWAY_THERE -> {
-                current = Math.min(progress.gameplay().getTotalManualRuns(), AscendConstants.ACHIEVEMENT_MANUAL_RUNS_500);
-                required = AscendConstants.ACHIEVEMENT_MANUAL_RUNS_500;
+                current = Math.min(progress.gameplay().getTotalManualRuns(), AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_500);
+                required = AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_500;
             }
             case MARATHON -> {
-                current = Math.min(progress.gameplay().getTotalManualRuns(), AscendConstants.ACHIEVEMENT_MANUAL_RUNS_1000);
-                required = AscendConstants.ACHIEVEMENT_MANUAL_RUNS_1000;
+                current = Math.min(progress.gameplay().getTotalManualRuns(), AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_1000);
+                required = AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_1000;
             }
             case UNSTOPPABLE -> {
-                current = Math.min(progress.gameplay().getTotalManualRuns(), AscendConstants.ACHIEVEMENT_MANUAL_RUNS_5000);
-                required = AscendConstants.ACHIEVEMENT_MANUAL_RUNS_5000;
+                current = Math.min(progress.gameplay().getTotalManualRuns(), AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_5000);
+                required = AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_5000;
             }
             case LIVING_LEGEND -> {
-                current = Math.min(progress.gameplay().getTotalManualRuns(), AscendConstants.ACHIEVEMENT_MANUAL_RUNS_10000);
-                required = AscendConstants.ACHIEVEMENT_MANUAL_RUNS_10000;
+                current = Math.min(progress.gameplay().getTotalManualRuns(), AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_10000);
+                required = AscensionConstants.ACHIEVEMENT_MANUAL_RUNS_10000;
             }
 
             // Runners
@@ -240,16 +242,16 @@ public class AchievementManager {
                 required = 1;
             }
             case ARMY -> {
-                current = Math.min(countRobots(progress), AscendConstants.ACHIEVEMENT_RUNNER_COUNT);
-                required = AscendConstants.ACHIEVEMENT_RUNNER_COUNT;
+                current = Math.min(countRobots(progress), AscensionConstants.ACHIEVEMENT_RUNNER_COUNT);
+                required = AscensionConstants.ACHIEVEMENT_RUNNER_COUNT;
             }
             case EVOLVED -> {
                 current = hasEvolvedRobot(progress) ? 1 : 0;
                 required = 1;
             }
             case STAR_COLLECTOR -> {
-                current = Math.min(getMaxRobotStars(progress), AscendConstants.MAX_ROBOT_STARS);
-                required = AscendConstants.MAX_ROBOT_STARS;
+                current = Math.min(getMaxRobotStars(progress), RunnerEconomyConstants.MAX_ROBOT_STARS);
+                required = RunnerEconomyConstants.MAX_ROBOT_STARS;
             }
 
             // Prestige
@@ -258,44 +260,44 @@ public class AchievementManager {
                 required = 1;
             }
             case GOING_UP -> {
-                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscendConstants.ACHIEVEMENT_ELEVATION_100);
-                required = AscendConstants.ACHIEVEMENT_ELEVATION_100;
+                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscensionConstants.ACHIEVEMENT_ELEVATION_100);
+                required = AscensionConstants.ACHIEVEMENT_ELEVATION_100;
             }
             case SKY_HIGH -> {
-                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscendConstants.ACHIEVEMENT_ELEVATION_5000);
-                required = AscendConstants.ACHIEVEMENT_ELEVATION_5000;
+                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscensionConstants.ACHIEVEMENT_ELEVATION_5000);
+                required = AscensionConstants.ACHIEVEMENT_ELEVATION_5000;
             }
             case STRATOSPHERE -> {
-                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscendConstants.ACHIEVEMENT_ELEVATION_20000);
-                required = AscendConstants.ACHIEVEMENT_ELEVATION_20000;
+                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscensionConstants.ACHIEVEMENT_ELEVATION_20000);
+                required = AscensionConstants.ACHIEVEMENT_ELEVATION_20000;
             }
             case SUMMIT_SEEKER -> {
                 current = hasAnySummitLevel(progress) ? 1 : 0;
                 required = 1;
             }
             case PEAK_PERFORMER -> {
-                current = Math.min(getMaxSummitLevel(progress), AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_10);
-                required = AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_10;
+                current = Math.min(getMaxSummitLevel(progress), AscensionConstants.ACHIEVEMENT_SUMMIT_LEVEL_10);
+                required = AscensionConstants.ACHIEVEMENT_SUMMIT_LEVEL_10;
             }
             case MOUNTAINEER -> {
-                current = Math.min(getMaxSummitLevel(progress), AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_100);
-                required = AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_100;
+                current = Math.min(getMaxSummitLevel(progress), AscensionConstants.ACHIEVEMENT_SUMMIT_LEVEL_100);
+                required = AscensionConstants.ACHIEVEMENT_SUMMIT_LEVEL_100;
             }
             case SUMMIT_LEGEND -> {
-                current = Math.min(getMaxSummitLevel(progress), AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_1000);
-                required = AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_1000;
+                current = Math.min(getMaxSummitLevel(progress), AscensionConstants.ACHIEVEMENT_SUMMIT_LEVEL_1000);
+                required = AscensionConstants.ACHIEVEMENT_SUMMIT_LEVEL_1000;
             }
             case ASCENDED -> {
                 current = Math.min(progress.gameplay().getAscensionCount(), 1);
                 required = 1;
             }
             case VETERAN -> {
-                current = Math.min(progress.gameplay().getAscensionCount(), AscendConstants.ACHIEVEMENT_ASCENSION_5);
-                required = AscendConstants.ACHIEVEMENT_ASCENSION_5;
+                current = Math.min(progress.gameplay().getAscensionCount(), AscensionConstants.ACHIEVEMENT_ASCENSION_5);
+                required = AscensionConstants.ACHIEVEMENT_ASCENSION_5;
             }
             case TRANSCENDENT -> {
-                current = Math.min(progress.gameplay().getAscensionCount(), AscendConstants.ACHIEVEMENT_ASCENSION_10);
-                required = AscendConstants.ACHIEVEMENT_ASCENSION_10;
+                current = Math.min(progress.gameplay().getAscensionCount(), AscensionConstants.ACHIEVEMENT_ASCENSION_10);
+                required = AscensionConstants.ACHIEVEMENT_ASCENSION_10;
             }
 
             // Skills
@@ -311,19 +313,19 @@ public class AchievementManager {
             }
             case CHALLENGE_MASTER -> {
                 current = progress.gameplay().getCompletedChallengeRewards().size();
-                required = AscendConstants.ChallengeType.values().length;
+                required = AscensionConstants.ChallengeType.values().length;
             }
 
             // Easter Eggs
             case CAT_COLLECTOR -> {
-                current = Math.min(progress.gameplay().getFoundCatCount(), AscendConstants.ACHIEVEMENT_CATS_REQUIRED);
-                required = AscendConstants.ACHIEVEMENT_CATS_REQUIRED;
+                current = Math.min(progress.gameplay().getFoundCatCount(), AscensionConstants.ACHIEVEMENT_CATS_REQUIRED);
+                required = AscensionConstants.ACHIEVEMENT_CATS_REQUIRED;
             }
 
             // Secret
             case CHAIN_RUNNER -> {
-                current = Math.min(progress.gameplay().getConsecutiveManualRuns(), AscendConstants.ACHIEVEMENT_CONSECUTIVE_RUNS_25);
-                required = AscendConstants.ACHIEVEMENT_CONSECUTIVE_RUNS_25;
+                current = Math.min(progress.gameplay().getConsecutiveManualRuns(), AscensionConstants.ACHIEVEMENT_CONSECUTIVE_RUNS_25);
+                required = AscensionConstants.ACHIEVEMENT_CONSECUTIVE_RUNS_25;
             }
             case ALL_STARS -> {
                 current = allMapsMaxStars(progress) ? 1 : 0;

@@ -1,8 +1,8 @@
 package io.hyvexa.ascend.summit;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.SummitConstants;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
@@ -47,7 +47,7 @@ public class SummitManager {
      */
     public boolean canSummit(UUID playerId) {
         BigNumber accumulatedVolt = playerStore.progression().getSummitAccumulatedVolt(playerId);
-        double potentialXp = AscendConstants.voltToXp(accumulatedVolt);
+        double potentialXp = SummitConstants.voltToXp(accumulatedVolt);
         return potentialXp >= 1.0;
     }
 
@@ -58,19 +58,19 @@ public class SummitManager {
      */
     public SummitPreview previewSummit(UUID playerId, SummitCategory category) {
         BigNumber volt = playerStore.progression().getSummitAccumulatedVolt(playerId);
-        double xpToGain = AscendConstants.voltToXp(volt);
+        double xpToGain = SummitConstants.voltToXp(volt);
 
         double currentXp = playerStore.progression().getSummitXp(playerId, category);
-        int currentLevel = AscendConstants.calculateLevelFromXp(currentXp);
+        int currentLevel = SummitConstants.calculateLevelFromXp(currentXp);
 
         double newXp = currentXp + xpToGain;
-        int newLevel = AscendConstants.calculateLevelFromXp(newXp);
+        int newLevel = SummitConstants.calculateLevelFromXp(newXp);
 
         double currentBonus = category.getBonusForLevel(currentLevel);
         double newBonus = category.getBonusForLevel(newLevel);
 
-        double[] currentProgress = AscendConstants.getXpProgress(currentXp);
-        double[] newProgress = AscendConstants.getXpProgress(newXp);
+        double[] currentProgress = SummitConstants.getXpProgress(currentXp);
+        double[] newProgress = SummitConstants.getXpProgress(newXp);
 
         return new SummitPreview(
             category,
@@ -101,7 +101,7 @@ public class SummitManager {
         }
 
         BigNumber volt = playerStore.progression().getSummitAccumulatedVolt(playerId);
-        double xpToGain = AscendConstants.voltToXp(volt);
+        double xpToGain = SummitConstants.voltToXp(volt);
 
         if (xpToGain < 1.0) {
             return new SummitResult(-1, List.of(), 0.0);

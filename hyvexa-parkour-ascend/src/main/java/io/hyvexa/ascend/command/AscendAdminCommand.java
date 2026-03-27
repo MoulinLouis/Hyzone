@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.holo.AscendHologramManager;
@@ -182,10 +182,10 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         // Show created map with automatic balancing
         String levelColor = getLevelColor(order);
         player.sendMessage(Message.raw("Ascend map created: " + id + " (" + levelColor + ")"));
-        player.sendMessage(Message.raw("  Unlock: " + AscendConstants.getMapUnlockPrice(order) + " volt"));
+        player.sendMessage(Message.raw("  Unlock: " + RunnerEconomyConstants.getMapUnlockPrice(order) + " volt"));
         player.sendMessage(Message.raw("  Runner: 0 volt (free)"));
-        player.sendMessage(Message.raw("  Reward: " + AscendConstants.getMapBaseReward(order) + " volt/run"));
-        player.sendMessage(Message.raw("  Run time: " + formatTime(AscendConstants.getMapBaseRunTimeMs(order))));
+        player.sendMessage(Message.raw("  Reward: " + RunnerEconomyConstants.getMapBaseReward(order) + " volt/run"));
+        player.sendMessage(Message.raw("  Run time: " + formatTime(RunnerEconomyConstants.getMapBaseRunTimeMs(order))));
         player.sendMessage(Message.raw("Use /as admin map setstart " + id + " to set spawn point."));
     }
 
@@ -265,10 +265,10 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
 
         String levelColor = getLevelColor(order);
         player.sendMessage(Message.raw("Order updated for " + map.getId() + " -> Level " + order + " (" + levelColor + ")"));
-        player.sendMessage(Message.raw("  Unlock: " + AscendConstants.getMapUnlockPrice(order) + " volt"));
+        player.sendMessage(Message.raw("  Unlock: " + RunnerEconomyConstants.getMapUnlockPrice(order) + " volt"));
         player.sendMessage(Message.raw("  Runner: 0 volt (free)"));
-        player.sendMessage(Message.raw("  Reward: " + AscendConstants.getMapBaseReward(order) + " volt/run"));
-        player.sendMessage(Message.raw("  Run time: " + formatTime(AscendConstants.getMapBaseRunTimeMs(order))));
+        player.sendMessage(Message.raw("  Reward: " + RunnerEconomyConstants.getMapBaseReward(order) + " volt/run"));
+        player.sendMessage(Message.raw("  Run time: " + formatTime(RunnerEconomyConstants.getMapBaseRunTimeMs(order))));
     }
 
     private void handleSetName(Player player, AscendMapStore mapStore, String[] args) {
@@ -304,10 +304,10 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             String status = hasStart && hasFinish ? "OK" : (hasStart ? "No Finish" : "No Start");
 
             player.sendMessage(Message.raw("[" + order + "] " + levelColor + " - " + name + " (" + map.getId() + ") [" + status + "]"));
-            player.sendMessage(Message.raw("    Unlock: " + AscendConstants.getMapUnlockPrice(order) +
+            player.sendMessage(Message.raw("    Unlock: " + RunnerEconomyConstants.getMapUnlockPrice(order) +
                     " | Runner: 0 (free)" +
-                    " | Reward: " + AscendConstants.getMapBaseReward(order) +
-                    " | Time: " + formatTime(AscendConstants.getMapBaseRunTimeMs(order))));
+                    " | Reward: " + RunnerEconomyConstants.getMapBaseReward(order) +
+                    " | Time: " + formatTime(RunnerEconomyConstants.getMapBaseRunTimeMs(order))));
         }
     }
 

@@ -1,7 +1,7 @@
 package io.hyvexa.ascend;
 
-import io.hyvexa.ascend.AscendConstants.ChallengeType;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.AscensionConstants.ChallengeType;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

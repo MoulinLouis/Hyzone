@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants.ChallengeType;
+import io.hyvexa.ascend.AscensionConstants.ChallengeType;
 import io.hyvexa.common.ui.AccentOverlayUtils;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.ascension.ChallengeManager.ChallengeLeaderboardEntry;

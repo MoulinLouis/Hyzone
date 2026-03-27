@@ -29,7 +29,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
@@ -340,7 +340,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     || (hasRobot && speedLevel < MAX_SPEED_LEVEL && canAffordUpgrade);
             boolean canEvolve = hasRobot
                     && speedLevel >= MAX_SPEED_LEVEL
-                    && stars < AscendConstants.MAX_ROBOT_STARS;
+                    && stars < RunnerEconomyConstants.MAX_ROBOT_STARS;
 
             hasAvailableBuyAll |= canBuyAll;
             hasEligibleEvolution |= canEvolve;
@@ -376,14 +376,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private void updateStarDisplay(UICommandBuilder cmd, int cardIndex, int stars) {
         // Show/hide star images based on evolution level (max 5 stars)
-        for (int i = 1; i <= AscendConstants.MAX_ROBOT_STARS; i++) {
+        for (int i = 1; i <= RunnerEconomyConstants.MAX_ROBOT_STARS; i++) {
             boolean visible = i <= stars;
             cmd.set("#MapCards[" + cardIndex + "] #Star" + i + ".Visible", visible);
         }
     }
 
     private String buildLevelText(int stars, int speedLevel) {
-        if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
+        if (stars >= RunnerEconomyConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
             return "MAX";
         }
         return "Lv." + speedLevel;
@@ -498,13 +498,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 actionPrice = BigNumber.ZERO;
             }
         } else {
-            int speedGainPercent = (int) (AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
+            int speedGainPercent = (int) (RunnerEconomyConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
             runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
-            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+            if (speedLevel >= MAX_SPEED_LEVEL && stars < RunnerEconomyConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
                 actionPrice = BigNumber.ZERO;
                 runnerStatusText = formatEvolveGain(stars, playerId);
-            } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
+            } else if (stars >= RunnerEconomyConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                 runnerButtonText = "Maxed!";
                 actionPrice = BigNumber.ZERO;
             } else {
@@ -560,7 +560,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         SummitManager.BonusTriplet bonuses = summitManager != null
             ? summitManager.getAllBonuses(playerId)
             : new SummitManager.BonusTriplet(1.0, 3.0, 0.0);
-        BigNumber increment = AscendConstants.getRunnerMultiplierIncrement(stars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
+        BigNumber increment = RunnerEconomyConstants.getRunnerMultiplierIncrement(stars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
         return "+" + FormatUtils.formatBigNumber(increment) + "x";
     }
 
@@ -572,7 +572,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         SummitManager.BonusTriplet bonuses = summitManager != null
             ? summitManager.getAllBonuses(playerId)
             : new SummitManager.BonusTriplet(1.0, 3.0, 0.0);
-        BigNumber nextIncrement = AscendConstants.getRunnerMultiplierIncrement(stars + 1, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
+        BigNumber nextIncrement = RunnerEconomyConstants.getRunnerMultiplierIncrement(stars + 1, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
         double val = nextIncrement.toDouble();
         String formatted;
         if (val < 1.0) {
@@ -593,7 +593,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
      * Early game boost: levels 0-4 cost ÷4 for smooth first 2-3 minutes
      */
     private BigNumber computeUpgradeCost(int currentLevel, int mapDisplayOrder, int stars) {
-        return AscendConstants.getRunnerUpgradeCost(currentLevel, mapDisplayOrder, stars);
+        return RunnerEconomyConstants.getRunnerUpgradeCost(currentLevel, mapDisplayOrder, stars);
     }
 
     private void handleRobotAction(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
@@ -639,13 +639,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
             int currentStars = mapProgress.getRobotStars();
 
             // Check if fully maxed (max stars and max level)
-            if (currentStars >= AscendConstants.MAX_ROBOT_STARS && currentLevel >= MAX_SPEED_LEVEL) {
+            if (currentStars >= RunnerEconomyConstants.MAX_ROBOT_STARS && currentLevel >= MAX_SPEED_LEVEL) {
                 AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.INFO, "Runner already maxed!");
                 return;
             }
 
             // Check if at max level and can evolve
-            if (currentLevel >= MAX_SPEED_LEVEL && currentStars < AscendConstants.MAX_ROBOT_STARS) {
+            if (currentLevel >= MAX_SPEED_LEVEL && currentStars < RunnerEconomyConstants.MAX_ROBOT_STARS) {
                 int newStars = playerStore.runners().evolveRobot(playerRef.getUuid(), mapId);
                 if (robotManager != null) {
                     robotManager.respawnRobot(playerRef.getUuid(), mapId, newStars);
@@ -678,7 +678,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             int newLevel = playerStore.runners().incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
 
             // Check if new level unlocks next map
-            if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
+            if (newLevel == RunnerEconomyConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
                 checkAndProcessMapUnlocks(ref, store, playerRef);
             }
 
@@ -1060,7 +1060,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     }
                     int newLevel = playerStore.runners().incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
                     // Check if new level unlocks next map
-                    if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
+                    if (newLevel == RunnerEconomyConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
                         checkAndProcessMapUnlocks(ref, store, playerRef);
                     }
                     success = true;
@@ -1146,7 +1146,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             int stars = mapProgress.getRobotStars();
 
             // Can evolve if at max speed level but not at max stars
-            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+            if (speedLevel >= MAX_SPEED_LEVEL && stars < RunnerEconomyConstants.MAX_ROBOT_STARS) {
                 eligibleMapIds.add(map.getId());
             }
         }

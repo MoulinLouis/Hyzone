@@ -12,8 +12,8 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.ChallengeType;
+import io.hyvexa.ascend.AscensionConstants;
+import io.hyvexa.ascend.AscensionConstants.ChallengeType;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -238,7 +238,7 @@ public class AscendChallengePage extends BaseAscendPage {
 
         player.sendMessage(Message.raw("[Challenge] " + type.getDisplayName() + " started! All progress has been reset.")
             .color(SystemMessageUtils.SUCCESS));
-        player.sendMessage(Message.raw("[Challenge] Reach " + io.hyvexa.common.util.FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VOLT_THRESHOLD)
+        player.sendMessage(Message.raw("[Challenge] Reach " + io.hyvexa.common.util.FormatUtils.formatBigNumber(AscensionConstants.ASCENSION_VOLT_THRESHOLD)
             + " volt to complete the challenge.")
             .color(SystemMessageUtils.SECONDARY));
 

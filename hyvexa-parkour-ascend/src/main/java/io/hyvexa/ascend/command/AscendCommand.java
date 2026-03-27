@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCu
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
 import io.hyvexa.ascend.AscendRuntimeConfig;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
@@ -441,10 +441,10 @@ public class AscendCommand extends AbstractAsyncCommand {
 
         var unlocked = playerStore.gameplay().getUnlockedAchievements(playerRef.getUuid());
 
-        player.sendMessage(Message.raw("[Achievements] " + unlocked.size() + "/" + AscendConstants.AchievementType.values().length + " unlocked")
+        player.sendMessage(Message.raw("[Achievements] " + unlocked.size() + "/" + AscensionConstants.AchievementType.values().length + " unlocked")
             .color(SystemMessageUtils.PRIMARY_TEXT));
 
-        for (var achievement : AscendConstants.AchievementType.values()) {
+        for (var achievement : AscensionConstants.AchievementType.values()) {
             var progress = achievementManager.getProgress(playerRef.getUuid(), achievement);
             String status = progress.unlocked() ? "[X]" : "[ ]";
             String progressText = progress.unlocked() ? "" : " (" + progress.current() + "/" + progress.required() + ")";

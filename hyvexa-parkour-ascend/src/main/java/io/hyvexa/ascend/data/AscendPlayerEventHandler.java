@@ -3,7 +3,7 @@ package io.hyvexa.ascend.data;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
@@ -87,7 +87,7 @@ public class AscendPlayerEventHandler {
         // If disabling break mode while above threshold, trigger ascension
         if (!enabled) {
             AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-            if (progress != null && progress.economy().getVolt().gte(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
+            if (progress != null && progress.economy().getVolt().gte(AscensionConstants.ASCENSION_VOLT_THRESHOLD)) {
                 if (ascensionManager != null
                         && ascensionManager.hasAutoAscend(playerId)
                         && playerStore.settings().isAutoAscendEnabled(playerId)) {
@@ -122,8 +122,8 @@ public class AscendPlayerEventHandler {
     // ========================================
 
     private void checkVoltTutorialThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
-        boolean crossedAscension = oldBalance.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)
-                && newBalance.gte(AscendConstants.ASCENSION_VOLT_THRESHOLD);
+        boolean crossedAscension = oldBalance.lt(AscensionConstants.ASCENSION_VOLT_THRESHOLD)
+                && newBalance.gte(AscensionConstants.ASCENSION_VOLT_THRESHOLD);
 
         // Mark the ascension tutorial as seen BEFORE the tutorial check,
         // so the tutorial popup is suppressed in favor of the cinematic
@@ -160,8 +160,8 @@ public class AscendPlayerEventHandler {
     }
 
     private void checkTranscendenceNotification(UUID playerId, BigNumber oldBalance, BigNumber newBalance, AscendPlayerProgress progress) {
-        boolean crossedTranscendence = oldBalance.lt(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
-                && newBalance.gte(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD);
+        boolean crossedTranscendence = oldBalance.lt(AscensionConstants.TRANSCENDENCE_VOLT_THRESHOLD)
+                && newBalance.gte(AscensionConstants.TRANSCENDENCE_VOLT_THRESHOLD);
         if (!crossedTranscendence) {
             return;
         }
@@ -311,7 +311,7 @@ public class AscendPlayerEventHandler {
 
             // Route to challenge completion if in a challenge
             if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
-                AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
+                AscensionConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
                 long elapsedMs = challengeManager.completeChallenge(playerId);
                 if (elapsedMs >= 0) {
                     String timeStr = io.hyvexa.common.util.FormatUtils.formatDurationLong(elapsedMs);

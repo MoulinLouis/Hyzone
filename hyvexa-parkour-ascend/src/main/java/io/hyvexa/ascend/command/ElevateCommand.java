@@ -11,8 +11,8 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.ElevationConstants.ElevationPurchaseResult;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
@@ -103,11 +103,11 @@ public class ElevateCommand extends AbstractAsyncCommand {
             BigNumber accumulatedVolt = playerStore.progression().getElevationAccumulatedVolt(playerId);
             int currentElevation = playerStore.progression().getElevationLevel(playerId);
 
-            ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(
+            ElevationPurchaseResult purchase = ElevationConstants.calculateElevationPurchase(
                 currentElevation, accumulatedVolt, BigNumber.ONE);
 
             if (purchase.levels <= 0) {
-                BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
+                BigNumber nextCost = ElevationConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
                 player.sendMessage(Message.raw("[Ascend] You need "
                     + FormatUtils.formatBigNumber(nextCost) + " accumulated volt to elevate.")
                     .color(SystemMessageUtils.SECONDARY));
@@ -126,8 +126,8 @@ public class ElevateCommand extends AbstractAsyncCommand {
             // Toast notification
             if (hudManager != null) {
                 hudManager.showToast(playerId, ToastType.ECONOMY, "Elevation: "
-                    + AscendConstants.formatElevationMultiplier(currentElevation) + " -> "
-                    + AscendConstants.formatElevationMultiplier(newElevation));
+                    + ElevationConstants.formatElevationMultiplier(currentElevation) + " -> "
+                    + ElevationConstants.formatElevationMultiplier(newElevation));
             }
 
             // Reset progress (volt, map unlocks, runners)
@@ -146,8 +146,8 @@ public class ElevateCommand extends AbstractAsyncCommand {
             }
 
             player.sendMessage(Message.raw("[Ascend] Elevated! "
-                + AscendConstants.formatElevationMultiplier(currentElevation) + " -> "
-                + AscendConstants.formatElevationMultiplier(newElevation)
+                + ElevationConstants.formatElevationMultiplier(currentElevation) + " -> "
+                + ElevationConstants.formatElevationMultiplier(newElevation)
                 + " (+" + purchase.levels + " levels)")
                 .color(SystemMessageUtils.SUCCESS));
         }, world);

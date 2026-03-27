@@ -13,8 +13,8 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.SummitConstants;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -140,9 +140,9 @@ public class SummitPage extends BaseAscendPage {
 
         // Update progress text (shared across all categories)
         BigNumber accumulatedVolt = playerStore.progression().getSummitAccumulatedVolt(playerId);
-        double currentXp = AscendConstants.voltToXp(accumulatedVolt);
+        double currentXp = SummitConstants.voltToXp(accumulatedVolt);
         double nextXp = currentXp + 1;
-        BigNumber voltForNextXp = AscendConstants.xpToVolt(nextXp);
+        BigNumber voltForNextXp = SummitConstants.xpToVolt(nextXp);
         String progressText = "Progress to next EXP: " +
             FormatUtils.formatBigNumber(accumulatedVolt) + " / " +
             FormatUtils.formatBigNumber(voltForNextXp) + " accumulated volt";
@@ -171,7 +171,7 @@ public class SummitPage extends BaseAscendPage {
             double xpAfterSummit = xpRemaining - preview.xpToGain();
             if (preview.xpToGain() > 0 && xpAfterSummit <= 0) {
                 // Player will level up - show what the NEXT level requires
-                double nextLevelXpReq = AscendConstants.getXpForLevel(preview.newLevel() + 1);
+                double nextLevelXpReq = SummitConstants.getXpForLevel(preview.newLevel() + 1);
                 xpText = "Exp " + FormatUtils.formatLong((long) preview.currentXpInLevel()) + "/" + FormatUtils.formatLong((long) preview.currentXpRequired())
                     + " (+" + FormatUtils.formatLong((long) preview.xpToGain()) + ") | Needs " + FormatUtils.formatLong((long) nextLevelXpReq)
                     + " XP to get Lv." + FormatUtils.formatLong(preview.newLevel() + 1);
@@ -296,7 +296,7 @@ public class SummitPage extends BaseAscendPage {
         if (!summitManager.canSummit(playerId)) {
             BigNumber volt = playerStore.volt().getVolt(playerId);
             String minVolt = FormatUtils.formatBigNumber(
-                BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VOLT));
+                BigNumber.fromLong(SummitConstants.SUMMIT_MIN_VOLT));
             String currentVolt = FormatUtils.formatBigNumber(volt);
             player.sendMessage(Message.raw("[Summit] Need " + minVolt
                 + " volt to Summit. You have: " + currentVolt)

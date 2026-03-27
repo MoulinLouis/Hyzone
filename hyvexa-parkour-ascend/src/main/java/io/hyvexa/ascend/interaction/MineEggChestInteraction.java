@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;

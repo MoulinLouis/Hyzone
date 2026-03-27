@@ -1,6 +1,6 @@
 package io.hyvexa.ascend.robot;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -38,7 +38,7 @@ public class RunnerSpeedCalculator {
     }
 
     public double calculateSpeedMultiplier(AscendMap map, int speedLevel, UUID ownerId) {
-        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
+        double speedMultiplier = 1.0 + (speedLevel * RunnerEconomyConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
 
         if (summitManager != null) {
             speedMultiplier *= summitManager.getRunnerSpeedBonus(ownerId);
@@ -69,11 +69,11 @@ public class RunnerSpeedCalculator {
                 if (mapProgress != null && mapProgress.isMomentumActive()) {
                     double momentumMultiplier;
                     if (ascensionManager != null && ascensionManager.hasMomentumMastery(ownerId)) {
-                        momentumMultiplier = AscendConstants.MOMENTUM_MASTERY_MULTIPLIER;
+                        momentumMultiplier = RunnerEconomyConstants.MOMENTUM_MASTERY_MULTIPLIER;
                     } else if (ascensionManager != null && ascensionManager.hasMomentumSurge(ownerId)) {
-                        momentumMultiplier = AscendConstants.MOMENTUM_SURGE_MULTIPLIER;
+                        momentumMultiplier = RunnerEconomyConstants.MOMENTUM_SURGE_MULTIPLIER;
                     } else {
-                        momentumMultiplier = AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
+                        momentumMultiplier = RunnerEconomyConstants.MOMENTUM_SPEED_MULTIPLIER;
                     }
                     speedMultiplier *= momentumMultiplier;
                 }

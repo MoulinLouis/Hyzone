@@ -11,8 +11,8 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.SummitConstants;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
@@ -121,7 +121,7 @@ public class SummitCommand extends AbstractAsyncCommand {
             if (!summitManager.canSummit(playerId)) {
                 BigNumber volt = playerStore.volt().getVolt(playerId);
                 String minVolt = FormatUtils.formatBigNumber(
-                    BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VOLT));
+                    BigNumber.fromLong(SummitConstants.SUMMIT_MIN_VOLT));
                 player.sendMessage(Message.raw("[Summit] Need " + minVolt
                     + " volt to Summit. You have: " + FormatUtils.formatBigNumber(volt))
                     .color(SystemMessageUtils.SECONDARY));

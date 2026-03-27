@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
+import io.hyvexa.ascend.AscensionConstants.SkillTreeNode;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.AscensionManager.SkillTreeSummary;

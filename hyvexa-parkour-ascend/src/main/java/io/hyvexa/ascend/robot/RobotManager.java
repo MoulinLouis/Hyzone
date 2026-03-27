@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
@@ -384,12 +385,12 @@ public class RobotManager {
             evolutionPowerBonus = summitManager.getEvolutionPowerBonus(ownerId);
             baseMultiplierBonus = summitManager.getBaseMultiplierBonus(ownerId);
         }
-        BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
+        BigNumber multiplierIncrement = RunnerEconomyConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
 
         BigNumber totalMultiplierBonus = multiplierIncrement.multiply(BigNumber.fromLong(completions));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
-        BigNumber payoutPerRun = playerStore.progression().getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO);
+        BigNumber payoutPerRun = playerStore.progression().getCompletionPayout(ownerId, maps, RunnerEconomyConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO);
 
         BigNumber totalPayout = payoutPerRun.multiply(BigNumber.fromLong(completions));
 
@@ -419,7 +420,7 @@ public class RobotManager {
         }
         return speedCalculator != null
             ? speedCalculator.calculateSpeedMultiplier(map, speedLevel, ownerId)
-            : 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
+            : 1.0 + (speedLevel * RunnerEconomyConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
     }
 
     public double getRunnerProgress(UUID ownerId, String mapId) {

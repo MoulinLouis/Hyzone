@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
@@ -325,7 +325,7 @@ public class AscendRunTracker {
         SummitManager.BonusTriplet bonuses = summitManager != null
             ? summitManager.getAllBonuses(playerId)
             : new SummitManager.BonusTriplet(1.0, 3.0, 0.0);
-        BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
+        BigNumber runnerIncrement = RunnerEconomyConstants.getRunnerMultiplierIncrement(runnerStars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
 
         BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(5.0));
 
@@ -346,7 +346,7 @@ public class AscendRunTracker {
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
-        BigNumber payout = playerStore.progression().getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigNumber.ZERO);
+        BigNumber payout = playerStore.progression().getCompletionPayout(playerId, multiplierMaps, RunnerEconomyConstants.MULTIPLIER_SLOTS, run.mapId, BigNumber.ZERO);
 
         // Mine cross-progression: volt gain bonus
         if (mineBonusCalc != null && mineProgress != null) {
@@ -411,11 +411,11 @@ public class AscendRunTracker {
             boolean wasActive = mapProgress.isMomentumActive();
             long momentumDuration;
             if (ascensionManager.hasMomentumMastery(playerId)) {
-                momentumDuration = AscendConstants.MOMENTUM_MASTERY_DURATION_MS;
+                momentumDuration = RunnerEconomyConstants.MOMENTUM_MASTERY_DURATION_MS;
             } else if (ascensionManager.hasMomentumEndurance(playerId)) {
-                momentumDuration = AscendConstants.MOMENTUM_ENDURANCE_DURATION_MS;
+                momentumDuration = RunnerEconomyConstants.MOMENTUM_ENDURANCE_DURATION_MS;
             } else {
-                momentumDuration = AscendConstants.MOMENTUM_DURATION_MS;
+                momentumDuration = RunnerEconomyConstants.MOMENTUM_DURATION_MS;
             }
             mapProgress.activateMomentum(momentumDuration);
             if (!wasActive) {
@@ -518,7 +518,7 @@ public class AscendRunTracker {
                     String prevName = previousMap != null && previousMap.getName() != null && !previousMap.getName().isBlank()
                         ? previousMap.getName() : "previous map";
                     player.sendMessage(Message.raw("[Ascend] This map is locked! Upgrade the runner on " + prevName
-                        + " to speed level " + AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL + " first. Open /ascend to manage runners.")
+                        + " to speed level " + RunnerEconomyConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL + " first. Open /ascend to manage runners.")
                         .color(SystemMessageUtils.ERROR));
                     return;
                 }

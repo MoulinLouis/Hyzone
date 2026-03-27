@@ -1,6 +1,6 @@
 package io.hyvexa.ascend.data;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 
 /**
  * Runtime balance source-of-truth:
@@ -40,7 +40,7 @@ public class AscendMap {
     }
 
     public long getEffectivePrice() {
-        return AscendConstants.getMapUnlockPrice(displayOrder);
+        return RunnerEconomyConstants.getMapUnlockPrice(displayOrder);
     }
 
     /** Always returns 0 -- runners are free. Retained for admin display and legacy DB compat writes. */
@@ -49,11 +49,11 @@ public class AscendMap {
     }
 
     public long getEffectiveBaseRunTimeMs() {
-        return AscendConstants.getMapBaseRunTimeMs(displayOrder);
+        return RunnerEconomyConstants.getMapBaseRunTimeMs(displayOrder);
     }
 
     public long getEffectiveBaseReward() {
-        return AscendConstants.getMapBaseReward(displayOrder);
+        return RunnerEconomyConstants.getMapBaseReward(displayOrder);
     }
 
     public String getWorld() {

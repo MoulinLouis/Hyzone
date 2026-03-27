@@ -1,6 +1,6 @@
 package io.hyvexa.ascend.data;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.SummitConstants;
 import io.hyvexa.common.math.BigNumber;
 
 import java.util.EnumMap;
@@ -19,7 +19,7 @@ public class EconomyState {
     private final AtomicReference<BigNumber> summitAccumulatedVolt = new AtomicReference<>(BigNumber.ZERO);
     private final AtomicReference<BigNumber> elevationAccumulatedVolt = new AtomicReference<>(BigNumber.ZERO);
     private final AtomicInteger elevationMultiplier = new AtomicInteger(1);
-    private final Map<AscendConstants.SummitCategory, Double> summitXp = new ConcurrentHashMap<>();
+    private final Map<SummitConstants.SummitCategory, Double> summitXp = new ConcurrentHashMap<>();
 
     // ── Volt ─────────────────────────────────────────────────────────────
 
@@ -87,30 +87,30 @@ public class EconomyState {
 
     // ── Summit XP ────────────────────────────────────────────────────────
 
-    public double getSummitXp(AscendConstants.SummitCategory category) { return summitXp.getOrDefault(category, 0.0); }
+    public double getSummitXp(SummitConstants.SummitCategory category) { return summitXp.getOrDefault(category, 0.0); }
 
-    public void setSummitXp(AscendConstants.SummitCategory category, double xp) { summitXp.put(category, Math.max(0.0, xp)); }
+    public void setSummitXp(SummitConstants.SummitCategory category, double xp) { summitXp.put(category, Math.max(0.0, xp)); }
 
-    public double addSummitXp(AscendConstants.SummitCategory category, double amount) {
+    public double addSummitXp(SummitConstants.SummitCategory category, double amount) {
         return summitXp.compute(category, (cat, current) -> {
             double base = current != null ? current : 0.0;
             return Math.max(0.0, base + amount);
         });
     }
 
-    public int getSummitLevel(AscendConstants.SummitCategory category) { return AscendConstants.calculateLevelFromXp(getSummitXp(category)); }
+    public int getSummitLevel(SummitConstants.SummitCategory category) { return SummitConstants.calculateLevelFromXp(getSummitXp(category)); }
 
-    public Map<AscendConstants.SummitCategory, Double> getSummitXpMap() {
-        Map<AscendConstants.SummitCategory, Double> xpMap = new EnumMap<>(AscendConstants.SummitCategory.class);
-        for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) { xpMap.put(cat, getSummitXp(cat)); }
+    public Map<SummitConstants.SummitCategory, Double> getSummitXpMap() {
+        Map<SummitConstants.SummitCategory, Double> xpMap = new EnumMap<>(SummitConstants.SummitCategory.class);
+        for (SummitConstants.SummitCategory cat : SummitConstants.SummitCategory.values()) { xpMap.put(cat, getSummitXp(cat)); }
         return xpMap;
     }
 
     public void clearSummitXp() { summitXp.clear(); }
 
-    public Map<AscendConstants.SummitCategory, Integer> getSummitLevels() {
-        Map<AscendConstants.SummitCategory, Integer> levels = new EnumMap<>(AscendConstants.SummitCategory.class);
-        for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) { levels.put(cat, getSummitLevel(cat)); }
+    public Map<SummitConstants.SummitCategory, Integer> getSummitLevels() {
+        Map<SummitConstants.SummitCategory, Integer> levels = new EnumMap<>(SummitConstants.SummitCategory.class);
+        for (SummitConstants.SummitCategory cat : SummitConstants.SummitCategory.values()) { levels.put(cat, getSummitLevel(cat)); }
         return levels;
     }
 }

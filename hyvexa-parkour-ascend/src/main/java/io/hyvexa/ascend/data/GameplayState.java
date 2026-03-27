@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.data;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.common.math.BigNumber;
 
 import java.util.EnumSet;
@@ -18,10 +19,10 @@ public class GameplayState {
     // Ascension System
     private final AtomicInteger ascensionCount = new AtomicInteger(0);
     private final AtomicInteger skillTreePoints = new AtomicInteger(0);
-    private final Set<AscendConstants.SkillTreeNode> unlockedSkillNodes = ConcurrentHashMap.newKeySet();
+    private final Set<AscensionConstants.SkillTreeNode> unlockedSkillNodes = ConcurrentHashMap.newKeySet();
 
     // Achievement System
-    private final Set<AscendConstants.AchievementType> unlockedAchievements = ConcurrentHashMap.newKeySet();
+    private final Set<AscensionConstants.AchievementType> unlockedAchievements = ConcurrentHashMap.newKeySet();
     private final AtomicInteger totalManualRuns = new AtomicInteger(0);
     private final AtomicInteger consecutiveManualRuns = new AtomicInteger(0); // For chain bonus tracking
 
@@ -30,11 +31,11 @@ public class GameplayState {
     private volatile Long fastestAscensionMs; // Best ascension time in milliseconds
 
     // Challenge system (in-memory only, persisted via ChallengeManager)
-    private volatile AscendConstants.ChallengeType activeChallenge;
+    private volatile AscensionConstants.ChallengeType activeChallenge;
     private volatile long challengeStartedAtMs;
 
     // Permanent challenge rewards (never reset by ascension/challenge)
-    private final Set<AscendConstants.ChallengeType> completedChallengeRewards = ConcurrentHashMap.newKeySet();
+    private final Set<AscensionConstants.ChallengeType> completedChallengeRewards = ConcurrentHashMap.newKeySet();
 
     // Transcendence System (4th Prestige)
     private final AtomicInteger transcendenceCount = new AtomicInteger(0);
@@ -103,21 +104,21 @@ public class GameplayState {
         return skillTreePoints.updateAndGet(v -> Math.max(0, v + amount));
     }
 
-    public boolean hasSkillNode(AscendConstants.SkillTreeNode node) {
+    public boolean hasSkillNode(AscensionConstants.SkillTreeNode node) {
         return unlockedSkillNodes.contains(node);
     }
 
-    public boolean unlockSkillNode(AscendConstants.SkillTreeNode node) {
+    public boolean unlockSkillNode(AscensionConstants.SkillTreeNode node) {
         return unlockedSkillNodes.add(node);
     }
 
-    public Set<AscendConstants.SkillTreeNode> getUnlockedSkillNodes() {
+    public Set<AscensionConstants.SkillTreeNode> getUnlockedSkillNodes() {
         return EnumSet.copyOf(unlockedSkillNodes.isEmpty()
-            ? EnumSet.noneOf(AscendConstants.SkillTreeNode.class)
+            ? EnumSet.noneOf(AscensionConstants.SkillTreeNode.class)
             : unlockedSkillNodes);
     }
 
-    public void setUnlockedSkillNodes(Set<AscendConstants.SkillTreeNode> nodes) {
+    public void setUnlockedSkillNodes(Set<AscensionConstants.SkillTreeNode> nodes) {
         unlockedSkillNodes.clear();
         if (nodes != null) {
             unlockedSkillNodes.addAll(nodes);
@@ -126,7 +127,7 @@ public class GameplayState {
 
     public int getSpentSkillPoints() {
         int total = 0;
-        for (AscendConstants.SkillTreeNode node : unlockedSkillNodes) {
+        for (AscensionConstants.SkillTreeNode node : unlockedSkillNodes) {
             total += node.getCost();
         }
         return total;
@@ -140,21 +141,21 @@ public class GameplayState {
     // Achievement System
     // ========================================
 
-    public boolean hasAchievement(AscendConstants.AchievementType achievement) {
+    public boolean hasAchievement(AscensionConstants.AchievementType achievement) {
         return unlockedAchievements.contains(achievement);
     }
 
-    public boolean unlockAchievement(AscendConstants.AchievementType achievement) {
+    public boolean unlockAchievement(AscensionConstants.AchievementType achievement) {
         return unlockedAchievements.add(achievement);
     }
 
-    public Set<AscendConstants.AchievementType> getUnlockedAchievements() {
+    public Set<AscensionConstants.AchievementType> getUnlockedAchievements() {
         return EnumSet.copyOf(unlockedAchievements.isEmpty()
-            ? EnumSet.noneOf(AscendConstants.AchievementType.class)
+            ? EnumSet.noneOf(AscensionConstants.AchievementType.class)
             : unlockedAchievements);
     }
 
-    public void setUnlockedAchievements(Set<AscendConstants.AchievementType> achievements) {
+    public void setUnlockedAchievements(Set<AscensionConstants.AchievementType> achievements) {
         unlockedAchievements.clear();
         if (achievements != null) {
             unlockedAchievements.addAll(achievements);
@@ -217,11 +218,11 @@ public class GameplayState {
     // Challenge System
     // ========================================
 
-    public AscendConstants.ChallengeType getActiveChallenge() {
+    public AscensionConstants.ChallengeType getActiveChallenge() {
         return activeChallenge;
     }
 
-    public void setActiveChallenge(AscendConstants.ChallengeType activeChallenge) {
+    public void setActiveChallenge(AscensionConstants.ChallengeType activeChallenge) {
         this.activeChallenge = activeChallenge;
     }
 
@@ -233,15 +234,15 @@ public class GameplayState {
         this.challengeStartedAtMs = challengeStartedAtMs;
     }
 
-    public boolean hasChallengeReward(AscendConstants.ChallengeType type) {
+    public boolean hasChallengeReward(AscensionConstants.ChallengeType type) {
         return completedChallengeRewards.contains(type);
     }
 
-    public void addChallengeReward(AscendConstants.ChallengeType type) {
+    public void addChallengeReward(AscensionConstants.ChallengeType type) {
         completedChallengeRewards.add(type);
     }
 
-    public Set<AscendConstants.ChallengeType> getCompletedChallengeRewards() {
+    public Set<AscensionConstants.ChallengeType> getCompletedChallengeRewards() {
         return Set.copyOf(completedChallengeRewards);
     }
 
@@ -249,7 +250,7 @@ public class GameplayState {
         return completedChallengeRewards.size();
     }
 
-    public void setCompletedChallengeRewards(Set<AscendConstants.ChallengeType> rewards) {
+    public void setCompletedChallengeRewards(Set<AscensionConstants.ChallengeType> rewards) {
         completedChallengeRewards.clear();
         if (rewards != null) {
             completedChallengeRewards.addAll(rewards);
@@ -257,7 +258,7 @@ public class GameplayState {
     }
 
     public boolean hasAllChallengeRewards() {
-        for (AscendConstants.ChallengeType type : AscendConstants.ChallengeType.values()) {
+        for (AscensionConstants.ChallengeType type : AscensionConstants.ChallengeType.values()) {
             if (!completedChallengeRewards.contains(type)) {
                 return false;
             }
@@ -341,7 +342,7 @@ public class GameplayState {
         private final AtomicReference<BigNumber> multiplier = new AtomicReference<>(BigNumber.ONE);
         private volatile Long bestTimeMs;
         private volatile long momentumExpireTimeMs; // 0 = inactive (ephemeral, not persisted)
-        private volatile long momentumDurationMs = AscendConstants.MOMENTUM_DURATION_MS; // total duration for progress bar
+        private volatile long momentumDurationMs = RunnerEconomyConstants.MOMENTUM_DURATION_MS; // total duration for progress bar
 
         public boolean isMomentumActive() {
             return System.currentTimeMillis() < momentumExpireTimeMs;

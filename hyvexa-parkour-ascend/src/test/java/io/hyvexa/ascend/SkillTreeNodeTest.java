@@ -1,6 +1,6 @@
 package io.hyvexa.ascend;
 
-import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
+import io.hyvexa.ascend.AscensionConstants.SkillTreeNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;

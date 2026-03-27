@@ -7,7 +7,9 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.SummitConstants;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendTutorialPage;
@@ -77,9 +79,9 @@ public class TutorialTriggerService {
     }
 
     public void checkVoltThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
-        BigNumber elevationThreshold = BigNumber.fromLong(AscendConstants.ELEVATION_BASE_COST);
-        BigNumber summitThreshold = BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VOLT);
-        BigNumber ascensionThreshold = AscendConstants.ASCENSION_VOLT_THRESHOLD;
+        BigNumber elevationThreshold = BigNumber.fromLong(ElevationConstants.ELEVATION_BASE_COST);
+        BigNumber summitThreshold = BigNumber.fromLong(SummitConstants.SUMMIT_MIN_VOLT);
+        BigNumber ascensionThreshold = AscensionConstants.ASCENSION_VOLT_THRESHOLD;
 
         if (crossedThreshold(oldBalance, newBalance, elevationThreshold)) {
             triggerFromUuid(playerId, ELEVATION, (playerRef, ref, store, player) ->

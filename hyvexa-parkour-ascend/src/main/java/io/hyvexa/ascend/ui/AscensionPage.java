@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.achievement.AchievementManager;
@@ -92,7 +92,7 @@ public class AscensionPage extends BaseAscendPage {
 
         if (!ascensionManager.canAscend(playerId)) {
             BigNumber volt = playerStore.volt().getVolt(playerId);
-            player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VOLT_THRESHOLD)
+            player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatBigNumber(AscensionConstants.ASCENSION_VOLT_THRESHOLD)
                 + " volt to Ascend. You have: " + FormatUtils.formatBigNumber(volt))
                 .color(SystemMessageUtils.SECONDARY));
             return;
@@ -135,7 +135,7 @@ public class AscensionPage extends BaseAscendPage {
     }
 
     private void handleChallengeCompletion(UUID playerId, Player player) {
-        AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
+        AscensionConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
 
         long elapsedMs = challengeManager.completeChallenge(playerId);
         if (elapsedMs < 0) {
@@ -167,7 +167,7 @@ public class AscensionPage extends BaseAscendPage {
 
         // Update volt values
         commandBuilder.set("#CurrentVolt.Text", FormatUtils.formatBigNumber(volt));
-        commandBuilder.set("#RequiredVolt.Text", FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VOLT_THRESHOLD));
+        commandBuilder.set("#RequiredVolt.Text", FormatUtils.formatBigNumber(AscensionConstants.ASCENSION_VOLT_THRESHOLD));
 
         // Update current stats
         commandBuilder.set("#AscensionCountValue.Text", "x" + ascensionCount);
@@ -177,7 +177,7 @@ public class AscensionPage extends BaseAscendPage {
         if (canAscend) {
             commandBuilder.set("#AscendButton.Text", "ASCEND");
         } else {
-            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VOLT_THRESHOLD));
+            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscensionConstants.ASCENSION_VOLT_THRESHOLD));
         }
     }
 }

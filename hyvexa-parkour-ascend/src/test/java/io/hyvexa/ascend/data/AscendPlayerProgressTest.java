@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.data;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
+import io.hyvexa.ascend.SummitConstants;
 import io.hyvexa.common.math.BigNumber;
 import org.junit.jupiter.api.Test;
 
@@ -52,15 +53,15 @@ class AscendPlayerProgressTest {
     @Test
     void summitXpClampsAtZeroAndLevelUsesCumulativeXpThresholds() {
         AscendPlayerProgress progress = new AscendPlayerProgress();
-        double levelFiveXp = AscendConstants.getCumulativeXpForLevel(5);
+        double levelFiveXp = SummitConstants.getCumulativeXpForLevel(5);
 
-        assertEquals(0.0, progress.economy().addSummitXp(AscendConstants.SummitCategory.MULTIPLIER_GAIN, -25), 1e-9);
+        assertEquals(0.0, progress.economy().addSummitXp(SummitConstants.SummitCategory.MULTIPLIER_GAIN, -25), 1e-9);
 
-        progress.economy().setSummitXp(AscendConstants.SummitCategory.MULTIPLIER_GAIN, levelFiveXp);
+        progress.economy().setSummitXp(SummitConstants.SummitCategory.MULTIPLIER_GAIN, levelFiveXp);
 
-        assertEquals(levelFiveXp, progress.economy().getSummitXp(AscendConstants.SummitCategory.MULTIPLIER_GAIN), 1e-9);
-        assertEquals(5, progress.economy().getSummitLevel(AscendConstants.SummitCategory.MULTIPLIER_GAIN));
-        assertEquals(5, progress.economy().getSummitLevels().get(AscendConstants.SummitCategory.MULTIPLIER_GAIN));
+        assertEquals(levelFiveXp, progress.economy().getSummitXp(SummitConstants.SummitCategory.MULTIPLIER_GAIN), 1e-9);
+        assertEquals(5, progress.economy().getSummitLevel(SummitConstants.SummitCategory.MULTIPLIER_GAIN));
+        assertEquals(5, progress.economy().getSummitLevels().get(SummitConstants.SummitCategory.MULTIPLIER_GAIN));
     }
 
     @Test
@@ -70,9 +71,9 @@ class AscendPlayerProgressTest {
         assertEquals(1, progress.gameplay().incrementAscensionCount());
         progress.gameplay().setSkillTreePoints(10);
 
-        assertTrue(progress.gameplay().unlockSkillNode(AscendConstants.SkillTreeNode.AUTO_RUNNERS));
-        assertFalse(progress.gameplay().unlockSkillNode(AscendConstants.SkillTreeNode.AUTO_RUNNERS));
-        assertTrue(progress.gameplay().hasSkillNode(AscendConstants.SkillTreeNode.AUTO_RUNNERS));
+        assertTrue(progress.gameplay().unlockSkillNode(AscensionConstants.SkillTreeNode.AUTO_RUNNERS));
+        assertFalse(progress.gameplay().unlockSkillNode(AscensionConstants.SkillTreeNode.AUTO_RUNNERS));
+        assertTrue(progress.gameplay().hasSkillNode(AscensionConstants.SkillTreeNode.AUTO_RUNNERS));
         assertEquals(10, progress.gameplay().getSkillTreePoints());
         assertEquals(1, progress.gameplay().getSpentSkillPoints());
         assertEquals(9, progress.gameplay().getAvailableSkillPoints());
@@ -82,13 +83,13 @@ class AscendPlayerProgressTest {
     void achievementsAndChallengeRewardsTrackCompletion() {
         AscendPlayerProgress progress = new AscendPlayerProgress();
 
-        assertTrue(progress.gameplay().unlockAchievement(AscendConstants.AchievementType.FIRST_STEPS));
-        assertFalse(progress.gameplay().unlockAchievement(AscendConstants.AchievementType.FIRST_STEPS));
-        progress.gameplay().addChallengeReward(AscendConstants.ChallengeType.CHALLENGE_1);
-        progress.gameplay().addChallengeReward(AscendConstants.ChallengeType.CHALLENGE_3);
+        assertTrue(progress.gameplay().unlockAchievement(AscensionConstants.AchievementType.FIRST_STEPS));
+        assertFalse(progress.gameplay().unlockAchievement(AscensionConstants.AchievementType.FIRST_STEPS));
+        progress.gameplay().addChallengeReward(AscensionConstants.ChallengeType.CHALLENGE_1);
+        progress.gameplay().addChallengeReward(AscensionConstants.ChallengeType.CHALLENGE_3);
 
-        assertTrue(progress.gameplay().hasAchievement(AscendConstants.AchievementType.FIRST_STEPS));
-        assertTrue(progress.gameplay().hasChallengeReward(AscendConstants.ChallengeType.CHALLENGE_1));
+        assertTrue(progress.gameplay().hasAchievement(AscensionConstants.AchievementType.FIRST_STEPS));
+        assertTrue(progress.gameplay().hasChallengeReward(AscensionConstants.ChallengeType.CHALLENGE_1));
         assertEquals(2, progress.gameplay().getCompletedChallengeCount());
     }
 

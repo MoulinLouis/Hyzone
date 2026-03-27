@@ -1,7 +1,7 @@
 package io.hyvexa.ascend.data;
 
-import io.hyvexa.ascend.AscendConstants.AchievementType;
-import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
+import io.hyvexa.ascend.AscensionConstants.AchievementType;
+import io.hyvexa.ascend.AscensionConstants.SkillTreeNode;
 
 import java.util.EnumSet;
 import java.util.Map;

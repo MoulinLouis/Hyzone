@@ -1,7 +1,7 @@
 package io.hyvexa.ascend.transcendence;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -38,7 +38,7 @@ public class TranscendenceManager {
         if (progress == null) {
             return false;
         }
-        return progress.economy().getVolt().gte(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
+        return progress.economy().getVolt().gte(AscensionConstants.TRANSCENDENCE_VOLT_THRESHOLD)
             && progress.automation().isBreakAscensionEnabled()
             && progress.gameplay().hasAllChallengeRewards();
     }

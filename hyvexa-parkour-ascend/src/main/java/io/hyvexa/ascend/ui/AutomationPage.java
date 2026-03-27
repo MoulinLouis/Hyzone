@@ -17,8 +17,9 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.SummitConstants;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -545,9 +546,9 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
                 return;
             }
             int currentLevel = playerStore.getOrCreatePlayer(playerId).economy().getElevationMultiplier();
-            long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
+            long currentActualMultiplier = Math.round(ElevationConstants.getElevationMultiplier(currentLevel));
             if (value <= currentActualMultiplier) {
-                player.sendMessage(Message.raw("[Automation] Target must be higher than your current elevation (" + AscendConstants.formatElevationMultiplier(currentLevel) + ").")
+                player.sendMessage(Message.raw("[Automation] Target must be higher than your current elevation (" + ElevationConstants.formatElevationMultiplier(currentLevel) + ").")
                     .color(SystemMessageUtils.ERROR));
                 return;
             }
@@ -595,7 +596,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
      */
     private void recalculateTargetIndex(UUID playerId, List<Long> targets) {
         int currentLevel = playerStore.getOrCreatePlayer(playerId).economy().getElevationMultiplier();
-        long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
+        long currentActualMultiplier = Math.round(ElevationConstants.getElevationMultiplier(currentLevel));
         int newIndex = 0;
         while (newIndex < targets.size() && targets.get(newIndex) <= currentActualMultiplier) {
             newIndex++;

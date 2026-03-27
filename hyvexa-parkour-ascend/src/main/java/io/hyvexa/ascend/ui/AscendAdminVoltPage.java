@@ -18,7 +18,7 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
@@ -222,9 +222,9 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
 
         // Bypass volt threshold for admin simulation
         BigNumber volt = playerStore.volt().getVolt(playerId);
-        if (volt.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
+        if (volt.lt(AscensionConstants.ASCENSION_VOLT_THRESHOLD)) {
             AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
-            progress.economy().setVolt(AscendConstants.ASCENSION_VOLT_THRESHOLD);
+            progress.economy().setVolt(AscensionConstants.ASCENSION_VOLT_THRESHOLD);
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
@@ -232,7 +232,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
 
         // Complete active challenge if in one (same routing as normal ascension)
         if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
-            AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
+            AscensionConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
             long elapsedMs = challengeManager.completeChallenge(playerId);
             if (elapsedMs >= 0) {
                 String timeStr = FormatUtils.formatDurationLong(elapsedMs);
@@ -279,7 +279,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
 
         // Unlock all skill tree nodes and grant enough points to cover costs
         int totalCost = 0;
-        for (AscendConstants.SkillTreeNode node : AscendConstants.SkillTreeNode.values()) {
+        for (AscensionConstants.SkillTreeNode node : AscensionConstants.SkillTreeNode.values()) {
             totalCost += node.getCost();
             progress.gameplay().unlockSkillNode(node);
         }
@@ -289,7 +289,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         }
 
         // Complete all challenges
-        for (AscendConstants.ChallengeType type : AscendConstants.ChallengeType.values()) {
+        for (AscensionConstants.ChallengeType type : AscensionConstants.ChallengeType.values()) {
             progress.gameplay().addChallengeReward(type);
         }
 

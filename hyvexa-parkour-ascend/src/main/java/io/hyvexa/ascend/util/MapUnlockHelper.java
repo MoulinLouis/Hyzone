@@ -1,6 +1,6 @@
 package io.hyvexa.ascend.util;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -175,7 +175,7 @@ public final class MapUnlockHelper {
 
         // Check if previous map's runner is at required level
         int runnerLevel = playerStore.runners().getRobotSpeedLevel(playerId, previousMap.getId());
-        return runnerLevel >= AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL;
+        return runnerLevel >= RunnerEconomyConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL;
     }
 
     /**

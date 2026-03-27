@@ -1,7 +1,8 @@
 package io.hyvexa.ascend.data;
 
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.SummitConstants;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.common.math.BigNumber;
 
@@ -43,7 +44,7 @@ public class AscendProgressionFacade {
      * Base: level (1:1). C8 reward: x1.25 bonus.
      */
     public double getCalculatedElevationMultiplier(UUID playerId) {
-        double base = AscendConstants.getElevationMultiplier(getElevationLevel(playerId));
+        double base = ElevationConstants.getElevationMultiplier(getElevationLevel(playerId));
         if (challengeManager != null) {
             base *= challengeManager.getChallengeElevationBonus(playerId);
         }

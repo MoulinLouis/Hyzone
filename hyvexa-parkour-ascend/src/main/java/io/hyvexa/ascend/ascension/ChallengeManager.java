@@ -2,9 +2,9 @@ package io.hyvexa.ascend.ascension;
 
 import com.google.gson.Gson;
 import com.hypixel.hytale.logger.HytaleLogger;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.ChallengeType;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.AscensionConstants;
+import io.hyvexa.ascend.AscensionConstants.ChallengeType;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;

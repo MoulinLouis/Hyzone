@@ -1,8 +1,8 @@
 package io.hyvexa.ascend.ascension;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
+import io.hyvexa.ascend.AscensionConstants;
+import io.hyvexa.ascend.AscensionConstants.SkillTreeNode;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -35,7 +35,7 @@ public class AscensionManager {
      */
     public boolean canAscend(UUID playerId) {
         BigNumber volt = playerStore.volt().getVolt(playerId);
-        return volt.gte(AscendConstants.ASCENSION_VOLT_THRESHOLD);
+        return volt.gte(AscensionConstants.ASCENSION_VOLT_THRESHOLD);
     }
 
     /**
@@ -45,7 +45,7 @@ public class AscensionManager {
      */
     public int performAscension(UUID playerId) {
         BigNumber volt = playerStore.volt().getVolt(playerId);
-        if (volt.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
+        if (volt.lt(AscensionConstants.ASCENSION_VOLT_THRESHOLD)) {
             return -1;
         }
 

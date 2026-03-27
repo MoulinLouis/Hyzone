@@ -2,7 +2,9 @@ package io.hyvexa.ascend.robot;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
+import io.hyvexa.ascend.SummitConstants;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.command.AscendCommand;
@@ -74,8 +76,8 @@ class AutoRunnerUpgradeEngine {
                 for (AscendMap map : maps) {
                     GameplayState.MapProgress mp = progress.gameplay().getMapProgress().get(map.getId());
                     if (mp == null || !mp.hasRobot()) continue;
-                    if (mp.getRobotSpeedLevel() >= AscendConstants.MAX_SPEED_LEVEL
-                            && mp.getRobotStars() < AscendConstants.MAX_ROBOT_STARS) {
+                    if (mp.getRobotSpeedLevel() >= RunnerEconomyConstants.MAX_SPEED_LEVEL
+                            && mp.getRobotStars() < RunnerEconomyConstants.MAX_ROBOT_STARS) {
                         int newStars = manager.getPlayerStore().runners().evolveRobot(playerId, map.getId());
                         manager.respawnRobot(playerId, map.getId(), newStars);
                         anyEvolved = true;
@@ -97,9 +99,9 @@ class AutoRunnerUpgradeEngine {
             if (mp == null || !mp.hasRobot()) continue;
 
             int speedLevel = mp.getRobotSpeedLevel();
-            if (speedLevel >= AscendConstants.MAX_SPEED_LEVEL) continue;
+            if (speedLevel >= RunnerEconomyConstants.MAX_SPEED_LEVEL) continue;
 
-            BigNumber cost = AscendConstants.getRunnerUpgradeCost(
+            BigNumber cost = RunnerEconomyConstants.getRunnerUpgradeCost(
                 speedLevel, map.getDisplayOrder(), mp.getRobotStars());
 
             if (cheapestCost == null || cost.lt(cheapestCost)) {
@@ -145,7 +147,7 @@ class AutoRunnerUpgradeEngine {
 
         // Skip targets already surpassed by current multiplier
         int currentLevel = progress.economy().getElevationMultiplier();
-        long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
+        long currentActualMultiplier = Math.round(ElevationConstants.getElevationMultiplier(currentLevel));
         while (targetIndex < targets.size() && targets.get(targetIndex) <= currentActualMultiplier) {
             targetIndex++;
         }
@@ -164,11 +166,11 @@ class AutoRunnerUpgradeEngine {
 
         // Calculate purchasable levels
         BigNumber accumulatedVolt = progress.economy().getElevationAccumulatedVolt();
-        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVolt, BigNumber.ONE);
+        ElevationConstants.ElevationPurchaseResult result = ElevationConstants.calculateElevationPurchase(currentLevel, accumulatedVolt, BigNumber.ONE);
         if (result.levels <= 0) return;
 
         int newLevel = currentLevel + result.levels;
-        long newMultiplier = Math.round(AscendConstants.getElevationMultiplier(newLevel));
+        long newMultiplier = Math.round(ElevationConstants.getElevationMultiplier(newLevel));
         long nextTarget = targets.get(targetIndex);
         if (newMultiplier < nextTarget) return;
 
@@ -248,7 +250,7 @@ class AutoRunnerUpgradeEngine {
         }
 
         List<AutomationConfig.AutoSummitCategoryConfig> config = progress.automation().getAutoSummitConfig();
-        AscendConstants.SummitCategory[] categories = AscendConstants.SummitCategory.values();
+        SummitConstants.SummitCategory[] categories = SummitConstants.SummitCategory.values();
 
         // Target-based: iterate all categories and summit the first one that can reach its target
         for (int i = 0; i < categories.length; i++) {
@@ -259,7 +261,7 @@ class AutoRunnerUpgradeEngine {
             int targetLevel = catConfig.getTargetLevel();
             if (targetLevel <= 0) continue;
 
-            AscendConstants.SummitCategory category = categories[i];
+            SummitConstants.SummitCategory category = categories[i];
             int currentLevel = manager.getPlayerStore().progression().getSummitLevel(playerId, category);
 
             // Skip if target already reached

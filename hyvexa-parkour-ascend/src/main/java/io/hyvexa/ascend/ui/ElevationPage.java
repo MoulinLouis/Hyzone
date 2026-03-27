@@ -11,8 +11,8 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.ElevationConstants.ElevationPurchaseResult;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
@@ -106,10 +106,10 @@ public class ElevationPage extends BaseAscendPage {
         int currentElevation = playerStore.progression().getElevationLevel(playerId);
 
         // Calculate how many levels can be purchased based on accumulated volt
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVolt, BigNumber.ONE);
+        ElevationPurchaseResult purchase = ElevationConstants.calculateElevationPurchase(currentElevation, accumulatedVolt, BigNumber.ONE);
 
         if (purchase.levels <= 0) {
-            BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
+            BigNumber nextCost = ElevationConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
             player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated volt to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
@@ -125,8 +125,8 @@ public class ElevationPage extends BaseAscendPage {
         playerStore.progression().atomicSetElevationAndResetVolt(playerId, newElevation);
 
         AscendHudManager.showToastSafe(playerId, ToastType.ECONOMY, "Elevation: "
-            + AscendConstants.formatElevationMultiplier(currentElevation) + " -> "
-            + AscendConstants.formatElevationMultiplier(newElevation));
+            + ElevationConstants.formatElevationMultiplier(currentElevation) + " -> "
+            + ElevationConstants.formatElevationMultiplier(newElevation));
 
         // Reset all progress (volt, map unlocks, runners). Best times are preserved.
         String firstMapId = null;
@@ -169,7 +169,7 @@ public class ElevationPage extends BaseAscendPage {
         // Show blocked state during active challenge
         if (challengeManager != null && challengeManager.isElevationBlocked(playerId)) {
             commandBuilder.set("#ConversionRate.Text", "Elevation is blocked during this challenge");
-            commandBuilder.set("#MultiplierValue.Text", AscendConstants.formatElevationMultiplier(currentElevation));
+            commandBuilder.set("#MultiplierValue.Text", ElevationConstants.formatElevationMultiplier(currentElevation));
             commandBuilder.set("#NewMultiplierValue.Text", "BLOCKED");
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#ef4444");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#ef4444");
@@ -182,34 +182,34 @@ public class ElevationPage extends BaseAscendPage {
         BigNumber accumulatedVolt = playerStore.progression().getElevationAccumulatedVolt(playerId);
 
         // Calculate purchase info based on accumulated volt
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVolt, BigNumber.ONE);
+        ElevationPurchaseResult purchase = ElevationConstants.calculateElevationPurchase(currentElevation, accumulatedVolt, BigNumber.ONE);
         int newElevation = currentElevation + purchase.levels;
-        BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
+        BigNumber nextCost = ElevationConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
 
         // Calculate cost for the next level beyond current affordable amount
-        BigNumber nextLevelAfterPurchaseCost = AscendConstants.getElevationLevelUpCost(newElevation, BigNumber.ONE);
+        BigNumber nextLevelAfterPurchaseCost = ElevationConstants.getElevationLevelUpCost(newElevation, BigNumber.ONE);
 
         // Update progression display (show progress toward next level after potential elevation)
         int targetElevation = newElevation + 1;
         BigNumber targetCost = purchase.cost.add(nextLevelAfterPurchaseCost);
-        String costText = "Progress to " + AscendConstants.formatElevationMultiplier(targetElevation) + ": " +
+        String costText = "Progress to " + ElevationConstants.formatElevationMultiplier(targetElevation) + ": " +
                          FormatUtils.formatBigNumber(accumulatedVolt) + " / " +
                          FormatUtils.formatBigNumber(targetCost) + " accumulated volt";
         commandBuilder.set("#ConversionRate.Text", costText);
 
         // Update current elevation display
-        commandBuilder.set("#MultiplierValue.Text", AscendConstants.formatElevationMultiplier(currentElevation));
+        commandBuilder.set("#MultiplierValue.Text", ElevationConstants.formatElevationMultiplier(currentElevation));
         BigNumber leftoverVolt = accumulatedVolt.subtract(purchase.cost);
         BigNumber amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverVolt).max(BigNumber.ZERO);
 
         // Update new elevation display and gain
         if (purchase.levels > 0) {
-            commandBuilder.set("#NewMultiplierValue.Text", AscendConstants.formatElevationMultiplier(newElevation));
+            commandBuilder.set("#NewMultiplierValue.Text", ElevationConstants.formatElevationMultiplier(newElevation));
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#4ade80");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#4ade80");
             commandBuilder.set("#ElevateButton.Text", "ELEVATE NOW");
         } else {
-            commandBuilder.set("#NewMultiplierValue.Text", AscendConstants.formatElevationMultiplier(currentElevation));
+            commandBuilder.set("#NewMultiplierValue.Text", ElevationConstants.formatElevationMultiplier(currentElevation));
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#6b7280");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#6b7280");
             commandBuilder.set("#ElevateButton.Text", "NEED MORE VOLT");

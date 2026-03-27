@@ -21,7 +21,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -129,7 +129,7 @@ public class StatsPage extends BaseAscendPage {
         commandBuilder.set("#IncomeValue.Text", formatCombinedIncome(playerId, maps));
 
         // 2. Multiplier Breakdown
-        AscendPlayerStore.MultiplierResult mr = playerStore.progression().getMultiplierProductAndValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        AscendPlayerStore.MultiplierResult mr = playerStore.progression().getMultiplierProductAndValues(playerId, maps, RunnerEconomyConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.progression().getCalculatedElevationMultiplier(playerId);
 
         double digitsProduct = 1.0;
@@ -184,7 +184,7 @@ public class StatsPage extends BaseAscendPage {
         }
         double totalVoltPerSec = 0.0;
 
-        BigNumber digitsProduct = playerStore.progression().getMultiplierProductAndValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS).product;
+        BigNumber digitsProduct = playerStore.progression().getMultiplierProductAndValues(playerId, maps, RunnerEconomyConstants.MULTIPLIER_SLOTS).product;
 
         for (AscendMap map : maps) {
             GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerId, map.getId());

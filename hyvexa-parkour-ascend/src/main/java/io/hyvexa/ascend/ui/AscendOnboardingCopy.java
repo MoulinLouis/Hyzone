@@ -1,6 +1,6 @@
 package io.hyvexa.ascend.ui;
 
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscensionConstants;
 import io.hyvexa.common.util.FormatUtils;
 
 /**
@@ -13,14 +13,14 @@ public final class AscendOnboardingCopy {
 
     // --- Dynamic values ---
 
-    private static final int NODE_COUNT = AscendConstants.SkillTreeNode.values().length;
+    private static final int NODE_COUNT = AscensionConstants.SkillTreeNode.values().length;
 
     public static int nodeCount() {
         return NODE_COUNT;
     }
 
     public static String ascensionThresholdDisplay() {
-        return FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VOLT_THRESHOLD);
+        return FormatUtils.formatBigNumber(AscensionConstants.ASCENSION_VOLT_THRESHOLD);
     }
 
     // --- Tutorial copy record ---

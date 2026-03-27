@@ -4,8 +4,8 @@ import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
-import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.ElevationConstants;
+import io.hyvexa.ascend.SummitConstants.SummitCategory;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
@@ -95,12 +95,12 @@ public class AscendHud extends CustomUIHud {
         String digitsKey = buildDigitsKey(digits);
         String elevationText;
         if (showElevation && potentialElevation > currentElevation) {
-            elevationText = AscendConstants.formatElevationMultiplier(currentElevation)
-                + " -> " + AscendConstants.formatElevationMultiplier(potentialElevation);
+            elevationText = ElevationConstants.formatElevationMultiplier(currentElevation)
+                + " -> " + ElevationConstants.formatElevationMultiplier(potentialElevation);
         } else {
-            elevationText = AscendConstants.formatElevationMultiplier(currentElevation);
+            elevationText = ElevationConstants.formatElevationMultiplier(currentElevation);
         }
-        String elevationValueText = formatMultiplier(AscendConstants.getElevationMultiplier(currentElevation));
+        String elevationValueText = formatMultiplier(ElevationConstants.getElevationMultiplier(currentElevation));
         // Check if values changed OR if we have active effects to process
         boolean valuesChanged = !voltText.equals(lastVoltText)
             || !voltPerRunText.equals(lastVoltPerRunText)

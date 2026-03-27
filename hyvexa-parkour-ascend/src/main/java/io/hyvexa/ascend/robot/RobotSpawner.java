@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
-import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.RunnerEconomyConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.npc.NPCHelper;
@@ -87,7 +87,7 @@ class RobotSpawner {
             Vector3f rotation = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
             String displayName = "Runner";
 
-            String npcRoleName = AscendConstants.getRunnerEntityType(state.getStars());
+            String npcRoleName = RunnerEconomyConstants.getRunnerEntityType(state.getStars());
             Object result = npcPlugin.spawnNPC(store, npcRoleName, displayName, position, rotation);
             if (result != null) {
                 Ref<EntityStore> entityRef = NPCHelper.extractEntityRef(result, LOGGER);
