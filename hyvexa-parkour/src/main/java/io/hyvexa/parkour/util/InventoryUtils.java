@@ -4,8 +4,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
-import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
 import static io.hyvexa.common.util.InventoryUtils.giveGlobalItems;
 import io.hyvexa.common.util.PlayerUtils;
 import io.hyvexa.common.util.PermissionUtils;
@@ -112,21 +110,17 @@ public final class InventoryUtils {
         if (isOp) {
             io.hyvexa.common.util.InventoryUtils.clearContainer(inventory.getHotbar());
         } else {
-            applyDropFilters(inventory, false);
+            io.hyvexa.common.util.InventoryUtils.applyDropFilters(inventory, false);
             io.hyvexa.common.util.InventoryUtils.clearAllContainers(inventory);
         }
     }
 
     private static void finalizeInventory(Inventory inventory, boolean isOp) {
         if (isOp) {
-            applyDropFilter(inventory.getHotbar(), false);
+            io.hyvexa.common.util.InventoryUtils.applyDropFilter(inventory.getHotbar(), false);
         } else {
-            applyDropFilters(inventory, false);
+            io.hyvexa.common.util.InventoryUtils.applyDropFilters(inventory, false);
         }
-    }
-
-    public static void clearAllItems(Player player) {
-        io.hyvexa.common.util.InventoryUtils.clearAllContainers(player);
     }
 
     private static void setHotbarItem(Inventory inventory, int slotIndex, ItemStack itemStack) {
@@ -138,28 +132,6 @@ public final class InventoryUtils {
             return;
         }
         hotbar.setItemStackForSlot((short) slotIndex, itemStack, false);
-    }
-
-    public static void applyDropFilters(Inventory inventory, boolean allowDrop) {
-        ItemContainer[] containers = {
-            inventory.getHotbar(), inventory.getStorage(), inventory.getBackpack(),
-            inventory.getTools(), inventory.getUtility(), inventory.getArmor()
-        };
-        for (ItemContainer container : containers) {
-            applyDropFilter(container, allowDrop);
-        }
-    }
-
-    public static void applyDropFilter(ItemContainer container, boolean allowDrop) {
-        if (container == null) {
-            return;
-        }
-        SlotFilter filter = allowDrop ? SlotFilter.ALLOW : SlotFilter.DENY;
-        short capacity = container.getCapacity();
-        for (short slot = 0; slot < capacity; slot++) {
-            container.setSlotFilter(FilterActionType.DROP, slot, filter);
-            container.setSlotFilter(FilterActionType.REMOVE, slot, filter);
-        }
     }
 
 }

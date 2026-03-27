@@ -57,7 +57,7 @@ public class PracticeInteraction extends SimpleInteraction {
             Map map = services.mapStore() != null ? services.mapStore().getMap(mapId) : null;
             if (!services.runTracker().isPracticeEnabled(playerRef.getUuid())) {
                 services.runTracker().enablePractice(ref, store, playerRef);
-                InventoryUtils.clearAllItems(player);
+                io.hyvexa.common.util.InventoryUtils.clearAllContainers(player);
                 InventoryUtils.giveRunItems(player, map, true);
                 player.sendMessage(SystemMessageUtils.parkourInfo("Practice mode enabled."));
                 return;

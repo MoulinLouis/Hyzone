@@ -42,7 +42,7 @@ public class RestartCheckpointInteraction extends SimpleInteraction {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            InventoryUtils.clearAllItems(player);
+            io.hyvexa.common.util.InventoryUtils.clearAllContainers(player);
             if (services.duelTracker() != null && services.duelTracker().isInMatch(playerRef.getUuid())) {
                 Map map = services.duelTracker().getActiveMap(playerRef.getUuid());
                 InventoryUtils.giveDuelItems(player, map);

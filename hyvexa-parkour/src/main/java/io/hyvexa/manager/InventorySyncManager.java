@@ -177,7 +177,7 @@ public class InventorySyncManager {
             return;
         }
         boolean allowDrop = PermissionUtils.isOp(player);
-        InventoryUtils.applyDropFilters(inventory, allowDrop);
+        io.hyvexa.common.util.InventoryUtils.applyDropFilters(inventory, allowDrop);
     }
 
     private boolean shouldApplyParkourMode(PlayerRef playerRef, Store<EntityStore> store) {

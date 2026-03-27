@@ -657,7 +657,7 @@ public class DuelTracker {
                 store.addComponent(ref, Teleport.getComponentType(),
                         new Teleport(world, map.getStart().toPosition(), map.getStart().toRotation()));
             }
-            InventoryUtils.clearAllItems(player);
+            io.hyvexa.common.util.InventoryUtils.clearAllContainers(player);
             InventoryUtils.giveDuelItems(player, map);
         }, world);
     }
@@ -906,7 +906,7 @@ public class DuelTracker {
             }
             TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
             TrackerUtils.teleportToSpawn(ref, store, transform, null);
-            InventoryUtils.clearAllItems(player);
+            io.hyvexa.common.util.InventoryUtils.clearAllContainers(player);
             InventoryUtils.giveMenuItems(player);
             restoreVipSpeedAfterDuel(ref, store, playerRef);
         }, world);

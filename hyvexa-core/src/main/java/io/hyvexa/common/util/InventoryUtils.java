@@ -4,6 +4,8 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
+import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
 import io.hyvexa.common.WorldConstants;
 
 public final class InventoryUtils {
@@ -73,6 +75,28 @@ public final class InventoryUtils {
         ItemStack existing = hotbar.getItemStack(slot);
         if (existing == null || ItemStack.isEmpty(existing) || !itemId.equals(existing.getItemId())) {
             hotbar.setItemStackForSlot(slot, new ItemStack(itemId, 1), false);
+        }
+    }
+
+    public static void applyDropFilters(Inventory inventory, boolean allowDrop) {
+        ItemContainer[] containers = {
+            inventory.getHotbar(), inventory.getStorage(), inventory.getBackpack(),
+            inventory.getTools(), inventory.getUtility(), inventory.getArmor()
+        };
+        for (ItemContainer container : containers) {
+            applyDropFilter(container, allowDrop);
+        }
+    }
+
+    public static void applyDropFilter(ItemContainer container, boolean allowDrop) {
+        if (container == null) {
+            return;
+        }
+        SlotFilter filter = allowDrop ? SlotFilter.ALLOW : SlotFilter.DENY;
+        short capacity = container.getCapacity();
+        for (short slot = 0; slot < capacity; slot++) {
+            container.setSlotFilter(FilterActionType.DROP, slot, filter);
+            container.setSlotFilter(FilterActionType.REMOVE, slot, filter);
         }
     }
 }

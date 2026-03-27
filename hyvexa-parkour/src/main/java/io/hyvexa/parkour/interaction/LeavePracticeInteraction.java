@@ -56,7 +56,7 @@ public class LeavePracticeInteraction extends SimpleInteraction {
             }
             String mapId = services.runTracker().getActiveMapId(playerRef.getUuid());
             Map map = mapId != null && services.mapStore() != null ? services.mapStore().getMap(mapId) : null;
-            InventoryUtils.clearAllItems(player);
+            io.hyvexa.common.util.InventoryUtils.clearAllContainers(player);
             InventoryUtils.giveRunItems(player, map, false);
             player.sendMessage(SystemMessageUtils.parkourInfo("Practice mode disabled. Checkpoint progress restored."));
         }, world);
