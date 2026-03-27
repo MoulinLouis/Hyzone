@@ -18,7 +18,8 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.GateConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
@@ -44,7 +45,8 @@ public class MineGateChecker {
     private static final String TEXT_ENTERING = "Entering the Mines...";
     private static final String TEXT_EXITING = "Returning to Surface...";
 
-    private final MineConfigStore configStore;
+    private final GateConfigStore gateConfigStore;
+    private final MineHierarchyStore hierarchyStore;
     private final AscendPlayerStore playerStore;
     private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastTeleport = new ConcurrentHashMap<>();
@@ -52,8 +54,9 @@ public class MineGateChecker {
     private volatile AscendHudManager ascendHudManager;
     private volatile MineHudManager mineHudManager;
 
-    public MineGateChecker(MineConfigStore configStore, AscendPlayerStore playerStore, MinePlayerStore minePlayerStore) {
-        this.configStore = configStore;
+    public MineGateChecker(GateConfigStore gateConfigStore, MineHierarchyStore hierarchyStore, AscendPlayerStore playerStore, MinePlayerStore minePlayerStore) {
+        this.gateConfigStore = gateConfigStore;
+        this.hierarchyStore = hierarchyStore;
         this.playerStore = playerStore;
         this.minePlayerStore = minePlayerStore;
     }
@@ -85,20 +88,20 @@ public class MineGateChecker {
         if (isOnCooldown(playerId)) return;
 
         // Entry gate: start fade -> teleport inside mine + give pickaxe
-        if (configStore.isInsideEntryGate(x, y, z)) {
+        if (gateConfigStore.isInsideEntryGate(x, y, z)) {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (denyMineAccess(playerId, player)) return;
             startTransition(playerId, true,
-                configStore.getEntryDestX(), configStore.getEntryDestY(), configStore.getEntryDestZ(),
-                configStore.getEntryDestRotX(), configStore.getEntryDestRotY(), configStore.getEntryDestRotZ());
+                gateConfigStore.getEntryDestX(), gateConfigStore.getEntryDestY(), gateConfigStore.getEntryDestZ(),
+                gateConfigStore.getEntryDestRotX(), gateConfigStore.getEntryDestRotY(), gateConfigStore.getEntryDestRotZ());
             return;
         }
 
         // Exit gate: start fade -> teleport outside mine + restore menu items
-        if (configStore.isInsideExitGate(x, y, z)) {
+        if (gateConfigStore.isInsideExitGate(x, y, z)) {
             startTransition(playerId, false,
-                configStore.getExitDestX(), configStore.getExitDestY(), configStore.getExitDestZ(),
-                configStore.getExitDestRotX(), configStore.getExitDestRotY(), configStore.getExitDestRotZ());
+                gateConfigStore.getExitDestX(), gateConfigStore.getExitDestY(), gateConfigStore.getExitDestZ(),
+                gateConfigStore.getExitDestRotX(), gateConfigStore.getExitDestRotY(), gateConfigStore.getExitDestRotZ());
             return;
         }
     }
@@ -251,8 +254,8 @@ public class MineGateChecker {
         }
 
         teleportPlayer(ref, store, world,
-            configStore.getExitDestX(), configStore.getExitDestY(), configStore.getExitDestZ(),
-            configStore.getExitDestRotX(), configStore.getExitDestRotY(), configStore.getExitDestRotZ());
+            gateConfigStore.getExitDestX(), gateConfigStore.getExitDestY(), gateConfigStore.getExitDestZ(),
+            gateConfigStore.getExitDestRotX(), gateConfigStore.getExitDestRotY(), gateConfigStore.getExitDestRotZ());
         markCooldown(playerId);
 
         resetSpeed(ref, store, playerRef);
@@ -366,7 +369,7 @@ public class MineGateChecker {
                 if (count <= 0) continue;
                 int capped = Math.min(count, 64);
                 String layerId = entry.getKey();
-                MineZoneLayer layer = configStore.getLayerById(layerId);
+                MineZoneLayer layer = hierarchyStore.getLayerById(layerId);
                 String itemId = EggDropHelper.resolveEggItemId(layer);
                 BsonDocument meta = new BsonDocument("EggLayerId", new BsonString(layerId));
                 hotbar.setItemStackForSlot(nextSlot, new ItemStack(itemId, capped, meta), false);

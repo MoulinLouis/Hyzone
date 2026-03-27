@@ -12,7 +12,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
+import io.hyvexa.ascend.mine.data.MinerConfigStore;
+import io.hyvexa.ascend.mine.data.TierConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
@@ -35,17 +37,23 @@ import java.util.concurrent.CompletableFuture;
 public class MineCommand extends AbstractAsyncCommand {
     private final MineGateChecker mineGateChecker;
     private final MinePlayerStore minePlayerStore;
-    private final MineConfigStore mineConfigStore;
+    private final BlockConfigStore blockConfigStore;
+    private final MinerConfigStore minerConfigStore;
+    private final TierConfigStore tierConfigStore;
     private final MineAchievementTracker mineAchievementTracker;
     private final MineRobotManager mineRobotManager;
 
     public MineCommand(MineGateChecker mineGateChecker, MinePlayerStore minePlayerStore,
-                       MineConfigStore mineConfigStore, MineAchievementTracker mineAchievementTracker,
+                       BlockConfigStore blockConfigStore, MinerConfigStore minerConfigStore,
+                       TierConfigStore tierConfigStore,
+                       MineAchievementTracker mineAchievementTracker,
                        MineRobotManager mineRobotManager) {
         super("mine", "Mine commands");
         this.mineGateChecker = mineGateChecker;
         this.minePlayerStore = minePlayerStore;
-        this.mineConfigStore = mineConfigStore;
+        this.blockConfigStore = blockConfigStore;
+        this.minerConfigStore = minerConfigStore;
+        this.tierConfigStore = tierConfigStore;
         this.mineAchievementTracker = mineAchievementTracker;
         this.mineRobotManager = mineRobotManager;
         this.setPermissionGroup(GameMode.Adventure);
@@ -96,7 +104,7 @@ public class MineCommand extends AbstractAsyncCommand {
 
             if (args.length == 0) {
                 MineBagPage page = new MineBagPage(playerRef, progress,
-                    mineConfigStore, minePlayerStore, mineAchievementTracker);
+                    blockConfigStore, minePlayerStore, mineAchievementTracker);
                 player.getPageManager().openCustomPage(ref, store, page);
                 return;
             }
@@ -105,13 +113,13 @@ public class MineCommand extends AbstractAsyncCommand {
             switch (subCommand) {
                 case "sell" -> {
                     MineSellPage page = new MineSellPage(playerRef, progress,
-                        mineConfigStore, minePlayerStore, mineAchievementTracker);
+                        blockConfigStore, minePlayerStore, mineAchievementTracker);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "upgrades" -> {
                     MinePage page = new MinePage(playerRef, progress,
-                        mineConfigStore, minePlayerStore, mineRobotManager,
-                        mineGateChecker, mineAchievementTracker);
+                        minerConfigStore, tierConfigStore, minePlayerStore,
+                        mineRobotManager, mineGateChecker, mineAchievementTracker);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "achievements" -> {

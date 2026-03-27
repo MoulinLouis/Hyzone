@@ -16,7 +16,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
+import io.hyvexa.ascend.mine.data.MinerConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.data.MinerDefinition;
@@ -47,7 +48,8 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
     }
 
     private final PlayerRef playerRef;
-    private final MineConfigStore mineConfigStore;
+    private final MineHierarchyStore hierarchyStore;
+    private final MinerConfigStore minerConfigStore;
     private final MineManager mineManager;
     private final AscendAdminNavigator adminNavigator;
     private final String mineId;
@@ -59,13 +61,15 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
     private final String[] cachedNames = new String[MinerRarity.values().length];
 
     public MinerDefAdminPage(@Nonnull PlayerRef playerRef,
-                             MineConfigStore mineConfigStore,
+                             MineHierarchyStore hierarchyStore,
+                             MinerConfigStore minerConfigStore,
                              MineManager mineManager,
                              AscendAdminNavigator adminNavigator,
                              String mineId) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MinerDefData.CODEC);
         this.playerRef = playerRef;
-        this.mineConfigStore = mineConfigStore;
+        this.hierarchyStore = hierarchyStore;
+        this.minerConfigStore = minerConfigStore;
         this.mineManager = mineManager;
         this.adminNavigator = adminNavigator;
         this.mineId = mineId;
@@ -77,7 +81,7 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
                       @Nonnull UIEventBuilder evt, @Nonnull Store<EntityStore> store) {
         cmd.append("Pages/Ascend_MinerDefAdmin.ui");
 
-        Mine mine = mineConfigStore.getMine(mineId);
+        Mine mine = hierarchyStore.getMine(mineId);
         String mineName = mine != null ? mine.getName() : mineId;
         cmd.set("#HeaderTitle.Text", "Miner Definitions - " + mineName);
 
@@ -135,7 +139,7 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
     private void handleSelectLayer(String layerId, Ref<EntityStore> ref, Store<EntityStore> store) {
         selectedLayerId = layerId;
         // Load current definitions for this layer into portrait indices + cached names
-        Map<MinerRarity, MinerDefinition> defs = mineConfigStore.getMinerDefinitions(layerId);
+        Map<MinerRarity, MinerDefinition> defs = minerConfigStore.getMinerDefinitions(layerId);
         for (MinerRarity rarity : MinerRarity.values()) {
             int ord = rarity.ordinal();
             MinerDefinition def = defs.get(rarity);
@@ -160,7 +164,7 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
         String name = cachedNames[ord];
         if (name.isEmpty()) name = MinerVariant.getDefaultDisplayName(rarity);
         String portraitId = CYCLEABLE_PORTRAITS.get(portraitIndex[ord]);
-        mineConfigStore.saveMinerDefinition(new MinerDefinition(selectedLayerId, rarity, name, portraitId));
+        minerConfigStore.saveMinerDefinition(new MinerDefinition(selectedLayerId, rarity, name, portraitId));
         sendRefresh(ref, store);
     }
 
@@ -174,7 +178,7 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
         String name = cachedNames[ord];
         if (name.isEmpty()) name = MinerVariant.getDefaultDisplayName(rarity);
         String portraitId = CYCLEABLE_PORTRAITS.get(portraitIndex[ord]);
-        mineConfigStore.saveMinerDefinition(new MinerDefinition(selectedLayerId, rarity, name, portraitId));
+        minerConfigStore.saveMinerDefinition(new MinerDefinition(selectedLayerId, rarity, name, portraitId));
         sendRefresh(ref, store);
     }
 
@@ -188,7 +192,7 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
         String name = cachedNames[ord];
         if (name.isEmpty()) name = MinerVariant.getDefaultDisplayName(rarity);
         String portraitId = CYCLEABLE_PORTRAITS.get(portraitIndex[ord]);
-        mineConfigStore.saveMinerDefinition(new MinerDefinition(selectedLayerId, rarity, name, portraitId));
+        minerConfigStore.saveMinerDefinition(new MinerDefinition(selectedLayerId, rarity, name, portraitId));
         sendRefresh(ref, store);
     }
 
@@ -202,7 +206,7 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
     private void buildLayerList(UICommandBuilder cmd, UIEventBuilder evt) {
         cmd.clear("#LayerList");
 
-        Mine mine = mineConfigStore.getMine(mineId);
+        Mine mine = hierarchyStore.getMine(mineId);
         if (mine == null) return;
 
         List<MineZoneLayer> allLayers = new ArrayList<>();
@@ -237,7 +241,7 @@ public class MinerDefAdminPage extends InteractiveCustomUIPage<MinerDefAdminPage
             return;
         }
 
-        MineZoneLayer layer = mineConfigStore.getLayerById(selectedLayerId);
+        MineZoneLayer layer = hierarchyStore.getLayerById(selectedLayerId);
         String layerLabel = layer != null && layer.getDisplayName() != null && !layer.getDisplayName().isEmpty()
             ? layer.getDisplayName() : selectedLayerId;
         cmd.set("#SelectedLayerLabel.Text", "Layer: " + layerLabel);

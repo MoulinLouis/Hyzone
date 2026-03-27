@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.mine;
 
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.system.BlockDamageTracker;
@@ -30,7 +31,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
 public class MineManager {
-    private final MineConfigStore configStore;
+    private final MineHierarchyStore hierarchyStore;
+    private final BlockConfigStore blockConfigStore;
     private final Function<UUID, PlayerRef> playerRefResolver;
     private final BlockDamageTracker blockDamageTracker = new BlockDamageTracker();
 
@@ -46,13 +48,15 @@ public class MineManager {
 
     private volatile World mineWorld;
 
-    public MineManager(MineConfigStore configStore, Function<UUID, PlayerRef> playerRefResolver) {
-        this.configStore = configStore;
+    public MineManager(MineHierarchyStore hierarchyStore, BlockConfigStore blockConfigStore,
+                       Function<UUID, PlayerRef> playerRefResolver) {
+        this.hierarchyStore = hierarchyStore;
+        this.blockConfigStore = blockConfigStore;
         this.playerRefResolver = playerRefResolver;
     }
 
     public MineZone findZoneAt(int x, int y, int z) {
-        MineZone zone = configStore.getZone();
+        MineZone zone = hierarchyStore.getZone();
         if (zone != null && zone.contains(x, y, z)) {
             return zone;
         }
@@ -139,15 +143,19 @@ public class MineManager {
     }
 
     private MineZone findZoneById(String zoneId) {
-        MineZone zone = configStore.getZone();
+        MineZone zone = hierarchyStore.getZone();
         if (zone != null && zone.getId().equals(zoneId)) {
             return zone;
         }
         return null;
     }
 
-    public MineConfigStore getConfigStore() {
-        return configStore;
+    public MineHierarchyStore getHierarchyStore() {
+        return hierarchyStore;
+    }
+
+    public BlockConfigStore getBlockConfigStore() {
+        return blockConfigStore;
     }
 
     public BlockDamageTracker getBlockDamageTracker() {
@@ -161,7 +169,7 @@ public class MineManager {
     public void setMineHudManager(MineHudManager mineHudManager) { this.mineHudManager = mineHudManager; }
 
     public void initTimer() {
-        MineZone zone = configStore.getZone();
+        MineZone zone = hierarchyStore.getZone();
         if (zone != null) {
             nextRegenTimestamp = System.currentTimeMillis() + zone.getRegenIntervalSeconds() * 1000L;
         }
@@ -185,7 +193,7 @@ public class MineManager {
     }
 
     public void tick() {
-        MineZone zone = configStore.getZone();
+        MineZone zone = hierarchyStore.getZone();
         if (zone == null || regenerating || nextRegenTimestamp == 0) return;
         if (System.currentTimeMillis() < nextRegenTimestamp) return;
 
@@ -235,7 +243,7 @@ public class MineManager {
     }
 
     public void generateAllZones(World world) {
-        MineZone zone = configStore.getZone();
+        MineZone zone = hierarchyStore.getZone();
         if (zone != null) {
             generateZone(world, zone);
         }

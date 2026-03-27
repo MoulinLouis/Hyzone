@@ -54,7 +54,12 @@ import io.hyvexa.ascend.mine.MineBonusCalculator;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.egg.EggRouletteAnimation;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
+import io.hyvexa.ascend.mine.data.ConveyorConfigStore;
+import io.hyvexa.ascend.mine.data.GateConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
+import io.hyvexa.ascend.mine.data.MinerConfigStore;
+import io.hyvexa.ascend.mine.data.TierConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
@@ -126,7 +131,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private TutorialTriggerService tutorialTriggerService;
     private PlayerAnalytics analytics;
     private RunnerSpeedCalculator runnerSpeedCalculator;
-    private MineConfigStore mineConfigStore;
+    private MineHierarchyStore mineHierarchyStore;
+    private BlockConfigStore blockConfigStore;
+    private TierConfigStore tierConfigStore;
+    private GateConfigStore gateConfigStore;
+    private MinerConfigStore minerConfigStore;
+    private ConveyorConfigStore conveyorConfigStore;
     private MineBonusCalculator mineBonusCalculator;
     private MineGateChecker mineGateChecker;
     private MineManager mineManager;
@@ -207,23 +217,47 @@ public class ParkourAscendPlugin extends JavaPlugin {
             return;
         }
 
-        // Mine config
+        // Mine config stores
         try {
-            mineConfigStore = new MineConfigStore(DatabaseManager.getInstance());
-            mineConfigStore.syncLoad();
-            mineBonusCalculator = new MineBonusCalculator(mineConfigStore);
+            var db = DatabaseManager.getInstance();
+            mineHierarchyStore = new MineHierarchyStore(db);
+            blockConfigStore = new BlockConfigStore(db);
+            tierConfigStore = new TierConfigStore(db);
+            gateConfigStore = new GateConfigStore(db);
+            minerConfigStore = new MinerConfigStore(db, mineHierarchyStore::getMineId);
+            conveyorConfigStore = new ConveyorConfigStore(db, mineHierarchyStore::getMineId, minerConfigStore);
+
+            if (db.isInitialized()) {
+                try (var conn = db.getConnection()) {
+                    if (conn != null) {
+                        mineHierarchyStore.syncLoad(conn);
+                        blockConfigStore.syncLoad(conn);
+                        tierConfigStore.syncLoad(conn);
+                        gateConfigStore.syncLoad(conn);
+                        minerConfigStore.syncLoad(conn);
+                        conveyorConfigStore.syncLoad(conn);
+                    }
+                }
+            }
+
+            mineBonusCalculator = new MineBonusCalculator(minerConfigStore);
         } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize mine config store");
-            mineConfigStore = null;
+            LOGGER.atWarning().withCause(e).log("Failed to initialize mine config stores");
+            mineHierarchyStore = null;
+            blockConfigStore = null;
+            tierConfigStore = null;
+            gateConfigStore = null;
+            minerConfigStore = null;
+            conveyorConfigStore = null;
             mineBonusCalculator = null;
         }
 
         // Mine player store + manager + gate checker
-        if (mineConfigStore != null) {
+        if (mineHierarchyStore != null) {
             try {
                 minePlayerStore = new MinePlayerStore(DatabaseManager.getInstance());
-                mineManager = new MineManager(mineConfigStore, this::getPlayerRef);
-                mineGateChecker = new MineGateChecker(mineConfigStore, playerStore, minePlayerStore);
+                mineManager = new MineManager(mineHierarchyStore, blockConfigStore, this::getPlayerRef);
+                mineGateChecker = new MineGateChecker(gateConfigStore, mineHierarchyStore, playerStore, minePlayerStore);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
                 minePlayerStore = null;
@@ -233,8 +267,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         // Mine HUD manager
-        if (minePlayerStore != null && mineManager != null && mineConfigStore != null) {
-            mineHudManager = new MineHudManager(minePlayerStore, mineManager, mineConfigStore, this::getPlayerRef);
+        if (minePlayerStore != null && mineManager != null && mineHierarchyStore != null) {
+            mineHudManager = new MineHudManager(minePlayerStore, mineManager, mineHierarchyStore, this::getPlayerRef);
             mineManager.setMineHudManager(mineHudManager);
             mineManager.initTimer();
         }
@@ -243,11 +277,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
         mineAchievementTracker = new MineAchievementTracker(minePlayerStore, playerStore, this::getPlayerRef, DatabaseManager.getInstance());
 
         // Mine robot manager (automated miners)
-        if (mineConfigStore != null && minePlayerStore != null) {
+        if (mineHierarchyStore != null && minePlayerStore != null) {
             eggOpenService = new io.hyvexa.ascend.mine.egg.EggOpenService(minePlayerStore, mineAchievementTracker);
             try {
-                mineRobotManager = new MineRobotManager(mineConfigStore, minePlayerStore, mineManager,
-                    mineAchievementTracker);
+                mineRobotManager = new MineRobotManager(mineHierarchyStore, minerConfigStore,
+                    conveyorConfigStore, minePlayerStore, mineManager, mineAchievementTracker);
                 mineRobotManager.start();
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to initialize mine robot manager");
@@ -366,7 +400,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
             robotManager,
             achievementManager,
             whitelistManager,
-            mineConfigStore,
+            mineHierarchyStore,
+            minerConfigStore,
+            tierConfigStore,
+            conveyorConfigStore,
+            gateConfigStore,
+            blockConfigStore,
             mineManager,
             hologramManager
         );
@@ -393,7 +432,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             adminNavigator,
             mapStore,
             whitelistManager,
-            mineConfigStore,
+            mineHierarchyStore,
             hologramManager
         ));
         getCommandRegistry().registerCommand(new ElevateCommand(
@@ -405,7 +444,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             playerStore, transcendenceManager, robotManager, achievementManager));
         getCommandRegistry().registerCommand(new CatCommand(playerStore, hudManager, achievementManager));
         getCommandRegistry().registerCommand(new io.hyvexa.ascend.mine.command.MineCommand(
-            mineGateChecker, minePlayerStore, mineConfigStore, mineAchievementTracker, mineRobotManager));
+            mineGateChecker, minePlayerStore, blockConfigStore, minerConfigStore, tierConfigStore,
+            mineAchievementTracker, mineRobotManager));
         if (runtimeConfig.isEnableTestCommands()) {
             getCommandRegistry().registerCommand(new CinematicTestCommand());
             getCommandRegistry().registerCommand(new HudPreviewCommand(hudManager));
@@ -428,7 +468,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             runnerSpeedCalculator,
             eggOpenService,
             minePlayerStore,
-            mineConfigStore,
+            blockConfigStore,
+            minerConfigStore,
+            tierConfigStore,
             mineAchievementTracker,
             mineRobotManager,
             mineGateChecker,
@@ -450,7 +492,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         // Mine break system — allows block breaking inside mining zones (overrides NoBreakSystem)
-        if (mineConfigStore != null && mineManager != null && minePlayerStore != null) {
+        if (mineHierarchyStore != null && mineManager != null && minePlayerStore != null) {
             if (registry.getEntityEventTypeForClass(BreakBlockEvent.class) == null) {
                 registry.registerEntityEventType(BreakBlockEvent.class);
             }
@@ -465,7 +507,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             }
             if (!registry.hasSystemClass(MineDamageSystem.class)) {
                 mineDamageSystem = new MineDamageSystem(mineManager, minePlayerStore,
-                    mineConfigStore, mineHudManager, mineAchievementTracker);
+                    blockConfigStore, mineHudManager, mineAchievementTracker);
                 registry.registerSystem(mineDamageSystem);
             }
         }
@@ -1082,7 +1124,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 (ref, store, playerRef, services) -> {
                     MinePlayerProgress progress = services.minePlayerStore().getOrCreatePlayer(playerRef.getUuid());
                     return new io.hyvexa.ascend.mine.ui.MineSellPage(playerRef, progress,
-                        services.mineConfigStore(), services.minePlayerStore(), services.mineAchievementTracker());
+                        services.blockConfigStore(), services.minePlayerStore(), services.mineAchievementTracker());
                 },
                 (services, player) -> services.minePlayerStore() != null,
                 true, true)));
@@ -1092,10 +1134,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 (ref, store, playerRef, services) -> {
                     MinePlayerProgress progress = services.minePlayerStore().getOrCreatePlayer(playerRef.getUuid());
                     return new io.hyvexa.ascend.mine.ui.MinePage(playerRef, progress,
-                        services.mineConfigStore(), services.minePlayerStore(), services.mineRobotManager(),
+                        services.minerConfigStore(), services.tierConfigStore(),
+                        services.minePlayerStore(), services.mineRobotManager(),
                         services.mineGateChecker(), services.mineAchievementTracker());
                 },
-                (services, player) -> services.minePlayerStore() != null && services.mineConfigStore() != null,
+                (services, player) -> services.minePlayerStore() != null && services.minerConfigStore() != null,
                 true, true)));
         // Mine Leaderboard -> MineLeaderboardPage
         registry.register("Mine_Leaderboard_Interaction",

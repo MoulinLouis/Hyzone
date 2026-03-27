@@ -19,7 +19,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.mine.MineBlockRegistry;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.TierConfigStore;
 import io.hyvexa.ascend.mine.data.PickaxeTier;
 
 import java.util.List;
@@ -30,13 +30,13 @@ public class PickaxeAdminPage extends InteractiveCustomUIPage<PickaxeAdminPage.P
     private static final String SELECT_BLOCK_PREFIX = "SelectBlock:";
 
     private final PlayerRef playerRef;
-    private final MineConfigStore configStore;
+    private final TierConfigStore configStore;
     private int selectedTier = 0;
     private String selectedBlockId = "";
     private String amountInput = "";
     private String costInput = "";
 
-    public PickaxeAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore configStore) {
+    public PickaxeAdminPage(@Nonnull PlayerRef playerRef, TierConfigStore configStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PageData.CODEC);
         this.playerRef = playerRef;
         this.configStore = configStore;

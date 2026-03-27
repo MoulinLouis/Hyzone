@@ -4,7 +4,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 
 /**
  * Resolves miner portraits and display names.
- * Config-aware overloads check MineConfigStore first, falling back to hardcoded defaults (variant 0).
+ * Config-aware overloads check MinerConfigStore first, falling back to hardcoded defaults (variant 0).
  */
 public final class MinerVariant {
 
@@ -46,20 +46,20 @@ public final class MinerVariant {
 
     // --- Config-aware overloads (preferred) ---
 
-    public static String getDisplayName(MineConfigStore store, CollectedMiner miner) {
+    public static String getDisplayName(MinerConfigStore store, CollectedMiner miner) {
         MinerDefinition def = store.getMinerDefinition(miner.getLayerId(), miner.getRarity());
         if (def != null) return def.displayName();
         return DISPLAY_NAMES[miner.getRarity().ordinal()][0];
     }
 
-    public static String getPortraitId(MineConfigStore store, CollectedMiner miner) {
+    public static String getPortraitId(MinerConfigStore store, CollectedMiner miner) {
         MinerDefinition def = store.getMinerDefinition(miner.getLayerId(), miner.getRarity());
         if (def != null) return def.portraitId();
         return PORTRAIT_IDS[miner.getRarity().ordinal()][0];
     }
 
     public static void applyPortrait(UICommandBuilder cmd, String selector,
-                                      MineConfigStore store, CollectedMiner miner) {
+                                      MinerConfigStore store, CollectedMiner miner) {
         String targetId = miner != null ? getPortraitId(store, miner) : "PortraitEmpty";
         for (String id : ALL_PORTRAIT_IDS) {
             cmd.set(selector + " #" + id + ".Visible", id.equals(targetId));

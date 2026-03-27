@@ -18,7 +18,8 @@ import io.hyvexa.ascend.mine.achievement.MineAchievement;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.data.CollectedMiner;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinerConfigStore;
+import io.hyvexa.ascend.mine.data.TierConfigStore;
 import io.hyvexa.ascend.mine.data.MinerVariant;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -80,7 +81,8 @@ public class MinePage extends BaseAscendPage {
 
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
-    private final MineConfigStore configStore;
+    private final MinerConfigStore minerConfigStore;
+    private final TierConfigStore tierConfigStore;
     private final MinePlayerStore minePlayerStore;
     private final MineRobotManager mineRobotManager;
     private final MineGateChecker mineGateChecker;
@@ -89,13 +91,15 @@ public class MinePage extends BaseAscendPage {
     private int pickerSlotIndex = -1;
 
     public MinePage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress,
-                    MineConfigStore configStore, MinePlayerStore minePlayerStore,
+                    MinerConfigStore minerConfigStore, TierConfigStore tierConfigStore,
+                    MinePlayerStore minePlayerStore,
                     MineRobotManager mineRobotManager, MineGateChecker mineGateChecker,
                     MineAchievementTracker mineAchievementTracker) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.mineProgress = mineProgress;
-        this.configStore = configStore;
+        this.minerConfigStore = minerConfigStore;
+        this.tierConfigStore = tierConfigStore;
         this.minePlayerStore = minePlayerStore;
         this.mineRobotManager = mineRobotManager;
         this.mineGateChecker = mineGateChecker;
@@ -132,9 +136,9 @@ public class MinePage extends BaseAscendPage {
     // ==================== Slots Tab ====================
 
     private void populateSlotsTab(UICommandBuilder cmd, UIEventBuilder evt) {
-        if (configStore == null) return;
+        if (minerConfigStore == null) return;
 
-        List<io.hyvexa.ascend.mine.data.MinerSlot> slots = configStore.getMinerSlots();
+        List<io.hyvexa.ascend.mine.data.MinerSlot> slots = minerConfigStore.getMinerSlots();
         int slotCount = Math.max(slots.size(), 1);
 
         int row = -1;
@@ -167,11 +171,11 @@ public class MinePage extends BaseAscendPage {
             applyBanner(cmd, sel + " #RarityBanner", assigned.getRarity());
 
             // Portrait
-            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", configStore, assigned);
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", minerConfigStore, assigned);
 
             // Info banner — show name + stats, hide slot label
             cmd.set(sel + " #MinerName.Visible", true);
-            cmd.set(sel + " #MinerName.Text", MinerVariant.getDisplayName(configStore, assigned));
+            cmd.set(sel + " #MinerName.Text", MinerVariant.getDisplayName(minerConfigStore, assigned));
             cmd.set(sel + " #MinerStats.Visible", true);
             cmd.set(sel + " #MinerStats.Text",
                 "Lv." + assigned.getSpeedLevel() + " \u2014 " +
@@ -236,10 +240,10 @@ public class MinePage extends BaseAscendPage {
             cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
 
             // Portrait
-            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", configStore, miner);
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", minerConfigStore, miner);
 
             // Name + stats
-            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(configStore, miner));
+            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(minerConfigStore, miner));
             cmd.set(sel + " #StatsLabel.Text",
                 "Lv." + miner.getSpeedLevel() + " \u2014 " +
                 String.format("%.1f", miner.getProductionRate()) + " b/m");
@@ -299,10 +303,10 @@ public class MinePage extends BaseAscendPage {
             cmd.set(sel + " #RarityLabel.Style.TextColor", miner.getRarity().getColor());
 
             // Portrait
-            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", configStore, miner);
+            MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", minerConfigStore, miner);
 
             // Name + stats
-            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(configStore, miner));
+            cmd.set(sel + " #NameLabel.Text", MinerVariant.getDisplayName(minerConfigStore, miner));
             cmd.set(sel + " #StatsLabel.Text",
                 "Lv." + miner.getSpeedLevel() + " \u2014 " +
                 String.format("%.1f", miner.getProductionRate()) + " b/m");
@@ -395,7 +399,7 @@ public class MinePage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, "Noop"), false);
         } else if (enhancement < PickaxeTier.MAX_ENHANCEMENT) {
             int nextLevel = enhancement + 1;
-            long cost = configStore != null ? configStore.getEnhanceCost(current.getTier(), nextLevel) : 0;
+            long cost = tierConfigStore != null ? tierConfigStore.getEnhanceCost(current.getTier(), nextLevel) : 0;
             cmd.set(sel + " #RequirementText.Text", "Next: +" + nextLevel);
             cmd.set(sel + " #ActionText.Text", "Enhance");
             cmd.set(sel + " #ActionPrice.Text", cost > 0 ? cost + " cryst" : "Free");
@@ -404,8 +408,8 @@ public class MinePage extends BaseAscendPage {
             evt.addEventBinding(CustomUIEventBindingType.Activating, sel + " #PickaxeBuyButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, canAfford ? BUTTON_ENHANCE_PICKAXE : "Noop"), false);
         } else {
-            Map<String, Integer> recipe = configStore != null
-                ? configStore.getTierRecipe(next.getTier()) : java.util.Collections.emptyMap();
+            Map<String, Integer> recipe = tierConfigStore != null
+                ? tierConfigStore.getTierRecipe(next.getTier()) : java.util.Collections.emptyMap();
             boolean configured = !recipe.isEmpty();
             boolean hasBlocks = configured && mineProgress.hasInventoryBlocks(recipe);
 
@@ -531,7 +535,7 @@ public class MinePage extends BaseAscendPage {
             mineRobotManager.syncAssignedMiner(playerRef.getUuid(), slotIndex, store.getExternalData().getWorld());
         }
 
-        String minerName = MinerVariant.getDisplayName(configStore, miner);
+        String minerName = MinerVariant.getDisplayName(minerConfigStore, miner);
         player.sendMessage(Message.raw("Assigned " + minerName + " to Slot #" + (slotIndex + 1) + "!"));
         hidePicker();
         sendRefresh(ref, store);
@@ -586,7 +590,7 @@ public class MinePage extends BaseAscendPage {
         PickaxeTier next = mineProgress.getPickaxeTierEnum().next();
         if (next == null) { player.sendMessage(Message.raw("Already at max pickaxe tier!")); return; }
 
-        Map<String, Integer> recipe = configStore != null ? configStore.getTierRecipe(next.getTier()) : java.util.Collections.emptyMap();
+        Map<String, Integer> recipe = tierConfigStore != null ? tierConfigStore.getTierRecipe(next.getTier()) : java.util.Collections.emptyMap();
 
         MinePlayerProgress.PickaxeUpgradeResult result = mineProgress.upgradePickaxeTier(recipe);
         switch (result) {
@@ -608,7 +612,7 @@ public class MinePage extends BaseAscendPage {
         if (player == null) return;
 
         int nextLevel = mineProgress.getPickaxeEnhancement() + 1;
-        long cost = configStore != null ? configStore.getEnhanceCost(mineProgress.getPickaxeTier(), nextLevel) : 0;
+        long cost = tierConfigStore != null ? tierConfigStore.getEnhanceCost(mineProgress.getPickaxeTier(), nextLevel) : 0;
 
         MinePlayerProgress.PickaxeEnhanceResult result = mineProgress.purchasePickaxeEnhancement(cost);
         if (result == MinePlayerProgress.PickaxeEnhanceResult.ALREADY_MAXED) {

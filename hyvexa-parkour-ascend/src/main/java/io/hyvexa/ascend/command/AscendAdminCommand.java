@@ -24,7 +24,7 @@ import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.ascend.mine.data.Mine;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
@@ -41,7 +41,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     private final AscendAdminNavigator adminNavigator;
     private final AscendMapStore mapStore;
     private final AscendWhitelistManager whitelistManager;
-    private final MineConfigStore mineConfigStore;
+    private final MineHierarchyStore mineHierarchyStore;
     private final AscendHologramManager hologramManager;
 
     public static void clearPlayer(UUID playerId) {
@@ -50,13 +50,13 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     }
 
     public AscendAdminCommand(AscendAdminNavigator adminNavigator, AscendMapStore mapStore,
-                              AscendWhitelistManager whitelistManager, MineConfigStore mineConfigStore,
+                              AscendWhitelistManager whitelistManager, MineHierarchyStore mineHierarchyStore,
                               AscendHologramManager hologramManager) {
         super("as", "Ascend admin tools");
         this.adminNavigator = adminNavigator;
         this.mapStore = mapStore;
         this.whitelistManager = whitelistManager;
-        this.mineConfigStore = mineConfigStore;
+        this.mineHierarchyStore = mineHierarchyStore;
         this.hologramManager = hologramManager;
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -483,11 +483,11 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     }
 
     private void handleMineList(Player player) {
-        if (mineConfigStore == null) {
+        if (mineHierarchyStore == null) {
             player.sendMessage(Message.raw("[Mine] Mine config store not available."));
             return;
         }
-        List<Mine> mines = mineConfigStore.listMinesSorted();
+        List<Mine> mines = mineHierarchyStore.listMinesSorted();
         if (mines.isEmpty()) {
             player.sendMessage(Message.raw("[Mine] No mines created yet."));
             return;

@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
@@ -33,15 +33,15 @@ public class MineHudManager {
 
     private final MinePlayerStore playerStore;
     private final MineManager mineManager;
-    private final MineConfigStore configStore;
+    private final MineHierarchyStore hierarchyStore;
     private final Function<UUID, PlayerRef> playerRefLookup;
     private final ConcurrentHashMap<UUID, MineHudState> huds = new ConcurrentHashMap<>();
 
-    public MineHudManager(MinePlayerStore playerStore, MineManager mineManager, MineConfigStore configStore,
+    public MineHudManager(MinePlayerStore playerStore, MineManager mineManager, MineHierarchyStore hierarchyStore,
                           Function<UUID, PlayerRef> playerRefLookup) {
         this.playerStore = playerStore;
         this.mineManager = mineManager;
-        this.configStore = configStore;
+        this.hierarchyStore = hierarchyStore;
         this.playerRefLookup = playerRefLookup;
     }
 
@@ -197,7 +197,7 @@ public class MineHudManager {
         // Update mine name
         String mineName = "";
         if (currentZone != null) {
-            Mine mine = configStore.getMine();
+            Mine mine = hierarchyStore.getMine();
             if (mine != null) {
                 mineName = mine.getName();
             }

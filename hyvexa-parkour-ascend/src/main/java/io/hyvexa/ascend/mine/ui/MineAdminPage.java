@@ -27,7 +27,11 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
+import io.hyvexa.ascend.mine.data.ConveyorConfigStore;
+import io.hyvexa.ascend.mine.data.GateConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
+import io.hyvexa.ascend.mine.data.MinerConfigStore;
 import io.hyvexa.ascend.mine.data.MinerSlot;
 import io.hyvexa.ascend.ui.AscendAdminNavigator;
 import io.hyvexa.common.math.BigNumber;
@@ -35,7 +39,11 @@ import io.hyvexa.common.math.BigNumber;
 public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineData> {
 
     private final PlayerRef playerRef;
-    private final MineConfigStore mineConfigStore;
+    private final MineHierarchyStore hierarchyStore;
+    private final MinerConfigStore minerConfigStore;
+    private final ConveyorConfigStore conveyorConfigStore;
+    private final GateConfigStore gateConfigStore;
+    private final BlockConfigStore blockConfigStore;
     private final MineManager mineManager;
     private final AscendAdminNavigator adminNavigator;
     private String mineId = "";
@@ -46,12 +54,20 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
     private int selectedSlotIndex = 0;
 
     public MineAdminPage(@Nonnull PlayerRef playerRef,
-                         MineConfigStore mineConfigStore,
+                         MineHierarchyStore hierarchyStore,
+                         MinerConfigStore minerConfigStore,
+                         ConveyorConfigStore conveyorConfigStore,
+                         GateConfigStore gateConfigStore,
+                         BlockConfigStore blockConfigStore,
                          MineManager mineManager,
                          AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MineData.CODEC);
         this.playerRef = playerRef;
-        this.mineConfigStore = mineConfigStore;
+        this.hierarchyStore = hierarchyStore;
+        this.minerConfigStore = minerConfigStore;
+        this.conveyorConfigStore = conveyorConfigStore;
+        this.gateConfigStore = gateConfigStore;
+        this.blockConfigStore = blockConfigStore;
         this.mineManager = mineManager;
         this.adminNavigator = adminNavigator;
     }
@@ -90,7 +106,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         }
         if (data.button.startsWith(MineData.BUTTON_SELECT_PREFIX)) {
             selectedMineId = data.button.substring(MineData.BUTTON_SELECT_PREFIX.length());
-            Mine mine = mineConfigStore.getMine(selectedMineId);
+            Mine mine = hierarchyStore.getMine(selectedMineId);
             if (mine != null) {
                 mineId = mine.getId();
                 mineName = mine.getName() != null ? mine.getName() : "";
@@ -142,7 +158,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             player.sendMessage(Message.raw("Mine name is required."));
             return;
         }
-        if (mineConfigStore.getMine(id) != null) {
+        if (hierarchyStore.getMine(id) != null) {
             player.sendMessage(Message.raw("Mine already exists: " + id));
             return;
         }
@@ -151,7 +167,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         if (order >= 0) {
             mine.setDisplayOrder(order);
         }
-        mineConfigStore.saveMine(mine);
+        hierarchyStore.saveMine(mine);
         selectedMineId = id;
         player.sendMessage(Message.raw("Mine created: " + id + " (" + name + ")"));
         sendRefresh(ref, store);
@@ -168,7 +184,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             return;
         }
         mine.setName(name);
-        mineConfigStore.saveMine(mine);
+        hierarchyStore.saveMine(mine);
         player.sendMessage(Message.raw("Name updated: " + mine.getId() + " -> " + name));
         sendRefresh(ref, store);
     }
@@ -181,7 +197,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         int order = parseOrder(player);
         if (order < 0) return;
         mine.setDisplayOrder(order);
-        mineConfigStore.saveMine(mine);
+        hierarchyStore.saveMine(mine);
         player.sendMessage(Message.raw("Order updated: " + mine.getId() + " -> " + order));
         sendRefresh(ref, store);
     }
@@ -209,7 +225,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         mine.setSpawnRotZ(rot.getZ());
         World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
         mine.setWorld(world != null ? world.getName() : "");
-        mineConfigStore.saveMine(mine);
+        hierarchyStore.saveMine(mine);
         player.sendMessage(Message.raw("Spawn set for mine: " + mine.getId()));
         player.sendMessage(Message.raw("  Pos: " + String.format("%.2f, %.2f, %.2f", pos.getX(), pos.getY(), pos.getZ())));
         player.sendMessage(Message.raw("  Rot: " + String.format("%.2f, %.2f, %.2f", rot.getX(), rot.getY(), rot.getZ())));
@@ -230,7 +246,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             double value = Double.parseDouble(raw);
             BigNumber cost = BigNumber.fromDouble(value);
             mine.setUnlockCost(cost);
-            mineConfigStore.saveMine(mine);
+            hierarchyStore.saveMine(mine);
             player.sendMessage(Message.raw("Cost updated: " + mine.getId() + " -> " + cost));
             sendRefresh(ref, store);
         } catch (NumberFormatException e) {
@@ -244,7 +260,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         Mine mine = resolveSelectedMine(player);
         if (mine == null) return;
         String id = mine.getId();
-        boolean deleted = mineConfigStore.deleteMine(id);
+        boolean deleted = hierarchyStore.deleteMine(id);
         if (deleted) {
             player.sendMessage(Message.raw("Mine deleted: " + id));
             selectedMineId = "";
@@ -268,7 +284,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
         MineZoneAdminPage page = new MineZoneAdminPage(
-            pRef, mineConfigStore, mineManager, adminNavigator, selectedMineId);
+            pRef, hierarchyStore, mineManager, adminNavigator, selectedMineId);
         player.getPageManager().openCustomPage(ref, store, page);
     }
 
@@ -278,7 +294,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
         player.getPageManager().openCustomPage(ref, store,
-            new MineGateAdminPage(pRef, mineConfigStore, adminNavigator));
+            new MineGateAdminPage(pRef, gateConfigStore, adminNavigator));
     }
 
     private void handleBlockConfig(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -287,7 +303,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (pRef == null) return;
         player.getPageManager().openCustomPage(ref, store,
-            new MineBlockHpPage(pRef, mineConfigStore, adminNavigator));
+            new MineBlockHpPage(pRef, blockConfigStore, adminNavigator));
     }
 
     private void handleMiners(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -325,13 +341,13 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         int blockY = (int) Math.floor(pos.getY());
         int blockZ = (int) Math.floor(pos.getZ());
 
-        MinerSlot slot = mineConfigStore.getMinerSlot(mine.getId(), selectedSlotIndex);
+        MinerSlot slot = minerConfigStore.getMinerSlot(mine.getId(), selectedSlotIndex);
         if (slot == null) {
             slot = new MinerSlot(mine.getId(), selectedSlotIndex);
         }
         slot.setNpcPosition(pos.getX(), pos.getY(), pos.getZ(), yaw);
         slot.setBlockPosition(blockX, blockY, blockZ);
-        mineConfigStore.saveMinerSlot(slot);
+        minerConfigStore.saveMinerSlot(slot);
 
         player.sendMessage(Message.raw("Miner pos set: " + mine.getId() + " slot " + selectedSlotIndex));
         player.sendMessage(Message.raw("  NPC: " + String.format("%.1f, %.1f, %.1f yaw=%.1f",
@@ -365,8 +381,8 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) { player.sendMessage(Message.raw("Unable to read position.")); return; }
         Vector3d pos = transform.getPosition();
-        mineConfigStore.addConveyorWaypoint(mine.getId(), selectedSlotIndex, pos.getX(), pos.getY(), pos.getZ());
-        int count = mineConfigStore.getSlotWaypoints(mine.getId(), selectedSlotIndex).size();
+        conveyorConfigStore.addConveyorWaypoint(mine.getId(), selectedSlotIndex, pos.getX(), pos.getY(), pos.getZ());
+        int count = conveyorConfigStore.getSlotWaypoints(mine.getId(), selectedSlotIndex).size();
         player.sendMessage(Message.raw("+Slot WP #" + count + " for slot " + selectedSlotIndex
             + ": " + String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ())));
     }
@@ -379,8 +395,8 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) { player.sendMessage(Message.raw("Unable to read position.")); return; }
         Vector3d pos = transform.getPosition();
-        mineConfigStore.addConveyorWaypoint(mine.getId(), -1, pos.getX(), pos.getY(), pos.getZ());
-        int count = mineConfigStore.getMainLineWaypoints(mine.getId()).size();
+        conveyorConfigStore.addConveyorWaypoint(mine.getId(), -1, pos.getX(), pos.getY(), pos.getZ());
+        int count = conveyorConfigStore.getMainLineWaypoints(mine.getId()).size();
         player.sendMessage(Message.raw("+Main WP #" + count
             + ": " + String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ())));
     }
@@ -390,7 +406,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         if (player == null) return;
         Mine mine = resolveSelectedMine(player);
         if (mine == null) return;
-        mineConfigStore.clearConveyorWaypoints(mine.getId(), selectedSlotIndex);
+        conveyorConfigStore.clearConveyorWaypoints(mine.getId(), selectedSlotIndex);
         player.sendMessage(Message.raw("Cleared slot " + selectedSlotIndex + " waypoints for " + mine.getId()));
     }
 
@@ -399,7 +415,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         if (player == null) return;
         Mine mine = resolveSelectedMine(player);
         if (mine == null) return;
-        mineConfigStore.clearConveyorWaypoints(mine.getId(), -1);
+        conveyorConfigStore.clearConveyorWaypoints(mine.getId(), -1);
         player.sendMessage(Message.raw("Cleared main line waypoints for " + mine.getId()));
     }
 
@@ -416,7 +432,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             player.sendMessage(Message.raw("Select a mine or enter a mine ID first."));
             return null;
         }
-        Mine mine = mineConfigStore.getMine(id);
+        Mine mine = hierarchyStore.getMine(id);
         if (mine == null) {
             player.sendMessage(Message.raw("Mine not found: " + id));
         }
@@ -491,7 +507,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         commandBuilder.set("#MineOrderField.Value", mineOrder);
         commandBuilder.set("#MineCostField.Value", mineCost);
 
-        boolean hasMines = !mineConfigStore.listMinesSorted().isEmpty();
+        boolean hasMines = !hierarchyStore.listMinesSorted().isEmpty();
         boolean hasSelection = selectedMineId != null && !selectedMineId.isBlank();
 
         // Show form section when a mine is selected or there are no mines (create mode)
@@ -502,7 +518,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         String selectedText = "No mine selected";
         String mineInfo = "";
         if (hasSelection) {
-            Mine mine = mineConfigStore.getMine(selectedMineId);
+            Mine mine = hierarchyStore.getMine(selectedMineId);
             if (mine != null) {
                 selectedText = mine.getId() + " (" + mine.getName() + ")";
                 boolean hasSpawn = mine.getSpawnX() != 0 || mine.getSpawnY() != 0 || mine.getSpawnZ() != 0;
@@ -522,7 +538,7 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
 
     private void buildMineList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#MineCards");
-        List<Mine> mines = new ArrayList<>(mineConfigStore.listMinesSorted());
+        List<Mine> mines = new ArrayList<>(hierarchyStore.listMinesSorted());
         int index = 0;
         for (Mine mine : mines) {
             commandBuilder.append("#MineCards", "Pages/Ascend_MineAdminEntry.ui");

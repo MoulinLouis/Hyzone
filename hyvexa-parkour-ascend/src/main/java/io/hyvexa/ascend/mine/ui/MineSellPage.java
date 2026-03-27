@@ -19,7 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.common.util.FormatUtils;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.ui.BaseAscendPage;
@@ -33,12 +33,12 @@ public class MineSellPage extends BaseAscendPage {
 
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
-    private final MineConfigStore configStore;
+    private final BlockConfigStore configStore;
     private final MinePlayerStore minePlayerStore;
     private final MineAchievementTracker mineAchievementTracker;
 
     public MineSellPage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress,
-                        MineConfigStore configStore, MinePlayerStore minePlayerStore,
+                        BlockConfigStore configStore, MinePlayerStore minePlayerStore,
                         MineAchievementTracker mineAchievementTracker) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;

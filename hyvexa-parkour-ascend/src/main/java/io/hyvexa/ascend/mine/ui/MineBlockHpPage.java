@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineBlockRegistry;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
 import io.hyvexa.ascend.ui.AscendAdminNavigator;
 
 import javax.annotation.Nonnull;
@@ -28,14 +28,14 @@ import java.util.Map;
  */
 public class MineBlockHpPage extends InteractiveCustomUIPage<MineBlockHpPage.ConfigData> {
 
-    private final MineConfigStore mineConfigStore;
+    private final BlockConfigStore mineConfigStore;
     private final AscendAdminNavigator adminNavigator;
     private String selectedBlockId = "";
     private String hpValue = "";
     private String priceValue = "";
 
     public MineBlockHpPage(@Nonnull PlayerRef playerRef,
-                           MineConfigStore mineConfigStore,
+                           BlockConfigStore mineConfigStore,
                            AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ConfigData.CODEC);
         this.mineConfigStore = mineConfigStore;

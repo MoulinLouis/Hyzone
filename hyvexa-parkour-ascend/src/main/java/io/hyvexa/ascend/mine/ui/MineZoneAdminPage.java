@@ -22,7 +22,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.mine.MineBlockRegistry;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.ui.AscendAdminNavigator;
@@ -41,7 +41,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private static Map<UUID, int[]> pos1Selections() { return io.hyvexa.ascend.command.AscendAdminCommand.minePos1; }
     private static Map<UUID, int[]> pos2Selections() { return io.hyvexa.ascend.command.AscendAdminCommand.minePos2; }
 
-    private final MineConfigStore mineConfigStore;
+    private final MineHierarchyStore hierarchyStore;
     private final MineManager mineManager;
     private final AscendAdminNavigator adminNavigator;
     private final String mineId;
@@ -58,11 +58,11 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private String layerDisplayName = "";
     private String activeTab = TAB_ZONES;
 
-    public MineZoneAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore,
+    public MineZoneAdminPage(@Nonnull PlayerRef playerRef, MineHierarchyStore hierarchyStore,
                              MineManager mineManager, AscendAdminNavigator adminNavigator,
                              String mineId) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ZoneData.CODEC);
-        this.mineConfigStore = mineConfigStore;
+        this.hierarchyStore = hierarchyStore;
         this.mineManager = mineManager;
         this.adminNavigator = adminNavigator;
         this.mineId = mineId;
@@ -208,7 +208,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 MineBlockPickerPage picker = new MineBlockPickerPage(
-                    playerRef, mineConfigStore, mineManager,
+                    playerRef, hierarchyStore, mineManager,
                     selectedZoneId, selectedLayerId, blockId, adminNavigator
                 );
                 player.getPageManager().openCustomPage(ref, store, picker);
@@ -289,7 +289,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             return;
         }
         MineZone zone = new MineZone(id, mineId, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
-        mineConfigStore.saveZone(zone);
+        hierarchyStore.saveZone(zone);
         pos1Selections().remove(uuid);
         pos2Selections().remove(uuid);
         selectedZoneId = id;
@@ -305,7 +305,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             player.sendMessage(Message.raw("Select a zone first."));
             return;
         }
-        boolean removed = mineConfigStore.deleteZone(id);
+        boolean removed = hierarchyStore.deleteZone(id);
         if (removed) {
             player.sendMessage(Message.raw("Zone deleted: " + id));
             selectedZoneId = "";
@@ -341,14 +341,14 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             MineZoneLayer layer = findLayer(selectedLayerId);
             if (layer != null) {
                 layer.getBlockTable().put(blockId, prob);
-                mineConfigStore.saveLayer(layer);
+                hierarchyStore.saveLayer(layer);
                 player.sendMessage(Message.raw("Block added to layer: " + displayName + " = " + prob));
                 sendRefresh(ref, store);
                 return;
             }
         }
         zone.getBlockTable().put(blockId, prob);
-        mineConfigStore.saveZone(zone);
+        hierarchyStore.saveZone(zone);
         player.sendMessage(Message.raw("Block added: " + displayName + " = " + prob));
         sendRefresh(ref, store);
     }
@@ -363,7 +363,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             if (layer != null) {
                 Double removedFromLayer = layer.getBlockTable().remove(removeBlockId);
                 if (removedFromLayer != null) {
-                    mineConfigStore.saveLayer(layer);
+                    hierarchyStore.saveLayer(layer);
                     String displayName = MineBlockRegistry.getDisplayName(removeBlockId);
                     player.sendMessage(Message.raw("Block removed from layer: " + displayName));
                 }
@@ -373,7 +373,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
         Double removed = zone.getBlockTable().remove(removeBlockId);
         if (removed != null) {
-            mineConfigStore.saveZone(zone);
+            hierarchyStore.saveZone(zone);
             String displayName = MineBlockRegistry.getDisplayName(removeBlockId);
             player.sendMessage(Message.raw("Block removed: " + displayName));
         }
@@ -403,7 +403,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             return;
         }
         zone.setRegenIntervalSeconds(value);
-        mineConfigStore.saveZone(zone);
+        hierarchyStore.saveZone(zone);
         player.sendMessage(Message.raw("Reset interval set: " + value + "s"));
         sendRefresh(ref, store);
     }
@@ -461,7 +461,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
 
         String layerId = java.util.UUID.randomUUID().toString().replace("-", "");
         MineZoneLayer layer = new MineZoneLayer(layerId, zone.getId(), minY, maxY);
-        mineConfigStore.saveLayer(layer);
+        hierarchyStore.saveLayer(layer);
         selectedLayerId = layerId;
         layerMinY = "";
         layerMaxY = "";
@@ -472,7 +472,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private void handleDeleteLayer(Ref<EntityStore> ref, Store<EntityStore> store, String layerId) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
-        boolean removed = mineConfigStore.deleteLayer(layerId);
+        boolean removed = hierarchyStore.deleteLayer(layerId);
         if (removed) {
             player.sendMessage(Message.raw("Layer deleted."));
             if (layerId.equals(selectedLayerId)) {
@@ -499,7 +499,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             return;
         }
         layer.setDisplayName(layerDisplayName);
-        mineConfigStore.saveLayer(layer);
+        hierarchyStore.saveLayer(layer);
         player.sendMessage(Message.raw("Layer renamed to: " + (layerDisplayName.isEmpty() ? "(cleared)" : layerDisplayName)));
         sendRefresh(ref, store);
     }
@@ -523,7 +523,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         int newIndex = (currentIndex + direction + items.length) % items.length;
         String newItemId = items[newIndex];
 
-        mineConfigStore.saveLayerEggItemId(selectedLayerId, newItemId);
+        hierarchyStore.saveLayerEggItemId(selectedLayerId, newItemId);
         sendRefresh(ref, store);
     }
 
@@ -554,7 +554,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     }
 
     private MineZone findZone(String zoneId) {
-        Mine mine = mineConfigStore.getMine(mineId);
+        Mine mine = hierarchyStore.getMine(mineId);
         if (mine == null) return null;
         for (MineZone z : mine.getZones()) {
             if (z.getId().equals(zoneId)) {
@@ -674,7 +674,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     // ---- Field population ----
 
     private void populateFields(UICommandBuilder commandBuilder) {
-        Mine mine = mineConfigStore.getMine(mineId);
+        Mine mine = hierarchyStore.getMine(mineId);
         String mineName = mine != null ? mine.getName() : mineId;
         commandBuilder.set("#HeaderTitle.Text", "Zones - " + mineName);
 
@@ -744,7 +744,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
 
     private void buildZoneList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#ZoneCards");
-        Mine mine = mineConfigStore.getMine(mineId);
+        Mine mine = hierarchyStore.getMine(mineId);
         boolean hasZones = mine != null && !mine.getZones().isEmpty();
         commandBuilder.set("#ZonesEmptyLabel.Visible", !hasZones);
         if (mine == null) return;
@@ -815,7 +815,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             commandBuilder.set(sel + " #BlockName.Text", displayName);
             commandBuilder.set(sel + " #BlockProb.Text", formatProb(entry.getValue()));
 
-            int hp = mineConfigStore.getBlockHp(entry.getKey());
+            int hp = hierarchyStore.getBlockHp(entry.getKey());
             commandBuilder.set(sel + " #BlockHp.Text", hp + " HP");
             if (hp > 1) {
                 commandBuilder.set(sel + " #BlockHp.Style.TextColor", "#ef4444");

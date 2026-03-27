@@ -1,6 +1,6 @@
 package io.hyvexa.ascend.mine;
 
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinerConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 
 /**
@@ -14,10 +14,10 @@ public class MineBonusCalculator {
 
     private static final double MULT_BONUS_ALL_MINERS = 0.20;
 
-    private final MineConfigStore mineConfigStore;
+    private final MinerConfigStore minerConfigStore;
 
-    public MineBonusCalculator(MineConfigStore mineConfigStore) {
-        this.mineConfigStore = mineConfigStore;
+    public MineBonusCalculator(MinerConfigStore minerConfigStore) {
+        this.minerConfigStore = minerConfigStore;
     }
 
     /**
@@ -56,7 +56,7 @@ public class MineBonusCalculator {
      * Checks whether all configured miner slots have a miner for the given player.
      */
     private boolean allSlotsHaveMiners(MinePlayerProgress progress) {
-        var slots = mineConfigStore.getMinerSlots();
+        var slots = minerConfigStore.getMinerSlots();
         if (slots.isEmpty()) return false;
 
         for (var slot : slots) {

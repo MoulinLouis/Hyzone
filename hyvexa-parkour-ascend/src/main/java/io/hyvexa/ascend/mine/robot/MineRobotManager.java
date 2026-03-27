@@ -35,7 +35,9 @@ import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.common.npc.NPCHelper;
 import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.Mine;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.ConveyorConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
+import io.hyvexa.ascend.mine.data.MinerConfigStore;
 import io.hyvexa.ascend.mine.data.MinerDefinition;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -76,7 +78,9 @@ public class MineRobotManager {
     private static final long MOVEMENT_STOP_MS = 150L;
     private static final long STOPPED_RECHECK_MS = 2000L;
 
-    private final MineConfigStore configStore;
+    private final MineHierarchyStore hierarchyStore;
+    private final MinerConfigStore minerConfigStore;
+    private final ConveyorConfigStore conveyorConfigStore;
     private final MinePlayerStore playerStore;
     private final MineManager mineManager;
     private final MineAchievementTracker achievementTracker;
@@ -97,9 +101,12 @@ public class MineRobotManager {
     private volatile java.lang.reflect.Field pickupDelayField;
     private volatile java.lang.reflect.Field mergeDelayField;
 
-    public MineRobotManager(MineConfigStore configStore, MinePlayerStore playerStore, MineManager mineManager,
-                            MineAchievementTracker achievementTracker) {
-        this.configStore = configStore;
+    public MineRobotManager(MineHierarchyStore hierarchyStore, MinerConfigStore minerConfigStore,
+                            ConveyorConfigStore conveyorConfigStore, MinePlayerStore playerStore,
+                            MineManager mineManager, MineAchievementTracker achievementTracker) {
+        this.hierarchyStore = hierarchyStore;
+        this.minerConfigStore = minerConfigStore;
+        this.conveyorConfigStore = conveyorConfigStore;
         this.playerStore = playerStore;
         this.mineManager = mineManager;
         this.achievementTracker = achievementTracker;
@@ -167,7 +174,7 @@ public class MineRobotManager {
         MinePlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
         if (progress == null) return;
 
-        List<MinerSlot> slots = configStore.getMinerSlots();
+        List<MinerSlot> slots = minerConfigStore.getMinerSlots();
         for (MinerSlot slot : slots) {
             if (progress.isSlotAssigned(slot.getSlotIndex())) {
                 spawnMiner(playerId, slot.getSlotIndex(), world);
@@ -195,9 +202,9 @@ public class MineRobotManager {
         if (ownerId == null || world == null) return;
         if (getMinerState(ownerId, slotIndex) != null) return; // already spawned
 
-        String mineId = configStore.getMineId();
+        String mineId = hierarchyStore.getMineId();
         if (mineId == null) return;
-        MinerSlot slot = configStore.getMinerSlot(slotIndex);
+        MinerSlot slot = minerConfigStore.getMinerSlot(slotIndex);
         if (slot == null || !slot.isConfigured()) {
             LOGGER.atWarning().log("No miner slot configured for slot: " + slotIndex);
             return;
@@ -251,9 +258,9 @@ public class MineRobotManager {
             try {
                 Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
                 if (nameplate != null) {
-                    MinerDefinition def = configStore.getMinerDefinition(state.getOriginLayerId(), state.getRarity());
+                    MinerDefinition def = minerConfigStore.getMinerDefinition(state.getOriginLayerId(), state.getRarity());
                     String minerName = def != null ? def.displayName() : state.getRarity().getDisplayName() + " Miner";
-                    MineZoneLayer layer = configStore.getLayerById(state.getOriginLayerId());
+                    MineZoneLayer layer = hierarchyStore.getLayerById(state.getOriginLayerId());
                     String layerName = (layer != null && !layer.getDisplayName().isEmpty())
                             ? layer.getDisplayName() : state.getOriginLayerId();
                     nameplate.setText(minerName + " - " + layerName + " (" + state.getRarity().getDisplayName() + ")");
@@ -504,7 +511,7 @@ public class MineRobotManager {
         double y = position.getY();
         double z = position.getZ();
 
-        for (Mine mine : configStore.listMinesSorted()) {
+        for (Mine mine : hierarchyStore.listMinesSorted()) {
             String mineWorld = mine.getWorld();
             if (mineWorld != null && !mineWorld.isEmpty() && !mineWorld.equals(worldName)) {
                 continue;
@@ -539,7 +546,7 @@ public class MineRobotManager {
 
     private void clearStartupCleanupStateIfExhausted() {
         Set<String> configuredMineWorlds = new HashSet<>();
-        for (Mine mine : configStore.listMinesSorted()) {
+        for (Mine mine : hierarchyStore.listMinesSorted()) {
             String mineWorld = mine.getWorld();
             if (mineWorld != null && !mineWorld.isEmpty()) {
                 configuredMineWorlds.add(mineWorld);
@@ -574,12 +581,12 @@ public class MineRobotManager {
 
         String mineId = state.getMineId();
         int slotIndex = state.getSlotIndex();
-        MinerSlot slot = configStore.getMinerSlot(mineId, slotIndex);
+        MinerSlot slot = minerConfigStore.getMinerSlot(mineId, slotIndex);
         if (slot == null) return;
 
         // --- Full bag/conveyor: pause mining, stop animation, recheck periodically ---
         MinePlayerProgress progress = playerStore.getPlayer(state.getOwnerId());
-        boolean hasConveyor = configStore.isConveyorConfigured(mineId);
+        boolean hasConveyor = conveyorConfigStore.isConveyorConfigured(mineId);
         boolean isFull = hasConveyor
                 ? (progress != null && isConveyorFull(state.getOwnerId(), progress))
                 : (progress == null || progress.isInventoryFull());
@@ -647,7 +654,7 @@ public class MineRobotManager {
         }
 
         // Break current block and place a NEW random block
-        Mine mine = configStore.getMine(mineId);
+        Mine mine = hierarchyStore.getMine(mineId);
         if (mine == null || mine.getZones().isEmpty()) return;
         MineZone zone = mine.getZones().get(0);
 
@@ -663,7 +670,7 @@ public class MineRobotManager {
     }
 
     private Map<String, Double> resolveBlockTable(MinerRobotState state, MineZone zone, MinerSlot slot) {
-        io.hyvexa.ascend.mine.data.MineZoneLayer originLayer = configStore.getLayerById(state.getOriginLayerId());
+        io.hyvexa.ascend.mine.data.MineZoneLayer originLayer = hierarchyStore.getLayerById(state.getOriginLayerId());
         if (originLayer != null) {
             return originLayer.getBlockTableForRarity(state.getRarity());
         }
@@ -696,13 +703,13 @@ public class MineRobotManager {
         // Build full waypoint path: block center -> slot waypoints -> main line waypoints
         List<double[]> path = new ArrayList<>();
         path.add(new double[]{slot.getBlockX() + 0.5, slot.getBlockY() + 0.5, slot.getBlockZ() + 0.5});
-        path.addAll(configStore.getSlotWaypoints(mineId, slotIndex));
-        path.addAll(configStore.getMainLineWaypoints(mineId));
+        path.addAll(conveyorConfigStore.getSlotWaypoints(mineId, slotIndex));
+        path.addAll(conveyorConfigStore.getMainLineWaypoints(mineId));
 
         if (path.size() < 2) return; // need at least start + 1 waypoint
 
         double[][] waypoints = path.toArray(new double[0][]);
-        double speed = configStore.getConveyorSpeed(mineId);
+        double speed = conveyorConfigStore.getConveyorSpeed(mineId);
 
         ConveyorItemState itemState = new ConveyorItemState(ownerId, mineId, worldName, blockType, speed, waypoints);
 
@@ -842,7 +849,7 @@ public class MineRobotManager {
     // ── Block cleanup ──────────────────────────────────────────────────
 
     private void clearMinerBlock(MinerRobotState state) {
-        MinerSlot slot = configStore.getMinerSlot(state.getMineId(), state.getSlotIndex());
+        MinerSlot slot = minerConfigStore.getMinerSlot(state.getMineId(), state.getSlotIndex());
         if (slot == null || !slot.isConfigured()) return;
 
         String worldName = state.getWorldName();
@@ -861,7 +868,7 @@ public class MineRobotManager {
     // ── Block placement helpers ────────────────────────────────────────
 
     private void placeInitialBlock(World world, MinerSlot slot, MinerRobotState state) {
-        Mine mine = configStore.getMine(slot.getMineId());
+        Mine mine = hierarchyStore.getMine(slot.getMineId());
         if (mine == null || mine.getZones().isEmpty()) return;
         MineZone zone = mine.getZones().get(0);
         Map<String, Double> blockTable = resolveBlockTable(state, zone, slot);

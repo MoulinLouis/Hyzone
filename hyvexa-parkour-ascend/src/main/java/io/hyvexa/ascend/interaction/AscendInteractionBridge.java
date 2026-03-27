@@ -10,7 +10,9 @@ import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
+import io.hyvexa.ascend.mine.data.MinerConfigStore;
+import io.hyvexa.ascend.mine.data.TierConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.egg.EggOpenService;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
@@ -64,7 +66,9 @@ public final class AscendInteractionBridge {
         RunnerSpeedCalculator runnerSpeedCalculator,
         EggOpenService eggOpenService,
         MinePlayerStore minePlayerStore,
-        MineConfigStore mineConfigStore,
+        BlockConfigStore blockConfigStore,
+        MinerConfigStore minerConfigStore,
+        TierConfigStore tierConfigStore,
         MineAchievementTracker mineAchievementTracker,
         MineRobotManager mineRobotManager,
         MineGateChecker mineGateChecker,

@@ -18,7 +18,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.GateConfigStore;
 import io.hyvexa.ascend.ui.AscendAdminNavigator;
 
 import javax.annotation.Nonnull;
@@ -41,15 +41,15 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
     }
 
     private final PlayerRef playerRef;
-    private final MineConfigStore mineConfigStore;
+    private final GateConfigStore gateConfigStore;
     private final AscendAdminNavigator adminNavigator;
 
     public MineGateAdminPage(@Nonnull PlayerRef playerRef,
-                             MineConfigStore mineConfigStore,
+                             GateConfigStore gateConfigStore,
                              AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, GateData.CODEC);
         this.playerRef = playerRef;
-        this.mineConfigStore = mineConfigStore;
+        this.gateConfigStore = gateConfigStore;
         this.adminNavigator = adminNavigator;
     }
 
@@ -108,9 +108,9 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
         }
         double minX = Math.min(p1[0], p2[0]), minY = Math.min(p1[1], p2[1]), minZ = Math.min(p1[2], p2[2]);
         double maxX = Math.max(p1[0], p2[0]), maxY = Math.max(p1[1], p2[1]), maxZ = Math.max(p1[2], p2[2]);
-        mineConfigStore.saveEntryGate(minX, minY, minZ, maxX, maxY, maxZ,
-            mineConfigStore.getEntryDestX(), mineConfigStore.getEntryDestY(), mineConfigStore.getEntryDestZ(),
-            mineConfigStore.getEntryDestRotX(), mineConfigStore.getEntryDestRotY(), mineConfigStore.getEntryDestRotZ());
+        gateConfigStore.saveEntryGate(minX, minY, minZ, maxX, maxY, maxZ,
+            gateConfigStore.getEntryDestX(), gateConfigStore.getEntryDestY(), gateConfigStore.getEntryDestZ(),
+            gateConfigStore.getEntryDestRotX(), gateConfigStore.getEntryDestRotY(), gateConfigStore.getEntryDestRotZ());
         player.sendMessage(Message.raw("Entry gate AABB saved!"));
         updateAllLabels();
     }
@@ -125,9 +125,9 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
         }
         double minX = Math.min(p1[0], p2[0]), minY = Math.min(p1[1], p2[1]), minZ = Math.min(p1[2], p2[2]);
         double maxX = Math.max(p1[0], p2[0]), maxY = Math.max(p1[1], p2[1]), maxZ = Math.max(p1[2], p2[2]);
-        mineConfigStore.saveExitGate(minX, minY, minZ, maxX, maxY, maxZ,
-            mineConfigStore.getExitDestX(), mineConfigStore.getExitDestY(), mineConfigStore.getExitDestZ(),
-            mineConfigStore.getExitDestRotX(), mineConfigStore.getExitDestRotY(), mineConfigStore.getExitDestRotZ());
+        gateConfigStore.saveExitGate(minX, minY, minZ, maxX, maxY, maxZ,
+            gateConfigStore.getExitDestX(), gateConfigStore.getExitDestY(), gateConfigStore.getExitDestZ(),
+            gateConfigStore.getExitDestRotX(), gateConfigStore.getExitDestRotY(), gateConfigStore.getExitDestRotZ());
         player.sendMessage(Message.raw("Exit gate AABB saved!"));
         updateAllLabels();
     }
@@ -145,16 +145,16 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
         Vector3f rot = headRot != null ? headRot : bodyRot;
 
         if (isEntry) {
-            mineConfigStore.saveEntryGate(
-                mineConfigStore.getEntryMinX(), mineConfigStore.getEntryMinY(), mineConfigStore.getEntryMinZ(),
-                mineConfigStore.getEntryMaxX(), mineConfigStore.getEntryMaxY(), mineConfigStore.getEntryMaxZ(),
+            gateConfigStore.saveEntryGate(
+                gateConfigStore.getEntryMinX(), gateConfigStore.getEntryMinY(), gateConfigStore.getEntryMinZ(),
+                gateConfigStore.getEntryMaxX(), gateConfigStore.getEntryMaxY(), gateConfigStore.getEntryMaxZ(),
                 pos.getX(), pos.getY(), pos.getZ(),
                 rot.getX(), rot.getY(), rot.getZ());
             player.sendMessage(Message.raw("Entry destination set: " + formatPos(pos.getX(), pos.getY(), pos.getZ())));
         } else {
-            mineConfigStore.saveExitGate(
-                mineConfigStore.getExitMinX(), mineConfigStore.getExitMinY(), mineConfigStore.getExitMinZ(),
-                mineConfigStore.getExitMaxX(), mineConfigStore.getExitMaxY(), mineConfigStore.getExitMaxZ(),
+            gateConfigStore.saveExitGate(
+                gateConfigStore.getExitMinX(), gateConfigStore.getExitMinY(), gateConfigStore.getExitMinZ(),
+                gateConfigStore.getExitMaxX(), gateConfigStore.getExitMaxY(), gateConfigStore.getExitMaxZ(),
                 pos.getX(), pos.getY(), pos.getZ(),
                 rot.getX(), rot.getY(), rot.getZ());
             player.sendMessage(Message.raw("Exit destination set: " + formatPos(pos.getX(), pos.getY(), pos.getZ())));
@@ -201,16 +201,16 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
     private void populateFields(UICommandBuilder cmd) {
         // Entry gate
         populateGateSection(cmd, "#EntryBoundsText", "#EntryDestText", "#EntryStatusText",
-            mineConfigStore.getEntryMinX(), mineConfigStore.getEntryMinY(), mineConfigStore.getEntryMinZ(),
-            mineConfigStore.getEntryMaxX(), mineConfigStore.getEntryMaxY(), mineConfigStore.getEntryMaxZ(),
-            mineConfigStore.getEntryDestX(), mineConfigStore.getEntryDestY(), mineConfigStore.getEntryDestZ(),
+            gateConfigStore.getEntryMinX(), gateConfigStore.getEntryMinY(), gateConfigStore.getEntryMinZ(),
+            gateConfigStore.getEntryMaxX(), gateConfigStore.getEntryMaxY(), gateConfigStore.getEntryMaxZ(),
+            gateConfigStore.getEntryDestX(), gateConfigStore.getEntryDestY(), gateConfigStore.getEntryDestZ(),
             "Entry");
 
         // Exit gate
         populateGateSection(cmd, "#ExitBoundsText", "#ExitDestText", "#ExitStatusText",
-            mineConfigStore.getExitMinX(), mineConfigStore.getExitMinY(), mineConfigStore.getExitMinZ(),
-            mineConfigStore.getExitMaxX(), mineConfigStore.getExitMaxY(), mineConfigStore.getExitMaxZ(),
-            mineConfigStore.getExitDestX(), mineConfigStore.getExitDestY(), mineConfigStore.getExitDestZ(),
+            gateConfigStore.getExitMinX(), gateConfigStore.getExitMinY(), gateConfigStore.getExitMinZ(),
+            gateConfigStore.getExitMaxX(), gateConfigStore.getExitMaxY(), gateConfigStore.getExitMaxZ(),
+            gateConfigStore.getExitDestX(), gateConfigStore.getExitDestY(), gateConfigStore.getExitDestZ(),
             "Exit");
     }
 

@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.util.MinePositionUtils;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
@@ -86,7 +86,7 @@ public final class MineAoEBreaker {
                                       MinePlayerStore minePlayerStore, BlockDamageTracker damageTracker,
                                       PlayerRef playerRef) {
         int totalBroken = 0;
-        MineConfigStore configStore = mineManager.getConfigStore();
+        BlockConfigStore configStore = mineManager.getBlockConfigStore();
         int cashbackLevel = progress.getUpgradeLevel(MineUpgradeType.CASHBACK);
         double cashbackPercent = cashbackLevel > 0 ? MineUpgradeType.CASHBACK.getEffect(cashbackLevel) : 0;
         double aoeDamage = progress.getPickaxeDamage() * progress.getMomentumMultiplier();

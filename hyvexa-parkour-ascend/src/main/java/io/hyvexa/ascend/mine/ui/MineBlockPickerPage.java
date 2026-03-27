@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineBlockRegistry;
 import io.hyvexa.ascend.mine.MineManager;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.ui.AscendAdminNavigator;
 
 import javax.annotation.Nonnull;
@@ -27,19 +27,19 @@ public class MineBlockPickerPage extends InteractiveCustomUIPage<MineBlockPicker
 
     private static final String SELECT_PREFIX = "Select:";
 
-    private final MineConfigStore mineConfigStore;
+    private final MineHierarchyStore hierarchyStore;
     private final MineManager mineManager;
     private final String selectedZoneId;
     private final String selectedLayerId;
     private final String currentBlockId;
     private final AscendAdminNavigator adminNavigator;
 
-    public MineBlockPickerPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore,
+    public MineBlockPickerPage(@Nonnull PlayerRef playerRef, MineHierarchyStore hierarchyStore,
                                MineManager mineManager,
                                String selectedZoneId, String selectedLayerId, String currentBlockId,
                                AscendAdminNavigator adminNavigator) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PickerData.CODEC);
-        this.mineConfigStore = mineConfigStore;
+        this.hierarchyStore = hierarchyStore;
         this.mineManager = mineManager;
         this.selectedZoneId = selectedZoneId;
         this.selectedLayerId = selectedLayerId != null ? selectedLayerId : "";
@@ -95,10 +95,10 @@ public class MineBlockPickerPage extends InteractiveCustomUIPage<MineBlockPicker
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) return;
 
-        String mineId = mineConfigStore.getMineId();
+        String mineId = hierarchyStore.getMineId();
         if (mineId == null) return;
         MineZoneAdminPage page = new MineZoneAdminPage(
-            playerRef, mineConfigStore, mineManager, adminNavigator, mineId);
+            playerRef, hierarchyStore, mineManager, adminNavigator, mineId);
         page.setSelectedZoneId(selectedZoneId);
         page.setSelectedLayerId(selectedLayerId);
         page.setSelectedBlockId(selectedBlockId);

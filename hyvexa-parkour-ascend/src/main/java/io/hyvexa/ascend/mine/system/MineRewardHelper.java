@@ -4,7 +4,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
@@ -52,7 +52,7 @@ public final class MineRewardHelper {
         int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
         boolean bagFull = false;
         if (stored < blocksGained) {
-            MineConfigStore configStore = mineManager.getConfigStore();
+            BlockConfigStore configStore = mineManager.getBlockConfigStore();
             long blockPrice = configStore.getBlockPrice(blockTypeName);
             int overflow = blocksGained - stored;
             long fallbackCrystals = blockPrice * overflow;
@@ -63,7 +63,7 @@ public final class MineRewardHelper {
         }
         int cashbackLevel = mineProgress.getUpgradeLevel(MineUpgradeType.CASHBACK);
         if (cashbackLevel > 0) {
-            MineConfigStore configStore = mineManager.getConfigStore();
+            BlockConfigStore configStore = mineManager.getBlockConfigStore();
             long blockPrice = configStore.getBlockPrice(blockTypeName);
             double cashbackPercent = MineUpgradeType.CASHBACK.getEffect(cashbackLevel);
             double cashbackAmount = calculateCashbackAmount(blockPrice, blocksGained, cashbackPercent);

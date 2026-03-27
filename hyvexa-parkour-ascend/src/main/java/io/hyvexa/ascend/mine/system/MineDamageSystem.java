@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
-import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.BlockConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlockEvent> {
     private final MineManager mineManager;
     private final MinePlayerStore minePlayerStore;
-    private final MineConfigStore configStore;
+    private final BlockConfigStore configStore;
     private final MineHudManager mineHudManager;
     private final MineAchievementTracker mineAchievementTracker;
     private final BlockDamageTracker damageTracker;
@@ -41,7 +41,7 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
 
     public MineDamageSystem(MineManager mineManager, MinePlayerStore minePlayerStore,
-                            MineConfigStore configStore, MineHudManager mineHudManager,
+                            BlockConfigStore configStore, MineHudManager mineHudManager,
                             MineAchievementTracker mineAchievementTracker) {
         super(DamageBlockEvent.class);
         this.mineManager = mineManager;
