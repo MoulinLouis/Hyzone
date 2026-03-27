@@ -29,7 +29,8 @@ public class MineHierarchyStore {
     private volatile List<Mine> sortedCache;
 
     // layerId -> MineZoneLayer (index built after loadLayers)
-    private final Map<String, MineZoneLayer> layerById = new ConcurrentHashMap<>();
+    // Volatile reference: rebuilt atomically during syncLoad, individual put/remove for CRUD ops
+    private volatile Map<String, MineZoneLayer> layerById = new ConcurrentHashMap<>();
 
     public MineHierarchyStore(ConnectionProvider db) {
         this.db = db;
@@ -40,13 +41,16 @@ public class MineHierarchyStore {
         try {
             mines.clear();
             invalidateSortedCache();
-            layerById.clear();
+
+            Map<String, MineZoneLayer> newLayerById = new ConcurrentHashMap<>();
 
             loadMines(conn);
             loadZones(conn);
-            loadLayers(conn);
-            loadLayerRarityBlocks(conn);
+            loadLayers(conn, newLayerById);
+            loadLayerRarityBlocks(conn, newLayerById);
             seedRarityBlockTables(conn);
+
+            layerById = newLayerById;
 
             LOGGER.atInfo().log("MineHierarchyStore loaded " + mines.size() + " mines");
         } finally {
@@ -120,7 +124,7 @@ public class MineHierarchyStore {
         }
     }
 
-    private void loadLayers(Connection conn) throws SQLException {
+    private void loadLayers(Connection conn, Map<String, MineZoneLayer> layerIndex) throws SQLException {
         String sql = "SELECT id, zone_id, min_y, max_y, block_table_json, egg_drop_chance, display_name, egg_item_id " +
             "FROM mine_zone_layers ORDER BY zone_id, min_y, max_y, id";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -149,7 +153,7 @@ public class MineHierarchyStore {
                     try {
                         layer.setEggItemId(rs.getString("egg_item_id"));
                     } catch (SQLException ignored) {}
-                    layerById.put(layer.getId(), layer);
+                    layerIndex.put(layer.getId(), layer);
                     for (Mine mine : mines.values()) {
                         boolean attached = false;
                         for (MineZone zone : mine.getZones()) {
@@ -175,7 +179,7 @@ public class MineHierarchyStore {
         }
     }
 
-    private void loadLayerRarityBlocks(Connection conn) throws SQLException {
+    private void loadLayerRarityBlocks(Connection conn, Map<String, MineZoneLayer> layerIndex) throws SQLException {
         String sql = "SELECT layer_id, rarity, block_table_json FROM mine_layer_rarity_blocks";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -189,7 +193,7 @@ public class MineHierarchyStore {
                     Map<String, Double> table = GSON.fromJson(json,
                         new TypeToken<Map<String, Double>>(){}.getType());
                     if (table == null || table.isEmpty()) continue;
-                    MineZoneLayer layer = getLayerById(layerId);
+                    MineZoneLayer layer = layerIndex.get(layerId);
                     if (layer != null) {
                         layer.getRarityBlockTables().put(rarity, table);
                     }

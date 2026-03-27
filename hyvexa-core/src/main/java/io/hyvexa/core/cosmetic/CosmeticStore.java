@@ -9,11 +9,11 @@ import io.hyvexa.core.economy.CurrencyBridge;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Persistence layer for player cosmetics. Singleton shared across all modules.
@@ -30,6 +30,8 @@ public class CosmeticStore {
     private final ConcurrentHashMap<UUID, String> equippedCache = new ConcurrentHashMap<>();
     /** Sentinel value meaning no cosmetic is equipped. Empty string rather than null for safe map operations. */
     private static final String NONE_EQUIPPED = "";
+    /** Per-player locks for transactional operations (purchase). */
+    private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
     private final ConnectionProvider db;
     private volatile PlayerAnalytics analytics;
 
@@ -105,7 +107,7 @@ public class CosmeticStore {
         if (playerId == null || cosmeticId == null) return;
         // Update cache
         getOwnedCosmetics(playerId); // ensure loaded
-        ownedCache.computeIfAbsent(playerId, k -> Collections.synchronizedList(new ArrayList<>()));
+        ownedCache.computeIfAbsent(playerId, k -> new CopyOnWriteArrayList<>());
         List<String> owned = ownedCache.get(playerId);
         if (!owned.contains(cosmeticId)) {
             owned.add(cosmeticId);
@@ -114,35 +116,38 @@ public class CosmeticStore {
         persistPurchase(playerId, cosmeticId);
     }
 
-    public synchronized PurchaseResult purchaseShopCosmetic(UUID playerId, CosmeticDefinition def) {
+    public PurchaseResult purchaseShopCosmetic(UUID playerId, CosmeticDefinition def) {
         if (playerId == null || def == null) {
             return new PurchaseResult(false, "Unknown cosmetic.");
         }
 
-        String cosmeticId = def.getId();
-        if (ownsCosmetic(playerId, cosmeticId)) {
-            return new PurchaseResult(false, "You already own " + def.getDisplayName() + "!");
-        }
+        Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
+        synchronized (lock) {
+            String cosmeticId = def.getId();
+            if (ownsCosmetic(playerId, cosmeticId)) {
+                return new PurchaseResult(false, "You already own " + def.getDisplayName() + "!");
+            }
 
-        String currency = def.getKind() == CosmeticDefinition.Kind.TRAIL ? "feathers" : "vexa";
-        int price = def.getPrice();
-        long balance = CurrencyBridge.getBalance(currency, playerId);
-        if (balance < price) {
-            return new PurchaseResult(false, "Not enough " + currency + "! You need " + price
-                    + " but have " + balance + ".");
-        }
+            String currency = def.getKind() == CosmeticDefinition.Kind.TRAIL ? "feathers" : "vexa";
+            int price = def.getPrice();
+            long balance = CurrencyBridge.getBalance(currency, playerId);
+            if (balance < price) {
+                return new PurchaseResult(false, "Not enough " + currency + "! You need " + price
+                        + " but have " + balance + ".");
+            }
 
-        if (!CurrencyBridge.deduct(currency, playerId, price)) {
-            long currentBalance = CurrencyBridge.getBalance(currency, playerId);
-            return new PurchaseResult(false, "Not enough " + currency + "! You need " + price
-                    + " but have " + currentBalance + ".");
-        }
+            if (!CurrencyBridge.deduct(currency, playerId, price)) {
+                long currentBalance = CurrencyBridge.getBalance(currency, playerId);
+                return new PurchaseResult(false, "Not enough " + currency + "! You need " + price
+                        + " but have " + currentBalance + ".");
+            }
 
-        purchaseCosmetic(playerId, cosmeticId);
-        if (analytics != null) {
-            analytics.logPurchase(playerId, cosmeticId, price, currency, "effects");
+            purchaseCosmetic(playerId, cosmeticId);
+            if (analytics != null) {
+                analytics.logPurchase(playerId, cosmeticId, price, currency, "effects");
+            }
+            return new PurchaseResult(true, "Purchased " + def.getDisplayName() + "!");
         }
-        return new PurchaseResult(true, "Purchased " + def.getDisplayName() + "!");
     }
 
     public void equipCosmetic(UUID playerId, String cosmeticId) {
@@ -176,7 +181,7 @@ public class CosmeticStore {
      */
     public void resetAllCosmetics(UUID playerId) {
         if (playerId == null) return;
-        ownedCache.put(playerId, Collections.synchronizedList(new ArrayList<>()));
+        ownedCache.put(playerId, new CopyOnWriteArrayList<>());
         equippedCache.put(playerId, NONE_EQUIPPED);
         DatabaseManager.execute(this.db,
                 "DELETE FROM player_cosmetics WHERE player_uuid = ?",
@@ -187,6 +192,7 @@ public class CosmeticStore {
         if (playerId == null) return;
         ownedCache.remove(playerId);
         equippedCache.remove(playerId);
+        playerLocks.remove(playerId);
     }
 
     // ── DB operations ────────────────────────────────────────────────────
@@ -199,7 +205,7 @@ public class CosmeticStore {
                 stmt -> stmt.setString(1, playerId.toString()),
                 rs -> new CosmeticRow(rs.getString("cosmetic_id"), rs.getBoolean("equipped")));
 
-        List<String> owned = Collections.synchronizedList(new ArrayList<>());
+        List<String> owned = new CopyOnWriteArrayList<>();
         String equipped = NONE_EQUIPPED;
         for (CosmeticRow row : rows) {
             owned.add(row.cosmeticId);

@@ -8,11 +8,10 @@ import io.hyvexa.core.economy.CurrencyStore;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class PurgeSkinStore {
 
@@ -30,6 +29,8 @@ public class PurgeSkinStore {
         NOT_ENOUGH_VEXA
     }
 
+    /** Per-player locks for transactional operations (purchase). */
+    private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
     private final ConnectionProvider db;
     private volatile CurrencyStore vexaStore;
 
@@ -105,33 +106,37 @@ public class PurgeSkinStore {
         return null;
     }
 
-    public synchronized PurchaseResult purchaseSkin(UUID playerId, String weaponId, String skinId) {
+    public PurchaseResult purchaseSkin(UUID playerId, String weaponId, String skinId) {
         if (playerId == null || weaponId == null || weaponId.isBlank() || skinId == null || skinId.isBlank()) {
             return PurchaseResult.NOT_ENOUGH_VEXA;
         }
-        if (ownsSkin(playerId, weaponId, skinId)) {
-            return PurchaseResult.ALREADY_OWNED;
+
+        Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
+        synchronized (lock) {
+            if (ownsSkin(playerId, weaponId, skinId)) {
+                return PurchaseResult.ALREADY_OWNED;
+            }
+            PurgeSkinDefinition def = PurgeSkinRegistry.getSkin(weaponId, skinId);
+            if (def == null) {
+                return PurchaseResult.NOT_ENOUGH_VEXA;
+            }
+            if (vexaStore == null) {
+                return PurchaseResult.NOT_ENOUGH_VEXA;
+            }
+            long vexa = vexaStore.getBalance(playerId);
+            if (vexa < def.getPrice()) {
+                return PurchaseResult.NOT_ENOUGH_VEXA;
+            }
+            vexaStore.removeBalance(playerId, def.getPrice());
+            persistPurchase(playerId, weaponId, skinId);
+            // Update cache
+            ownedCache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
+                    .computeIfAbsent(weaponId, k -> new CopyOnWriteArrayList<>())
+                    .add(skinId);
+            // Auto-select the newly purchased skin
+            selectSkin(playerId, weaponId, skinId);
+            return PurchaseResult.SUCCESS;
         }
-        PurgeSkinDefinition def = PurgeSkinRegistry.getSkin(weaponId, skinId);
-        if (def == null) {
-            return PurchaseResult.NOT_ENOUGH_VEXA;
-        }
-        if (vexaStore == null) {
-            return PurchaseResult.NOT_ENOUGH_VEXA;
-        }
-        long vexa = vexaStore.getBalance(playerId);
-        if (vexa < def.getPrice()) {
-            return PurchaseResult.NOT_ENOUGH_VEXA;
-        }
-        vexaStore.removeBalance(playerId, def.getPrice());
-        persistPurchase(playerId, weaponId, skinId);
-        // Update cache
-        ownedCache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
-                .computeIfAbsent(weaponId, k -> Collections.synchronizedList(new ArrayList<>()))
-                .add(skinId);
-        // Auto-select the newly purchased skin
-        selectSkin(playerId, weaponId, skinId);
-        return PurchaseResult.SUCCESS;
     }
 
     public void selectSkin(UUID playerId, String weaponId, String skinId) {
@@ -173,6 +178,7 @@ public class PurgeSkinStore {
         if (playerId != null) {
             ownedCache.remove(playerId);
             selectedCache.remove(playerId);
+            playerLocks.remove(playerId);
         }
     }
 
@@ -187,7 +193,7 @@ public class PurgeSkinStore {
         ConcurrentHashMap<String, List<String>> owned = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, String> selected = new ConcurrentHashMap<>();
         for (SkinRow row : rows) {
-            owned.computeIfAbsent(row.weaponId, k -> Collections.synchronizedList(new ArrayList<>())).add(row.skinId);
+            owned.computeIfAbsent(row.weaponId, k -> new CopyOnWriteArrayList<>()).add(row.skinId);
             if (row.selected) {
                 selected.put(row.weaponId, row.skinId);
             }
