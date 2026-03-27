@@ -5,9 +5,6 @@ import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import javax.annotation.Nonnull;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.EnumSet;
 import java.util.List;
@@ -100,18 +97,7 @@ public class DuelPreferenceStore {
     }
 
     private void ensureTable() {
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to create duel_category_prefs table: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, CREATE_TABLE_SQL);
     }
 
     @Nonnull
