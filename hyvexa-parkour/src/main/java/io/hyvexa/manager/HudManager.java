@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.hud.AbstractHudManager;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.MultiHudBridge;
@@ -29,14 +30,11 @@ import io.hyvexa.parkour.ParkourTimingConstants;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** Manages player run HUDs: timer display, checkpoint progress, leaderboard overlay. */
-public class HudManager {
+public class HudManager extends AbstractHudManager<HudManager.PlayerHudState> {
 
     private static final String SERVER_IP_DISPLAY = "play.hyvexa.com (/vote)";
-
-    private final ConcurrentHashMap<UUID, PlayerHudState> playerStates = new ConcurrentHashMap<>();
 
     private final ProgressStore progressStore;
     private final MapStore mapStore;
@@ -50,6 +48,7 @@ public class HudManager {
     public HudManager(ProgressStore progressStore, MapStore mapStore, RunTracker runTracker, DuelTracker duelTracker,
                       PlayerPerksManager perksManager, CurrencyStore vexaStore, CurrencyStore featherStore,
                       PlayerSettingsPersistence playerSettingsPersistence) {
+        super(250L);
         this.progressStore = progressStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
@@ -61,7 +60,7 @@ public class HudManager {
     }
 
     private PlayerHudState getState(UUID playerId) {
-        return playerStates.computeIfAbsent(playerId, k -> new PlayerHudState());
+        return huds.computeIfAbsent(playerId, k -> new PlayerHudState());
     }
 
     public void ensureRunHud(PlayerRef playerRef) {
@@ -213,7 +212,7 @@ public class HudManager {
         if (playerId == null) {
             return false;
         }
-        PlayerHudState s = playerStates.get(playerId);
+        PlayerHudState s = huds.get(playerId);
         return s != null && s.hidden;
     }
 
@@ -221,7 +220,7 @@ public class HudManager {
         if (playerRef == null) {
             return null;
         }
-        PlayerHudState state = playerStates.get(playerRef.getUuid());
+        PlayerHudState state = huds.get(playerRef.getUuid());
         if (state == null) {
             return null;
         }
@@ -366,11 +365,17 @@ public class HudManager {
         return lines;
     }
 
+    /** @deprecated Use {@link #removePlayer(UUID)} instead. */
     public void clearPlayer(UUID playerId) {
         if (playerId == null) {
             return;
         }
-        playerStates.remove(playerId);
+        removePlayer(playerId);
+    }
+
+    @Override
+    protected void onRemove(UUID playerId, PlayerHudState hud) {
+        // No additional cleanup needed — engine handles HUD lifecycle
     }
 
     public void setAdvancedHudVisible(PlayerRef playerRef, boolean visible) {
@@ -382,7 +387,7 @@ public class HudManager {
             return;
         }
         if (!visible) {
-            PlayerHudState state = playerStates.get(playerId);
+            PlayerHudState state = huds.get(playerId);
             if (state != null) {
                 state.lastPositionSample = null;
             }
@@ -454,7 +459,7 @@ public class HudManager {
     }
 
     public void sweepStalePlayers(Set<UUID> onlinePlayers) {
-        playerStates.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        huds.keySet().removeIf(id -> !onlinePlayers.contains(id));
     }
 
     public void showCheckpointSplit(PlayerRef playerRef, String splitText, String splitColor) {
@@ -482,7 +487,7 @@ public class HudManager {
         if (playerId == null) {
             return;
         }
-        PlayerHudState state = playerStates.get(playerId);
+        PlayerHudState state = huds.get(playerId);
         if (!running || duelActive) {
             if (state != null) {
                 state.checkpointSplit = null;
@@ -504,7 +509,7 @@ public class HudManager {
         hud.updateCheckpointSplit(split.text, split.color, true);
     }
 
-    private static final class PlayerHudState {
+    static final class PlayerHudState {
         volatile RunHud runHud;
         volatile RunRecordsHud runRecordHud;
         volatile HiddenRunHud hiddenRunHud;
@@ -569,7 +574,7 @@ public class HudManager {
         if (hud == null || playerId == null) {
             return;
         }
-        PlayerHudState state = playerStates.get(playerId);
+        PlayerHudState state = huds.get(playerId);
         MedalNotifState notif = state != null ? state.medalNotif : null;
 
         if (notif == null) {

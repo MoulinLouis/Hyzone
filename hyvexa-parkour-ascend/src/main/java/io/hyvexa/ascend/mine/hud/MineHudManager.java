@@ -14,6 +14,7 @@ import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.common.hud.AbstractHudManager;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.MultiHudBridge;
 
@@ -21,12 +22,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-public class MineHudManager {
+public class MineHudManager extends AbstractHudManager<MineHudManager.MineHudState> {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final int MAX_BLOCK_ENTRIES = 5;
@@ -35,10 +34,10 @@ public class MineHudManager {
     private final MineManager mineManager;
     private final MineHierarchyStore hierarchyStore;
     private final Function<UUID, PlayerRef> playerRefLookup;
-    private final ConcurrentHashMap<UUID, MineHudState> huds = new ConcurrentHashMap<>();
 
     public MineHudManager(MinePlayerStore playerStore, MineManager mineManager, MineHierarchyStore hierarchyStore,
                           Function<UUID, PlayerRef> playerRefLookup) {
+        super(250L);
         this.playerStore = playerStore;
         this.mineManager = mineManager;
         this.hierarchyStore = hierarchyStore;
@@ -55,22 +54,23 @@ public class MineHudManager {
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
         state.resetCache();
         MultiHudBridge.showIfNeeded(state.hud);
-        state.readyAtMs = System.currentTimeMillis() + 250L;
+        registerHud(playerId, state);
     }
 
     public void detachHud(UUID playerId, PlayerRef playerRef, Player player) {
         huds.remove(playerId);
+        clearThrottle(playerId);
         if (player != null && playerRef != null) {
             MultiHudBridge.hideCustomHud(player, playerRef, MultiHudBridge.KEY_MINE);
         }
     }
 
     public void updateFull(UUID playerId) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) {
             return;
         }
-        if (System.currentTimeMillis() < state.readyAtMs) {
+        if (!isReady(playerId)) {
             return;
         }
         MinePlayerProgress progress = playerStore.getPlayer(playerId);
@@ -87,11 +87,11 @@ public class MineHudManager {
     }
 
     public void updateCooldowns(UUID playerId) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) {
             return;
         }
-        if (System.currentTimeMillis() < state.readyAtMs) {
+        if (!isReady(playerId)) {
             return;
         }
 
@@ -108,6 +108,7 @@ public class MineHudManager {
      * should use {@link #removePlayer(UUID, Player, PlayerRef)} instead, since
      * {@code PlayerRef.getReference()} is often null during world transitions.
      */
+    @Override
     public void removePlayer(UUID playerId) {
         removePlayer(playerId, null, null);
     }
@@ -118,7 +119,9 @@ public class MineHudManager {
      * otherwise falls back to the playerRefLookup (best-effort).
      */
     public void removePlayer(UUID playerId, Player player, PlayerRef playerRef) {
-        if (huds.remove(playerId) == null) {
+        MineHudState state = huds.remove(playerId);
+        clearThrottle(playerId);
+        if (state == null) {
             return; // never had a mine HUD — nothing to detach
         }
         try {
@@ -139,12 +142,9 @@ public class MineHudManager {
         }
     }
 
-    public boolean hasHud(UUID playerId) {
-        return huds.containsKey(playerId);
-    }
-
-    public Set<UUID> getTrackedPlayerIds() {
-        return huds.keySet();
+    @Override
+    protected void onRemove(UUID playerId, MineHudState hud) {
+        // Handled by removePlayer(UUID, Player, PlayerRef) overload
     }
 
     private void updateCrystals(MineHudState state, MinePlayerProgress progress) {
@@ -277,10 +277,10 @@ public class MineHudManager {
         }
     }
 
-    // --- Inner state class ---
+    // --- Block health ---
 
     public void showBlockHealth(UUID playerId, String blockTypeId, double currentHp, int maxHp) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) return;
 
         float fraction = maxHp > 0 ? (float) (currentHp / maxHp) : 0f;
@@ -317,7 +317,7 @@ public class MineHudManager {
     }
 
     public void hideBlockHealth(UUID playerId) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) return;
         if (!state.blockHealthVisible) return;
         state.blockHealthVisible = false;
@@ -333,7 +333,7 @@ public class MineHudManager {
      * Called each tick to auto-hide the block health bar after no hits for 3 seconds.
      */
     public void tickBlockHealth(UUID playerId) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null || !state.blockHealthVisible) return;
         if (System.currentTimeMillis() - state.blockHealthLastUpdateMs > BLOCK_HEALTH_TIMEOUT_MS) {
             hideBlockHealth(playerId);
@@ -341,7 +341,7 @@ public class MineHudManager {
     }
 
     public void showCombo(UUID playerId, int comboCount, float timerPercent) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) return;
 
         state.comboVisible = true;
@@ -355,7 +355,7 @@ public class MineHudManager {
     }
 
     public void hideCombo(UUID playerId) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) return;
         if (!state.comboVisible) return;
         state.comboVisible = false;
@@ -370,7 +370,7 @@ public class MineHudManager {
      * Also updates the timer bar countdown.
      */
     public void tickCombo(UUID playerId) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null || !state.comboVisible) return;
         long elapsed = System.currentTimeMillis() - state.comboLastUpdateMs;
         if (elapsed >= COMBO_TIMEOUT_MS) {
@@ -385,7 +385,7 @@ public class MineHudManager {
     }
 
     public void showScreenFade(UUID playerId, boolean visible) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) return;
         UICommandBuilder cb = new UICommandBuilder();
         cb.set("#ScreenFade.Visible", visible);
@@ -393,7 +393,7 @@ public class MineHudManager {
     }
 
     public void updateScreenFadeBar(UUID playerId, String text, float progress) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) return;
         UICommandBuilder cb = new UICommandBuilder();
         cb.set("#FadeText.Text", text);
@@ -402,7 +402,7 @@ public class MineHudManager {
     }
 
     public void showMineToast(UUID playerId, String blockTypeId, int count) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) {
             return;
         }
@@ -410,11 +410,11 @@ public class MineHudManager {
     }
 
     public void updateToasts(UUID playerId) {
-        MineHudState state = huds.get(playerId);
+        MineHudState state = getHud(playerId);
         if (state == null) {
             return;
         }
-        if (System.currentTimeMillis() < state.readyAtMs) {
+        if (!isReady(playerId)) {
             return;
         }
         if (!state.toastManager.hasActiveToasts()) {
@@ -425,11 +425,10 @@ public class MineHudManager {
         state.hud.update(false, cb);
     }
 
-    private static final class MineHudState {
+    static final class MineHudState {
         final UUID playerId;
         final MineHud hud;
         final MineToastManager toastManager = new MineToastManager();
-        long readyAtMs;
         double lastCrystals = -1;
         String lastInventoryKey;
         String lastCooldownKey;

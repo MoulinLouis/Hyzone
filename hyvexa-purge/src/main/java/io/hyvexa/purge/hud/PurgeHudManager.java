@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.hud.AbstractHudManager;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.CurrencyStore;
@@ -29,19 +30,17 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class PurgeHudManager {
+public class PurgeHudManager extends AbstractHudManager<PurgeHud> {
 
-    private static final long HUD_READY_DELAY_MS = 1500L;
     private static final long STREAK_WINDOW_MS = 3000L;
     private final CurrencyStore vexaStore;
-    private final ConcurrentHashMap<UUID, PurgeHud> purgeHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeSessionPlayerState> comboPlayers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeSession> killMeterPlayers = new ConcurrentHashMap<>();
     private volatile long lastKillMeterTickMs;
     private PurgeManagerRegistry registry;
 
     public PurgeHudManager(CurrencyStore vexaStore) {
+        super(1500L);
         this.vexaStore = vexaStore;
     }
 
@@ -57,17 +56,18 @@ public class PurgeHudManager {
         if (playerId == null) {
             return;
         }
-        PurgeHud hud = purgeHuds.computeIfAbsent(playerId, id -> new PurgeHud(playerRef));
+        PurgeHud hud = huds.computeIfAbsent(playerId, id -> new PurgeHud(playerRef));
         hud.resetCache();
-        hudReadyAt.put(playerId, System.currentTimeMillis() + HUD_READY_DELAY_MS);
+        registerHud(playerId, hud);
         MultiHudBridge.setCustomHud(player, playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         player.getHudManager().showHudComponents(playerRef, HudComponent.Health, HudComponent.Stamina);
         MultiHudBridge.showIfNeeded(hud);
     }
 
+    @Override
     public PurgeHud getHud(UUID playerId) {
-        return playerId != null ? purgeHuds.get(playerId) : null;
+        return playerId != null ? super.getHud(playerId) : null;
     }
 
     public Ref<EntityStore> getPlayerRef(UUID playerId) {
@@ -81,13 +81,18 @@ public class PurgeHudManager {
         return null;
     }
 
+    @Override
     public void removePlayer(UUID playerId) {
         if (playerId != null) {
-            purgeHuds.remove(playerId);
-            hudReadyAt.remove(playerId);
+            super.removePlayer(playerId);
             comboPlayers.remove(playerId);
             killMeterPlayers.remove(playerId);
         }
+    }
+
+    @Override
+    protected void onRemove(UUID playerId, PurgeHud hud) {
+        // No additional cleanup needed — HUD lifecycle managed by engine
     }
 
     public void registerComboPlayer(UUID playerId, PurgeSessionPlayerState state) {
@@ -280,7 +285,7 @@ public class PurgeHudManager {
         long now = System.currentTimeMillis();
         int playerCount = Universe.get().getPlayers().size();
         List<UUID> toRemove = new ArrayList<>();
-        for (var entry : purgeHuds.entrySet()) {
+        for (var entry : huds.entrySet()) {
             UUID playerId = entry.getKey();
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null || !playerRef.isValid()) {
@@ -298,8 +303,7 @@ public class PurgeHudManager {
                 toRemove.add(playerId);
                 continue;
             }
-            long readyAt = hudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-            if (now < readyAt) {
+            if (!isReady(playerId)) {
                 continue;
             }
             PurgeHud hud = entry.getValue();
@@ -312,10 +316,7 @@ public class PurgeHudManager {
             }
         }
         for (UUID playerId : toRemove) {
-            purgeHuds.remove(playerId);
-            hudReadyAt.remove(playerId);
-            comboPlayers.remove(playerId);
-            killMeterPlayers.remove(playerId);
+            removePlayer(playerId);
         }
     }
 

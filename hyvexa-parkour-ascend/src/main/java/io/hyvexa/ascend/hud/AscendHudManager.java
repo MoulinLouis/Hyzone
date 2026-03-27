@@ -15,6 +15,7 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
+import io.hyvexa.common.hud.AbstractHudManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.CurrencyStore;
@@ -24,7 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class AscendHudManager {
+public class AscendHudManager extends AbstractHudManager<AscendHud> {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long ECONOMY_CACHE_TTL_MS = 1000L;
@@ -36,9 +37,7 @@ public class AscendHudManager {
     private final AscendRunTracker runTracker;
     private final SummitManager summitManager;
     private final CurrencyStore vexaStore;
-    private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> hudAttached = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, HiddenAscendHud> hiddenHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> hudHidden = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> previewPlayers = ConcurrentHashMap.newKeySet();
@@ -48,6 +47,7 @@ public class AscendHudManager {
     private volatile RobotManager robotManager;
 
     public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager, CurrencyStore vexaStore) {
+        super(250L);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
@@ -69,7 +69,7 @@ public class AscendHudManager {
             attachHiddenHud(playerRef, player);
             return;
         }
-        AscendHud hud = ascendHuds.get(playerId);
+        AscendHud hud = getHud(playerId);
         boolean needsAttach = !Boolean.TRUE.equals(hudAttached.get(playerId));
         if (needsAttach || hud == null) {
             attach(playerRef, player);
@@ -77,8 +77,7 @@ public class AscendHudManager {
         }
         // Always ensure HUD is set on player (in case they came from another world)
         MultiHudBridge.setCustomHud(player, playerRef, hud);
-        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-        if (System.currentTimeMillis() < readyAt) {
+        if (!isReady(playerId)) {
             return;
         }
         hud.applyStaticText();
@@ -114,12 +113,11 @@ public class AscendHudManager {
                 || !Boolean.TRUE.equals(hudAttached.get(playerId))) {
             return;
         }
-        AscendHud hud = ascendHuds.get(playerId);
+        AscendHud hud = getHud(playerId);
         if (hud == null) {
             return;
         }
-        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-        if (System.currentTimeMillis() < readyAt) {
+        if (!isReady(playerId)) {
             return;
         }
         try {
@@ -142,12 +140,11 @@ public class AscendHudManager {
                 || !Boolean.TRUE.equals(hudAttached.get(playerId))) {
             return;
         }
-        AscendHud hud = ascendHuds.get(playerId);
+        AscendHud hud = getHud(playerId);
         if (hud == null) {
             return;
         }
-        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-        if (System.currentTimeMillis() < readyAt) {
+        if (!isReady(playerId)) {
             return;
         }
         try {
@@ -184,13 +181,14 @@ public class AscendHudManager {
             attachHiddenHud(playerRef, player);
             return;
         }
-        AscendHud hud = ascendHuds.computeIfAbsent(playerRef.getUuid(), id -> new AscendHud(playerRef));
+        UUID playerId = playerRef.getUuid();
+        AscendHud hud = huds.computeIfAbsent(playerId, id -> new AscendHud(playerRef));
         MultiHudBridge.setCustomHud(player, playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
         hud.resetCache();
         MultiHudBridge.showIfNeeded(hud);
-        hudAttached.put(playerRef.getUuid(), true);
-        ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
+        hudAttached.put(playerId, true);
+        registerHud(playerId, hud);
     }
 
     public void hideHud(UUID playerId) {
@@ -238,7 +236,7 @@ public class AscendHudManager {
     }
 
     public void setMineMode(UUID playerId, boolean enabled) {
-        AscendHud hud = ascendHuds.get(playerId);
+        AscendHud hud = getHud(playerId);
         if (hud == null) {
             return;
         }
@@ -269,10 +267,10 @@ public class AscendHudManager {
         }
     }
 
+    @Override
     public void removePlayer(UUID playerId) {
-        ascendHuds.remove(playerId);
+        super.removePlayer(playerId);
         hudAttached.remove(playerId);
-        ascendHudReadyAt.remove(playerId);
         hiddenHuds.remove(playerId);
         hudHidden.remove(playerId);
         previewPlayers.remove(playerId);
@@ -281,10 +279,15 @@ public class AscendHudManager {
         runnerBarCache.remove(playerId);
     }
 
+    @Override
+    protected void onRemove(UUID playerId, AscendHud hud) {
+        // No additional cleanup needed — auxiliary maps handled by removePlayer override
+    }
+
     public void showScreenFade(UUID playerId, boolean visible) {
         UICommandBuilder cb = new UICommandBuilder();
         cb.set("#ScreenFade.Visible", visible);
-        AscendHud hud = ascendHuds.get(playerId);
+        AscendHud hud = getHud(playerId);
         if (hud != null) {
             hud.update(false, cb);
             return;
@@ -299,7 +302,7 @@ public class AscendHudManager {
         UICommandBuilder cb = new UICommandBuilder();
         cb.set("#FadeText.Text", text);
         cb.set("#FadeBar.Value", progress);
-        AscendHud hud = ascendHuds.get(playerId);
+        AscendHud hud = getHud(playerId);
         if (hud != null) {
             hud.update(false, cb);
             return;
@@ -322,7 +325,7 @@ public class AscendHudManager {
     }
 
     public void showToast(UUID playerId, ToastType type, String message) {
-        AscendHud hud = ascendHuds.get(playerId);
+        AscendHud hud = getHud(playerId);
         if (hud == null) {
             return;
         }
@@ -334,19 +337,14 @@ public class AscendHudManager {
                 || !Boolean.TRUE.equals(hudAttached.get(playerId))) {
             return;
         }
-        AscendHud hud = ascendHuds.get(playerId);
+        AscendHud hud = getHud(playerId);
         if (hud == null) {
             return;
         }
-        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-        if (System.currentTimeMillis() < readyAt) {
+        if (!isReady(playerId)) {
             return;
         }
         hud.updateToasts();
-    }
-
-    public AscendHud getHud(UUID playerId) {
-        return ascendHuds.get(playerId);
     }
 
     /**
