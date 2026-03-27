@@ -669,6 +669,30 @@ CompletableFuture.runAsync(() -> {
 }, world);
 ```
 
+## Facade Access Pattern
+
+Large coordinator stores use domain facades to organize operations by concern. The coordinator owns cache lifecycle and cross-domain operations; facades own domain-specific logic.
+
+```java
+// AscendPlayerStore is the coordinator — access domain facades via accessor methods:
+AscendPlayerStore playerStore = ...;
+
+playerStore.volt().getVolt(playerId);              // currency operations
+playerStore.progression().getElevation(playerId);  // prestige/progression
+playerStore.runners().getRunnerLevel(playerId, mapId); // map progress
+playerStore.gameplay().getAchievements(playerId);  // achievements, skills, tutorials
+playerStore.settings().isAutomationEnabled(playerId);  // player settings
+```
+
+**When to use this pattern:**
+- A store class has grown past ~500 lines with clearly separable concerns
+- Different callers only need a subset of the store's API
+- The coordinator still owns: player cache lifecycle (`getOrLoad`, `removePlayer`, `syncLoad`), cross-domain resets (prestige), and leaderboard queries
+
+**When NOT to use:**
+- Small stores where a single class is clear enough
+- When operations frequently span multiple domains (keep them in the coordinator)
+
 ## Concurrency Patterns
 
 ### Pattern 1: Read-Heavy Configuration Store

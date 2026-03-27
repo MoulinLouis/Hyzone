@@ -14,7 +14,7 @@ Entry point: `hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/ParkourAscend
 |---------|---------|
 | `AscendRunTracker` | Per-player run detection, checkpoint tracking, finish validation |
 | `AscendHudManager` | Attaches/updates the Ascend HUD (volt, multiplier, timer, runner bars) |
-| `RobotManager` | Spawns and manages ghost-replay runner NPCs per player |
+| `RobotManager` | Spawns and manages ghost-replay runner NPCs per player. Delegates to `RobotMovementController`, `AutoRunnerUpgradeEngine`, `RobotSpawner`, `RobotRefreshSystem`, `RunnerCleanupSystem` |
 | `SummitManager` | Summit prestige logic (volt -> summit tokens) |
 | `AscensionManager` | Ascension prestige logic (resets summit, grants ascension level) |
 | `TranscendenceManager` | Transcendence prestige (4th layer, resets ascension) |
@@ -24,7 +24,12 @@ Entry point: `hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/ParkourAscend
 | `TutorialTriggerService` | Shows progressive tutorials based on player milestones |
 | `AscendHologramManager` | In-world leaderboard holograms per map |
 | `MineManager` | Zone generation, block respawn, mine area lifecycle |
-| `MineConfigStore` | DB-backed mine definitions, zones, gates, block prices |
+| `MineHierarchyStore` | Mine definitions and zones (`ReadWriteLock`-protected, volatile snapshot caches) |
+| `BlockConfigStore` | Block prices and block-related config |
+| `TierConfigStore` | Mine tier definitions and unlock costs |
+| `MinerConfigStore` | Automated miner configuration |
+| `ConveyorConfigStore` | Conveyor chest buffer configuration |
+| `GateConfigStore` | Entry/exit gate bounds and teleport destinations |
 | `MinePlayerStore` | Per-player mine progress (crystals, inventory, upgrades, miners) |
 | `MineRobotManager` | Automated miner NPCs that mine while the player is online |
 | `MineHudManager` | HUD for the mine area (crystals, inventory, toasts) |
@@ -50,7 +55,7 @@ Entry point: `hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/ParkourAscend
 
 1. `ParkourAscendPlugin.setup()` initializes database tables (`AscendDatabaseSetup.ensureTables()`), shared stores (DB, Vexa, Discord), whitelist, and runtime config.
 2. Core stores load synchronously: `AscendMapStore`, `AscendPlayerStore`, `AscendSettingsStore`.
-3. Mine subsystem initializes: `MineConfigStore` -> `MineBonusCalculator` + `MineGateChecker` -> `MinePlayerStore` + `MineManager` -> `MineHudManager` -> `MineRobotManager`.
+3. Mine subsystem initializes: mine config stores (`MineHierarchyStore`, `BlockConfigStore`, `TierConfigStore`, `MinerConfigStore`, `ConveyorConfigStore`, `GateConfigStore`) -> `MineBonusCalculator` + `MineGateChecker` -> `MinePlayerStore` + `MineManager` -> `MineHudManager` -> `MineRobotManager`.
 4. Ghost system, run tracker, summit/ascension/transcendence/challenge/achievement managers, and tutorials are wired.
 5. Holograms initialize if `HylogramsBridge` is available.
 6. Commands and interaction codecs are registered.

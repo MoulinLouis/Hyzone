@@ -50,10 +50,10 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 ### Ascend Plugin Lifecycle
 - `ParkourAscendPlugin.setup()` is the composition root for Ascend: it creates stores/managers/services and passes dependencies down through constructors.
 - Ensures Ascend DB tables on startup (`AscendDatabaseSetup`).
-- Loads map store and player store into memory (`AscendMapStore`, `AscendPlayerStore`).
+- Loads map store and player store into memory (`AscendMapStore`, `AscendPlayerStore`). `AscendPlayerStore` is a coordinator that delegates domain logic to five facades: `volt()`, `progression()`, `runners()`, `gameplay()`, `settings()`.
 - Creates `AscendPlayerEventHandler` for gameplay side-effects (ascension flow, tutorial triggers, transcendence notifications). The player store is pure data/cache; the handler orchestrates reactions.
 - Starts `AscendRunTracker` for manual completion detection.
-- Starts `RobotManager` for runner ghost replay.
+- Starts `RobotManager` for runner ghost replay. `RobotManager` delegates to `RobotMovementController`, `AutoRunnerUpgradeEngine`, `RobotSpawner`, `RobotRefreshSystem`, and `RunnerCleanupSystem`.
 - Registers `/ascend` and `/as` commands.
 - PlayerReady: if in Ascend world, clears inventory, gives Ascend dev items + hub selector, attaches Ascend HUD.
 - AddPlayerToWorld: re-ensures Ascend dev items + hub selector when entering the Ascend world (e.g., respawn).
@@ -79,7 +79,12 @@ Module boundaries:
 | Class | Role |
 |-------|------|
 | `MineManager` | Zone lifecycle — tracks broken blocks per zone, cooldown/regen timers, generates zones on world thread |
-| `MineConfigStore` | Loads mine definitions, zones, gates, and block prices from DB into memory (`ReadWriteLock`-protected) |
+| `MineHierarchyStore` | Loads mine definitions and zones from DB (`ReadWriteLock`-protected, volatile snapshot caches) |
+| `BlockConfigStore` | Block prices and block-related config |
+| `TierConfigStore` | Mine tier definitions and unlock costs |
+| `MinerConfigStore` | Automated miner configuration |
+| `ConveyorConfigStore` | Conveyor chest buffer configuration |
+| `GateConfigStore` | Entry/exit gate AABB bounds and teleport destinations |
 | `MinePlayerStore` | Per-player progress (crystals, upgrade levels, inventory, mine unlocks, miner states) — lazy-loaded, evicted on disconnect, 5s debounced saves |
 | `MineGateChecker` | Tick-based AABB gate detection — teleports players in/out of the mine area, swaps HUD and inventory items |
 | `MineHudManager` | Custom HUD showing crystal count, bag contents, zone cooldown timer, and block-mined toasts |
@@ -118,7 +123,7 @@ Module boundaries:
 | `mine_player_miners` | Per-player automated miner state (has_miner, speed_level, stars) |
 
 **Runtime flow:**
-1. On startup, `ParkourAscendPlugin.setup()` initializes `MineConfigStore.syncLoad()`, then creates `MinePlayerStore`, `MineManager`, `MineHudManager`, and `MineRobotManager`
+1. On startup, `ParkourAscendPlugin.setup()` initializes the mine config stores (`MineHierarchyStore`, `BlockConfigStore`, `TierConfigStore`, `MinerConfigStore`, `ConveyorConfigStore`, `GateConfigStore`), then creates `MinePlayerStore`, `MineManager`, `MineHudManager`, and `MineRobotManager`
 2. Registers `MineBreakSystem` and `MineDamageSystem` as ECS event systems on the entity store registry
 3. On first player entering the Ascend world, `MineManager.generateAllZones()` fills all zone regions with weighted-random blocks on the world thread
 4. `MineManager.tick()` runs every 1000ms — checks each zone's broken-block ratio against its regen threshold, starts cooldown, and regenerates on the world thread when cooldown expires
