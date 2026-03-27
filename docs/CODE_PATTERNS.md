@@ -669,26 +669,101 @@ CompletableFuture.runAsync(() -> {
 }, world);
 ```
 
-## Thread Safety
+## Concurrency Patterns
+
+### Pattern 1: Read-Heavy Configuration Store
+**Use:** Config data loaded once, read frequently, rarely written (map definitions, game settings).
+**Primitive:** `ReadWriteLock` + plain `HashMap`/`LinkedHashMap`
+**Examples:** `MapStore`, `SettingsStore`, `MineHierarchyStore.mines`
 
 ```java
-// Use AtomicLong/AtomicInteger for counters accessed from multiple threads
+private final ReadWriteLock lock = new ReentrantReadWriteLock();
+private final Map<String, Config> configs = new LinkedHashMap<>();
+
+public Config get(String id) {
+    lock.readLock().lock();
+    try { return configs.get(id); } finally { lock.readLock().unlock(); }
+}
+
+public void reload(List<Config> newConfigs) {
+    lock.writeLock().lock();
+    try { configs.clear(); newConfigs.forEach(c -> configs.put(c.id(), c)); }
+    finally { lock.writeLock().unlock(); }
+}
+```
+
+### Pattern 2: Player Data Cache
+**Use:** Per-player mutable state, concurrent reads/writes from different players, no cross-player atomicity needed.
+**Primitive:** `ConcurrentHashMap<UUID, PlayerData>` (NO external lock)
+**Examples:** `AscendPlayerStore`, HUD managers
+
+```java
+private final ConcurrentHashMap<UUID, PlayerData> players = new ConcurrentHashMap<>();
+
+public PlayerData get(UUID id) { return players.get(id); }
+public void evict(UUID id) { players.remove(id); }
+```
+
+### Pattern 3: Transactional Per-Player Operation
+**Use:** Operations that need atomicity within a single player (purchase, unlock).
+**Primitive:** Per-player lock via `ConcurrentHashMap<UUID, Object>`
+**Examples:** `CosmeticStore`, `PurgeSkinStore`
+
+```java
+private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
+
+public PurchaseResult purchase(UUID playerId, ItemDef def) {
+    Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
+    synchronized (lock) {
+        // check-deduct-grant is atomic per player
+    }
+}
+
+public void evict(UUID playerId) {
+    playerLocks.remove(playerId); // prevent memory leak
+}
+```
+
+### Pattern 4: Independent Counters / Flags
+**Use:** Simple counters, boolean flags, one-time initialization.
+**Primitive:** `AtomicInteger`/`AtomicLong`/`AtomicBoolean` or `volatile`
+
+```java
 private final AtomicLong counter = new AtomicLong(0);
 counter.incrementAndGet();
 
-// Use volatile for simple flags
 private volatile boolean initialized = false;
 
-// Use synchronized for initialization
+// Use synchronized only for compound init (check + set + side effects)
 synchronized (INIT_LOCK) {
     if (initialized) return;
     // ... initialize ...
     initialized = true;
 }
-
-// Use computeIfAbsent instead of check-then-put
-map.computeIfAbsent(key, k -> new Value());
 ```
+
+### Pattern 5: Snapshot References
+**Use:** Data rebuilt periodically, readers see complete snapshot.
+**Primitive:** `volatile` reference to immutable or independently thread-safe collection
+**Examples:** `MineHierarchyStore.sortedCache`, `MineHierarchyStore.layerById`
+
+```java
+private volatile List<Mine> sortedCache;
+
+public List<Mine> getSorted() { return sortedCache; }  // readers get atomic snapshot
+
+public void rebuild() {
+    List<Mine> newList = /* build sorted list */;
+    sortedCache = Collections.unmodifiableList(newList);  // atomic publish
+}
+```
+
+### Anti-Patterns to Avoid
+- **`Collections.synchronizedMap/List`** — Use `ConcurrentHashMap` or `CopyOnWriteArrayList`
+- **`ReadWriteLock` + `ConcurrentHashMap` on same data** — Pick one; layer them only when they guard different concerns (e.g., bulk-load lock + per-key map)
+- **`synchronized` on entire store method** — Use per-player locks or atomics
+- **Multiple `volatile` fields that must be consistent together** — Use `AtomicReference<Record>` or a lock
+- **`computeIfAbsent` vs check-then-put** — Always prefer `computeIfAbsent`
 
 ## ECS Access
 
