@@ -16,24 +16,19 @@ import io.hyvexa.ascend.ascension.ChallengeManager.ChallengeLeaderboardEntry;
 import io.hyvexa.ascend.data.AscendPlayerEventHandler;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
-import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
+import io.hyvexa.common.ui.AbstractLeaderboardPage;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
+public class ChallengeLeaderboardPage extends AbstractLeaderboardPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_TAB_PREFIX = "Tab";
-
     private static final int MAX_TABS = 8;
-
-    private static final String COLOR_TAB_ACTIVE = "#2d3f50";
-    private static final String COLOR_TAB_INACTIVE = "#142029";
 
     private final AscendPlayerStore playerStore;
     private final ChallengeManager challengeManager;
@@ -64,6 +59,31 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
     }
 
     @Override
+    protected String getCardTemplatePath() {
+        return "Pages/Ascend_LeaderboardEntry.ui";
+    }
+
+    @Override
+    protected String getRankAccentColor(int rank) {
+        return AscendUIUtils.getRankAccentColor(rank);
+    }
+
+    @Override
+    protected boolean useFilteredRanks() {
+        return true;
+    }
+
+    @Override
+    protected String getNoDataMessage() {
+        return "No challenges available.";
+    }
+
+    @Override
+    protected String getNoEntriesMessage() {
+        return "No times recorded yet.";
+    }
+
+    @Override
     protected void bindCustomEvents(UIEventBuilder eventBuilder) {
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
@@ -81,12 +101,6 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
     }
 
     @Override
-    protected void buildContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        updateTabStyles(commandBuilder);
-        buildLeaderboard(commandBuilder);
-    }
-
-    @Override
     protected void handleCustomButton(String button, Ref<EntityStore> ref, Store<EntityStore> store) {
         if (BUTTON_CLOSE.equals(button)) {
             handleBack(ref, store);
@@ -99,6 +113,33 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
             } catch (NumberFormatException ignored) {
             }
         }
+    }
+
+    @Override
+    protected void onBuildLeaderboard(UICommandBuilder cmd) {
+        updateTabStyles(cmd);
+    }
+
+    @Override
+    protected List<LeaderboardRow> loadRows() {
+        if (currentTabIndex >= challengeTypes.length) {
+            return null;
+        }
+
+        ChallengeType type = challengeTypes[currentTabIndex];
+        List<ChallengeLeaderboardEntry> entries = challengeManager.getChallengeLeaderboard(type);
+        if (entries.isEmpty()) {
+            return List.of();
+        }
+
+        List<LeaderboardRow> rows = new ArrayList<>();
+        int rank = 1;
+        for (ChallengeLeaderboardEntry entry : entries) {
+            String name = entry.playerName() != null ? entry.playerName() : "Unknown";
+            rows.add(new LeaderboardRow(rank, null, name, FormatUtils.formatDurationLong(entry.bestTimeMs())));
+            rank++;
+        }
+        return rows;
     }
 
     private void switchTab(int tabIndex) {
@@ -124,95 +165,33 @@ public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
         this.close();
     }
 
-    private void setupTabs(UICommandBuilder commandBuilder) {
+    private void setupTabs(UICommandBuilder cmd) {
         int tabCount = Math.min(challengeTypes.length, MAX_TABS);
         for (int i = 0; i < tabCount; i++) {
-            commandBuilder.set("#Tab" + i + "Label.Text", "C" + (i + 1));
-            commandBuilder.set("#Tab" + i + "Wrap.Visible", true);
+            cmd.set("#Tab" + i + "Label.Text", "C" + (i + 1));
+            cmd.set("#Tab" + i + "Wrap.Visible", true);
         }
         for (int i = tabCount; i < MAX_TABS; i++) {
-            commandBuilder.set("#Tab" + i + "Wrap.Visible", false);
+            cmd.set("#Tab" + i + "Wrap.Visible", false);
         }
-        updateTabStyles(commandBuilder);
+        updateTabStyles(cmd);
     }
 
-    private void updateTabStyles(UICommandBuilder commandBuilder) {
+    private void updateTabStyles(UICommandBuilder cmd) {
         int tabCount = Math.min(challengeTypes.length, MAX_TABS);
         for (int i = 0; i < tabCount; i++) {
             boolean active = (i == currentTabIndex);
-            commandBuilder.set("#Tab" + i + "Wrap #TabActive.Visible", active);
+            cmd.set("#Tab" + i + "Wrap #TabActive.Visible", active);
             if (active) {
-                AccentOverlayUtils.applyAccent(commandBuilder, "#Tab" + i + "Accent",
+                AccentOverlayUtils.applyAccent(cmd, "#Tab" + i + "Accent",
                         challengeTypes[i].getAccentColor(), AccentOverlayUtils.CHALLENGE_TAB_ACCENTS);
             } else {
                 for (String id : AccentOverlayUtils.CHALLENGE_TAB_ACCENTS) {
-                    commandBuilder.set("#Tab" + i + "Accent #" + id + ".Visible", false);
+                    cmd.set("#Tab" + i + "Accent #" + id + ".Visible", false);
                 }
             }
-            commandBuilder.set("#Tab" + i + "Label.Style.TextColor",
+            cmd.set("#Tab" + i + "Label.Style.TextColor",
                     active ? "#f0f4f8" : "#9fb0ba");
         }
-    }
-
-    private void buildLeaderboard(UICommandBuilder commandBuilder) {
-        commandBuilder.clear("#LeaderboardCards");
-        commandBuilder.set("#SearchField.Value", getSearchText());
-
-        if (currentTabIndex >= challengeTypes.length) {
-            commandBuilder.set("#EmptyText.Text", "No challenges available.");
-            commandBuilder.set("#PageLabel.Text", "");
-            return;
-        }
-
-        ChallengeType type = challengeTypes[currentTabIndex];
-        List<ChallengeLeaderboardEntry> entries = challengeManager.getChallengeLeaderboard(type);
-
-        if (entries.isEmpty()) {
-            commandBuilder.set("#EmptyText.Text", "No times recorded yet.");
-            commandBuilder.set("#PageLabel.Text", "");
-            return;
-        }
-
-        // Apply search filter
-        String filter = getSearchText().toLowerCase();
-        List<ChallengeLeaderboardEntry> filtered = new ArrayList<>();
-        for (ChallengeLeaderboardEntry entry : entries) {
-            if (!filter.isEmpty()) {
-                String safeName = entry.playerName() != null ? entry.playerName() : "";
-                if (!safeName.toLowerCase().startsWith(filter)) {
-                    continue;
-                }
-            }
-            filtered.add(entry);
-        }
-
-        if (filtered.isEmpty()) {
-            commandBuilder.set("#EmptyText.Text", "No matches.");
-            commandBuilder.set("#PageLabel.Text", "");
-            return;
-        }
-
-        commandBuilder.set("#EmptyText.Text", "");
-        PaginationState.PageSlice slice = getPagination().slice(filtered.size());
-        int start = slice.startIndex;
-        int end = slice.endIndex;
-        int index = 0;
-
-        for (int i = start; i < end; i++) {
-            ChallengeLeaderboardEntry entry = filtered.get(i);
-            int rank = i + 1;
-            commandBuilder.append("#LeaderboardCards", "Pages/Ascend_LeaderboardEntry.ui");
-            String accentColor = AscendUIUtils.getRankAccentColor(rank);
-            AccentOverlayUtils.applyAccent(commandBuilder, "#LeaderboardCards[" + index + "] #AccentBar",
-                    accentColor, AccentOverlayUtils.RANK_ACCENTS);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", "#" + rank);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text",
-                    entry.playerName() != null ? entry.playerName() : "Unknown");
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Value.Text",
-                    FormatUtils.formatDurationLong(entry.bestTimeMs()));
-            index++;
-        }
-
-        commandBuilder.set("#PageLabel.Text", slice.getLabel());
     }
 }

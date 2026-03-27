@@ -9,10 +9,8 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
-import io.hyvexa.common.ui.AccentOverlayUtils;
+import io.hyvexa.common.ui.AbstractLeaderboardPage;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
@@ -20,14 +18,19 @@ import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
-public class LeaderboardPage extends AbstractSearchablePaginatedPage {
+public class LeaderboardPage extends AbstractLeaderboardPage {
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
     private final MedalStore medalStore;
     private static final String BUTTON_BACK = "Back";
+
+    private Map<UUID, MedalStore.MedalScoreEntry> medalData;
 
     public LeaderboardPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
                                   ProgressStore progressStore, MedalStore medalStore) {
@@ -45,6 +48,21 @@ public class LeaderboardPage extends AbstractSearchablePaginatedPage {
     @Override
     protected String getSearchFieldId() {
         return "#LeaderboardSearchField";
+    }
+
+    @Override
+    protected String getCardTemplatePath() {
+        return "Pages/Parkour_LeaderboardEntry.ui";
+    }
+
+    @Override
+    protected String getRankAccentColor(int rank) {
+        return UIColorUtils.getRankAccentColor(rank);
+    }
+
+    @Override
+    protected String getNoDataMessage() {
+        return "No medals earned yet.";
     }
 
     @Override
@@ -66,66 +84,36 @@ public class LeaderboardPage extends AbstractSearchablePaginatedPage {
     }
 
     @Override
-    protected void buildContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        commandBuilder.clear("#LeaderboardCards");
-        commandBuilder.set("#LeaderboardSearchField.Value", getSearchText());
+    protected List<LeaderboardRow> loadRows() {
         List<MedalStore.MedalScoreEntry> snapshot = medalStore.getLeaderboardSnapshot();
         if (snapshot.isEmpty()) {
-            commandBuilder.set("#EmptyText.Text", "No medals earned yet.");
-            commandBuilder.set("#PageLabel.Text", "");
-            return;
+            return null;
         }
-        String filter = getSearchText().trim().toLowerCase();
-        List<LeaderboardRow> filtered = new ArrayList<>();
+
+        medalData = new HashMap<>();
+        List<LeaderboardRow> rows = new ArrayList<>();
         for (int i = 0; i < snapshot.size(); i++) {
             MedalStore.MedalScoreEntry entry = snapshot.get(i);
-            String name = ParkourUtils.resolveName(entry.getPlayerId(), progressStore);
-            if (!filter.isEmpty()) {
-                String safeName = name != null ? name : "";
-                if (!safeName.toLowerCase().startsWith(filter)) {
-                    continue;
-                }
-            }
-            filtered.add(new LeaderboardRow(i + 1, entry, name));
+            UUID playerId = entry.getPlayerId();
+            String name = ParkourUtils.resolveName(playerId, progressStore);
+            medalData.put(playerId, entry);
+            rows.add(new LeaderboardRow(i + 1, playerId, name != null ? name : "", ""));
         }
-        if (filtered.isEmpty()) {
-            commandBuilder.set("#EmptyText.Text", "No matches.");
-            commandBuilder.set("#PageLabel.Text", "");
-            return;
-        }
-        commandBuilder.set("#EmptyText.Text", "");
-        PaginationState.PageSlice slice = getPagination().slice(filtered.size());
-        int start = slice.startIndex;
-        int end = slice.endIndex;
-        int index = 0;
-        for (int i = start; i < end; i++) {
-            LeaderboardRow row = filtered.get(i);
-            commandBuilder.append("#LeaderboardCards", "Pages/Parkour_LeaderboardEntry.ui");
-            String accentColor = UIColorUtils.getRankAccentColor(row.rank);
-            AccentOverlayUtils.applyAccent(commandBuilder, "#LeaderboardCards[" + index + "] #AccentBar",
-                    accentColor, AccentOverlayUtils.RANK_ACCENTS);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", "#" + row.rank);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text", row.name);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #BronzeCount.Text", String.valueOf(row.entry.getBronzeCount()));
-            commandBuilder.set("#LeaderboardCards[" + index + "] #SilverCount.Text", String.valueOf(row.entry.getSilverCount()));
-            commandBuilder.set("#LeaderboardCards[" + index + "] #GoldCount.Text", String.valueOf(row.entry.getGoldCount()));
-            commandBuilder.set("#LeaderboardCards[" + index + "] #EmeraldCount.Text", String.valueOf(row.entry.getEmeraldCount()));
-            commandBuilder.set("#LeaderboardCards[" + index + "] #InsaneCount.Text", String.valueOf(row.entry.getInsaneCount()));
-            commandBuilder.set("#LeaderboardCards[" + index + "] #TotalScore.Text", String.valueOf(row.entry.getTotalScore()));
-            index++;
-        }
-        commandBuilder.set("#PageLabel.Text", slice.getLabel());
+        return rows;
     }
 
-    private static final class LeaderboardRow {
-        private final int rank;
-        private final MedalStore.MedalScoreEntry entry;
-        private final String name;
-
-        private LeaderboardRow(int rank, MedalStore.MedalScoreEntry entry, String name) {
-            this.rank = rank;
-            this.entry = entry;
-            this.name = name != null ? name : "";
+    @Override
+    protected void renderRow(UICommandBuilder cmd, String cardPrefix, LeaderboardRow row) {
+        cmd.set(cardPrefix + " #Rank.Text", "#" + row.rank());
+        cmd.set(cardPrefix + " #PlayerName.Text", row.name());
+        MedalStore.MedalScoreEntry entry = medalData != null ? medalData.get(row.playerId()) : null;
+        if (entry != null) {
+            cmd.set(cardPrefix + " #BronzeCount.Text", String.valueOf(entry.getBronzeCount()));
+            cmd.set(cardPrefix + " #SilverCount.Text", String.valueOf(entry.getSilverCount()));
+            cmd.set(cardPrefix + " #GoldCount.Text", String.valueOf(entry.getGoldCount()));
+            cmd.set(cardPrefix + " #EmeraldCount.Text", String.valueOf(entry.getEmeraldCount()));
+            cmd.set(cardPrefix + " #InsaneCount.Text", String.valueOf(entry.getInsaneCount()));
+            cmd.set(cardPrefix + " #TotalScore.Text", String.valueOf(entry.getTotalScore()));
         }
     }
 }
