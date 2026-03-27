@@ -21,6 +21,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.egg.EggOpenService;
 import io.hyvexa.ascend.mine.egg.EggRouletteAnimation;
+import org.bson.BsonDocument;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -52,11 +53,26 @@ public class MineEggChestInteraction extends SimpleInteraction {
 
         MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
 
-        // Find the active chest slot
-        Short activeSlot = findActiveChestSlot(player, progress);
-        if (activeSlot == null) return;
+        // Use the exact slot the player right-clicked
+        short activeSlot = interactionContext.getHeldItemSlot();
+        if (activeSlot < CHEST_SLOT_MIN || activeSlot > CHEST_SLOT_MAX) return;
 
-        String layerId = progress.getChestLayerId(activeSlot);
+        Inventory inventory = player.getInventory();
+        ItemContainer hotbar = inventory != null ? inventory.getHotbar() : null;
+        if (hotbar == null) return;
+
+        ItemStack heldStack = hotbar.getItemStack(activeSlot);
+        if (heldStack == null || ItemStack.isEmpty(heldStack)) return;
+
+        // Resolve layerId: primary source is item metadata, fallback to chestSlotMap for legacy items
+        String layerId = null;
+        BsonDocument meta = heldStack.getMetadata();
+        if (meta != null && meta.containsKey("EggLayerId")) {
+            layerId = meta.getString("EggLayerId").getValue();
+        }
+        if (layerId == null) {
+            layerId = progress.getChestLayerId(activeSlot);
+        }
         if (layerId == null) return;
 
         // Open the egg (rolls rarity, removes from backing store)
@@ -66,17 +82,13 @@ public class MineEggChestInteraction extends SimpleInteraction {
             return;
         }
 
-        // Decrement or remove the physical item
-        Inventory inventory = player.getInventory();
-        ItemContainer hotbar = inventory != null ? inventory.getHotbar() : null;
-        if (hotbar != null) {
-            ItemStack stack = hotbar.getItemStack(activeSlot);
-            if (stack != null && stack.getQuantity() > 1) {
-                hotbar.setItemStackForSlot(activeSlot, new ItemStack(AscendConstants.ITEM_MINE_EGG_CHEST, stack.getQuantity() - 1), false);
-            } else {
-                hotbar.setItemStackForSlot(activeSlot, null, false);
-                progress.removeChestSlot(activeSlot);
-            }
+        // Decrement or remove the physical item, preserving metadata and itemId
+        if (heldStack.getQuantity() > 1) {
+            hotbar.setItemStackForSlot(activeSlot,
+                new ItemStack(heldStack.getItemId(), heldStack.getQuantity() - 1, heldStack.getMetadata()), false);
+        } else {
+            hotbar.setItemStackForSlot(activeSlot, null, false);
+            progress.removeChestSlot(activeSlot);
         }
 
         // Play the 3D roulette animation
@@ -87,53 +99,5 @@ public class MineEggChestInteraction extends SimpleInteraction {
             return;
         }
         EggRouletteAnimation.play(player, ph, playerRef, store, ref, world, miner.getRarity(), () -> {});
-    }
-
-    private Short findActiveChestSlot(Player player, MinePlayerProgress progress) {
-        Inventory inventory = player.getInventory();
-        if (inventory == null) return null;
-        ItemContainer hotbar = inventory.getHotbar();
-        if (hotbar == null) return null;
-
-        for (short slot = CHEST_SLOT_MIN; slot <= CHEST_SLOT_MAX; slot++) {
-            ItemStack stack = hotbar.getItemStack(slot);
-            boolean hasItem = stack != null && AscendConstants.ITEM_MINE_EGG_CHEST.equals(stack.getItemId());
-            String mappedLayer = progress.getChestLayerId(slot);
-
-            if (hasItem && mappedLayer != null) {
-                return slot;
-            }
-            // Rebuild on mismatch: item exists but no map entry
-            if (hasItem && mappedLayer == null) {
-                rebuildChestSlotMap(hotbar, progress);
-                mappedLayer = progress.getChestLayerId(slot);
-                if (mappedLayer != null) return slot;
-            }
-            // Stale map entry: no item but map entry exists
-            if (!hasItem && mappedLayer != null) {
-                progress.removeChestSlot(slot);
-            }
-        }
-        return null;
-    }
-
-    private void rebuildChestSlotMap(ItemContainer hotbar, MinePlayerProgress progress) {
-        progress.clearChestSlots();
-        var eggs = progress.getEggInventory();
-        var usedLayers = new java.util.HashSet<String>();
-
-        for (short slot = CHEST_SLOT_MIN; slot <= CHEST_SLOT_MAX; slot++) {
-            ItemStack stack = hotbar.getItemStack(slot);
-            if (stack == null || !AscendConstants.ITEM_MINE_EGG_CHEST.equals(stack.getItemId())) continue;
-
-            // Try to match this slot to an egg layer based on available eggs
-            for (var entry : eggs.entrySet()) {
-                if (entry.getValue() > 0 && !usedLayers.contains(entry.getKey())) {
-                    progress.assignChestSlot(slot, entry.getKey());
-                    usedLayers.add(entry.getKey());
-                    break;
-                }
-            }
-        }
     }
 }

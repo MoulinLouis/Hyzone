@@ -685,6 +685,66 @@ $C.@PageOverlay {
           }
         }
 
+        // Egg item picker row (visible when a layer is selected)
+        Group #EggItemRow {
+          Anchor: (Left: 0, Right: 0, Top: 6, Height: 30);
+          LayoutMode: Left;
+          Visible: false;
+
+          Label {
+            Anchor: (Width: 80, Height: 28);
+            Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+            Text: "Egg Item";
+          }
+
+          TextButton #EggItemPrev {
+            Anchor: (Width: 28, Height: 28);
+            Text: "<";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 14, TextColor: #cfd7dc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 14, TextColor: #cfd7dc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+
+          Label #EggItemLabel {
+            Anchor: (Left: 6, Height: 28);
+            FlexWeight: 1;
+            Style: (FontSize: 12, TextColor: #f0f4f8, VerticalAlignment: Center, HorizontalAlignment: Center);
+            Text: "Mine_Egg_Chest";
+          }
+
+          TextButton #EggItemNext {
+            Anchor: (Left: 6, Width: 28, Height: 28);
+            Text: ">";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 14, TextColor: #cfd7dc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 14, TextColor: #cfd7dc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
         // Layer info label
         Label #LayerInfoLabel {
           Anchor: (Top: 4);

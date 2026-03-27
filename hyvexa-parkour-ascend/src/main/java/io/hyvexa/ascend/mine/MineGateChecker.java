@@ -21,7 +21,11 @@ import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
+import io.hyvexa.ascend.mine.system.EggDropHelper;
+import org.bson.BsonDocument;
+import org.bson.BsonString;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
@@ -349,19 +353,24 @@ public class MineGateChecker {
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_MINE_CHEST, 1), false);
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_MINE_LEADERBOARD, 1), false);
 
-        // Restore egg chests from virtual inventory
+        // Restore egg chests from virtual inventory with per-layer item ID + metadata
+        // Sort by layerId for deterministic slot assignment across exit/enter cycles
         if (minePlayerStore != null) {
             MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
             progress.clearChestSlots();
-            Map<String, Integer> eggs = progress.getEggInventory();
+            Map<String, Integer> eggs = new java.util.TreeMap<>(progress.getEggInventory());
             short nextSlot = 3;
             for (var entry : eggs.entrySet()) {
                 if (nextSlot > 6) break;
                 int count = entry.getValue();
                 if (count <= 0) continue;
                 int capped = Math.min(count, 64);
-                hotbar.setItemStackForSlot(nextSlot, new ItemStack(AscendConstants.ITEM_MINE_EGG_CHEST, capped), false);
-                progress.assignChestSlot(nextSlot, entry.getKey());
+                String layerId = entry.getKey();
+                MineZoneLayer layer = configStore.getLayerById(layerId);
+                String itemId = EggDropHelper.resolveEggItemId(layer);
+                BsonDocument meta = new BsonDocument("EggLayerId", new BsonString(layerId));
+                hotbar.setItemStackForSlot(nextSlot, new ItemStack(itemId, capped, meta), false);
+                progress.assignChestSlot(nextSlot, layerId);
                 nextSlot++;
             }
         }

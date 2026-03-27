@@ -13,6 +13,8 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
+import org.bson.BsonDocument;
+import org.bson.BsonString;
 
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,7 +38,7 @@ public final class EggDropHelper {
         store.markDirty(playerId);
 
         // Place physical chest in hotbar
-        placeEggChest(player, progress, layer.getId());
+        placeEggChest(player, progress, layer);
 
         // Toast notification + achievement
         if (hudManager != null) {
@@ -48,21 +50,37 @@ public final class EggDropHelper {
         }
     }
 
-    private static void placeEggChest(Player player, MinePlayerProgress progress, String layerId) {
+    private static void placeEggChest(Player player, MinePlayerProgress progress, MineZoneLayer layer) {
         Inventory inventory = player.getInventory();
         if (inventory == null) return;
         ItemContainer hotbar = inventory.getHotbar();
         if (hotbar == null) return;
 
-        // Check if player already has a chest for this layer
-        Short existingSlot = progress.findSlotForLayer(layerId);
+        String layerId = layer.getId();
+        String eggItemId = resolveEggItemId(layer);
+
+        // Check if player already has a chest for this layer (via metadata scan)
+        Short existingSlot = findSlotWithLayerMeta(hotbar, layerId);
         if (existingSlot != null) {
             ItemStack stack = hotbar.getItemStack(existingSlot);
             if (stack != null && stack.getQuantity() < 64) {
                 hotbar.setItemStackForSlot(existingSlot,
-                    new ItemStack(AscendConstants.ITEM_MINE_EGG_CHEST, stack.getQuantity() + 1), false);
+                    new ItemStack(stack.getItemId(), stack.getQuantity() + 1, stack.getMetadata()), false);
             }
             // If already 64, egg stays in backing store only
+            return;
+        }
+
+        // Fallback: check chestSlotMap for legacy items without metadata
+        Short legacySlot = progress.findSlotForLayer(layerId);
+        if (legacySlot != null) {
+            ItemStack stack = hotbar.getItemStack(legacySlot);
+            if (stack != null && stack.getQuantity() < 64) {
+                // Upgrade legacy item with metadata
+                BsonDocument meta = new BsonDocument("EggLayerId", new BsonString(layerId));
+                hotbar.setItemStackForSlot(legacySlot,
+                    new ItemStack(eggItemId, stack.getQuantity() + 1, meta), false);
+            }
             return;
         }
 
@@ -70,7 +88,8 @@ public final class EggDropHelper {
         for (short slot = CHEST_SLOT_MIN; slot <= CHEST_SLOT_MAX; slot++) {
             ItemStack stack = hotbar.getItemStack(slot);
             if (stack == null || ItemStack.isEmpty(stack)) {
-                hotbar.setItemStackForSlot(slot, new ItemStack(AscendConstants.ITEM_MINE_EGG_CHEST, 1), false);
+                BsonDocument meta = new BsonDocument("EggLayerId", new BsonString(layerId));
+                hotbar.setItemStackForSlot(slot, new ItemStack(eggItemId, 1, meta), false);
                 progress.assignChestSlot(slot, layerId);
                 return;
             }
@@ -78,5 +97,23 @@ public final class EggDropHelper {
 
         // All slots occupied
         player.sendMessage(Message.raw("Chest slots full!"));
+    }
+
+    static Short findSlotWithLayerMeta(ItemContainer hotbar, String layerId) {
+        for (short slot = CHEST_SLOT_MIN; slot <= CHEST_SLOT_MAX; slot++) {
+            ItemStack stack = hotbar.getItemStack(slot);
+            if (stack == null || ItemStack.isEmpty(stack)) continue;
+            BsonDocument meta = stack.getMetadata();
+            if (meta != null && meta.containsKey("EggLayerId")
+                    && layerId.equals(meta.getString("EggLayerId").getValue())) {
+                return slot;
+            }
+        }
+        return null;
+    }
+
+    public static String resolveEggItemId(MineZoneLayer layer) {
+        return (layer != null && layer.getEggItemId() != null)
+            ? layer.getEggItemId() : AscendConstants.ITEM_MINE_EGG_CHEST;
     }
 }

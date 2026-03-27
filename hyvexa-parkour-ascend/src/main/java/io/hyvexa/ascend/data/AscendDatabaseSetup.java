@@ -529,6 +529,14 @@ public final class AscendDatabaseSetup {
                 LOGGER.atSevere().log("Failed to add display_name column: " + e.getMessage());
             }
         }
+        if (!columnExists(conn, "mine_zone_layers", "egg_item_id")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE mine_zone_layers ADD COLUMN egg_item_id VARCHAR(64) DEFAULT NULL");
+                LOGGER.atInfo().log("Added egg_item_id column to mine_zone_layers");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add egg_item_id column: " + e.getMessage());
+            }
+        }
     }
 
     /**

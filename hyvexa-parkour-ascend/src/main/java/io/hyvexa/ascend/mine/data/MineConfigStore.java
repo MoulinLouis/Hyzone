@@ -179,7 +179,7 @@ public class MineConfigStore {
 
     private void loadLayers(Connection conn) throws SQLException {
         layerById.clear();
-        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json, egg_drop_chance, display_name " +
+        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json, egg_drop_chance, display_name, egg_item_id " +
             "FROM mine_zone_layers ORDER BY zone_id, min_y, max_y, id";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -203,6 +203,9 @@ public class MineConfigStore {
                     } catch (SQLException ignored) {}
                     try {
                         layer.setDisplayName(rs.getString("display_name"));
+                    } catch (SQLException ignored) {}
+                    try {
+                        layer.setEggItemId(rs.getString("egg_item_id"));
                     } catch (SQLException ignored) {}
                     layerById.put(layer.getId(), layer);
                     boolean attached = false;
@@ -978,13 +981,14 @@ public class MineConfigStore {
 
     private void saveLayerToDatabase(MineZoneLayer layer) {
         String sql = """
-            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json, egg_drop_chance, display_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json, egg_drop_chance, display_name, egg_item_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 min_y = VALUES(min_y), max_y = VALUES(max_y),
                 block_table_json = VALUES(block_table_json),
                 egg_drop_chance = VALUES(egg_drop_chance),
-                display_name = VALUES(display_name)
+                display_name = VALUES(display_name),
+                egg_item_id = VALUES(egg_item_id)
             """;
 
         DatabaseManager.execute(this.db, sql, stmt -> {
@@ -995,8 +999,21 @@ public class MineConfigStore {
             stmt.setInt(i++, layer.getMaxY());
             stmt.setString(i++, GSON.toJson(layer.getBlockTable()));
             stmt.setDouble(i++, layer.getEggDropChance());
-            stmt.setString(i, layer.getDisplayName());
+            stmt.setString(i++, layer.getDisplayName());
+            stmt.setString(i, layer.getEggItemId());
         });
+    }
+
+    public void saveLayerEggItemId(String layerId, String eggItemId) {
+        MineZoneLayer layer = getLayerById(layerId);
+        if (layer == null) return;
+        layer.setEggItemId(eggItemId);
+        DatabaseManager.execute(this.db,
+            "UPDATE mine_zone_layers SET egg_item_id = ? WHERE id = ?",
+            stmt -> {
+                stmt.setString(1, eggItemId);
+                stmt.setString(2, layerId);
+            });
     }
 
     public boolean deleteLayer(String layerId) {

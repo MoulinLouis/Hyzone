@@ -12,6 +12,7 @@ public class MineZoneLayer {
     private final Map<String, Double> blockTable = new HashMap<>();
     private double eggDropChance = 0.5;
     private String displayName = "";
+    private String eggItemId;
     private final Map<MinerRarity, Map<String, Double>> rarityBlockTables = new EnumMap<>(MinerRarity.class);
 
     public MineZoneLayer(String id, String zoneId, int minY, int maxY) {
@@ -34,6 +35,8 @@ public class MineZoneLayer {
     public void setEggDropChance(double eggDropChance) { this.eggDropChance = eggDropChance; }
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String displayName) { this.displayName = displayName != null ? displayName : ""; }
+    public String getEggItemId() { return eggItemId; }
+    public void setEggItemId(String eggItemId) { this.eggItemId = eggItemId; }
     public Map<MinerRarity, Map<String, Double>> getRarityBlockTables() { return rarityBlockTables; }
 
     /**

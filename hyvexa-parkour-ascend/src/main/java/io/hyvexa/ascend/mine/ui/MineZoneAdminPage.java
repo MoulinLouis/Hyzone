@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.mine.MineBlockRegistry;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
@@ -180,6 +181,14 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
         if (data.button.equals(ZoneData.BUTTON_RENAME_LAYER)) {
             handleRenameLayer(ref, store);
+            return;
+        }
+        if (data.button.equals(ZoneData.BUTTON_EGG_ITEM_PREV)) {
+            handleCycleEggItem(-1, ref, store);
+            return;
+        }
+        if (data.button.equals(ZoneData.BUTTON_EGG_ITEM_NEXT)) {
+            handleCycleEggItem(1, ref, store);
             return;
         }
         if (data.button.startsWith(ZoneData.BUTTON_DELETE_LAYER_PREFIX)) {
@@ -495,6 +504,29 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         sendRefresh(ref, store);
     }
 
+    private void handleCycleEggItem(int direction, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (selectedLayerId.isEmpty()) return;
+        MineZoneLayer layer = findLayer(selectedLayerId);
+        if (layer == null) return;
+
+        String[] items = AscendConstants.EGG_CHEST_ITEMS;
+        String current = layer.getEggItemId();
+        int currentIndex = 0;
+        if (current != null) {
+            for (int i = 0; i < items.length; i++) {
+                if (items[i].equals(current)) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+        }
+        int newIndex = (currentIndex + direction + items.length) % items.length;
+        String newItemId = items[newIndex];
+
+        mineConfigStore.saveLayerEggItemId(selectedLayerId, newItemId);
+        sendRefresh(ref, store);
+    }
+
     private boolean rangesOverlap(int minA, int maxA, int minB, int maxB) {
         return Math.max(minA, minB) <= Math.min(maxA, maxB);
     }
@@ -629,6 +661,10 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_ADD_LAYER), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RenameLayerButton",
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_RENAME_LAYER), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EggItemPrev",
+            EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_EGG_ITEM_PREV), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EggItemNext",
+            EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_EGG_ITEM_NEXT), false);
 
         // Back button
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
@@ -652,6 +688,13 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
 
         boolean hasSelectedLayer = !selectedLayerId.isEmpty() && findLayer(selectedLayerId) != null;
         commandBuilder.set("#LayerRenameRow.Visible", hasSelectedLayer);
+        commandBuilder.set("#EggItemRow.Visible", hasSelectedLayer);
+        if (hasSelectedLayer) {
+            MineZoneLayer selectedLayer = findLayer(selectedLayerId);
+            String eggItem = selectedLayer != null && selectedLayer.getEggItemId() != null
+                ? selectedLayer.getEggItemId() : AscendConstants.ITEM_MINE_EGG_CHEST;
+            commandBuilder.set("#EggItemLabel.Text", eggItem);
+        }
 
         // Selected block display
         String selectedBlockDisplay = blockId.isEmpty() ? "(none)" : MineBlockRegistry.getDisplayName(blockId);
@@ -875,6 +918,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         static final String BUTTON_RENAME_LAYER = "RenameLayer";
         static final String BUTTON_DELETE_LAYER_PREFIX = "DeleteLayer:";
         static final String BUTTON_SELECT_LAYER_PREFIX = "SelectLayer:";
+        static final String BUTTON_EGG_ITEM_PREV = "EggItemPrev";
+        static final String BUTTON_EGG_ITEM_NEXT = "EggItemNext";
         static final String BUTTON_TAB_ZONES = "TabZones";
         static final String BUTTON_TAB_BLOCKS = "TabBlocks";
         static final String BUTTON_TAB_LAYERS = "TabLayers";

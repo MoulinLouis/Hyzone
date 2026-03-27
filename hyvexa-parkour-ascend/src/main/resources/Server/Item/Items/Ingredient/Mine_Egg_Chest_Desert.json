@@ -1,0 +1,45 @@
+{
+  "TranslationProperties": {
+    "Name": "Desert Egg Chest",
+    "Description": "Right click to open an egg chest."
+  },
+  "PlayerAnimationsId": "Block",
+  "Categories": [
+    "Furniture.Containers"
+  ],
+  "Icon": "Icons/ItemsGenerated/Furniture_Desert_Chest_Small.png",
+  "BlockType": {
+    "BlockParticleSetId": "Wood",
+    "BlockSoundSetId": "Wood",
+    "CustomModel": "Blocks/Decorative_Sets/Desert/Chest_Small.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Decorative_Sets/Desert/Chest_Small_Texture.png",
+        "Weight": 1
+      }
+    ],
+    "DrawType": "Model",
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "VariantRotation": "NESW",
+    "ParticleColor": "#d4a574"
+  },
+  "IconProperties": {
+    "Scale": 0.55,
+    "Translation": [
+      0,
+      -15
+    ],
+    "Rotation": [
+      22.5,
+      45,
+      22.5
+    ]
+  },
+  "ItemSoundSetId": "ISS_Blocks_Wood",
+  "MaxStack": 64,
+  "Quality": "Developer",
+  "Interactions": {
+    "Secondary": "Mine_Egg_Chest_Desert"
+  }
+}
