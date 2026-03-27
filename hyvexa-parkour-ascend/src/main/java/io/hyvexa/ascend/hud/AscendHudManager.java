@@ -44,6 +44,7 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
     private final ConcurrentHashMap<UUID, CachedEconomyData> economyCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, RunnerBarCache> runnerBarCache = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> mineModeActive = ConcurrentHashMap.newKeySet();
+    private final java.util.Set<UUID> mineModePendingApply = ConcurrentHashMap.newKeySet();
     private volatile RobotManager robotManager;
 
     public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager, CurrencyStore vexaStore) {
@@ -82,6 +83,10 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
         }
         hud.applyStaticText();
         hud.updatePlayerCount();
+        // Apply deferred mine mode visibility if it was set before the HUD was ready
+        if (mineModePendingApply.remove(playerId)) {
+            applyMineModeVisibility(hud, true);
+        }
         // In mine mode, only update the info panel — skip economy/elevation/prestige
         if (mineModeActive.contains(playerId)) {
             try {
@@ -242,27 +247,20 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
         }
         if (enabled) {
             mineModeActive.add(playerId);
-            // Hide economy elements, keep only the info panel (#RunHudRoot)
-            UICommandBuilder cb = new UICommandBuilder();
-            cb.set("#TopBar.Visible", false);
-            cb.set("#TopVoltHud.Visible", false);
-            cb.set("#RunTimerHud.Visible", false);
-            cb.set("#ElevationHud.Visible", false);
-            cb.set("#PrestigeHud.Visible", false);
-            cb.set("#AscensionHud.Visible", false);
-            cb.set("#AscensionQuestHud.Visible", false);
-            cb.set("#ToastContainer.Visible", false);
-            hud.update(false, cb);
+            // If HUD not ready yet (client still loading UI), defer the visibility commands —
+            // updateFull will apply them once the HUD is ready
+            if (!isReady(playerId)) {
+                mineModePendingApply.add(playerId);
+                return;
+            }
+            applyMineModeVisibility(hud, true);
         } else {
             mineModeActive.remove(playerId);
-            // Show economy elements again and reset cache so next updateFull refreshes all
-            UICommandBuilder cb = new UICommandBuilder();
-            cb.set("#TopBar.Visible", true);
-            cb.set("#TopVoltHud.Visible", true);
-            cb.set("#ToastContainer.Visible", true);
-            // ElevationHud, PrestigeHud, AscensionHud, AscensionQuestHud, RunTimerHud
-            // are conditionally visible — resetCache lets updateFull re-evaluate them
-            hud.update(false, cb);
+            mineModePendingApply.remove(playerId);
+            if (!isReady(playerId)) {
+                return;
+            }
+            applyMineModeVisibility(hud, false);
             hud.resetCache();
         }
     }
@@ -275,8 +273,28 @@ public class AscendHudManager extends AbstractHudManager<AscendHud> {
         hudHidden.remove(playerId);
         previewPlayers.remove(playerId);
         mineModeActive.remove(playerId);
+        mineModePendingApply.remove(playerId);
         economyCache.remove(playerId);
         runnerBarCache.remove(playerId);
+    }
+
+    private void applyMineModeVisibility(AscendHud hud, boolean enterMine) {
+        UICommandBuilder cb = new UICommandBuilder();
+        if (enterMine) {
+            cb.set("#TopBar.Visible", false);
+            cb.set("#TopVoltHud.Visible", false);
+            cb.set("#RunTimerHud.Visible", false);
+            cb.set("#ElevationHud.Visible", false);
+            cb.set("#PrestigeHud.Visible", false);
+            cb.set("#AscensionHud.Visible", false);
+            cb.set("#AscensionQuestHud.Visible", false);
+            cb.set("#ToastContainer.Visible", false);
+        } else {
+            cb.set("#TopBar.Visible", true);
+            cb.set("#TopVoltHud.Visible", true);
+            cb.set("#ToastContainer.Visible", true);
+        }
+        hud.update(false, cb);
     }
 
     public void showScreenFade(UUID playerId, boolean visible) {
