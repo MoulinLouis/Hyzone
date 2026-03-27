@@ -104,11 +104,8 @@ public class GlobalMessageStore {
         String insertSql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
 
         this.db.withTransaction(conn -> {
-            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
-                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-                DatabaseManager.applyQueryTimeout(deleteStmt);
-                DatabaseManager.applyQueryTimeout(insertStmt);
-
+            try (PreparedStatement deleteStmt = DatabaseManager.prepare(conn, deleteSql);
+                 PreparedStatement insertStmt = DatabaseManager.prepare(conn, insertSql)) {
                 deleteStmt.executeUpdate();
 
                 for (int i = 0; i < messages.size(); i++) {
