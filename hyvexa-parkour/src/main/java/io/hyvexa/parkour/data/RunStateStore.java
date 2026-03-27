@@ -5,9 +5,6 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -28,12 +25,7 @@ public class RunStateStore {
     }
 
     public void ensureTable() {
-        if (!this.db.isInitialized()) {
-            return;
-        }
-        try (Connection conn = this.db.getConnection();
-             Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("""
+        DatabaseManager.execute(this.db, """
                 CREATE TABLE IF NOT EXISTS saved_run_state (
                     player_uuid         CHAR(36)    NOT NULL PRIMARY KEY,
                     map_id              VARCHAR(64) NOT NULL,
@@ -46,9 +38,6 @@ public class RunStateStore {
                     CONSTRAINT fk_saved_run_map FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB
                 """);
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to ensure saved_run_state table");
-        }
     }
 
     public void saveAsync(UUID playerId, String mapId, long elapsedMs, int lastCheckpointIndex,
