@@ -179,10 +179,6 @@ public final class SummitConstants {
         return baseCum + lateCum;
     }
 
-    /**
-     * Closed-form sum of fourth powers: sum(i^4, i=1..n) = n(n+1)(2n+1)(3n^2+3n-1)/30
-     * Computed in double to avoid intermediate overflow.
-     */
     private static double sumOfFourthPowers(long n) {
         double d = (double) n;
         return d * (d + 1) * (2 * d + 1) * (3 * d * d + 3 * d - 1) / 30.0;

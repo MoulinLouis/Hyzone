@@ -7,19 +7,12 @@ public final class ElevationConstants {
     private ElevationConstants() {
     }
 
-    /**
-     * Calculate the elevation multiplier for a given level.
-     * Multiplier = level (1:1).
-     */
     public static double getElevationMultiplier(int level) {
         return Math.max(1, level);
     }
 
-    /**
-     * Format the elevation multiplier for display.
-     */
     public static String formatElevationMultiplier(int level) {
-        return "x" + Math.max(1, level);
+        return "x" + (int) getElevationMultiplier(level);
     }
 
     // Elevation: cost curve flattened at high levels.
@@ -33,21 +26,10 @@ public final class ElevationConstants {
     public static final double ELEVATION_COST_CURVE_LATE = 0.58; // Late game exponent (level > SOFT_CAP)
     public static final int ELEVATION_SOFT_CAP = 300; // Level where late-game curve kicks in
 
-    /**
-     * Calculate the cost to reach the next elevation level.
-     * Below SOFT_CAP: baseCost * 1.15^(level^0.72)
-     * Above SOFT_CAP: baseCost * 1.15^(300^0.72 + (level-300)^0.58)
-     * Keeps identical early game, much flatter late game.
-     */
     public static BigNumber getElevationLevelUpCost(int currentLevel) {
         return getElevationLevelUpCost(currentLevel, BigNumber.ONE);
     }
 
-    /**
-     * Calculate the cost to reach the next elevation level with a cost multiplier.
-     * @param currentLevel The player's current elevation level
-     * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
-     */
     public static BigNumber getElevationLevelUpCost(int currentLevel, BigNumber costMultiplier) {
         int safeLevel = Math.max(0, currentLevel);
 
@@ -82,19 +64,11 @@ public final class ElevationConstants {
         return cost;
     }
 
-    /**
-     * Calculate how many levels can be purchased with given volt at current level.
-     * Returns the number of levels affordable and the total cost.
-     */
     public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVolt) {
         return calculateElevationPurchase(currentLevel, availableVolt, BigNumber.ONE);
     }
 
-    /**
-     * Calculate how many levels can be purchased with given volt and cost multiplier.
-     * Uses exponential probing + binary search to find the upper bound, then iterates precisely.
-     * No artificial cap — bounded naturally by exponential cost growth.
-     */
+    // Exponential probing + binary search for upper bound, then precise iteration.
     public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVolt, BigNumber costMultiplier) {
         if (availableVolt.lte(BigNumber.ZERO)
                 || costMultiplier.lte(BigNumber.ZERO)) {

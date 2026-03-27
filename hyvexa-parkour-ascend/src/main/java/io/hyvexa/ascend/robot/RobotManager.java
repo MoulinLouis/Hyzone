@@ -420,7 +420,7 @@ public class RobotManager {
         }
         return speedCalculator != null
             ? speedCalculator.calculateSpeedMultiplier(map, speedLevel, ownerId)
-            : 1.0 + (speedLevel * RunnerEconomyConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
+            : 1.0 + (speedLevel * RunnerEconomyConstants.getMapSpeedMultiplier());
     }
 
     public double getRunnerProgress(UUID ownerId, String mapId) {

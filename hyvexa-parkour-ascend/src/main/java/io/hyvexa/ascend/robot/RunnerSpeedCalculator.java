@@ -38,7 +38,7 @@ public class RunnerSpeedCalculator {
     }
 
     public double calculateSpeedMultiplier(AscendMap map, int speedLevel, UUID ownerId) {
-        double speedMultiplier = 1.0 + (speedLevel * RunnerEconomyConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
+        double speedMultiplier = 1.0 + (speedLevel * RunnerEconomyConstants.getMapSpeedMultiplier());
 
         if (summitManager != null) {
             speedMultiplier *= summitManager.getRunnerSpeedBonus(ownerId);

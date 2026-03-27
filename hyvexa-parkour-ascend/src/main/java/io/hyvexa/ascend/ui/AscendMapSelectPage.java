@@ -68,7 +68,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private static final String BUTTON_LEADERBOARD = "Leaderboard";
     private static final String BUTTON_CHALLENGE_TAB = "ChallengeTab";
     private static final String BUTTON_TRANSCENDENCE_TAB = "TranscendenceTab";
-    private static final int MAX_SPEED_LEVEL = 20;
+    private static final int MAX_SPEED_LEVEL = RunnerEconomyConstants.MAX_SPEED_LEVEL;
     private static final long BUY_ALL_COOLDOWN_MS = 100L; // 100ms cooldown to prevent race conditions while allowing satisfying spam clicks
 
     private static final Map<UUID, Long> lastBuyAllClick = new ConcurrentHashMap<>();
@@ -498,7 +498,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 actionPrice = BigNumber.ZERO;
             }
         } else {
-            int speedGainPercent = (int) (RunnerEconomyConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
+            int speedGainPercent = (int) (RunnerEconomyConstants.getMapSpeedMultiplier() * 100);
             runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
             if (speedLevel >= MAX_SPEED_LEVEL && stars < RunnerEconomyConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";

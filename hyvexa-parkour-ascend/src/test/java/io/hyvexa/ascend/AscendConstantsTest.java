@@ -13,19 +13,8 @@ class AscendConstantsTest {
     // --- Map accessors with bounds ---
 
     @Test
-    void getMapSpeedMultiplierValid() {
-        assertEquals(0.10, RunnerEconomyConstants.getMapSpeedMultiplier(0), 1e-9);
-    }
-
-    @Test
-    void getMapSpeedMultiplierOutOfBounds() {
-        // With single-mine simplification, all display orders return the same constant
-        assertEquals(RunnerEconomyConstants.MAP_SPEED_MULTIPLIER, RunnerEconomyConstants.getMapSpeedMultiplier(99), 1e-9);
-    }
-
-    @Test
-    void getMapSpeedMultiplierNegative() {
-        assertEquals(RunnerEconomyConstants.MAP_SPEED_MULTIPLIER, RunnerEconomyConstants.getMapSpeedMultiplier(-1), 1e-9);
+    void getMapSpeedMultiplier() {
+        assertEquals(0.10, RunnerEconomyConstants.getMapSpeedMultiplier(), 1e-9);
     }
 
     // --- Early level boost ---

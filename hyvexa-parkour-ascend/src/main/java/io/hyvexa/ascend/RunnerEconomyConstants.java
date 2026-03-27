@@ -30,7 +30,7 @@ public final class RunnerEconomyConstants {
     // Speed upgrade multiplier: uniform +10% per level for all maps
     public static final double MAP_SPEED_MULTIPLIER = 0.10;
 
-    public static double getMapSpeedMultiplier(int displayOrder) {
+    public static double getMapSpeedMultiplier() {
         return MAP_SPEED_MULTIPLIER;
     }
 
