@@ -7,7 +7,6 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -50,12 +49,7 @@ public class DuelStatsStore extends BasePlayerStore<DuelStats> {
     }
 
     private void ensureTable() {
-        try (Connection conn = getConnectionProvider().getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, CREATE_TABLE_SQL)) {
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to create duel_player_stats table: " + e.getMessage());
-        }
+        DatabaseManager.execute(getConnectionProvider(), CREATE_TABLE_SQL);
     }
 
     @Nullable
