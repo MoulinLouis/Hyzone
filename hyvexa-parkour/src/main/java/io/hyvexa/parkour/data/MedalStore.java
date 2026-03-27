@@ -4,9 +4,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -49,31 +46,19 @@ public class MedalStore {
                 + "earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
                 + "PRIMARY KEY (player_uuid, map_id, medal)"
                 + ") ENGINE=InnoDB";
-        try (Connection conn = connectionProvider.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(createSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            // Widen medal column to fit EMERALD/INSANE before any data migrations
-            try (PreparedStatement alterStmt = conn.prepareStatement(
-                    "ALTER TABLE player_medals MODIFY COLUMN medal VARCHAR(8) NOT NULL")) {
-                DatabaseManager.applyQueryTimeout(alterStmt);
-                alterStmt.executeUpdate();
-            } catch (SQLException ignored) {
-                // May fail if already widened
-            }
-            // Migrate old AUTHOR/PLATINUM medal values to EMERALD
-            try (PreparedStatement migStmt = conn.prepareStatement(
-                    "UPDATE player_medals SET medal = 'EMERALD' WHERE medal IN ('AUTHOR', 'PLATINUM', 'PLATIN', 'EMERAL')")) {
-                DatabaseManager.applyQueryTimeout(migStmt);
-                int migrated = migStmt.executeUpdate();
-                if (migrated > 0) {
-                    LOGGER.atInfo().log("Migrated " + migrated + " AUTHOR/PLATINUM medals to EMERALD");
-                }
-            }
-            LOGGER.atInfo().log("MedalStore initialized (player_medals table ensured)");
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create player_medals table");
+        if (!DatabaseManager.execute(connectionProvider, createSql)) {
+            return;
         }
+        // Widen medal column to fit EMERALD/INSANE before any data migrations
+        DatabaseManager.execute(connectionProvider,
+                "ALTER TABLE player_medals MODIFY COLUMN medal VARCHAR(8) NOT NULL");
+        // Migrate old AUTHOR/PLATINUM medal values to EMERALD
+        int migrated = DatabaseManager.executeCount(connectionProvider,
+                "UPDATE player_medals SET medal = 'EMERALD' WHERE medal IN ('AUTHOR', 'PLATINUM', 'PLATIN', 'EMERAL')");
+        if (migrated > 0) {
+            LOGGER.atInfo().log("Migrated " + migrated + " AUTHOR/PLATINUM medals to EMERALD");
+        }
+        LOGGER.atInfo().log("MedalStore initialized (player_medals table ensured)");
         loadLeaderboardSnapshot();
     }
 
