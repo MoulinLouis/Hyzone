@@ -12,12 +12,10 @@ import java.util.UUID;
 public class AscendVoltFacade {
 
     private final Map<UUID, AscendPlayerProgress> players;
-    private final AscendPlayerPersistence persistence;
     private final AscendPlayerStore store;
 
-    AscendVoltFacade(Map<UUID, AscendPlayerProgress> players, AscendPlayerPersistence persistence, AscendPlayerStore store) {
+    AscendVoltFacade(Map<UUID, AscendPlayerProgress> players, AscendPlayerStore store) {
         this.players = players;
-        this.persistence = persistence;
         this.store = store;
     }
 
@@ -38,19 +36,8 @@ public class AscendVoltFacade {
         store.markDirty(playerId);
     }
 
-    public boolean spendVolt(UUID playerId, BigNumber amount) {
-        AscendPlayerProgress progress = store.getOrCreatePlayer(playerId);
-        if (progress.economy().getVolt().lt(amount)) {
-            return false;
-        }
-        progress.economy().addVolt(amount.negate());
-        store.markDirty(playerId);
-        return true;
-    }
-
     /**
-     * Add volt to a player atomically. Returns [oldBalance, newBalance] for callers
-     * that need to trigger side-effects based on threshold crossings.
+     * Returns [oldBalance, newBalance] for callers that need to detect threshold crossings.
      */
     public BigNumber[] atomicAddVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = store.getOrCreatePlayer(playerId);
@@ -60,8 +47,7 @@ public class AscendVoltFacade {
     }
 
     /**
-     * Spend volt with balance check (prevents negative balance).
-     * Uses in-memory CAS loop. Returns false if insufficient funds.
+     * Spend volt with CAS loop to prevent negative balance.
      */
     public boolean atomicSpendVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = store.getOrCreatePlayer(playerId);
@@ -75,14 +61,6 @@ public class AscendVoltFacade {
             updated = current.subtract(amount);
         } while (!progress.economy().casVolt(current, updated));
         store.markDirty(playerId);
-        return true;
-    }
-
-    /**
-     * Add to total volt earned (lifetime stat) + accumulated volt trackers.
-     */
-    public boolean atomicAddTotalVoltEarned(UUID playerId, BigNumber amount) {
-        addTotalVoltEarned(playerId, amount);
         return true;
     }
 

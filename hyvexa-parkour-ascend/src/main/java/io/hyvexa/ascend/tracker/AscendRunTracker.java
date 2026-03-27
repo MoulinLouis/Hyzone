@@ -358,12 +358,8 @@ public class AscendRunTracker {
 
         // Use event handler for volt + side-effects (tutorial thresholds, ascension triggers)
         eventHandler.addVoltWithEffects(playerId, payout);
-        if (!playerStore.volt().atomicAddTotalVoltEarned(playerId, payout)) {
-            LOGGER.atWarning().log("Failed to add total volt earned for manual run: " + playerId);
-        }
-        if (!playerStore.runners().atomicAddMapMultiplier(playerId, run.mapId, multiplierIncrement)) {
-            LOGGER.atWarning().log("Failed to add map multiplier for manual run: " + playerId);
-        }
+        playerStore.volt().addTotalVoltEarned(playerId, payout);
+        playerStore.runners().addMapMultiplier(playerId, run.mapId, multiplierIncrement);
         playerStore.gameplay().incrementTotalManualRuns(playerId);
         playerStore.gameplay().incrementConsecutiveManualRuns(playerId);
 

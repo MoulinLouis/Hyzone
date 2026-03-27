@@ -19,10 +19,6 @@ public class AscendSettingsFacade {
         this.store = store;
     }
 
-    // ========================================
-    // Auto-Upgrade / Auto-Evolution
-    // ========================================
-
     public boolean isAutoUpgradeEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.automation().isAutoUpgradeEnabled();
@@ -44,10 +40,6 @@ public class AscendSettingsFacade {
         progress.automation().setAutoEvolutionEnabled(enabled);
         store.markDirty(playerId);
     }
-
-    // ========================================
-    // Auto-Elevation
-    // ========================================
 
     public boolean isAutoElevationEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
@@ -96,10 +88,6 @@ public class AscendSettingsFacade {
         store.markDirty(playerId);
     }
 
-    // ========================================
-    // Auto-Summit
-    // ========================================
-
     public boolean isAutoSummitEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.automation().isAutoSummitEnabled();
@@ -144,10 +132,6 @@ public class AscendSettingsFacade {
         store.markDirty(playerId);
     }
 
-    // ========================================
-    // Auto-Ascend
-    // ========================================
-
     public boolean isAutoAscendEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.automation().isAutoAscendEnabled();
@@ -159,10 +143,6 @@ public class AscendSettingsFacade {
         store.markDirty(playerId);
     }
 
-    // ========================================
-    // Break Ascension
-    // ========================================
-
     public boolean isBreakAscensionEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.automation().isBreakAscensionEnabled();
@@ -173,10 +153,6 @@ public class AscendSettingsFacade {
         progress.automation().setBreakAscensionEnabled(enabled);
         store.markDirty(playerId);
     }
-
-    // ========================================
-    // Visibility
-    // ========================================
 
     public boolean isHideOtherRunners(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
@@ -210,10 +186,6 @@ public class AscendSettingsFacade {
         progress.session().setPlayersHidden(hidden);
         store.markDirty(playerId);
     }
-
-    // ========================================
-    // Session
-    // ========================================
 
     public boolean isSessionFirstRunClaimed(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);

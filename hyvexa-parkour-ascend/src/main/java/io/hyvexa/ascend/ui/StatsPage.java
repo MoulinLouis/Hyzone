@@ -129,11 +129,11 @@ public class StatsPage extends BaseAscendPage {
         commandBuilder.set("#IncomeValue.Text", formatCombinedIncome(playerId, maps));
 
         // 2. Multiplier Breakdown
-        BigNumber[] digits = playerStore.progression().getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        AscendPlayerStore.MultiplierResult mr = playerStore.progression().getMultiplierProductAndValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.progression().getCalculatedElevationMultiplier(playerId);
 
         double digitsProduct = 1.0;
-        for (BigNumber d : digits) {
+        for (BigNumber d : mr.values) {
             digitsProduct *= Math.max(1.0, d.toDouble());
         }
         double total = digitsProduct * elevation;
@@ -184,7 +184,7 @@ public class StatsPage extends BaseAscendPage {
         }
         double totalVoltPerSec = 0.0;
 
-        BigNumber digitsProduct = playerStore.progression().getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        BigNumber digitsProduct = playerStore.progression().getMultiplierProductAndValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS).product;
 
         for (AscendMap map : maps) {
             GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerId, map.getId());

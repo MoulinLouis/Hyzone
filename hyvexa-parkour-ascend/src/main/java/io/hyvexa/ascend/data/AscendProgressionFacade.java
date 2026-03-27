@@ -29,10 +29,6 @@ public class AscendProgressionFacade {
         this.challengeManager = challengeManager;
     }
 
-    // ========================================
-    // Elevation
-    // ========================================
-
     /**
      * Gets the raw elevation level (stored value).
      * For the actual multiplier value, use {@link #getCalculatedElevationMultiplier(UUID)}.
@@ -71,34 +67,23 @@ public class AscendProgressionFacade {
     /**
      * Set elevation level and reset volt to 0 (for elevation purchase).
      */
-    public boolean atomicSetElevationAndResetVolt(UUID playerId, int newElevation) {
+    public void atomicSetElevationAndResetVolt(UUID playerId, int newElevation) {
         AscendPlayerProgress progress = store.getOrCreatePlayer(playerId);
         progress.economy().setElevationMultiplier(newElevation);
         progress.economy().setVolt(BigNumber.ZERO);
         progress.economy().setSummitAccumulatedVolt(BigNumber.ZERO);
         progress.economy().setElevationAccumulatedVolt(BigNumber.ZERO);
         store.markDirty(playerId);
-        return true;
     }
-
-    // ========================================
-    // Summit
-    // ========================================
 
     public int getSummitLevel(UUID playerId, SummitCategory category) {
         AscendPlayerProgress progress = players.get(playerId);
-        if (progress == null) {
-            return 0;
-        }
-        return progress.economy().getSummitLevel(category);
+        return progress != null ? progress.economy().getSummitLevel(category) : 0;
     }
 
     public double getSummitXp(UUID playerId, SummitCategory category) {
         AscendPlayerProgress progress = players.get(playerId);
-        if (progress == null) {
-            return 0.0;
-        }
-        return progress.economy().getSummitXp(category);
+        return progress != null ? progress.economy().getSummitXp(category) : 0.0;
     }
 
     public double addSummitXp(UUID playerId, SummitCategory category, double amount) {
@@ -110,20 +95,13 @@ public class AscendProgressionFacade {
 
     public Map<SummitCategory, Integer> getSummitLevels(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        if (progress == null) {
-            return Map.of();
-        }
-        return progress.economy().getSummitLevels();
+        return progress != null ? progress.economy().getSummitLevels() : Map.of();
     }
 
     public double getSummitBonusDouble(UUID playerId, SummitCategory category) {
         int level = getSummitLevel(playerId, category);
         return category.getBonusForLevel(level);
     }
-
-    // ========================================
-    // Accumulated Volt
-    // ========================================
 
     public BigNumber getSummitAccumulatedVolt(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
@@ -153,10 +131,6 @@ public class AscendProgressionFacade {
         store.markDirty(playerId);
     }
 
-    // ========================================
-    // Ascension / Transcendence
-    // ========================================
-
     public int getAscensionCount(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null ? progress.gameplay().getAscensionCount() : 0;
@@ -167,67 +141,10 @@ public class AscendProgressionFacade {
         return progress != null ? progress.gameplay().getTranscendenceCount() : 0;
     }
 
-    // ========================================
-    // Multiplier Calculations
-    // ========================================
-
-    public BigNumber[] getMultiplierDisplayValues(UUID playerId, List<AscendMap> maps, int slotCount) {
-        int slots = Math.max(0, slotCount);
-        BigNumber[] digits = new BigNumber[slots];
-        for (int i = 0; i < slots; i++) {
-            digits[i] = BigNumber.ONE;
-        }
-        if (maps == null || maps.isEmpty() || slots == 0) {
-            return digits;
-        }
-        int index = 0;
-        for (AscendMap map : maps) {
-            if (index >= slots) {
-                break;
-            }
-            if (map == null || map.getId() == null) {
-                continue;
-            }
-            BigNumber value = store.runners().getMapMultiplier(playerId, map.getId());
-            double challengeMapBonus = getChallengeMapBonus(playerId, map.getDisplayOrder());
-            if (challengeMapBonus > 1.0) {
-                value = value.multiply(BigNumber.fromDouble(challengeMapBonus));
-            }
-            digits[index] = value;
-            index++;
-        }
-        return digits;
-    }
-
-    public BigNumber getMultiplierProduct(UUID playerId, List<AscendMap> maps, int slotCount) {
-        BigNumber product = BigNumber.ONE;
-        int slots = Math.max(0, slotCount);
-        if (maps == null || maps.isEmpty() || slots == 0) {
-            BigNumber elevation = BigNumber.fromDouble(getCalculatedElevationMultiplier(playerId));
-            return product.multiply(elevation);
-        }
-        int index = 0;
-        for (AscendMap map : maps) {
-            if (index >= slots) {
-                break;
-            }
-            if (map == null || map.getId() == null) {
-                continue;
-            }
-            BigNumber value = store.runners().getMapMultiplier(playerId, map.getId());
-            double challengeMapBonus = getChallengeMapBonus(playerId, map.getDisplayOrder());
-            if (challengeMapBonus > 1.0) {
-                value = value.multiply(BigNumber.fromDouble(challengeMapBonus));
-            }
-            product = product.multiply(value.max(BigNumber.ONE));
-            index++;
-        }
-        BigNumber elevation = BigNumber.fromDouble(getCalculatedElevationMultiplier(playerId));
-        return product.multiply(elevation);
-    }
-
     /**
-     * Computes both the multiplier product and per-slot display values in a single pass.
+     * Computes multiplier product and per-slot display values in a single pass.
+     * Resolves the player once and accesses map progress directly to avoid
+     * per-slot map lookups through the runner facade.
      */
     public AscendPlayerStore.MultiplierResult getMultiplierProductAndValues(UUID playerId, List<AscendMap> maps, int slotCount) {
         int slots = Math.max(0, slotCount);
@@ -237,6 +154,9 @@ public class AscendProgressionFacade {
         }
         BigNumber product = BigNumber.ONE;
         if (maps != null && !maps.isEmpty() && slots > 0) {
+            AscendPlayerProgress progress = players.get(playerId);
+            Map<String, GameplayState.MapProgress> mapProgressMap = progress != null
+                    ? progress.gameplay().getMapProgress() : Map.of();
             int index = 0;
             for (AscendMap map : maps) {
                 if (index >= slots) {
@@ -245,7 +165,7 @@ public class AscendProgressionFacade {
                 if (map == null || map.getId() == null) {
                     continue;
                 }
-                BigNumber value = store.runners().getMapMultiplier(playerId, map.getId());
+                BigNumber value = getMapMultiplierFromProgress(mapProgressMap, map.getId());
                 double challengeMapBonus = getChallengeMapBonus(playerId, map.getDisplayOrder());
                 if (challengeMapBonus > 1.0) {
                     value = value.multiply(BigNumber.fromDouble(challengeMapBonus));
@@ -260,6 +180,10 @@ public class AscendProgressionFacade {
         return new AscendPlayerStore.MultiplierResult(product, digits);
     }
 
+    /**
+     * Computes the multiplier product (with optional bonus on one map) in a single pass.
+     * Used for payout calculations where a bonus amount is added to one specific map slot.
+     */
     public BigNumber getCompletionPayout(UUID playerId, List<AscendMap> maps, int slotCount, String mapId, BigNumber bonusAmount) {
         BigNumber product = BigNumber.ONE;
         int slots = Math.max(0, slotCount);
@@ -267,6 +191,9 @@ public class AscendProgressionFacade {
             BigNumber elevation = BigNumber.fromDouble(getCalculatedElevationMultiplier(playerId));
             return product.multiply(elevation);
         }
+        AscendPlayerProgress progress = players.get(playerId);
+        Map<String, GameplayState.MapProgress> mapProgressMap = progress != null
+                ? progress.gameplay().getMapProgress() : Map.of();
         int index = 0;
         for (AscendMap map : maps) {
             if (index >= slots) {
@@ -275,7 +202,7 @@ public class AscendProgressionFacade {
             if (map == null || map.getId() == null) {
                 continue;
             }
-            BigNumber value = store.runners().getMapMultiplier(playerId, map.getId());
+            BigNumber value = getMapMultiplierFromProgress(mapProgressMap, map.getId());
             double challengeMapBonus = getChallengeMapBonus(playerId, map.getDisplayOrder());
             if (challengeMapBonus > 1.0) {
                 value = value.multiply(BigNumber.fromDouble(challengeMapBonus));
@@ -290,9 +217,14 @@ public class AscendProgressionFacade {
         return product.multiply(elevation);
     }
 
-    /**
-     * Get map base multiplier bonus from completed challenge rewards.
-     */
+    private static BigNumber getMapMultiplierFromProgress(Map<String, GameplayState.MapProgress> mapProgressMap, String mapId) {
+        GameplayState.MapProgress mapProgress = mapProgressMap.get(mapId);
+        if (mapProgress == null) {
+            return BigNumber.ONE;
+        }
+        return mapProgress.getMultiplier().max(BigNumber.ONE);
+    }
+
     private double getChallengeMapBonus(UUID playerId, int displayOrder) {
         if (challengeManager != null) {
             return challengeManager.getChallengeMapBaseMultiplier(playerId, displayOrder);

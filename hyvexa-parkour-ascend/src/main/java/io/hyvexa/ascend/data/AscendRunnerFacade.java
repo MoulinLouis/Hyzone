@@ -33,10 +33,6 @@ public class AscendRunnerFacade {
         this.robotManager = robotManager;
     }
 
-    // ========================================
-    // Map Progress
-    // ========================================
-
     public GameplayState.MapProgress getMapProgress(UUID playerId, String mapId) {
         AscendPlayerProgress progress = players.get(playerId);
         if (progress == null) {
@@ -74,10 +70,6 @@ public class AscendRunnerFacade {
         }
         return dbBest;
     }
-
-    // ========================================
-    // Map Unlocks
-    // ========================================
 
     public boolean setMapUnlocked(UUID playerId, String mapId, boolean unlocked) {
         GameplayState.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
@@ -124,10 +116,6 @@ public class AscendRunnerFacade {
         return newlyUnlockedMapIds;
     }
 
-    // ========================================
-    // Map Multipliers
-    // ========================================
-
     public BigNumber getMapMultiplier(UUID playerId, String mapId) {
         GameplayState.MapProgress mapProgress = getMapProgress(playerId, mapId);
         if (mapProgress == null) {
@@ -142,18 +130,6 @@ public class AscendRunnerFacade {
         store.markDirty(playerId);
         return value;
     }
-
-    /**
-     * Add to map multiplier. In-memory update + debounced save.
-     */
-    public boolean atomicAddMapMultiplier(UUID playerId, String mapId, BigNumber amount) {
-        addMapMultiplier(playerId, mapId, amount);
-        return true;
-    }
-
-    // ========================================
-    // Robots
-    // ========================================
 
     public boolean hasRobot(UUID playerId, String mapId) {
         GameplayState.MapProgress mapProgress = getMapProgress(playerId, mapId);

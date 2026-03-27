@@ -35,7 +35,6 @@ public class AscendPlayerStore {
     private ChallengeManager challengeManager;
     private RobotManager robotManager;
 
-    // Domain facades
     private final AscendVoltFacade voltFacade;
     private final AscendProgressionFacade progressionFacade;
     private final AscendRunnerFacade runnerFacade;
@@ -45,7 +44,7 @@ public class AscendPlayerStore {
     public AscendPlayerStore(ConnectionProvider db) {
         this.db = db;
         this.persistence = new AscendPlayerPersistence(db, players, playerNames, resetPendingPlayers);
-        this.voltFacade = new AscendVoltFacade(players, persistence, this);
+        this.voltFacade = new AscendVoltFacade(players, this);
         this.progressionFacade = new AscendProgressionFacade(players, this);
         this.runnerFacade = new AscendRunnerFacade(players, persistence, this);
         this.gameplayFacade = new AscendGameplayFacade(players, this);
@@ -59,19 +58,11 @@ public class AscendPlayerStore {
         runnerFacade.setRuntimeServices(challengeManager, robotManager);
     }
 
-    // ========================================
-    // Facade Accessors
-    // ========================================
-
     public AscendVoltFacade volt() { return voltFacade; }
     public AscendProgressionFacade progression() { return progressionFacade; }
     public AscendRunnerFacade runners() { return runnerFacade; }
     public AscendGameplayFacade gameplay() { return gameplayFacade; }
     public AscendSettingsFacade settings() { return settingsFacade; }
-
-    // ========================================
-    // Records
-    // ========================================
 
     public record LeaderboardEntry(UUID playerId, String playerName,
             double totalVoltEarnedMantissa, int totalVoltEarnedExp10,
@@ -92,10 +83,6 @@ public class AscendPlayerStore {
             this.values = values;
         }
     }
-
-    // ========================================
-    // Cache Lifecycle
-    // ========================================
 
     /**
      * Initialize the store. With lazy loading, we don't load all players upfront.
@@ -122,14 +109,12 @@ public class AscendPlayerStore {
     }
 
     public AscendPlayerProgress getOrCreatePlayer(UUID playerId) {
-        // Fast path: already cached
         AscendPlayerProgress progress = players.get(playerId);
         if (progress != null) {
             migrateAscensionTimer(playerId, progress);
             return progress;
         }
 
-        // Slow path: load from DB or create new
         AscendPlayerProgress loaded = persistence.loadPlayerFromDatabase(playerId);
         if (loaded == null) {
             loaded = new AscendPlayerProgress();
@@ -137,15 +122,12 @@ public class AscendPlayerStore {
             markDirty(playerId);
         }
 
-        // Atomic insert — if another thread won the race, use their instance
         AscendPlayerProgress existing = players.putIfAbsent(playerId, loaded);
         if (existing != null) {
-            // Another thread already inserted — use their version
             migrateAscensionTimer(playerId, existing);
             return existing;
         }
 
-        // We won the race — our instance is now in the cache
         migrateAscensionTimer(playerId, loaded);
         return loaded;
     }
@@ -176,10 +158,6 @@ public class AscendPlayerStore {
         resetPendingPlayers.remove(playerId);
     }
 
-    // ========================================
-    // Player Names
-    // ========================================
-
     public void storePlayerName(UUID playerId, String name) {
         if (playerId == null || name == null) {
             return;
@@ -191,10 +169,6 @@ public class AscendPlayerStore {
     public String getPlayerName(UUID playerId) {
         return playerNames.get(playerId);
     }
-
-    // ========================================
-    // Persistence
-    // ========================================
 
     public void markDirty(UUID playerId) {
         if (playerId == null) {
@@ -216,10 +190,6 @@ public class AscendPlayerStore {
     public boolean savePlayerSync(UUID playerId) {
         return persistence.savePlayerSync(playerId);
     }
-
-    // ========================================
-    // Resets
-    // ========================================
 
     public void resetPlayerProgress(UUID playerId) {
         // Mark as reset so any concurrent/pending syncSave() will
@@ -417,10 +387,6 @@ public class AscendPlayerStore {
         }
         robotManager.markPlayerDirty(playerId);
     }
-
-    // ========================================
-    // Leaderboard (delegated to persistence)
-    // ========================================
 
     public List<LeaderboardEntry> getLeaderboardEntries() {
         return persistence.getLeaderboardEntries();

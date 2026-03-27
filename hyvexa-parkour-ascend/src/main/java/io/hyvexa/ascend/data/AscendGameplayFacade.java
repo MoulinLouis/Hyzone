@@ -22,10 +22,6 @@ public class AscendGameplayFacade {
         this.store = store;
     }
 
-    // ========================================
-    // Skill Tree
-    // ========================================
-
     public int getSkillTreePoints(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null ? progress.gameplay().getSkillTreePoints() : 0;
@@ -69,10 +65,6 @@ public class AscendGameplayFacade {
         return progress.gameplay().getUnlockedSkillNodes();
     }
 
-    // ========================================
-    // Achievements
-    // ========================================
-
     public boolean hasAchievement(UUID playerId, AchievementType achievement) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.gameplay().hasAchievement(achievement);
@@ -95,10 +87,6 @@ public class AscendGameplayFacade {
         }
         return progress.gameplay().getUnlockedAchievements();
     }
-
-    // ========================================
-    // Run Tracking
-    // ========================================
 
     public int getTotalManualRuns(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
@@ -131,10 +119,6 @@ public class AscendGameplayFacade {
             store.markDirty(playerId);
         }
     }
-
-    // ========================================
-    // Tutorials
-    // ========================================
 
     public boolean hasSeenTutorial(UUID playerId, int bit) {
         AscendPlayerProgress progress = players.get(playerId);

@@ -395,12 +395,8 @@ public class RobotManager {
 
         // Use event handler for volt + side-effects (tutorial thresholds, ascension triggers)
         eventHandler.addVoltWithEffects(ownerId, totalPayout);
-        if (!playerStore.volt().atomicAddTotalVoltEarned(ownerId, totalPayout)) {
-            LOGGER.atWarning().log("Failed to add total volt earned for " + ownerId);
-        }
-        if (!playerStore.runners().atomicAddMapMultiplier(ownerId, mapId, totalMultiplierBonus)) {
-            LOGGER.atWarning().log("Failed to add map multiplier for " + ownerId + " on map " + mapId);
-        }
+        playerStore.volt().addTotalVoltEarned(ownerId, totalPayout);
+        playerStore.runners().addMapMultiplier(ownerId, mapId, totalMultiplierBonus);
 
         robot.setLastCompletionMs(lastCompletionMs + (intervalMs * completions));
         robot.addRunsCompleted(completions);
