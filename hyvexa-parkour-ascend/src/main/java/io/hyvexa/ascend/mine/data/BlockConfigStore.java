@@ -1,6 +1,5 @@
 package io.hyvexa.ascend.mine.data;
 
-import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -13,8 +12,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BlockConfigStore {
-
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final ConnectionProvider db;
 
@@ -53,24 +50,17 @@ public class BlockConfigStore {
 
         if (price <= 1) {
             blockPrices.remove(blockTypeId);
-        } else {
-            blockPrices.put(blockTypeId, price);
-        }
-
-        if (!this.db.isInitialized()) return;
-
-        if (price <= 1) {
             removeBlockPriceFromDatabase(blockTypeId);
             return;
         }
 
-        String sql = """
+        blockPrices.put(blockTypeId, price);
+
+        DatabaseManager.execute(this.db, """
             INSERT INTO block_prices (block_type_id, price)
             VALUES (?, ?)
             ON DUPLICATE KEY UPDATE price = VALUES(price)
-            """;
-
-        DatabaseManager.execute(this.db, sql, stmt -> {
+            """, stmt -> {
             stmt.setString(1, blockTypeId);
             stmt.setLong(2, price);
         });
@@ -115,24 +105,17 @@ public class BlockConfigStore {
 
         if (hp <= 1) {
             blockHpMap.remove(blockTypeId);
-        } else {
-            blockHpMap.put(blockTypeId, hp);
-        }
-
-        if (!this.db.isInitialized()) return;
-
-        if (hp <= 1) {
             removeBlockHpFromDatabase(blockTypeId);
             return;
         }
 
-        String sql = """
+        blockHpMap.put(blockTypeId, hp);
+
+        DatabaseManager.execute(this.db, """
             INSERT INTO block_hp (block_type_id, hp)
             VALUES (?, ?)
             ON DUPLICATE KEY UPDATE hp = VALUES(hp)
-            """;
-
-        DatabaseManager.execute(this.db, sql, stmt -> {
+            """, stmt -> {
             stmt.setString(1, blockTypeId);
             stmt.setInt(2, hp);
         });

@@ -83,7 +83,7 @@ public class MineHierarchyStore {
 
     private void loadZones(Connection conn) throws SQLException {
         String sql = "SELECT id, mine_id, min_x, min_y, min_z, max_x, max_y, max_z, " +
-            "block_table_json, regen_threshold, regen_cooldown_seconds FROM mine_zones";
+            "block_table_json, regen_cooldown_seconds FROM mine_zones";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -150,18 +150,26 @@ public class MineHierarchyStore {
                         layer.setEggItemId(rs.getString("egg_item_id"));
                     } catch (SQLException ignored) {}
                     layerById.put(layer.getId(), layer);
-                    boolean attached = false;
                     for (Mine mine : mines.values()) {
+                        boolean attached = false;
                         for (MineZone zone : mine.getZones()) {
                             if (zone.getId().equals(zoneId)) {
                                 zone.getLayers().add(layer);
-                                sortLayers(zone);
                                 attached = true;
                                 break;
                             }
                         }
                         if (attached) break;
                     }
+                }
+            }
+        }
+
+        // Sort layers once after all are loaded (SQL already orders them, but this ensures consistency)
+        for (Mine mine : mines.values()) {
+            for (MineZone zone : mine.getZones()) {
+                if (!zone.getLayers().isEmpty()) {
+                    sortLayers(zone);
                 }
             }
         }
@@ -204,7 +212,7 @@ public class MineHierarchyStore {
 
             List<Map.Entry<String, Double>> sorted = new ArrayList<>(layer.getBlockTable().entrySet());
             sorted.sort(Map.Entry.comparingByValue());
-            java.util.Set<String> rareBlocks = new java.util.HashSet<>();
+            Set<String> rareBlocks = new HashSet<>();
             for (int i = 0; i < Math.min(2, sorted.size()); i++) {
                 rareBlocks.add(sorted.get(i).getKey());
             }

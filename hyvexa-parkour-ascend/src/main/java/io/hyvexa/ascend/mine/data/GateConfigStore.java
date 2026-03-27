@@ -1,6 +1,5 @@
 package io.hyvexa.ascend.mine.data;
 
-import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -11,7 +10,6 @@ import java.sql.SQLException;
 
 public class GateConfigStore {
 
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final int GATE_ENTRY = 1;
     private static final int GATE_EXIT = 2;
 

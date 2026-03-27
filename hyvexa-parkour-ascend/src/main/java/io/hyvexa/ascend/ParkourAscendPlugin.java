@@ -229,14 +229,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
             if (db.isInitialized()) {
                 try (var conn = db.getConnection()) {
-                    if (conn != null) {
-                        mineHierarchyStore.syncLoad(conn);
-                        blockConfigStore.syncLoad(conn);
-                        tierConfigStore.syncLoad(conn);
-                        gateConfigStore.syncLoad(conn);
-                        minerConfigStore.syncLoad(conn);
-                        conveyorConfigStore.syncLoad(conn);
-                    }
+                    mineHierarchyStore.syncLoad(conn);
+                    blockConfigStore.syncLoad(conn);
+                    tierConfigStore.syncLoad(conn);
+                    gateConfigStore.syncLoad(conn);
+                    minerConfigStore.syncLoad(conn);
+                    conveyorConfigStore.syncLoad(conn);
                 }
             }
 

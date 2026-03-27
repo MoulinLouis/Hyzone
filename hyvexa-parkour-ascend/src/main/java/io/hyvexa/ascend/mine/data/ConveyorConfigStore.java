@@ -1,6 +1,5 @@
 package io.hyvexa.ascend.mine.data;
 
-import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -16,8 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public class ConveyorConfigStore {
-
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final ConnectionProvider db;
     private final Supplier<String> defaultMineId;
@@ -86,8 +83,6 @@ public class ConveyorConfigStore {
         int order = wps.size();
         wps.add(new double[]{x, y, z});
 
-        if (!this.db.isInitialized()) return;
-
         DatabaseManager.execute(this.db,
             "INSERT INTO mine_conveyor_waypoints (mine_id, slot_index, waypoint_order, x, y, z) VALUES (?, ?, ?, ?, ?, ?)",
             stmt -> {
@@ -105,8 +100,6 @@ public class ConveyorConfigStore {
         if (mineWps != null) {
             mineWps.remove(slotIndex);
         }
-
-        if (!this.db.isInitialized()) return;
 
         DatabaseManager.execute(this.db,
             "DELETE FROM mine_conveyor_waypoints WHERE mine_id = ? AND slot_index = ?",

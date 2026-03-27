@@ -1,6 +1,5 @@
 package io.hyvexa.ascend.mine.data;
 
-import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -13,8 +12,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TierConfigStore {
-
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final ConnectionProvider db;
 
@@ -58,8 +55,6 @@ public class TierConfigStore {
         tierRecipes.computeIfAbsent(targetTier, k -> new ConcurrentHashMap<>())
             .put(blockTypeId, amount);
 
-        if (!this.db.isInitialized()) return;
-
         DatabaseManager.execute(this.db, """
             INSERT INTO pickaxe_tier_recipes (tier, block_type_id, amount)
             VALUES (?, ?, ?)
@@ -80,8 +75,6 @@ public class TierConfigStore {
             recipe.remove(blockTypeId);
             if (recipe.isEmpty()) tierRecipes.remove(targetTier);
         }
-
-        if (!this.db.isInitialized()) return;
 
         DatabaseManager.execute(this.db,
             "DELETE FROM pickaxe_tier_recipes WHERE tier = ? AND block_type_id = ?",
@@ -121,8 +114,6 @@ public class TierConfigStore {
         enhanceCosts.computeIfAbsent(tier, k -> new ConcurrentHashMap<>())
             .put(level, cost);
 
-        if (!this.db.isInitialized()) return;
-
         DatabaseManager.execute(this.db, """
             INSERT INTO pickaxe_enhance_costs (tier, level, crystal_cost)
             VALUES (?, ?, ?)
@@ -141,8 +132,6 @@ public class TierConfigStore {
             costs.remove(level);
             if (costs.isEmpty()) enhanceCosts.remove(tier);
         }
-
-        if (!this.db.isInitialized()) return;
 
         DatabaseManager.execute(this.db,
             "DELETE FROM pickaxe_enhance_costs WHERE tier = ? AND level = ?",

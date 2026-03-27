@@ -1,6 +1,5 @@
 package io.hyvexa.ascend.mine.data;
 
-import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -13,8 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public class MinerConfigStore {
-
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final ConnectionProvider db;
     private final Supplier<String> defaultMineId;
@@ -67,11 +64,6 @@ public class MinerConfigStore {
         return null;
     }
 
-    /** Backward-compat: returns slot 0. */
-    public MinerSlot getMinerSlot(String mineId) {
-        return getMinerSlot(mineId, 0);
-    }
-
     public List<MinerSlot> getMinerSlots(String mineId) {
         List<MinerSlot> slots = minerSlots.get(mineId);
         return slots != null ? Collections.unmodifiableList(slots) : Collections.emptyList();
@@ -84,8 +76,6 @@ public class MinerConfigStore {
         slots.removeIf(s -> s.getSlotIndex() == slot.getSlotIndex());
         slots.add(slot);
         slots.sort(Comparator.comparingInt(MinerSlot::getSlotIndex));
-
-        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO mine_miner_slots (mine_id, slot_index, npc_x, npc_y, npc_z, npc_yaw,
@@ -166,8 +156,6 @@ public class MinerConfigStore {
 
         minerDefs.computeIfAbsent(def.layerId(), k -> new ConcurrentHashMap<>())
             .put(def.rarity(), def);
-
-        if (!this.db.isInitialized()) return;
 
         String sql = """
             INSERT INTO mine_layer_miner_defs (layer_id, rarity, display_name, portrait_id)
