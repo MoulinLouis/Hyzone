@@ -312,7 +312,7 @@ public class AscendRunTracker {
             SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, SoundCategory.SFX);
         }
 
-        GameplayState.MapProgress mapProgress = playerStore.getOrCreateMapProgress(playerId, run.mapId);
+        GameplayState.MapProgress mapProgress = playerStore.runners().getOrCreateMapProgress(playerId, run.mapId);
 
         boolean firstCompletion = !mapProgress.isCompletedManually();
 
@@ -321,7 +321,7 @@ public class AscendRunTracker {
         playerStore.markDirty(playerId);
 
         // Manual multiplier increment = runner's multiplier increment for this map × 5
-        int runnerStars = playerStore.getRobotStars(playerId, run.mapId);
+        int runnerStars = playerStore.runners().getRobotStars(playerId, run.mapId);
         SummitManager.BonusTriplet bonuses = summitManager != null
             ? summitManager.getAllBonuses(playerId)
             : new SummitManager.BonusTriplet(1.0, 3.0, 0.0);
@@ -346,7 +346,7 @@ public class AscendRunTracker {
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
-        BigNumber payout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigNumber.ZERO);
+        BigNumber payout = playerStore.progression().getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigNumber.ZERO);
 
         // Mine cross-progression: volt gain bonus
         if (mineBonusCalc != null && mineProgress != null) {
@@ -358,14 +358,14 @@ public class AscendRunTracker {
 
         // Use event handler for volt + side-effects (tutorial thresholds, ascension triggers)
         eventHandler.addVoltWithEffects(playerId, payout);
-        if (!playerStore.atomicAddTotalVoltEarned(playerId, payout)) {
+        if (!playerStore.volt().atomicAddTotalVoltEarned(playerId, payout)) {
             LOGGER.atWarning().log("Failed to add total volt earned for manual run: " + playerId);
         }
-        if (!playerStore.atomicAddMapMultiplier(playerId, run.mapId, multiplierIncrement)) {
+        if (!playerStore.runners().atomicAddMapMultiplier(playerId, run.mapId, multiplierIncrement)) {
             LOGGER.atWarning().log("Failed to add map multiplier for manual run: " + playerId);
         }
-        playerStore.incrementTotalManualRuns(playerId);
-        playerStore.incrementConsecutiveManualRuns(playerId);
+        playerStore.gameplay().incrementTotalManualRuns(playerId);
+        playerStore.gameplay().incrementConsecutiveManualRuns(playerId);
 
         // Calculate completion time and validate range
         long completionTimeMs = System.currentTimeMillis() - run.startTimeMs;
@@ -376,7 +376,7 @@ public class AscendRunTracker {
                 completionTimeMs, playerId, map.getId(), maxReasonableMs);
         }
 
-        Long previousBest = playerStore.getBestTimeMs(playerId, run.mapId);
+        Long previousBest = playerStore.runners().getBestTimeMs(playerId, run.mapId);
         boolean isPersonalBest = validTime && (previousBest == null || completionTimeMs < previousBest);
 
         if (isPersonalBest) {

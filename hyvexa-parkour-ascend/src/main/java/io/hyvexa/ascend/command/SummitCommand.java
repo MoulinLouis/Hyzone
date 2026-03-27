@@ -119,7 +119,7 @@ public class SummitCommand extends AbstractAsyncCommand {
             }
 
             if (!summitManager.canSummit(playerId)) {
-                BigNumber volt = playerStore.getVolt(playerId);
+                BigNumber volt = playerStore.volt().getVolt(playerId);
                 String minVolt = FormatUtils.formatBigNumber(
                     BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VOLT));
                 player.sendMessage(Message.raw("[Summit] Need " + minVolt

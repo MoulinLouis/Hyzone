@@ -150,20 +150,20 @@ public class TutorialTriggerService {
     }
 
     private void triggerIfUnseen(UUID playerId, Ref<EntityStore> entityRef, int bit, TutorialOpener opener) {
-        if (playerStore.hasSeenTutorial(playerId, bit)) {
+        if (playerStore.gameplay().hasSeenTutorial(playerId, bit)) {
             return;
         }
-        playerStore.markTutorialSeen(playerId, bit);
+        playerStore.gameplay().markTutorialSeen(playerId, bit);
 
         scheduleOpener(playerId, opener);
     }
 
     private void triggerFromUuid(UUID playerId, int bit, TutorialOpener opener) {
-        if (playerStore.hasSeenTutorial(playerId, bit)) {
+        if (playerStore.gameplay().hasSeenTutorial(playerId, bit)) {
             return;
         }
         // Mark as seen immediately to prevent re-triggers
-        playerStore.markTutorialSeen(playerId, bit);
+        playerStore.gameplay().markTutorialSeen(playerId, bit);
 
         // If player is in a run, defer the tutorial opening
         if (runTracker != null && (runTracker.isRunActive(playerId) || runTracker.isPendingRun(playerId))) {

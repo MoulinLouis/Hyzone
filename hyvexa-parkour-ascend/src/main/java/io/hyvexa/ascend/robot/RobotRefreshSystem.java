@@ -371,7 +371,7 @@ class RobotRefreshSystem {
             return;
         }
         AscendPlayerStore playerStore = manager.getPlayerStore();
-        boolean hide = playerStore.isHideOtherRunners(viewerId);
+        boolean hide = playerStore.settings().isHideOtherRunners(viewerId);
         EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
         for (RobotState state : manager.getRobots().values()) {
             if (state.getOwnerId().equals(viewerId)) {

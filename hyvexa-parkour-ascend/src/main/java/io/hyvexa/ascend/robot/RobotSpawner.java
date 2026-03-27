@@ -212,7 +212,7 @@ class RobotSpawner {
             if (viewerId.equals(runnerOwnerId)) {
                 continue; // Owner always sees their own runners
             }
-            if (manager.getPlayerStore().isHideOtherRunners(viewerId)) {
+            if (manager.getPlayerStore().settings().isHideOtherRunners(viewerId)) {
                 visibilityManager.hideEntity(viewerId, entityUuid);
             }
         }

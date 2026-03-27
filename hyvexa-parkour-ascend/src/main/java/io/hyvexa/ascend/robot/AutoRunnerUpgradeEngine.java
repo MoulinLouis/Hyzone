@@ -60,7 +60,7 @@ class AutoRunnerUpgradeEngine {
             GhostRecording ghost = manager.getGhostStore().getRecording(playerId, map.getId());
             if (ghost == null && mp.getBestTimeMs() == null) continue;
 
-            manager.getPlayerStore().setHasRobot(playerId, map.getId(), true);
+            manager.getPlayerStore().runners().setHasRobot(playerId, map.getId(), true);
             return; // One action per call for smooth visual
         }
 
@@ -76,7 +76,7 @@ class AutoRunnerUpgradeEngine {
                     if (mp == null || !mp.hasRobot()) continue;
                     if (mp.getRobotSpeedLevel() >= AscendConstants.MAX_SPEED_LEVEL
                             && mp.getRobotStars() < AscendConstants.MAX_ROBOT_STARS) {
-                        int newStars = manager.getPlayerStore().evolveRobot(playerId, map.getId());
+                        int newStars = manager.getPlayerStore().runners().evolveRobot(playerId, map.getId());
                         manager.respawnRobot(playerId, map.getId(), newStars);
                         anyEvolved = true;
                     }
@@ -109,9 +109,9 @@ class AutoRunnerUpgradeEngine {
         }
 
         if (cheapestMapId != null && cheapestCost != null && volt.gte(cheapestCost)) {
-            if (!manager.getPlayerStore().atomicSpendVolt(playerId, cheapestCost)) return;
-            manager.getPlayerStore().incrementRobotSpeedLevel(playerId, cheapestMapId);
-            manager.getPlayerStore().checkAndUnlockEligibleMaps(playerId, manager.getMapStore());
+            if (!manager.getPlayerStore().volt().atomicSpendVolt(playerId, cheapestCost)) return;
+            manager.getPlayerStore().runners().incrementRobotSpeedLevel(playerId, cheapestMapId);
+            manager.getPlayerStore().runners().checkAndUnlockEligibleMaps(playerId, manager.getMapStore());
         }
     }
 
@@ -150,7 +150,7 @@ class AutoRunnerUpgradeEngine {
             targetIndex++;
         }
         if (targetIndex != progress.automation().getAutoElevationTargetIndex()) {
-            manager.getPlayerStore().setAutoElevationTargetIndex(playerId, targetIndex);
+            manager.getPlayerStore().settings().setAutoElevationTargetIndex(playerId, targetIndex);
         }
 
         if (targets.isEmpty() || targetIndex >= targets.size()) return;
@@ -177,7 +177,7 @@ class AutoRunnerUpgradeEngine {
         // robots on the next cycle. We despawn after to accelerate cleanup, but the critical part
         // is that the reset happens first — if despawn fails or throws, robots won't be re-created
         // because hasRobot is already false.
-        manager.getPlayerStore().atomicSetElevationAndResetVolt(playerId, newLevel);
+        manager.getPlayerStore().progression().atomicSetElevationAndResetVolt(playerId, newLevel);
 
         // Get first map ID for reset
         List<AscendMap> maps = manager.getMapStore().listMapsSorted();
@@ -201,7 +201,7 @@ class AutoRunnerUpgradeEngine {
         while (newIndex < targets.size() && newMultiplier >= targets.get(newIndex)) {
             newIndex++;
         }
-        manager.getPlayerStore().setAutoElevationTargetIndex(playerId, newIndex);
+        manager.getPlayerStore().settings().setAutoElevationTargetIndex(playerId, newIndex);
 
         lastAutoElevationMs.put(playerId, now);
         manager.getPlayerStore().markDirty(playerId);
@@ -260,7 +260,7 @@ class AutoRunnerUpgradeEngine {
             if (targetLevel <= 0) continue;
 
             AscendConstants.SummitCategory category = categories[i];
-            int currentLevel = manager.getPlayerStore().getSummitLevel(playerId, category);
+            int currentLevel = manager.getPlayerStore().progression().getSummitLevel(playerId, category);
 
             // Skip if target already reached
             if (currentLevel >= targetLevel) continue;

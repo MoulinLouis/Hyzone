@@ -139,7 +139,7 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         // Update progress text (shared across all categories)
-        BigNumber accumulatedVolt = playerStore.getSummitAccumulatedVolt(playerId);
+        BigNumber accumulatedVolt = playerStore.progression().getSummitAccumulatedVolt(playerId);
         double currentXp = AscendConstants.voltToXp(accumulatedVolt);
         double nextXp = currentXp + 1;
         BigNumber voltForNextXp = AscendConstants.xpToVolt(nextXp);
@@ -294,7 +294,7 @@ public class SummitPage extends BaseAscendPage {
         }
 
         if (!summitManager.canSummit(playerId)) {
-            BigNumber volt = playerStore.getVolt(playerId);
+            BigNumber volt = playerStore.volt().getVolt(playerId);
             String minVolt = FormatUtils.formatBigNumber(
                 BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VOLT));
             String currentVolt = FormatUtils.formatBigNumber(volt);

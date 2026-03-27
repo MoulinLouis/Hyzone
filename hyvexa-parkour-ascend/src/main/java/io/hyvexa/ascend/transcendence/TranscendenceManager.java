@@ -119,6 +119,6 @@ public class TranscendenceManager {
      * Whether the player has unlocked map 6 via transcendence milestone 1.
      */
     public boolean hasMap6Unlocked(UUID playerId) {
-        return playerStore.getTranscendenceCount(playerId) >= 1;
+        return playerStore.progression().getTranscendenceCount(playerId) >= 1;
     }
 }

@@ -157,7 +157,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 uiCommandBuilder.set("#TabChallengeLabel.Visible", true);
             }
             // Check if Transcendence tab should be unlocked (milestone 1)
-            if (playerStore.getTranscendenceCount(pRef.getUuid()) >= 1) {
+            if (playerStore.progression().getTranscendenceCount(pRef.getUuid()) >= 1) {
                 uiCommandBuilder.set("#TabTransUnlockedBg.Visible", true);
                 uiCommandBuilder.set("#TabLockedBContent.Visible", false);
                 uiCommandBuilder.set("#TabTransLabel.Visible", true);
@@ -312,7 +312,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private RefreshSnapshot buildRefreshSnapshot(UUID playerId) {
-        BigNumber currentVolt = playerStore.getVolt(playerId);
+        BigNumber currentVolt = playerStore.volt().getVolt(playerId);
         List<MapRefreshState> mapStates = new ArrayList<>();
         boolean hasAvailableBuyAll = false;
         boolean hasEligibleEvolution = false;
@@ -321,7 +321,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             if (map == null) {
                 continue;
             }
-            GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+            GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerId, map.getId());
             if (!isMapUnlockedForDisplay(playerId, map, mapProgress)) {
                 continue;
             }
@@ -467,7 +467,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         RunnerStatusData runnerStatus = resolveRunnerStatusData(map, hasRobot, hasGhostRecording, speedLevel, stars, playerId);
         BigNumber volt = currentVolt != null
             ? currentVolt
-            : (playerId != null ? playerStore.getVolt(playerId) : BigNumber.ZERO);
+            : (playerId != null ? playerStore.volt().getVolt(playerId) : BigNumber.ZERO);
         boolean canAfford = !runnerStatus.isUpgrade() || volt.gte(runnerStatus.actionPrice());
         boolean showDisabledOverlay = runnerStatus.isUpgrade() && !canAfford;
         String secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
@@ -627,7 +627,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
 
             // Buying a runner is now free
-            playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
+            playerStore.runners().setHasRobot(playerRef.getUuid(), mapId, true);
             AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.SUCCESS, "Runner purchased!");
             try {
                 analytics.logEvent(playerRef.getUuid(), "ascend_runner_buy",
@@ -646,7 +646,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Check if at max level and can evolve
             if (currentLevel >= MAX_SPEED_LEVEL && currentStars < AscendConstants.MAX_ROBOT_STARS) {
-                int newStars = playerStore.evolveRobot(playerRef.getUuid(), mapId);
+                int newStars = playerStore.runners().evolveRobot(playerRef.getUuid(), mapId);
                 if (robotManager != null) {
                     robotManager.respawnRobot(playerRef.getUuid(), mapId, newStars);
                 }
@@ -672,10 +672,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Normal speed upgrade
             BigNumber upgradeCost = computeUpgradeCost(currentLevel, map.getDisplayOrder(), currentStars);
-            if (!playerStore.atomicSpendVolt(playerRef.getUuid(), upgradeCost)) {
+            if (!playerStore.volt().atomicSpendVolt(playerRef.getUuid(), upgradeCost)) {
                 return;
             }
-            int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
+            int newLevel = playerStore.runners().incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
 
             // Check if new level unlocks next map
             if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
@@ -857,7 +857,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (index < 0 || selectedMap == null) {
             return;
         }
-        GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), selectedMap.getId());
+        GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerRef.getUuid(), selectedMap.getId());
         UICommandBuilder commandBuilder = new UICommandBuilder();
         RunnerCardSnapshot snapshot = renderRunnerButton(
             commandBuilder,
@@ -865,7 +865,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             selectedMap,
             mapProgress,
             playerRef.getUuid(),
-            playerStore.getVolt(playerRef.getUuid())
+            playerStore.volt().getVolt(playerRef.getUuid())
         );
 
         // Keep cache in sync so the periodic refresh doesn't see a stale diff
@@ -904,7 +904,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
 
         // Get map progress (newly unlocked, so might be minimal data)
-        GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+        GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerRef.getUuid(), map.getId());
 
         // Append new map card
         commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
@@ -921,7 +921,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             map,
             mapProgress,
             playerRef.getUuid(),
-            playerStore.getVolt(playerRef.getUuid())
+            playerStore.volt().getVolt(playerRef.getUuid())
         );
 
         // Event bindings
@@ -948,7 +948,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private void checkAndProcessMapUnlocks(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-        List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
+        List<String> unlockedMapIds = playerStore.runners().checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
         if (!unlockedMapIds.isEmpty() && tutorialTriggerService != null) {
             tutorialTriggerService.checkMapUnlock(playerRef.getUuid(), ref);
         }
@@ -1003,7 +1003,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 continue;
             }
 
-            GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+            GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
@@ -1038,7 +1038,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         List<String> updatedMapIds = new ArrayList<>();
 
         for (PurchaseOption option : options) {
-            BigNumber currentVolt = playerStore.getVolt(playerRef.getUuid());
+            BigNumber currentVolt = playerStore.volt().getVolt(playerRef.getUuid());
             if (option.price.gt(currentVolt)) {
                 continue;
             }
@@ -1047,18 +1047,18 @@ public class AscendMapSelectPage extends BaseAscendPage {
             switch (option.type) {
                 case BUY_ROBOT -> {
                     if (option.price.gt(BigNumber.ZERO)) {
-                        if (!playerStore.atomicSpendVolt(playerRef.getUuid(), option.price)) {
+                        if (!playerStore.volt().atomicSpendVolt(playerRef.getUuid(), option.price)) {
                             continue;
                         }
                     }
-                    playerStore.setHasRobot(playerRef.getUuid(), option.mapId, true);
+                    playerStore.runners().setHasRobot(playerRef.getUuid(), option.mapId, true);
                     success = true;
                 }
                 case UPGRADE_SPEED -> {
-                    if (!playerStore.atomicSpendVolt(playerRef.getUuid(), option.price)) {
+                    if (!playerStore.volt().atomicSpendVolt(playerRef.getUuid(), option.price)) {
                         continue;
                     }
-                    int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
+                    int newLevel = playerStore.runners().incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
                     // Check if new level unlocks next map
                     if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
                         checkAndProcessMapUnlocks(ref, store, playerRef);
@@ -1137,7 +1137,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 continue;
             }
 
-            GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+            GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerRef.getUuid(), map.getId());
             if (mapProgress == null || !mapProgress.hasRobot()) {
                 continue;
             }
@@ -1158,7 +1158,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Evolve all eligible runners
         int evolved = 0;
         for (String mapId : eligibleMapIds) {
-            int newStars = playerStore.evolveRobot(playerRef.getUuid(), mapId);
+            int newStars = playerStore.runners().evolveRobot(playerRef.getUuid(), mapId);
             if (robotManager != null) {
                 robotManager.respawnRobot(playerRef.getUuid(), mapId, newStars);
             }
@@ -1234,7 +1234,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (player == null) {
             return;
         }
-        if (playerStore.getTranscendenceCount(playerRef.getUuid()) < 1) {
+        if (playerStore.progression().getTranscendenceCount(playerRef.getUuid()) < 1) {
             player.sendMessage(Message.raw("[Ascend] Transcend to unlock this tab.")
                 .color(io.hyvexa.common.util.SystemMessageUtils.SECONDARY));
             return;

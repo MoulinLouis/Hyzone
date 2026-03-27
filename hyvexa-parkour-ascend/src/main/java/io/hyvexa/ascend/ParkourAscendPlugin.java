@@ -555,8 +555,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 }
                 // Reset session-specific tracking
                 if (playerId != null && playerStore != null) {
-                    playerStore.setSessionFirstRunClaimed(playerId, false);
-                    playerStore.resetConsecutiveManualRuns(playerId);
+                    playerStore.settings().setSessionFirstRunClaimed(playerId, false);
+                    playerStore.gameplay().resetConsecutiveManualRuns(playerId);
                     playerStore.storePlayerName(playerId, playerRef.getUsername());
 
                     // Initialize ascension timer on first join (if not already set)
@@ -593,7 +593,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     hudManager.loadHudHiddenFromStore(playerId);
                     hudManager.attach(playerRef, player);
                     // Restore persisted players_hidden state
-                    if (playerStore != null && playerStore.isPlayersHidden(playerId)) {
+                    if (playerStore != null && playerStore.settings().isPlayersHidden(playerId)) {
                         Universe.get().getWorlds().forEach((wId, w) ->
                                 w.execute(() -> applyHiddenStateForPlayer(playerRef, w)));
                     }

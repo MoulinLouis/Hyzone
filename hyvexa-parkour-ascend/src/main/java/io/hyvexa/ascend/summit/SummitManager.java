@@ -46,7 +46,7 @@ public class SummitManager {
      * Requires at least 1 XP worth of volt (1B volt = 1 XP).
      */
     public boolean canSummit(UUID playerId) {
-        BigNumber accumulatedVolt = playerStore.getSummitAccumulatedVolt(playerId);
+        BigNumber accumulatedVolt = playerStore.progression().getSummitAccumulatedVolt(playerId);
         double potentialXp = AscendConstants.voltToXp(accumulatedVolt);
         return potentialXp >= 1.0;
     }
@@ -57,10 +57,10 @@ public class SummitManager {
      * XP is based on accumulated volt since last Summit/Elevation.
      */
     public SummitPreview previewSummit(UUID playerId, SummitCategory category) {
-        BigNumber volt = playerStore.getSummitAccumulatedVolt(playerId);
+        BigNumber volt = playerStore.progression().getSummitAccumulatedVolt(playerId);
         double xpToGain = AscendConstants.voltToXp(volt);
 
-        double currentXp = playerStore.getSummitXp(playerId, category);
+        double currentXp = playerStore.progression().getSummitXp(playerId, category);
         int currentLevel = AscendConstants.calculateLevelFromXp(currentXp);
 
         double newXp = currentXp + xpToGain;
@@ -100,7 +100,7 @@ public class SummitManager {
             return new SummitResult(-1, List.of(), 0.0);
         }
 
-        BigNumber volt = playerStore.getSummitAccumulatedVolt(playerId);
+        BigNumber volt = playerStore.progression().getSummitAccumulatedVolt(playerId);
         double xpToGain = AscendConstants.voltToXp(volt);
 
         if (xpToGain < 1.0) {
@@ -113,12 +113,12 @@ public class SummitManager {
             return new SummitResult(-1, List.of(), 0.0);
         }
 
-        int previousLevel = playerStore.getSummitLevel(playerId, category);
+        int previousLevel = playerStore.progression().getSummitLevel(playerId, category);
 
         // Add XP to category
-        playerStore.addSummitXp(playerId, category, xpToGain);
+        playerStore.progression().addSummitXp(playerId, category, xpToGain);
 
-        int newLevel = playerStore.getSummitLevel(playerId, category);
+        int newLevel = playerStore.progression().getSummitLevel(playerId, category);
 
         // Get first map ID for reset
         String firstMapId = null;
@@ -161,7 +161,7 @@ public class SummitManager {
      * @return Multiplier value (1.0 at level 0, 2.5 at level 10)
      */
     public double getRunnerSpeedBonus(UUID playerId) {
-        double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.RUNNER_SPEED);
+        double fullBonus = playerStore.progression().getSummitBonusDouble(playerId, SummitCategory.RUNNER_SPEED);
 
         if (challengeManager != null) {
             double divisor = challengeManager.getSpeedDivisor(playerId);
@@ -184,7 +184,7 @@ public class SummitManager {
      * @return Multiplier value (1.0 at level 0, 4.0 at level 10)
      */
     public double getMultiplierGainBonus(UUID playerId) {
-        double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
+        double fullBonus = playerStore.progression().getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
 
         if (challengeManager != null) {
             double divisor = challengeManager.getMultiplierGainDivisor(playerId);
@@ -225,7 +225,7 @@ public class SummitManager {
      * @return Evolution bonus (3.0 at level 0, 4.0 at level 10)
      */
     public double getEvolutionPowerBonus(UUID playerId) {
-        double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
+        double fullBonus = playerStore.progression().getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
 
         // Challenge malus: divide full value by evolution power divisor
         if (challengeManager != null) {

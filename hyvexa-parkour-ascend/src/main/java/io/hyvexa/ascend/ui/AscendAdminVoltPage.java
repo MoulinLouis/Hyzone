@@ -174,7 +174,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
                 }
             }
             if (firstMap != null) {
-                playerStore.setMapUnlocked(playerRef.getUuid(), firstMap.getId(), true);
+                playerStore.runners().setMapUnlocked(playerRef.getUuid(), firstMap.getId(), true);
             }
         }
 
@@ -221,7 +221,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         UUID playerId = playerRef.getUuid();
 
         // Bypass volt threshold for admin simulation
-        BigNumber volt = playerStore.getVolt(playerId);
+        BigNumber volt = playerStore.volt().getVolt(playerId);
         if (volt.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
             AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
             progress.economy().setVolt(AscendConstants.ASCENSION_VOLT_THRESHOLD);
@@ -244,8 +244,8 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
                     .color(SystemMessageUtils.SUCCESS));
             }
             UICommandBuilder commandBuilder = new UICommandBuilder();
-            commandBuilder.set("#CurrentVoltValue.Text", FormatUtils.formatBigNumber(playerStore.getVolt(playerId)));
-            commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(playerStore.getSkillTreePoints(playerId)));
+            commandBuilder.set("#CurrentVoltValue.Text", FormatUtils.formatBigNumber(playerStore.volt().getVolt(playerId)));
+            commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(playerStore.gameplay().getSkillTreePoints(playerId)));
             sendUpdate(commandBuilder, null, false);
             return;
         }
@@ -263,7 +263,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#CurrentVoltValue.Text", "0");
-        int skillPoints = playerStore.getSkillTreePoints(playerId);
+        int skillPoints = playerStore.gameplay().getSkillTreePoints(playerId);
         commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         sendUpdate(commandBuilder, null, false);
     }
@@ -308,8 +308,8 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         commandBuilder.set("#SkillPointsAmountField.Value", skillPointsInput);
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
-            BigNumber volt = playerStore != null ? playerStore.getVolt(playerRef.getUuid()) : BigNumber.ZERO;
-            int skillPoints = playerStore != null ? playerStore.getSkillTreePoints(playerRef.getUuid()) : 0;
+            BigNumber volt = playerStore != null ? playerStore.volt().getVolt(playerRef.getUuid()) : BigNumber.ZERO;
+            int skillPoints = playerStore != null ? playerStore.gameplay().getSkillTreePoints(playerRef.getUuid()) : 0;
             commandBuilder.set("#CurrentVoltValue.Text", FormatUtils.formatBigNumber(volt));
             commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         }
@@ -350,18 +350,18 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         }
         String formatted = FormatUtils.formatBigNumber(amount);
         if (add) {
-            playerStore.addVolt(playerRef.getUuid(), amount);
-            playerStore.addSummitAccumulatedVolt(playerRef.getUuid(), amount);
-            playerStore.addElevationAccumulatedVolt(playerRef.getUuid(), amount);
+            playerStore.volt().addVolt(playerRef.getUuid(), amount);
+            playerStore.progression().addSummitAccumulatedVolt(playerRef.getUuid(), amount);
+            playerStore.progression().addElevationAccumulatedVolt(playerRef.getUuid(), amount);
             player.sendMessage(Message.raw("[Ascend] Added " + formatted + " volt (counts toward Summit & Elevation).")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
-            playerStore.addVolt(playerRef.getUuid(), amount.negate());
+            playerStore.volt().addVolt(playerRef.getUuid(), amount.negate());
             player.sendMessage(Message.raw("[Ascend] Removed " + formatted + " volt.")
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        BigNumber volt = playerStore.getVolt(playerRef.getUuid());
+        BigNumber volt = playerStore.volt().getVolt(playerRef.getUuid());
         commandBuilder.set("#CurrentVoltValue.Text", FormatUtils.formatBigNumber(volt));
         sendUpdate(commandBuilder, null, false);
     }
@@ -376,16 +376,16 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
             return;
         }
         if (add) {
-            playerStore.addSkillTreePoints(playerRef.getUuid(), amount);
+            playerStore.gameplay().addSkillTreePoints(playerRef.getUuid(), amount);
             player.sendMessage(Message.raw("[Ascend] Added " + amount + " AP.")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
-            playerStore.addSkillTreePoints(playerRef.getUuid(), -amount);
+            playerStore.gameplay().addSkillTreePoints(playerRef.getUuid(), -amount);
             player.sendMessage(Message.raw("[Ascend] Removed " + amount + " AP.")
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        int skillPoints = playerStore.getSkillTreePoints(playerRef.getUuid());
+        int skillPoints = playerStore.gameplay().getSkillTreePoints(playerRef.getUuid());
         commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         sendUpdate(commandBuilder, null, false);
     }

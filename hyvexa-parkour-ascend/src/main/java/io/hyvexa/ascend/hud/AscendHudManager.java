@@ -215,7 +215,7 @@ public class AscendHudManager {
         if (playerId == null || playerStore == null) {
             return;
         }
-        if (playerStore.isHudHidden(playerId)) {
+        if (playerStore.settings().isHudHidden(playerId)) {
             hudHidden.put(playerId, true);
         }
     }
@@ -367,18 +367,18 @@ public class AscendHudManager {
         List<AscendMap> mapList = mapStore != null ? mapStore.listMapsSorted() : List.of();
 
         // Single-pass multiplier computation
-        AscendPlayerStore.MultiplierResult mr = playerStore.getMultiplierProductAndValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+        AscendPlayerStore.MultiplierResult mr = playerStore.progression().getMultiplierProductAndValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
 
-        BigNumber volt = playerStore.getVolt(playerId);
-        int elevationLevel = playerStore.getElevationLevel(playerId);
-        BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
+        BigNumber volt = playerStore.volt().getVolt(playerId);
+        int elevationLevel = playerStore.progression().getElevationLevel(playerId);
+        BigNumber accumulatedVolt = playerStore.progression().getElevationAccumulatedVolt(playerId);
         AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVolt);
         int potentialElevation = elevationLevel + purchase.levels;
         boolean showElevation = elevationLevel > 1 || purchase.levels > 0;
 
-        Map<AscendConstants.SummitCategory, Integer> summitLevels = playerStore.getSummitLevels(playerId);
-        int ascensionCount = playerStore.getAscensionCount(playerId);
-        int skillPoints = playerStore.getAvailableSkillPoints(playerId);
+        Map<AscendConstants.SummitCategory, Integer> summitLevels = playerStore.progression().getSummitLevels(playerId);
+        int ascensionCount = playerStore.progression().getAscensionCount(playerId);
+        int skillPoints = playerStore.gameplay().getAvailableSkillPoints(playerId);
         SummitManager.SummitPreview multPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.MULTIPLIER_GAIN) : null;
         SummitManager.SummitPreview speedPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.RUNNER_SPEED) : null;
         SummitManager.SummitPreview evoPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.EVOLUTION_POWER) : null;

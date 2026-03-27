@@ -66,7 +66,7 @@ public final class MapUnlockHelper {
             return new UnlockResult(false, null);
         }
 
-        GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+        GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerId, map.getId());
 
         // Check if already unlocked
         if (mapProgress != null && mapProgress.isUnlocked()) {
@@ -79,8 +79,8 @@ public final class MapUnlockHelper {
 
         // Auto-unlock if requirement met
         if (meetsRequirement) {
-            playerStore.setMapUnlocked(playerId, map.getId(), true);
-            mapProgress = playerStore.getMapProgress(playerId, map.getId());
+            playerStore.runners().setMapUnlocked(playerId, map.getId(), true);
+            mapProgress = playerStore.runners().getMapProgress(playerId, map.getId());
             return new UnlockResult(true, mapProgress);
         }
 
@@ -157,7 +157,7 @@ public final class MapUnlockHelper {
 
         // Map 6 (displayOrder 5): requires transcendence milestone 1
         if (map.getDisplayOrder() == 5) {
-            if (playerStore.getTranscendenceCount(playerId) < 1) {
+            if (playerStore.progression().getTranscendenceCount(playerId) < 1) {
                 return false;
             }
         }
@@ -174,7 +174,7 @@ public final class MapUnlockHelper {
         }
 
         // Check if previous map's runner is at required level
-        int runnerLevel = playerStore.getRobotSpeedLevel(playerId, previousMap.getId());
+        int runnerLevel = playerStore.runners().getRobotSpeedLevel(playerId, previousMap.getId());
         return runnerLevel >= AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL;
     }
 

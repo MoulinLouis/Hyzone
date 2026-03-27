@@ -86,7 +86,7 @@ public class TranscendencePage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!transcendenceManager.isEligible(playerId)) {
-            BigNumber volt = playerStore.getVolt(playerId);
+            BigNumber volt = playerStore.volt().getVolt(playerId);
             player.sendMessage(Message.raw("[Transcendence] Need " + FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
                 + " volt with BREAK_ASCENSION active. You have: " + FormatUtils.formatBigNumber(volt))
                 .color(SystemMessageUtils.SECONDARY));
@@ -129,8 +129,8 @@ public class TranscendencePage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        BigNumber volt = playerStore.getVolt(playerId);
-        int transcendenceCount = playerStore.getTranscendenceCount(playerId);
+        BigNumber volt = playerStore.volt().getVolt(playerId);
+        int transcendenceCount = playerStore.progression().getTranscendenceCount(playerId);
         boolean eligible = transcendenceManager.isEligible(playerId);
 
         commandBuilder.set("#CurrentVolt.Text", FormatUtils.formatBigNumber(volt));

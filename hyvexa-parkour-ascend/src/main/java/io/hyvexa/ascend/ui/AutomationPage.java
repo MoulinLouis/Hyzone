@@ -154,25 +154,25 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         // Auto-Upgrade section
         renderToggleSection(commandBuilder, "Upgrade", "",
-            ascensionManager.hasAutoRunners(playerId), playerStore.isAutoUpgradeEnabled(playerId));
+            ascensionManager.hasAutoRunners(playerId), playerStore.settings().isAutoUpgradeEnabled(playerId));
 
         // Auto-Evolution section
         renderToggleSection(commandBuilder, "Evo", "Evo",
-            ascensionManager.hasAutoEvolution(playerId), playerStore.isAutoEvolutionEnabled(playerId));
+            ascensionManager.hasAutoEvolution(playerId), playerStore.settings().isAutoEvolutionEnabled(playerId));
 
         // Auto-Ascend section
         renderToggleSection(commandBuilder, "Asc", "Asc",
-            ascensionManager.hasAutoAscend(playerId), playerStore.isAutoAscendEnabled(playerId));
+            ascensionManager.hasAutoAscend(playerId), playerStore.settings().isAutoAscendEnabled(playerId));
 
         // Auto-Elevation section
         renderToggleSection(commandBuilder, "Elev", "Elev",
-            ascensionManager.hasAutoElevation(playerId), playerStore.isAutoElevationEnabled(playerId));
+            ascensionManager.hasAutoElevation(playerId), playerStore.settings().isAutoElevationEnabled(playerId));
 
         // Timer field
-        commandBuilder.set("#ElevTimerField.Value", String.valueOf(playerStore.getAutoElevationTimerSeconds(playerId)));
+        commandBuilder.set("#ElevTimerField.Value", String.valueOf(playerStore.settings().getAutoElevationTimerSeconds(playerId)));
 
-        List<Long> targets = playerStore.getAutoElevationTargets(playerId);
-        int targetIndex = playerStore.getAutoElevationTargetIndex(playerId);
+        List<Long> targets = playerStore.settings().getAutoElevationTargets(playerId);
+        int targetIndex = playerStore.settings().getAutoElevationTargetIndex(playerId);
         for (int i = 0; i < MAX_TARGETS; i++) {
             if (i < targets.size()) {
                 commandBuilder.set("#ElevTarget" + i + ".Visible", true);
@@ -195,13 +195,13 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         // Auto-Summit section
         renderToggleSection(commandBuilder, "Sum", "Sum",
-            ascensionManager.hasAutoSummit(playerId), playerStore.isAutoSummitEnabled(playerId));
+            ascensionManager.hasAutoSummit(playerId), playerStore.settings().isAutoSummitEnabled(playerId));
 
         // Summit timer
-        commandBuilder.set("#SumTimerField.Value", String.valueOf(playerStore.getAutoSummitTimerSeconds(playerId)));
+        commandBuilder.set("#SumTimerField.Value", String.valueOf(playerStore.settings().getAutoSummitTimerSeconds(playerId)));
 
         // Summit categories
-        List<AutomationConfig.AutoSummitCategoryConfig> sumConfig = playerStore.getAutoSummitConfig(playerId);
+        List<AutomationConfig.AutoSummitCategoryConfig> sumConfig = playerStore.settings().getAutoSummitConfig(playerId);
 
         int activeCount = 0;
         int reachedCount = 0;
@@ -213,7 +213,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             // Level display
             int level = 0;
             if (i < SUMMIT_CATEGORY_VALUES.length) {
-                level = playerStore.getSummitLevel(playerId, SUMMIT_CATEGORY_VALUES[i]);
+                level = playerStore.progression().getSummitLevel(playerId, SUMMIT_CATEGORY_VALUES[i]);
             }
 
             int targetLevel = catConfig.getTargetLevel();
@@ -408,32 +408,32 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     private void handleToggle(Ref<EntityStore> ref, Store<EntityStore> store) {
         handleGenericToggle(ref, store,
             id -> ascensionManager.hasAutoRunners(id),
-            id -> playerStore.isAutoUpgradeEnabled(id),
-            (id, state) -> playerStore.setAutoUpgradeEnabled(id, state),
+            id -> playerStore.settings().isAutoUpgradeEnabled(id),
+            (id, state) -> playerStore.settings().setAutoUpgradeEnabled(id, state),
             "Auto-Upgrade", "Auto-upgrade");
     }
 
     private void handleToggleEvolution(Ref<EntityStore> ref, Store<EntityStore> store) {
         handleGenericToggle(ref, store,
             id -> ascensionManager.hasAutoEvolution(id),
-            id -> playerStore.isAutoEvolutionEnabled(id),
-            (id, state) -> playerStore.setAutoEvolutionEnabled(id, state),
+            id -> playerStore.settings().isAutoEvolutionEnabled(id),
+            (id, state) -> playerStore.settings().setAutoEvolutionEnabled(id, state),
             "Auto-Evolution", "Auto-evolution");
     }
 
     private void handleToggleAscend(Ref<EntityStore> ref, Store<EntityStore> store) {
         handleGenericToggle(ref, store,
             id -> ascensionManager.hasAutoAscend(id),
-            id -> playerStore.isAutoAscendEnabled(id),
-            (id, state) -> playerStore.setAutoAscendEnabled(id, state),
+            id -> playerStore.settings().isAutoAscendEnabled(id),
+            (id, state) -> playerStore.settings().setAutoAscendEnabled(id, state),
             "Auto Ascend", "Auto ascend");
     }
 
     private void handleToggleElevation(Ref<EntityStore> ref, Store<EntityStore> store) {
         handleGenericToggle(ref, store,
             id -> ascensionManager.hasAutoElevation(id),
-            id -> playerStore.isAutoElevationEnabled(id),
-            (id, state) -> playerStore.setAutoElevationEnabled(id, state),
+            id -> playerStore.settings().isAutoElevationEnabled(id),
+            (id, state) -> playerStore.settings().setAutoElevationEnabled(id, state),
             "Auto-Elevation", "Auto-elevation");
     }
 
@@ -514,7 +514,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         try {
             int timer = (int) Double.parseDouble(timerInput);
             timer = Math.max(0, Math.min(86400, timer));
-            playerStore.setAutoElevationTimerSeconds(playerRef.getUuid(), timer);
+            playerStore.settings().setAutoElevationTimerSeconds(playerRef.getUuid(), timer);
         } catch (NumberFormatException ignored) {
         }
     }
@@ -527,7 +527,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
 
         UUID playerId = playerRef.getUuid();
-        List<Long> targets = new ArrayList<>(playerStore.getAutoElevationTargets(playerId));
+        List<Long> targets = new ArrayList<>(playerStore.settings().getAutoElevationTargets(playerId));
 
         if (targets.size() >= MAX_TARGETS) {
             player.sendMessage(Message.raw("[Automation] Maximum " + MAX_TARGETS + " targets allowed.")
@@ -557,7 +557,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
                 return;
             }
             targets.add(value);
-            playerStore.setAutoElevationTargets(playerId, targets);
+            playerStore.settings().setAutoElevationTargets(playerId, targets);
             recalculateTargetIndex(playerId, targets);
         } catch (NumberFormatException ignored) {
             return;
@@ -575,13 +575,13 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
 
         UUID playerId = playerRef.getUuid();
-        List<Long> targets = new ArrayList<>(playerStore.getAutoElevationTargets(playerId));
+        List<Long> targets = new ArrayList<>(playerStore.settings().getAutoElevationTargets(playerId));
         if (index < 0 || index >= targets.size()) {
             return;
         }
 
         targets.remove(index);
-        playerStore.setAutoElevationTargets(playerId, targets);
+        playerStore.settings().setAutoElevationTargets(playerId, targets);
         recalculateTargetIndex(playerId, targets);
 
         UICommandBuilder updateBuilder = new UICommandBuilder();
@@ -600,9 +600,9 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         while (newIndex < targets.size() && targets.get(newIndex) <= currentActualMultiplier) {
             newIndex++;
         }
-        int currentIndex = playerStore.getAutoElevationTargetIndex(playerId);
+        int currentIndex = playerStore.settings().getAutoElevationTargetIndex(playerId);
         if (newIndex != currentIndex) {
-            playerStore.setAutoElevationTargetIndex(playerId, newIndex);
+            playerStore.settings().setAutoElevationTargetIndex(playerId, newIndex);
         }
     }
 
@@ -613,7 +613,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
 
         UUID playerId = playerRef.getUuid();
-        playerStore.setAutoElevationTargets(playerId, List.of());
+        playerStore.settings().setAutoElevationTargets(playerId, List.of());
         recalculateTargetIndex(playerId, List.of());
 
         UICommandBuilder updateBuilder = new UICommandBuilder();
@@ -624,8 +624,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     private void handleToggleSummit(Ref<EntityStore> ref, Store<EntityStore> store) {
         handleGenericToggle(ref, store,
             id -> ascensionManager.hasAutoSummit(id),
-            id -> playerStore.isAutoSummitEnabled(id),
-            (id, state) -> playerStore.setAutoSummitEnabled(id, state),
+            id -> playerStore.settings().isAutoSummitEnabled(id),
+            (id, state) -> playerStore.settings().setAutoSummitEnabled(id, state),
             "Auto-Summit", "Auto-summit");
     }
 
@@ -638,7 +638,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         try {
             int timer = (int) Double.parseDouble(sumTimerInput);
             timer = Math.max(0, Math.min(86400, timer));
-            playerStore.setAutoSummitTimerSeconds(playerRef.getUuid(), timer);
+            playerStore.settings().setAutoSummitTimerSeconds(playerRef.getUuid(), timer);
         } catch (NumberFormatException ignored) {
         }
     }
@@ -651,7 +651,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         UUID playerId = playerRef.getUuid();
         List<AutomationConfig.AutoSummitCategoryConfig> config =
-            new ArrayList<>(playerStore.getAutoSummitConfig(playerId));
+            new ArrayList<>(playerStore.settings().getAutoSummitConfig(playerId));
 
         while (config.size() <= index) {
             config.add(new AutomationConfig.AutoSummitCategoryConfig(false, 0));
@@ -659,7 +659,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         AutomationConfig.AutoSummitCategoryConfig catConfig = config.get(index);
         config.set(index, new AutomationConfig.AutoSummitCategoryConfig(!catConfig.isEnabled(), catConfig.getTargetLevel()));
-        playerStore.setAutoSummitConfig(playerId, config);
+        playerStore.settings().setAutoSummitConfig(playerId, config);
 
         UICommandBuilder updateBuilder = new UICommandBuilder();
         updateState(ref, store, updateBuilder);
@@ -682,7 +682,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
             UUID playerId = playerRef.getUuid();
             List<AutomationConfig.AutoSummitCategoryConfig> config =
-                new ArrayList<>(playerStore.getAutoSummitConfig(playerId));
+                new ArrayList<>(playerStore.settings().getAutoSummitConfig(playerId));
 
             while (config.size() <= index) {
                 config.add(new AutomationConfig.AutoSummitCategoryConfig(false, 0));
@@ -690,7 +690,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
             AutomationConfig.AutoSummitCategoryConfig catConfig = config.get(index);
             config.set(index, new AutomationConfig.AutoSummitCategoryConfig(catConfig.isEnabled(), targetLevel));
-            playerStore.setAutoSummitConfig(playerId, config);
+            playerStore.settings().setAutoSummitConfig(playerId, config);
         } catch (NumberFormatException ignored) {
         }
     }

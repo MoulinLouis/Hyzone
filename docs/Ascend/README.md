@@ -36,7 +36,12 @@ Entry point: `hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/ParkourAscend
 | Store | Purpose |
 |-------|---------|
 | `AscendMapStore` | Map definitions, triggers, checkpoints, finish areas |
-| `AscendPlayerStore` | Player progress cache (volt, elevation, runner levels, skills, cats) — pure data, no side-effects |
+| `AscendPlayerStore` | Coordinator: player cache lifecycle, persistence, cross-domain resets, leaderboards. Delegates to domain facades |
+| `AscendVoltFacade` | Volt (currency) operations — via `playerStore.volt()` |
+| `AscendProgressionFacade` | Elevation, summit, accumulated volt, ascension/transcendence, multiplier calculations — via `playerStore.progression()` |
+| `AscendRunnerFacade` | Map progress, multipliers, unlocks, robots — via `playerStore.runners()` |
+| `AscendGameplayFacade` | Skill tree, achievements, run tracking, tutorials — via `playerStore.gameplay()` |
+| `AscendSettingsFacade` | Automation toggles, visibility, session state — via `playerStore.settings()` |
 | `AscendPlayerEventHandler` | Gameplay side-effects: ascension flow, tutorial triggers, transcendence notifications |
 | `AscendSettingsStore` | Global settings (spawn, admin config) |
 | `GhostStore` | Ghost recording storage (table: `ascend_ghost_recordings`) |

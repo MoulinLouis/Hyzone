@@ -34,7 +34,7 @@ public class AscensionManager {
      * Checks if a player can perform an Ascension.
      */
     public boolean canAscend(UUID playerId) {
-        BigNumber volt = playerStore.getVolt(playerId);
+        BigNumber volt = playerStore.volt().getVolt(playerId);
         return volt.gte(AscendConstants.ASCENSION_VOLT_THRESHOLD);
     }
 
@@ -44,7 +44,7 @@ public class AscensionManager {
      * @return the new Ascension count, or -1 if insufficient volt
      */
     public int performAscension(UUID playerId) {
-        BigNumber volt = playerStore.getVolt(playerId);
+        BigNumber volt = playerStore.volt().getVolt(playerId);
         if (volt.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
             return -1;
         }
@@ -120,11 +120,11 @@ public class AscensionManager {
 
         // Auto-enable automation toggles when their skills are unlocked
         switch (node) {
-            case AUTO_RUNNERS -> playerStore.setAutoUpgradeEnabled(playerId, true);
-            case AUTO_EVOLUTION -> playerStore.setAutoEvolutionEnabled(playerId, true);
-            case AUTO_ELEVATION -> playerStore.setAutoElevationEnabled(playerId, true);
-            case AUTO_SUMMIT -> playerStore.setAutoSummitEnabled(playerId, true);
-            case AUTO_ASCEND -> playerStore.setAutoAscendEnabled(playerId, true);
+            case AUTO_RUNNERS -> playerStore.settings().setAutoUpgradeEnabled(playerId, true);
+            case AUTO_EVOLUTION -> playerStore.settings().setAutoEvolutionEnabled(playerId, true);
+            case AUTO_ELEVATION -> playerStore.settings().setAutoElevationEnabled(playerId, true);
+            case AUTO_SUMMIT -> playerStore.settings().setAutoSummitEnabled(playerId, true);
+            case AUTO_ASCEND -> playerStore.settings().setAutoAscendEnabled(playerId, true);
             default -> {}
         }
 

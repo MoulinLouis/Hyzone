@@ -389,16 +389,16 @@ public class RobotManager {
         BigNumber totalMultiplierBonus = multiplierIncrement.multiply(BigNumber.fromLong(completions));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
-        BigNumber payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO);
+        BigNumber payoutPerRun = playerStore.progression().getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO);
 
         BigNumber totalPayout = payoutPerRun.multiply(BigNumber.fromLong(completions));
 
         // Use event handler for volt + side-effects (tutorial thresholds, ascension triggers)
         eventHandler.addVoltWithEffects(ownerId, totalPayout);
-        if (!playerStore.atomicAddTotalVoltEarned(ownerId, totalPayout)) {
+        if (!playerStore.volt().atomicAddTotalVoltEarned(ownerId, totalPayout)) {
             LOGGER.atWarning().log("Failed to add total volt earned for " + ownerId);
         }
-        if (!playerStore.atomicAddMapMultiplier(ownerId, mapId, totalMultiplierBonus)) {
+        if (!playerStore.runners().atomicAddMapMultiplier(ownerId, mapId, totalMultiplierBonus)) {
             LOGGER.atWarning().log("Failed to add map multiplier for " + ownerId + " on map " + mapId);
         }
 

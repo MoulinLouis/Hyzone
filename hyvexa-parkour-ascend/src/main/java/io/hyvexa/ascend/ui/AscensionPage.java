@@ -91,7 +91,7 @@ public class AscensionPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!ascensionManager.canAscend(playerId)) {
-            BigNumber volt = playerStore.getVolt(playerId);
+            BigNumber volt = playerStore.volt().getVolt(playerId);
             player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VOLT_THRESHOLD)
                 + " volt to Ascend. You have: " + FormatUtils.formatBigNumber(volt))
                 .color(SystemMessageUtils.SECONDARY));
@@ -160,9 +160,9 @@ public class AscensionPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        BigNumber volt = playerStore.getVolt(playerId);
-        int ascensionCount = playerStore.getAscensionCount(playerId);
-        int availablePoints = playerStore.getAvailableSkillPoints(playerId);
+        BigNumber volt = playerStore.volt().getVolt(playerId);
+        int ascensionCount = playerStore.progression().getAscensionCount(playerId);
+        int availablePoints = playerStore.gameplay().getAvailableSkillPoints(playerId);
         boolean canAscend = ascensionManager.canAscend(playerId);
 
         // Update volt values

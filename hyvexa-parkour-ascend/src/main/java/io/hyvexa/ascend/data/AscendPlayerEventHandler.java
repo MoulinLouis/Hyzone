@@ -74,7 +74,7 @@ public class AscendPlayerEventHandler {
      * Add volt to a player with side-effects (tutorial thresholds, ascension triggers).
      */
     public void addVoltWithEffects(UUID playerId, BigNumber amount) {
-        BigNumber[] result = playerStore.atomicAddVolt(playerId, amount);
+        BigNumber[] result = playerStore.volt().atomicAddVolt(playerId, amount);
         checkVoltTutorialThresholds(playerId, result[0], result[1]);
     }
 
@@ -82,7 +82,7 @@ public class AscendPlayerEventHandler {
      * Set break ascension with side-effects (trigger ascension if disabling while above threshold).
      */
     public void setBreakAscensionWithEffects(UUID playerId, boolean enabled) {
-        playerStore.setBreakAscensionEnabled(playerId, enabled);
+        playerStore.settings().setBreakAscensionEnabled(playerId, enabled);
 
         // If disabling break mode while above threshold, trigger ascension
         if (!enabled) {
@@ -90,7 +90,7 @@ public class AscendPlayerEventHandler {
             if (progress != null && progress.economy().getVolt().gte(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
                 if (ascensionManager != null
                         && ascensionManager.hasAutoAscend(playerId)
-                        && playerStore.isAutoAscendEnabled(playerId)) {
+                        && playerStore.settings().isAutoAscendEnabled(playerId)) {
                     performInstantAscension(playerId);
                 } else {
                     triggerAscensionCinematic(playerId);
@@ -128,7 +128,7 @@ public class AscendPlayerEventHandler {
         // Mark the ascension tutorial as seen BEFORE the tutorial check,
         // so the tutorial popup is suppressed in favor of the cinematic
         if (crossedAscension) {
-            playerStore.markTutorialSeen(playerId, TutorialTriggerService.ASCENSION);
+            playerStore.gameplay().markTutorialSeen(playerId, TutorialTriggerService.ASCENSION);
         }
 
         if (tutorialTriggerService != null) {
@@ -146,7 +146,7 @@ public class AscendPlayerEventHandler {
             }
             // Auto Ascend skill + toggle: skip popup and cinematic, ascend immediately
             if (ascensionManager != null && ascensionManager.hasAutoAscend(playerId)
-                    && playerStore.isAutoAscendEnabled(playerId)) {
+                    && playerStore.settings().isAutoAscendEnabled(playerId)) {
                 performInstantAscension(playerId);
             } else {
                 showAscensionExplainer(playerId);
@@ -338,12 +338,12 @@ public class AscendPlayerEventHandler {
                 List<AscendMap> maps = runtimeMapStore.listMapsSorted();
                 if (!maps.isEmpty()) {
                     String firstMapId = maps.get(0).getId();
-                    playerStore.setMapUnlocked(playerId, firstMapId, true);
+                    playerStore.runners().setMapUnlocked(playerId, firstMapId, true);
                     // Auto-buy runner if player has completed map 1 before (ghost or best time)
                     boolean hasGhost = ghostStore != null && ghostStore.getRecording(playerId, firstMapId) != null;
-                    boolean hasBestTime = playerStore.getBestTimeMs(playerId, firstMapId) != null;
+                    boolean hasBestTime = playerStore.runners().getBestTimeMs(playerId, firstMapId) != null;
                     if (hasGhost || hasBestTime) {
-                        playerStore.setHasRobot(playerId, firstMapId, true);
+                        playerStore.runners().setHasRobot(playerId, firstMapId, true);
                     }
                 }
             }

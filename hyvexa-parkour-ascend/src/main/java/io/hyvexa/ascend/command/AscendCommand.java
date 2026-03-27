@@ -282,8 +282,8 @@ public class AscendCommand extends AbstractAsyncCommand {
                                          Store<EntityStore> store,
                                          int tutorialKey, AscendTutorialPage.Tutorial tutorial) {
         UUID playerId = playerRef.getUuid();
-        if (!playerStore.hasSeenTutorial(playerId, tutorialKey)) {
-            playerStore.markTutorialSeen(playerId, tutorialKey);
+        if (!playerStore.gameplay().hasSeenTutorial(playerId, tutorialKey)) {
+            playerStore.gameplay().markTutorialSeen(playerId, tutorialKey);
             player.getPageManager().openCustomPage(ref, store,
                 new AscendTutorialPage(playerRef, tutorial));
             return true;
@@ -439,7 +439,7 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void showAchievements(Player player, PlayerRef playerRef) {
         if (achievementManager == null) return;
 
-        var unlocked = playerStore.getUnlockedAchievements(playerRef.getUuid());
+        var unlocked = playerStore.gameplay().getUnlockedAchievements(playerRef.getUuid());
 
         player.sendMessage(Message.raw("[Achievements] " + unlocked.size() + "/" + AscendConstants.AchievementType.values().length + " unlocked")
             .color(SystemMessageUtils.PRIMARY_TEXT));

@@ -102,8 +102,8 @@ public class ElevationPage extends BaseAscendPage {
             return;
         }
 
-        BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
-        int currentElevation = playerStore.getElevationLevel(playerId);
+        BigNumber accumulatedVolt = playerStore.progression().getElevationAccumulatedVolt(playerId);
+        int currentElevation = playerStore.progression().getElevationLevel(playerId);
 
         // Calculate how many levels can be purchased based on accumulated volt
         ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVolt, BigNumber.ONE);
@@ -122,7 +122,7 @@ public class ElevationPage extends BaseAscendPage {
 
         // Set new elevation and reset volt/accumulators atomically
         int newElevation = currentElevation + purchase.levels;
-        playerStore.atomicSetElevationAndResetVolt(playerId, newElevation);
+        playerStore.progression().atomicSetElevationAndResetVolt(playerId, newElevation);
 
         AscendHudManager.showToastSafe(playerId, ToastType.ECONOMY, "Elevation: "
             + AscendConstants.formatElevationMultiplier(currentElevation) + " -> "
@@ -164,7 +164,7 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        int currentElevation = playerStore.getElevationLevel(playerId);
+        int currentElevation = playerStore.progression().getElevationLevel(playerId);
 
         // Show blocked state during active challenge
         if (challengeManager != null && challengeManager.isElevationBlocked(playerId)) {
@@ -179,7 +179,7 @@ public class ElevationPage extends BaseAscendPage {
             return;
         }
 
-        BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
+        BigNumber accumulatedVolt = playerStore.progression().getElevationAccumulatedVolt(playerId);
 
         // Calculate purchase info based on accumulated volt
         ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVolt, BigNumber.ONE);

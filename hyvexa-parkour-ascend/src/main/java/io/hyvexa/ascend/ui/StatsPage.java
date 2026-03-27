@@ -129,8 +129,8 @@ public class StatsPage extends BaseAscendPage {
         commandBuilder.set("#IncomeValue.Text", formatCombinedIncome(playerId, maps));
 
         // 2. Multiplier Breakdown
-        BigNumber[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-        double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
+        BigNumber[] digits = playerStore.progression().getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        double elevation = playerStore.progression().getCalculatedElevationMultiplier(playerId);
 
         double digitsProduct = 1.0;
         for (BigNumber d : digits) {
@@ -143,15 +143,15 @@ public class StatsPage extends BaseAscendPage {
             "Digits: " + formatMultiplier(digitsProduct) + "  |  Elevation: " + formatMultiplier(elevation));
 
         // 3. Lifetime Earnings
-        BigNumber totalEarned = playerStore.getTotalVoltEarned(playerId);
+        BigNumber totalEarned = playerStore.volt().getTotalVoltEarned(playerId);
         commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatBigNumber(totalEarned) + " volt");
 
         // 4. Manual Runs
-        int manualRuns = playerStore.getTotalManualRuns(playerId);
+        int manualRuns = playerStore.gameplay().getTotalManualRuns(playerId);
         commandBuilder.set("#RunsValue.Text", String.format(Locale.US, "%,d runs", manualRuns));
 
         // 5. Ascensions
-        int ascensions = playerStore.getAscensionCount(playerId);
+        int ascensions = playerStore.progression().getAscensionCount(playerId);
         commandBuilder.set("#AscensionsValue.Text", String.format(Locale.US, "%,d", ascensions));
 
         // 6. Fastest Ascension
@@ -184,10 +184,10 @@ public class StatsPage extends BaseAscendPage {
         }
         double totalVoltPerSec = 0.0;
 
-        BigNumber digitsProduct = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        BigNumber digitsProduct = playerStore.progression().getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
 
         for (AscendMap map : maps) {
-            GameplayState.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+            GameplayState.MapProgress mapProgress = playerStore.runners().getMapProgress(playerId, map.getId());
             if (mapProgress == null || !mapProgress.hasRobot()) {
                 continue;
             }

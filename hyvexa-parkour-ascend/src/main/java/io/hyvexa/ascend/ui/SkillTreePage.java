@@ -110,7 +110,7 @@ public class SkillTreePage extends BaseAscendPage {
         commandBuilder.set("#AvailablePoints.Text", String.valueOf(summary.availablePoints()));
 
         // Update Ascendance display
-        int ascendanceCount = playerStore.getAscensionCount(playerId);
+        int ascendanceCount = playerStore.progression().getAscensionCount(playerId);
         commandBuilder.set("#AscendanceValue.Text", String.valueOf(ascendanceCount));
 
         // Update each node
@@ -275,8 +275,8 @@ public class SkillTreePage extends BaseAscendPage {
                 // tutorial, and sending UI commands to a replaced page causes a client crash
                 // ("element not found" for #AvailablePoints).
                 if (node == SkillTreeNode.ASCENSION_CHALLENGES
-                        && !playerStore.hasSeenTutorial(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES)) {
-                    playerStore.markTutorialSeen(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES);
+                        && !playerStore.gameplay().hasSeenTutorial(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES)) {
+                    playerStore.gameplay().markTutorialSeen(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES);
                     player.getPageManager().openCustomPage(ref, store,
                         new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.CHALLENGES));
                     return;

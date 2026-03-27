@@ -100,8 +100,8 @@ public class ElevateCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
-            int currentElevation = playerStore.getElevationLevel(playerId);
+            BigNumber accumulatedVolt = playerStore.progression().getElevationAccumulatedVolt(playerId);
+            int currentElevation = playerStore.progression().getElevationLevel(playerId);
 
             ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(
                 currentElevation, accumulatedVolt, BigNumber.ONE);
@@ -121,7 +121,7 @@ public class ElevateCommand extends AbstractAsyncCommand {
 
             // Perform elevation
             int newElevation = currentElevation + purchase.levels;
-            playerStore.atomicSetElevationAndResetVolt(playerId, newElevation);
+            playerStore.progression().atomicSetElevationAndResetVolt(playerId, newElevation);
 
             // Toast notification
             if (hudManager != null) {

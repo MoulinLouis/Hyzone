@@ -70,7 +70,7 @@ public class AscendSettingsPage extends BaseAscendPage {
         UUID playerId = playerRef != null ? playerRef.getUuid() : null;
 
         // Set runners toggle label
-        boolean runnersHidden = playerId != null && playerStore.isHideOtherRunners(playerId);
+        boolean runnersHidden = playerId != null && playerStore.settings().isHideOtherRunners(playerId);
         commandBuilder.set("#ToggleRunnersButton.Text", runnersHidden ? "Hide: On" : "Hide: Off");
 
         // Set HUD and player visibility indicators
@@ -129,7 +129,7 @@ public class AscendSettingsPage extends BaseAscendPage {
         if (BUTTON_HIDE_HUD.equals(data.getButton())) {
             if (hudManager != null) {
                 hudManager.hideHud(playerRef.getUuid());
-                playerStore.setHudHidden(playerRef.getUuid(), true);
+                playerStore.settings().setHudHidden(playerRef.getUuid(), true);
                 player.sendMessage(Message.raw("HUD hidden."));
                 player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             }
@@ -139,7 +139,7 @@ public class AscendSettingsPage extends BaseAscendPage {
         if (BUTTON_SHOW_HUD.equals(data.getButton())) {
             if (hudManager != null) {
                 hudManager.showHud(playerRef.getUuid());
-                playerStore.setHudHidden(playerRef.getUuid(), false);
+                playerStore.settings().setHudHidden(playerRef.getUuid(), false);
                 player.sendMessage(Message.raw("HUD shown."));
                 player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             }
@@ -153,7 +153,7 @@ public class AscendSettingsPage extends BaseAscendPage {
 
         if (BUTTON_HIDE_ALL.equals(data.getButton())) {
             hideAllPlayers(playerRef);
-            playerStore.setPlayersHidden(playerRef.getUuid(), true);
+            playerStore.settings().setPlayersHidden(playerRef.getUuid(), true);
             player.sendMessage(Message.raw("All players hidden."));
             player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             return;
@@ -161,7 +161,7 @@ public class AscendSettingsPage extends BaseAscendPage {
 
         if (BUTTON_SHOW_ALL.equals(data.getButton())) {
             showAllPlayers(playerRef);
-            playerStore.setPlayersHidden(playerRef.getUuid(), false);
+            playerStore.settings().setPlayersHidden(playerRef.getUuid(), false);
             player.sendMessage(Message.raw("All players shown."));
             player.getPageManager().openCustomPage(ref, store, menuNavigator.createSettingsPage(playerRef, fromProfile));
             return;
@@ -171,9 +171,9 @@ public class AscendSettingsPage extends BaseAscendPage {
     private void handleToggleRunners(Ref<EntityStore> ref, Store<EntityStore> store,
                                      Player player, PlayerRef playerRef) {
         UUID playerId = playerRef.getUuid();
-        boolean current = playerStore.isHideOtherRunners(playerId);
+        boolean current = playerStore.settings().isHideOtherRunners(playerId);
         boolean newState = !current;
-        playerStore.setHideOtherRunners(playerId, newState);
+        playerStore.settings().setHideOtherRunners(playerId, newState);
 
         if (robotManager != null) {
             robotManager.applyRunnerVisibility(playerId);
@@ -197,7 +197,7 @@ public class AscendSettingsPage extends BaseAscendPage {
         cmd.set("#ShowHudIndicator.Visible", !hudHidden);
 
         // Player visibility indicators
-        boolean playersHidden = playerId != null && playerStore.isPlayersHidden(playerId);
+        boolean playersHidden = playerId != null && playerStore.settings().isPlayersHidden(playerId);
         cmd.set("#HidePlayersIndicator.Visible", playersHidden);
         cmd.set("#ShowPlayersIndicator.Visible", !playersHidden);
     }
