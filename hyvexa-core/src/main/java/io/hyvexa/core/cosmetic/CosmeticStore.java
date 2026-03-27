@@ -9,11 +9,11 @@ import io.hyvexa.core.economy.CurrencyBridge;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Persistence layer for player cosmetics. Singleton shared across all modules.
@@ -105,7 +105,7 @@ public class CosmeticStore {
         if (playerId == null || cosmeticId == null) return;
         // Update cache
         getOwnedCosmetics(playerId); // ensure loaded
-        ownedCache.computeIfAbsent(playerId, k -> Collections.synchronizedList(new ArrayList<>()));
+        ownedCache.computeIfAbsent(playerId, k -> new CopyOnWriteArrayList<>());
         List<String> owned = ownedCache.get(playerId);
         if (!owned.contains(cosmeticId)) {
             owned.add(cosmeticId);
@@ -176,7 +176,7 @@ public class CosmeticStore {
      */
     public void resetAllCosmetics(UUID playerId) {
         if (playerId == null) return;
-        ownedCache.put(playerId, Collections.synchronizedList(new ArrayList<>()));
+        ownedCache.put(playerId, new CopyOnWriteArrayList<>());
         equippedCache.put(playerId, NONE_EQUIPPED);
         DatabaseManager.execute(this.db,
                 "DELETE FROM player_cosmetics WHERE player_uuid = ?",
@@ -199,7 +199,7 @@ public class CosmeticStore {
                 stmt -> stmt.setString(1, playerId.toString()),
                 rs -> new CosmeticRow(rs.getString("cosmetic_id"), rs.getBoolean("equipped")));
 
-        List<String> owned = Collections.synchronizedList(new ArrayList<>());
+        List<String> owned = new CopyOnWriteArrayList<>();
         String equipped = NONE_EQUIPPED;
         for (CosmeticRow row : rows) {
             owned.add(row.cosmeticId);
