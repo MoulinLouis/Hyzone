@@ -819,3 +819,316 @@ try {
 ```
 
 **Important:** See `HYTALE_API.md` (in docs/) for Vector3d limitations when working with positions.
+
+## Event Handler Registration
+
+Register platform events with `eventRegistry.registerGlobal(EventClass.class, handler)`. Two patterns exist:
+
+### Centralized Router (Parkour)
+
+A dedicated class receives all dependencies and registers handlers in one method:
+
+```java
+// ParkourEventRouter — receives stores/managers via constructor
+void registerAll(EventRegistry eventRegistry) {
+    eventRegistry.registerGlobal(PlayerConnectEvent.class, this::handlePlayerConnect);
+    eventRegistry.registerGlobal(PlayerReadyEvent.class, this::handlePlayerReady);
+    eventRegistry.registerGlobal(AddPlayerToWorldEvent.class, this::handleAddPlayerToWorld);
+    eventRegistry.registerGlobal(PlayerDisconnectEvent.class, this::handlePlayerDisconnect);
+    eventRegistry.registerGlobal(PlayerChatEvent.class, this::handlePlayerChat);
+}
+
+// Wired in Plugin.setup():
+this.eventRouter = new ParkourEventRouter(mapStore, progressStore, runTracker, ...);
+this.eventRouter.registerAll(this.getEventRegistry());
+```
+
+### Inline Handlers (Ascend)
+
+Register lambdas directly in `setup()` when the plugin class holds the dependencies:
+
+```java
+// ParkourAscendPlugin.setup()
+this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
+    try {
+        Ref<EntityStore> ref = event.getPlayerRef();
+        if (ref == null || !ref.isValid()) { return; }
+        // ... handler logic with direct access to plugin fields
+    } catch (Exception e) {
+        LOGGER.atWarning().log("Exception in PlayerReadyEvent (ascend): " + e.getMessage());
+    }
+});
+```
+
+### Key Rules
+
+- **Wrap each handler in try-catch** — one handler crash must not affect others
+- **Validate refs early** — `if (ref == null || !ref.isValid()) return;` before accessing ECS components
+- Common events: `PlayerConnectEvent`, `PlayerReadyEvent`, `PlayerDisconnectEvent`, `AddPlayerToWorldEvent`, `PlayerChatEvent`
+- Use the centralized router when the module has many handlers with shared dependencies; use inline when handler count is small
+
+## Plugin Initialization Sequence
+
+Every plugin's `setup()` follows a strict order. Skipping or reordering steps causes NPEs or stale state.
+
+### Canonical Order
+
+```
+1.  DatabaseManager.getInstance().initialize()
+2.  *DatabaseSetup.ensureTables()           — DDL
+3.  Core singleton stores                   — VexaStore.getInstance().initialize()
+4.  Module stores                           — new XxxStore(db) + syncLoad()
+5.  Managers                                — created with store dependencies
+6.  Service wiring                          — connect managers to each other
+7.  Bridge configuration                    — XxxBridge.configure(new Services(...))
+8.  Interaction codec registration          — registerInteractionCodecs()
+9.  Command registration                    — getCommandRegistry().registerCommand(...)
+10. ECS system registration                 — EntityStore.REGISTRY.registerSystem(...)
+11. Event handler registration              — registerGlobal(...) or router
+12. Scheduled tasks                         — scheduleTick(...)
+13. Post-init player loop                   — Universe.get().getPlayers() for already-connected players
+14. Shutdown hook                           — Runtime.getRuntime().addShutdownHook(...)
+```
+
+### initSafe Wrapper
+
+Wrap non-critical initialization steps so one failure doesn't crash the entire plugin:
+
+```java
+// HyvexaPlugin — logs and continues on failure
+private void initSafe(String name, Runnable init) {
+    try { init.run(); }
+    catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize " + name); }
+}
+
+// Usage:
+initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
+initSafe("AnalyticsStore", () -> {
+    analyticsStore.initialize();
+    analyticsStore.purgeOldEvents(90);
+});
+```
+
+### Fail-Fast for Critical Stores
+
+Core stores that the plugin cannot function without should abort setup on failure:
+
+```java
+// ParkourAscendPlugin — returns early, plugin is non-functional
+try {
+    mapStore = new AscendMapStore(DatabaseManager.getInstance());
+    mapStore.syncLoad();
+    playerStore = new AscendPlayerStore(DatabaseManager.getInstance());
+    playerStore.syncLoad();
+} catch (Exception e) {
+    LOGGER.atSevere().withCause(e).log("Failed to initialize core stores — plugin will not function");
+    return;
+}
+```
+
+### Post-Init Player Loop
+
+Players may already be connected when the plugin starts (hot reload). Process them after all systems are ready:
+
+```java
+// HyvexaPlugin.setup() — handle players connected before plugin init
+for (Player player : Universe.get().getPlayers()) {
+    // cache, load settings, attach HUD, mark ready
+}
+```
+
+## InteractionBridge (Service Locator for Codecs)
+
+Hytale instantiates interaction handlers via no-arg constructors (codec system), so they can't receive constructor dependencies. The InteractionBridge pattern provides a static service locator scoped to what interactions need.
+
+### Pattern
+
+```java
+// AscendInteractionBridge — static holder with volatile Services record
+public final class AscendInteractionBridge {
+
+    private static volatile Services services;
+
+    private AscendInteractionBridge() {}
+
+    public static void configure(Services services) {
+        AscendInteractionBridge.services = services;
+    }
+
+    public static Services get() {
+        return services;
+    }
+
+    public static void clear() {
+        services = null;
+    }
+
+    public record Services(
+        AscendMapStore mapStore,
+        AscendPlayerStore playerStore,
+        AscendRunTracker runTracker,
+        AscendHudManager hudManager,
+        // ... only what interactions actually need
+    ) {}
+}
+```
+
+### Lifecycle
+
+1. **Configure** — called once in `Plugin.setup()` after all dependencies are initialized:
+   ```java
+   AscendInteractionBridge.configure(new AscendInteractionBridge.Services(
+           mapStore, playerStore, runTracker, hudManager, ...));
+   ```
+2. **Use** — interactions call `XxxBridge.get().someStore()` in their handler methods:
+   ```java
+   public class MyInteraction extends ServerInteraction {
+       @Override
+       public void handle(...) {
+           AscendInteractionBridge.Services s = AscendInteractionBridge.get();
+           s.mapStore().getMap(mapId);
+       }
+   }
+   ```
+3. **Clear** — on shutdown to break reference cycles:
+   ```java
+   AscendInteractionBridge.clear();
+   ```
+
+### Key Rules
+
+- **Narrower than a plugin singleton** — only expose what interactions need, not the entire plugin
+- **volatile field** — ensures thread-safe publication of the Services record
+- **Record type** — immutable, no setters, all dependencies visible at construction
+- Parkour uses `ParkourInteractionBridge` with the same pattern
+
+## Player Disconnect Cleanup
+
+Every cleanup step on disconnect gets its own try-catch so one failure doesn't skip the rest.
+
+### Isolated Try-Catch (Parkour)
+
+```java
+// ParkourEventRouter — each operation isolated
+private void handlePlayerDisconnect(PlayerDisconnectEvent event) {
+    UUID playerId = event.getPlayerRef().getUuid();
+
+    try { if (duelTracker != null) { duelTracker.handleDisconnect(playerId); } }
+    catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: duelTracker"); }
+
+    try { cleanupManager.handleDisconnect(event.getPlayerRef()); }
+    catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: cleanupManager"); }
+
+    try { if (vexaStore != null) { vexaStore.evictPlayer(playerId); } }
+    catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
+    // ... one try-catch per operation
+}
+```
+
+### runSafe Helper (Ascend)
+
+A helper method reduces boilerplate for the same pattern:
+
+```java
+private static void runSafe(Runnable action, String logMessage) {
+    try { action.run(); }
+    catch (Exception e) { LOGGER.atWarning().withCause(e).log(logMessage); }
+}
+
+// Usage in disconnect handler:
+runSafe(() -> { if (eventHandler != null) eventHandler.cleanupPlayer(playerId); },
+        "Disconnect cleanup: eventHandler");
+runSafe(() -> { if (playerStore != null) playerStore.removePlayer(playerId); },
+        "Disconnect cleanup: playerStore");
+runSafe(() -> { if (minePlayerStore != null) minePlayerStore.evict(playerId); },
+        "Disconnect cleanup: minePlayerStore");
+```
+
+### Cleanup Order
+
+1. **Gameplay systems first** — trackers, managers, active sessions
+2. **Stores** — evict cached player data
+3. **Caches** — clear cooldowns, UI state
+4. **Analytics last** — fire disconnect event
+
+### Key Rules
+
+- **Null-check optional components** — `if (manager != null)` before calling cleanup
+- **Log at WARNING with player UUID context** — essential for debugging partial cleanup failures
+- **Never let one failure cascade** — the whole point is isolation
+- See also: [Data Stores § Evict on PlayerDisconnectEvent](#5-evict-on-playerdisconnectevent) for store-specific cleanup
+
+## Deferred Player State Initialization (PlayerReadyEvent)
+
+`PlayerReadyEvent` — not `PlayerConnectEvent` — is the canonical hook for loading persistent player data and initializing UI.
+
+### Why PlayerReadyEvent
+
+`PlayerConnectEvent` fires before the player's world and ECS components are fully available. `PlayerReadyEvent` fires once the player is in-world and safe to operate on.
+
+### Pattern (Parkour)
+
+```java
+// ParkourEventRouter.handlePlayerReady()
+private void handlePlayerReady(PlayerReadyEvent event) {
+    Ref<EntityStore> ref = event.getPlayerRef();
+    if (ref == null || !ref.isValid()) return;
+    Store<EntityStore> store = ref.getStore();
+    UUID playerId = playerRef.getUuid();
+
+    // 1. Load persisted settings from DB
+    PlayerSettings settings = playerSettingsPersistence.loadOrDefault(playerId);
+
+    // 2. Apply state BEFORE HUD attach to avoid flicker
+    hudManager.loadHudHiddenFromStore(playerId);
+
+    // 3. Attach HUD
+    hudManager.attach(playerRef, player);
+
+    // 4. Restore in-progress state async on world thread
+    CompletableFuture.runAsync(() -> {
+        runTracker.restoreSavedRun(playerId, ref, store);
+    }, world);
+
+    // 5. Deferred operations (Discord checks, vote rewards) after HUD
+    HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+        discordLinkStore.checkDiscordReady(playerId, ref);
+        voteManager.checkVoteReady(playerId, ref);
+    }, 2, TimeUnit.SECONDS);
+}
+```
+
+### Pattern (Ascend)
+
+```java
+// ParkourAscendPlugin — inline handler with world-thread async block
+this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
+    try {
+        Ref<EntityStore> ref = event.getPlayerRef();
+        if (ref == null || !ref.isValid()) return;
+        World world = ref.getStore().getExternalData().getWorld();
+        if (!isAscendWorld(world)) return;  // World gate
+
+        UUID playerId = playerRef.getUuid();
+        playersInAscendWorld.add(playerId);
+
+        CompletableFuture.runAsync(() -> {
+            hudManager.loadHudHiddenFromStore(playerId);
+            hudManager.attach(playerRef, player);
+            // ... restore active sessions, apply speed, etc.
+        }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
+            LOGGER.atWarning().withCause(ex).log("Exception in PlayerReadyEvent async task");
+            return null;
+        });
+    } catch (Exception e) {
+        LOGGER.atWarning().log("Exception in PlayerReadyEvent (ascend): " + e.getMessage());
+    }
+});
+```
+
+### Key Rules
+
+- **Load settings before HUD attach** — prevents a frame of default state showing then flickering to saved state
+- **World-gate early** — check `isXxxWorld(world)` before doing module-specific work
+- **Async with timeout** — use `orTimeout()` on world-thread futures to prevent indefinite hangs
+- **Deferred checks after HUD** — Discord link status, vote rewards, and similar checks can wait a few seconds
