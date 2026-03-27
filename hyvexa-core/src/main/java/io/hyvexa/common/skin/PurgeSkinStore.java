@@ -8,11 +8,10 @@ import io.hyvexa.core.economy.CurrencyStore;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class PurgeSkinStore {
 
@@ -127,7 +126,7 @@ public class PurgeSkinStore {
         persistPurchase(playerId, weaponId, skinId);
         // Update cache
         ownedCache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
-                .computeIfAbsent(weaponId, k -> Collections.synchronizedList(new ArrayList<>()))
+                .computeIfAbsent(weaponId, k -> new CopyOnWriteArrayList<>())
                 .add(skinId);
         // Auto-select the newly purchased skin
         selectSkin(playerId, weaponId, skinId);
@@ -187,7 +186,7 @@ public class PurgeSkinStore {
         ConcurrentHashMap<String, List<String>> owned = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, String> selected = new ConcurrentHashMap<>();
         for (SkinRow row : rows) {
-            owned.computeIfAbsent(row.weaponId, k -> Collections.synchronizedList(new ArrayList<>())).add(row.skinId);
+            owned.computeIfAbsent(row.weaponId, k -> new CopyOnWriteArrayList<>()).add(row.skinId);
             if (row.selected) {
                 selected.put(row.weaponId, row.skinId);
             }
