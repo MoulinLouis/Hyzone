@@ -57,6 +57,10 @@ public class PurgeCommand extends AbstractAsyncCommand {
     private final PurgeLoadoutService loadoutService;
     private final CurrencyStore vexaStore;
     private final io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore;
+    private final PurgeScrapStore scrapStore;
+    private final PurgeWeaponUpgradeStore weaponUpgradeStore;
+    private final PurgeClassStore classStore;
+    private final PurgePlayerStore playerStore;
 
     public PurgeCommand(PurgeSessionManager sessionManager,
                         PurgeWaveConfigManager waveConfigManager,
@@ -66,7 +70,11 @@ public class PurgeCommand extends AbstractAsyncCommand {
                         PurgeVariantConfigManager variantConfigManager,
                         PurgeLoadoutService loadoutService,
                         CurrencyStore vexaStore,
-                        io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore) {
+                        io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore,
+                        PurgeScrapStore scrapStore,
+                        PurgeWeaponUpgradeStore weaponUpgradeStore,
+                        PurgeClassStore classStore,
+                        PurgePlayerStore playerStore) {
         super("purge", "Purge zombie survival commands");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -79,6 +87,10 @@ public class PurgeCommand extends AbstractAsyncCommand {
         this.loadoutService = loadoutService;
         this.vexaStore = vexaStore;
         this.purgeSkinStore = purgeSkinStore;
+        this.scrapStore = scrapStore;
+        this.weaponUpgradeStore = weaponUpgradeStore;
+        this.classStore = classStore;
+        this.playerStore = playerStore;
     }
 
     @Override
@@ -170,8 +182,8 @@ public class PurgeCommand extends AbstractAsyncCommand {
     }
 
     private void handleStats(Player player, UUID playerId) {
-        PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrLoad(playerId);
-        long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+        PurgePlayerStats stats = playerStore.getOrLoad(playerId);
+        long scrap = scrapStore.getScrap(playerId);
         player.sendMessage(Message.raw("-- Purge Stats --"));
         player.sendMessage(Message.raw("Best wave: " + stats.getBestWave()));
         player.sendMessage(Message.raw("Total kills: " + stats.getTotalKills()));
@@ -191,10 +203,10 @@ public class PurgeCommand extends AbstractAsyncCommand {
                 return;
             }
             for (String weaponId : weaponConfigManager.getWeaponIds()) {
-                PurgeWeaponUpgradeStore.getInstance().setLevel(playerId, weaponId, 0);
+                weaponUpgradeStore.setLevel(playerId, weaponId, 0);
             }
             // Re-initialize defaults so default weapons are level 1
-            PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
+            weaponUpgradeStore.initializeDefaults(
                     playerId, weaponConfigManager.getDefaultWeaponIds());
             player.sendMessage(Message.raw("All weapon upgrades reset. Default weapons restored."));
             return;
@@ -206,7 +218,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.PLAYER, playerId,
-                        weaponConfigManager, null, null, null, null, null, purgeSkinStore));
+                        weaponConfigManager, null, null, null, null, null, purgeSkinStore, weaponUpgradeStore, null));
     }
 
     private void handleLoadout(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
@@ -217,7 +229,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.LOADOUT, playerId,
                         weaponConfigManager, null, null, null,
-                        sessionManager, loadoutService, purgeSkinStore));
+                        sessionManager, loadoutService, purgeSkinStore, weaponUpgradeStore, null));
     }
 
     private void handleShop(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
@@ -227,7 +239,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.SHOP, playerId,
-                        weaponConfigManager, null, null, null, null, null, purgeSkinStore));
+                        weaponConfigManager, null, null, null, null, null, purgeSkinStore, weaponUpgradeStore, null));
     }
 
     private void handleSkins(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
@@ -258,7 +270,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         UUID targetId = targetRef.getUuid();
 
         if ("check".equals(action)) {
-            long scrap = PurgeScrapStore.getInstance().getScrap(targetId);
+            long scrap = scrapStore.getScrap(targetId);
             player.sendMessage(Message.raw(targetName + " has " + scrap + " scrap."));
             return;
         }
@@ -281,21 +293,21 @@ public class PurgeCommand extends AbstractAsyncCommand {
 
         switch (action) {
             case "add" -> {
-                PurgeScrapStore.getInstance().addScrap(targetId, amount);
-                long newScrap = PurgeScrapStore.getInstance().getScrap(targetId);
+                scrapStore.addScrap(targetId, amount);
+                long newScrap = scrapStore.getScrap(targetId);
                 player.sendMessage(Message.raw("Added " + amount + " scrap to " + targetName + ". New total: " + newScrap));
             }
             case "remove" -> {
-                PurgeScrapStore.getInstance().removeScrap(targetId, amount);
-                long newScrap = PurgeScrapStore.getInstance().getScrap(targetId);
+                scrapStore.removeScrap(targetId, amount);
+                long newScrap = scrapStore.getScrap(targetId);
                 player.sendMessage(Message.raw("Removed " + amount + " scrap from " + targetName + ". New total: " + newScrap));
             }
             case "set" -> {
-                long current = PurgeScrapStore.getInstance().getScrap(targetId);
+                long current = scrapStore.getScrap(targetId);
                 if (amount > current) {
-                    PurgeScrapStore.getInstance().addScrap(targetId, amount - current);
+                    scrapStore.addScrap(targetId, amount - current);
                 } else if (amount < current) {
-                    PurgeScrapStore.getInstance().removeScrap(targetId, current - amount);
+                    scrapStore.removeScrap(targetId, current - amount);
                 }
                 player.sendMessage(Message.raw("Set " + targetName + " scrap to " + amount + "."));
             }
@@ -318,7 +330,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
                     player.sendMessage(Message.raw("Cannot change class during an active session."));
                     return;
                 }
-                PurgeClassStore.getInstance().selectClass(playerId, null);
+                classStore.selectClass(playerId, null);
                 player.sendMessage(Message.raw("Class deselected. You will play without a class."));
             }
             default -> player.sendMessage(Message.raw("Usage: /purge class [select|unlock|info|none]"));
@@ -335,7 +347,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("Unknown class: " + args[2] + ". Options: Scavenger, Tank, Assault, Medic"));
             return;
         }
-        if (!PurgeClassStore.getInstance().isUnlocked(playerId, target)) {
+        if (!classStore.isUnlocked(playerId, target)) {
             player.sendMessage(Message.raw(target.getDisplayName() + " is not unlocked. Use /purge class unlock " + target.getDisplayName()));
             return;
         }
@@ -343,7 +355,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("Cannot change class during an active session."));
             return;
         }
-        PurgeClassStore.getInstance().selectClass(playerId, target);
+        classStore.selectClass(playerId, target);
         player.sendMessage(Message.raw("Class set to " + target.getDisplayName() + "."));
     }
 
@@ -357,12 +369,12 @@ public class PurgeCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("Unknown class: " + args[2] + ". Options: Scavenger, Tank, Assault, Medic"));
             return;
         }
-        PurgeClassStore.PurchaseResult result = PurgeClassStore.getInstance().purchaseClass(playerId, target);
+        PurgeClassStore.PurchaseResult result = classStore.purchaseClass(playerId, target);
         switch (result) {
             case SUCCESS -> player.sendMessage(Message.raw("Unlocked " + target.getDisplayName() + "! Use /purge class select " + target.getDisplayName() + " to equip it."));
             case ALREADY_UNLOCKED -> player.sendMessage(Message.raw(target.getDisplayName() + " is already unlocked."));
             case NOT_ENOUGH_SCRAP -> {
-                long have = PurgeScrapStore.getInstance().getScrap(playerId);
+                long have = scrapStore.getScrap(playerId);
                 player.sendMessage(Message.raw("Not enough scrap. Need " + target.getUnlockCost() + ", have " + have + "."));
             }
         }
@@ -382,9 +394,9 @@ public class PurgeCommand extends AbstractAsyncCommand {
     }
 
     private void showClassList(Player player, UUID playerId) {
-        PurgeClass selected = PurgeClassStore.getInstance().getSelectedClass(playerId);
-        java.util.Set<PurgeClass> unlocked = PurgeClassStore.getInstance().getUnlockedClasses(playerId);
-        long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+        PurgeClass selected = classStore.getSelectedClass(playerId);
+        java.util.Set<PurgeClass> unlocked = classStore.getUnlockedClasses(playerId);
+        long scrap = scrapStore.getScrap(playerId);
 
         player.sendMessage(Message.raw("-- Purge Classes -- (Scrap: " + scrap + ")"));
         for (PurgeClass pc : PurgeClass.values()) {
@@ -397,7 +409,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
     }
 
     private void showClassInfo(Player player, UUID playerId, PurgeClass pc) {
-        boolean owned = PurgeClassStore.getInstance().isUnlocked(playerId, pc);
+        boolean owned = classStore.isUnlocked(playerId, pc);
         player.sendMessage(Message.raw("-- " + pc.getDisplayName() + " --"));
         switch (pc) {
             case SCAVENGER -> {

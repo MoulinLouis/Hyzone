@@ -12,18 +12,28 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WeaponXpStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final WeaponXpStore INSTANCE = new WeaponXpStore();
+    private static volatile WeaponXpStore instance;
 
     private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, int[]>> cache = new ConcurrentHashMap<>();
 
-    private WeaponXpStore() {
-        this.db = DatabaseManager.getInstance();
+    private WeaponXpStore(ConnectionProvider db) {
+        this.db = db;
     }
 
-    public static WeaponXpStore getInstance() {
-        return INSTANCE;
+    public static WeaponXpStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) throw new IllegalStateException("WeaponXpStore already initialized");
+        instance = new WeaponXpStore(db);
+        return instance;
     }
+
+    public static WeaponXpStore get() {
+        WeaponXpStore ref = instance;
+        if (ref == null) throw new IllegalStateException("WeaponXpStore not yet initialized");
+        return ref;
+    }
+
+    public static void destroy() { instance = null; }
 
     public void initialize() {
         if (!this.db.isInitialized()) {

@@ -26,7 +26,6 @@ import java.util.UUID;
 public class WardrobeBridge {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final WardrobeBridge INSTANCE = new WardrobeBridge();
 
     /** All wardrobe cosmetics available for purchase. Populated by initialize(). */
     private volatile List<WardrobeCosmeticDef> cosmetics = List.of();
@@ -61,12 +60,8 @@ public class WardrobeBridge {
         return CATEGORY_GROUPS.getOrDefault(category, category);
     }
 
-    private WardrobeBridge() {
-        this.db = DatabaseManager.getInstance();
-    }
-
-    public static WardrobeBridge getInstance() {
-        return INSTANCE;
+    public WardrobeBridge(ConnectionProvider db) {
+        this.db = db;
     }
 
     public void setAnalytics(PlayerAnalytics analytics) {

@@ -56,30 +56,29 @@ public class WardrobePlugin extends JavaPlugin {
     protected void setup() {
         LOGGER.atInfo().log("Setting up " + this.getName());
 
-        wardrobeBridge = WardrobeBridge.getInstance();
+        wardrobeBridge = new WardrobeBridge(DatabaseManager.get());
         wardrobeBridge.initialize();
 
         StoreInitializer.initialize(LOGGER,
-                () -> DatabaseManager.getInstance().initialize(),
-                () -> VexaStore.getInstance().initialize(),
-                () -> FeatherStore.getInstance().initialize(),
-                () -> CosmeticStore.getInstance().initialize(),
-                () -> PurgeSkinStore.getInstance().initialize(),
-                () -> CosmeticShopConfigStore.getInstance().initialize()
+                () -> DatabaseManager.get().initialize(),
+                () -> VexaStore.get().initialize(),
+                () -> FeatherStore.get().initialize(),
+                () -> CosmeticStore.get().initialize(),
+                () -> PurgeSkinStore.get().initialize(),
+                () -> { cosmeticShopConfigStore = new CosmeticShopConfigStore(DatabaseManager.get()); cosmeticShopConfigStore.initialize(); }
         );
 
-        cosmeticStore = CosmeticStore.getInstance();
-        cosmeticShopConfigStore = CosmeticShopConfigStore.getInstance();
-        vexaStore = VexaStore.getInstance();
-        featherStore = FeatherStore.getInstance();
-        purgeSkinStore = PurgeSkinStore.getInstance();
+        cosmeticStore = CosmeticStore.get();
+        vexaStore = VexaStore.get();
+        featherStore = FeatherStore.get();
+        purgeSkinStore = PurgeSkinStore.get();
 
         wardrobeBridge.setCosmeticStore(cosmeticStore);
         wardrobeBridge.setCosmeticShopConfigStore(cosmeticShopConfigStore);
 
-        cosmeticManager = CosmeticManager.getInstance();
-        cosmeticManager.setTrailManager(io.hyvexa.core.trail.TrailManager.getInstance());
-        cosmeticManager.setModelParticleTrailManager(io.hyvexa.core.trail.ModelParticleTrailManager.getInstance());
+        cosmeticManager = CosmeticManager.createAndRegister(
+                new io.hyvexa.core.trail.TrailManager(),
+                new io.hyvexa.core.trail.ModelParticleTrailManager());
         cosmeticManager.setCosmeticStore(cosmeticStore);
 
         wardrobeShopTab = new WardrobeShopTab(wardrobeBridge, cosmeticStore, cosmeticShopConfigStore);
@@ -141,7 +140,7 @@ public class WardrobePlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Shutdown: CosmeticManager");
         }
-        try { DatabaseManager.getInstance().shutdown(); }
+        try { DatabaseManager.get().shutdown(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: DatabaseManager"); }
         super.shutdown();
     }

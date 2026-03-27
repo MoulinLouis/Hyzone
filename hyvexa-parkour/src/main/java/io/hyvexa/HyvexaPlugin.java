@@ -208,63 +208,64 @@ public class HyvexaPlugin extends JavaPlugin {
             folder.mkdirs();
         }
         try {
-            DatabaseManager.getInstance().initialize();
+            DatabaseManager.createAndRegister().initialize();
             LOGGER.atInfo().log("Database connection initialized");
             ParkourDatabaseSetup.ensureTables();
-            this.playerSettingsPersistence = new PlayerSettingsPersistence(DatabaseManager.getInstance());
+            this.playerSettingsPersistence = new PlayerSettingsPersistence(DatabaseManager.get());
             this.playerSettingsPersistence.ensureTable();
             PlayerSettingsStore.setPersistence(this.playerSettingsPersistence);
             PlayerMusicPage.setPersistence(this.playerSettingsPersistence);
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
-        this.voteStore = new VoteStore(DatabaseManager.getInstance());
-        this.medalRewardStore = new MedalRewardStore(DatabaseManager.getInstance());
-        this.medalStore = new MedalStore(DatabaseManager.getInstance());
-        initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
-        this.vexaStore = VexaStore.getInstance();
-        this.discordLinkStore = DiscordLinkStore.getInstance();
-        initSafe("DiscordLinkStore", () -> discordLinkStore.initialize());
-        initSafe("FeatherStore", () -> FeatherStore.getInstance().initialize());
-        this.featherStore = FeatherStore.getInstance();
+        this.voteStore = new VoteStore(DatabaseManager.get());
+        this.medalRewardStore = new MedalRewardStore(DatabaseManager.get());
+        this.medalStore = new MedalStore(DatabaseManager.get());
+        initSafe("VexaStore", () -> VexaStore.createAndRegister(DatabaseManager.get()));
+        this.vexaStore = VexaStore.get();
+        initSafe("DiscordLinkStore", () -> DiscordLinkStore.createAndRegister(DatabaseManager.get()));
+        this.discordLinkStore = DiscordLinkStore.get();
+        initSafe("DiscordLinkStore.initialize", () -> discordLinkStore.initialize());
+        initSafe("FeatherStore", () -> FeatherStore.createAndRegister(DatabaseManager.get()));
+        this.featherStore = FeatherStore.get();
         initSafe("VoteStore", () -> voteStore.initialize());
         initSafe("MedalRewardStore", () -> medalRewardStore.initialize());
         initSafe("MedalStore", () -> medalStore.initialize());
-        initSafe("CosmeticStore", () -> CosmeticStore.getInstance().initialize());
-        this.cosmeticStore = CosmeticStore.getInstance();
-        this.analyticsStore = AnalyticsStore.getInstance();
+        initSafe("CosmeticStore", () -> CosmeticStore.createAndRegister(DatabaseManager.get()));
+        this.cosmeticStore = CosmeticStore.get();
         initSafe("AnalyticsStore", () -> {
-            analyticsStore.initialize();
+            this.analyticsStore = AnalyticsStore.createAndRegister(DatabaseManager.get());
             analyticsStore.purgeOldEvents(90);
         });
         initSafe("VoteManager", () -> {
             VoteConfig voteConfig = VoteConfig.load();
-            VoteManager.getInstance().initialize(voteConfig, voteStore, featherStore);
-            this.voteManager = VoteManager.getInstance();
+            this.voteManager = new VoteManager();
+            this.voteManager.initialize(voteConfig, voteStore, featherStore);
         });
         this.collisionManager = new CollisionManager();
-        this.mapStore = new MapStore(DatabaseManager.getInstance());
+        this.mapStore = new MapStore(DatabaseManager.get());
         this.mapStore.syncLoad();
         this.mapStore.setOnChangeListener(this::onMapStoreChanged);
-        this.settingsStore = new SettingsStore(DatabaseManager.getInstance());
+        this.settingsStore = new SettingsStore(DatabaseManager.get());
         this.settingsStore.syncLoad();
         PlayerAnalytics analytics = analyticsStore;
         cosmeticStore.setAnalytics(analytics);
         discordLinkStore.setAnalytics(analytics);
         discordLinkStore.setVexaStore(vexaStore);
-        WardrobeBridge.getInstance().setAnalytics(analytics);
-        WardrobeBridge.getInstance().setCurrencyStores(vexaStore, featherStore);
-        PurgeSkinStore.getInstance().setVexaStore(vexaStore);
-        this.progressStore = new ProgressStore(DatabaseManager.getInstance());
+        WardrobeBridge wardrobeBridge = new WardrobeBridge(DatabaseManager.get());
+        wardrobeBridge.setAnalytics(analytics);
+        wardrobeBridge.setCurrencyStores(vexaStore, featherStore);
+        PurgeSkinStore.get().setVexaStore(vexaStore);
+        this.progressStore = new ProgressStore(DatabaseManager.get());
         this.progressStore.setAnalytics(analytics);
         this.progressStore.syncLoad();
-        this.playerCountStore = new PlayerCountStore(DatabaseManager.getInstance());
+        this.playerCountStore = new PlayerCountStore(DatabaseManager.get());
         this.playerCountStore.syncLoad();
-        this.globalMessageStore = new GlobalMessageStore(DatabaseManager.getInstance());
+        this.globalMessageStore = new GlobalMessageStore(DatabaseManager.get());
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore,
                 this.medalStore, this.medalRewardStore, analytics, featherStore);
-        this.runStateStore = new RunStateStore(DatabaseManager.getInstance());
+        this.runStateStore = new RunStateStore(DatabaseManager.get());
         this.runStateStore.ensureTable();
         this.runTracker.setRunStateStore(this.runStateStore);
         // Saved runs persist indefinitely — only invalidated when the map changes
@@ -272,7 +273,7 @@ public class HyvexaPlugin extends JavaPlugin {
         // JVM shutdown hook — fires on kill/Ctrl+C even when plugin shutdown() is skipped
         this.shutdownHook = new Thread(() -> {
             try {
-                if (runTracker != null && runStateStore != null && DatabaseManager.getInstance().isInitialized()) {
+                if (runTracker != null && runStateStore != null && DatabaseManager.get().isInitialized()) {
                     runTracker.saveAllActiveRuns(runStateStore);
                 }
             } catch (Exception e) {
@@ -280,7 +281,7 @@ public class HyvexaPlugin extends JavaPlugin {
             }
         }, "RunStateSaveHook");
         Runtime.getRuntime().addShutdownHook(this.shutdownHook);
-        this.ghostStore = new GhostStore("parkour_ghost_recordings", "parkour", DatabaseManager.getInstance());
+        this.ghostStore = new GhostStore("parkour_ghost_recordings", "parkour", DatabaseManager.get());
         this.ghostStore.syncLoad();
         this.ghostRecorder = new GhostRecorder(this.ghostStore);
         this.ghostRecorder.start();
@@ -288,14 +289,14 @@ public class HyvexaPlugin extends JavaPlugin {
         this.ghostNpcManager.start();
         this.petManager = new PetManager();
         this.petManager.start();
-        this.trailManager = TrailManager.getInstance();
+        this.trailManager = new TrailManager();
         this.runTracker.setGhostRecorder(this.ghostRecorder);
         this.runTracker.setGhostNpcManager(this.ghostNpcManager);
-        this.duelStatsStore = new DuelStatsStore(DatabaseManager.getInstance());
+        this.duelStatsStore = new DuelStatsStore(DatabaseManager.get());
         this.duelStatsStore.syncLoad();
-        this.duelMatchStore = new DuelMatchStore(DatabaseManager.getInstance());
+        this.duelMatchStore = new DuelMatchStore(DatabaseManager.get());
         this.duelMatchStore.ensureTable();
-        this.duelPreferenceStore = new DuelPreferenceStore(DatabaseManager.getInstance());
+        this.duelPreferenceStore = new DuelPreferenceStore(DatabaseManager.get());
         this.duelPreferenceStore.syncLoad();
         this.duelQueue = new DuelQueue();
         this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore, progressStore, settingsStore, analytics);
@@ -319,7 +320,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 this::applyVipSpeedMultiplier));
         this.runTracker.setDuelTracker(duelTracker);
         this.runTracker.getValidator().setPluginServices(hudManager,
-                io.hyvexa.core.cosmetic.CosmeticManager.getInstance(),
+                io.hyvexa.core.cosmetic.CosmeticManager.get(),
                 discordLinkStore,
                 this::invalidateRankCache,
                 this::refreshLeaderboardHologram, this::refreshMapLeaderboardHologram);
@@ -900,7 +901,7 @@ public class HyvexaPlugin extends JavaPlugin {
         shutdownSafe("progressStore flush", () -> { if (progressStore != null) progressStore.flushPendingSave(); });
         shutdownSafe("analytics aggregation", () -> analyticsStore.computeDailyAggregates(java.time.LocalDate.now()));
         shutdownSafe("AdminPageUtils", AdminPageUtils::clear);
-        shutdownSafe("DatabaseManager", () -> DatabaseManager.getInstance().shutdown());
+        shutdownSafe("DatabaseManager", () -> DatabaseManager.get().shutdown());
 
         super.shutdown();
     }

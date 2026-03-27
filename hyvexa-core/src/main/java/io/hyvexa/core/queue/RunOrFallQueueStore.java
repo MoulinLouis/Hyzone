@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RunOrFallQueueStore {
 
-    private static final RunOrFallQueueStore INSTANCE = new RunOrFallQueueStore();
+    private static volatile RunOrFallQueueStore instance;
 
     public record QueueEntry(UUID playerId, long queuedAtMs, String sourceWorldName) {}
 
@@ -22,8 +22,24 @@ public class RunOrFallQueueStore {
 
     private RunOrFallQueueStore() {}
 
-    public static RunOrFallQueueStore getInstance() {
-        return INSTANCE;
+    public static RunOrFallQueueStore createAndRegister() {
+        if (instance != null) {
+            throw new IllegalStateException("RunOrFallQueueStore already initialized");
+        }
+        instance = new RunOrFallQueueStore();
+        return instance;
+    }
+
+    public static RunOrFallQueueStore get() {
+        RunOrFallQueueStore ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("RunOrFallQueueStore not yet initialized — check plugin load order");
+        }
+        return ref;
+    }
+
+    public static void destroy() {
+        instance = null;
     }
 
     public boolean enqueue(UUID playerId, String sourceWorldName) {

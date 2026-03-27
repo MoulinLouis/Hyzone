@@ -40,14 +40,17 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
 
     private final RunOrFallConfigStore configStore;
     private final RunOrFallGameManager gameManager;
+    private final RunOrFallQueueStore queueStore;
     private final Map<UUID, BlockSelection> selections = new ConcurrentHashMap<>();
 
-    public RunOrFallCommand(RunOrFallConfigStore configStore, RunOrFallGameManager gameManager) {
+    public RunOrFallCommand(RunOrFallConfigStore configStore, RunOrFallGameManager gameManager,
+                            RunOrFallQueueStore queueStore) {
         super("rof", "RunOrFall lobby and admin commands");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
         this.configStore = configStore;
         this.gameManager = gameManager;
+        this.queueStore = queueStore;
     }
 
     @Override
@@ -125,8 +128,8 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
             case "voidy" -> handleVoidY(player, args);
             case "breakdelay" -> handleBreakDelay(player, args);
             case "queue" -> {
-                if (RunOrFallQueueStore.getInstance().isQueued(playerId)) {
-                    RunOrFallQueueStore.getInstance().dequeue(playerId);
+                if (queueStore.isQueued(playerId)) {
+                    queueStore.dequeue(playerId);
                     player.sendMessage(Message.raw(PREFIX + "Removed from RunOrFall queue."));
                 } else {
                     gameManager.joinLobby(playerId, world);

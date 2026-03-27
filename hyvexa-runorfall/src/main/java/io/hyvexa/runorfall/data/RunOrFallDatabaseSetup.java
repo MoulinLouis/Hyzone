@@ -17,11 +17,11 @@ public final class RunOrFallDatabaseSetup {
     }
 
     public static void ensureTables() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!DatabaseManager.get().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, skipping RunOrFall table setup");
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = DatabaseManager.get().getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection for RunOrFall table setup");
                 return;

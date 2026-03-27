@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class PurgeScrapStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final PurgeScrapStore INSTANCE = new PurgeScrapStore();
+    private static volatile PurgeScrapStore instance;
     private static final long FLUSH_INTERVAL_MS = 2_000L;
     private static final long SLOW_FLUSH_WARNING_MS = 1_000L;
 
@@ -34,13 +34,23 @@ public class PurgeScrapStore {
 
     private volatile ScheduledExecutorService flushExecutor;
 
-    private PurgeScrapStore() {
-        this.db = DatabaseManager.getInstance();
+    private PurgeScrapStore(ConnectionProvider db) {
+        this.db = db;
     }
 
-    public static PurgeScrapStore getInstance() {
-        return INSTANCE;
+    public static PurgeScrapStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) throw new IllegalStateException("PurgeScrapStore already initialized");
+        instance = new PurgeScrapStore(db);
+        return instance;
     }
+
+    public static PurgeScrapStore get() {
+        PurgeScrapStore ref = instance;
+        if (ref == null) throw new IllegalStateException("PurgeScrapStore not yet initialized");
+        return ref;
+    }
+
+    public static void destroy() { instance = null; }
 
     public void initialize() {
         if (!this.db.isInitialized()) {

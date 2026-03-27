@@ -21,13 +21,13 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Manages Discord-Minecraft account linking via shared MySQL database.
- * Singleton shared across all modules. Players generate a code in-game,
+ * Shared instance across all modules. Players generate a code in-game,
  * enter it on Discord, and receive a one-time vexa reward on next login.
  */
 public class DiscordLinkStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final DiscordLinkStore INSTANCE = new DiscordLinkStore();
+    private static volatile DiscordLinkStore instance;
 
     private static final int CODE_LENGTH = 6;
     private static final long CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
@@ -40,12 +40,28 @@ public class DiscordLinkStore {
     private volatile PlayerAnalytics analytics;
     private volatile CurrencyStore vexaStore;
 
-    private DiscordLinkStore() {
-        this.db = DatabaseManager.getInstance();
+    private DiscordLinkStore(ConnectionProvider db) {
+        this.db = db;
     }
 
-    public static DiscordLinkStore getInstance() {
-        return INSTANCE;
+    public static DiscordLinkStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) {
+            throw new IllegalStateException("DiscordLinkStore already initialized");
+        }
+        instance = new DiscordLinkStore(db);
+        return instance;
+    }
+
+    public static DiscordLinkStore get() {
+        DiscordLinkStore ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("DiscordLinkStore not yet initialized — check plugin load order");
+        }
+        return ref;
+    }
+
+    public static void destroy() {
+        instance = null;
     }
 
     public void setAnalytics(PlayerAnalytics analytics) {

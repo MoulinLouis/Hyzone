@@ -45,8 +45,9 @@ public final class MyPage extends BaseAscendPage {
 Composition root rule:
 1. `Plugin.setup()` creates stores/managers/services and wires them together.
 2. Commands, interactions, and other framework-owned entry points may read dependencies from the plugin singleton once to bootstrap.
-3. Business logic classes, pages, and helper services should not call `Plugin.getInstance().getXxx()` internally.
+3. Business logic classes (stores, managers, services, pages) must never call `getInstance()` or access static singletons. Dependencies are passed via constructor. Only plugin `setup()` methods and interaction bridge `configure()` calls may use static accessors.
 4. If a page needs to open sibling pages, inject a small page factory/navigator rather than re-reading the plugin singleton inside the page.
+5. Cross-module stores use the shared-instance pattern (`createAndRegister()` + `get()`) — the owning plugin calls `createAndRegister()` in `setup()`, other plugins call `get()` in their `setup()`.
 
 ## UI Pages
 
@@ -506,38 +507,38 @@ Older module stores such as `DuelStatsStore` and `RunOrFallStatsStore` still cal
 
 There are 2 valid startup paths in the current codebase:
 
-1. Core singleton store with an explicit `initialize()`:
+1. Shared-instance store created by the owning plugin via `createAndRegister()`:
 
 ```java
-initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
-this.vexaStore = VexaStore.getInstance();
+initSafe("VexaStore", () -> VexaStore.createAndRegister(DatabaseManager.get()));
+this.vexaStore = VexaStore.get();
 ```
 
 2. Module `BasePlayerStore` after DB setup and table creation:
 
 ```java
 RunOrFallDatabaseSetup.ensureTables();
-statsStore = new RunOrFallStatsStore(DatabaseManager.getInstance());
+statsStore = new RunOrFallStatsStore(DatabaseManager.get());
 ```
 
 Rule of thumb:
-- If the store exposes `initialize()`, call it from `Plugin.setup()` behind the module's safe-init wrapper (`initSafe(...)` in Parkour, `StoreInitializer.initialize(...)` in other modules).
+- If the store uses the shared-instance pattern (`createAndRegister()` + `get()`), the owning plugin calls `createAndRegister()` in `setup()` and other plugins call `get()`.
 - If the store is a plain `BasePlayerStore<V>` with no startup hook, instantiate it only after `DatabaseManager` and the relevant `*DatabaseSetup.ensureTables()` have run.
 
 #### 5. Evict on `PlayerDisconnectEvent`
 
 Every player-cached store needs explicit disconnect cleanup.
 
-Core singleton stores (e.g. `VexaStore`, `DiscordLinkStore`) are accessed via `getInstance()`. Module-owned `BasePlayerStore` instances are held as fields on the plugin class — use whichever reference your module has.
+Shared-instance stores (e.g. `VexaStore`, `DiscordLinkStore`) are accessed via `get()` during setup and stored as fields. Module-owned `BasePlayerStore` instances are held as fields on the plugin class — use whichever reference your module has.
 
-Example from `HyvexaPurgePlugin` (mix of singletons and instance fields):
+Example from `HyvexaPurgePlugin` (all accessed via fields):
 
 ```java
 PlayerCleanupHelper.cleanup(playerId, LOGGER,
-        id -> VexaStore.getInstance().evictPlayer(id),
-        id -> DiscordLinkStore.getInstance().evictPlayer(id),
-        id -> PurgePlayerStore.getInstance().evict(id),
-        id -> PurgeScrapStore.getInstance().evictPlayer(id)
+        id -> vexaStore.evictPlayer(id),
+        id -> discordLinkStore.evictPlayer(id),
+        id -> playerStore.evict(id),
+        id -> scrapStore.evictPlayer(id)
 );
 ```
 
@@ -579,11 +580,11 @@ For `BasePlayerStore<V>`, the real lifecycle is:
 Concrete example from `PurgeSessionManager.persistResults()`:
 
 ```java
-PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrLoad(playerId);
+PurgePlayerStats stats = playerStore.getOrLoad(playerId);
 stats.updateBestWave(session.getCurrentWave());
 stats.incrementKills(kills);
 stats.incrementSessions();
-PurgePlayerStore.getInstance().save(playerId, stats);
+playerStore.save(playerId, stats);
 ```
 
 Core singleton currency stores follow the same cache -> persist -> evict shape, but the public API is `getBalance()/setBalance()/addBalance()/evictPlayer()` instead of `getOrLoad()/save()/evict()`.
@@ -973,9 +974,9 @@ Every plugin's `setup()` follows a strict order. Skipping or reordering steps ca
 ### Canonical Order
 
 ```
-1.  DatabaseManager.getInstance().initialize()
+1.  DatabaseManager.createAndRegister() / .get()
 2.  *DatabaseSetup.ensureTables()           — DDL
-3.  Core singleton stores                   — VexaStore.getInstance().initialize()
+3.  Core shared-instance stores             — VexaStore.createAndRegister(db) / .get()
 4.  Module stores                           — new XxxStore(db) + syncLoad()
 5.  Managers                                — created with store dependencies
 6.  Service wiring                          — connect managers to each other
@@ -1001,7 +1002,7 @@ private void initSafe(String name, Runnable init) {
 }
 
 // Usage:
-initSafe("VexaStore", () -> VexaStore.getInstance().initialize());
+initSafe("VexaStore", () -> VexaStore.createAndRegister(DatabaseManager.get()));
 initSafe("AnalyticsStore", () -> {
     analyticsStore.initialize();
     analyticsStore.purgeOldEvents(90);
@@ -1015,9 +1016,9 @@ Core stores that the plugin cannot function without should abort setup on failur
 ```java
 // ParkourAscendPlugin — returns early, plugin is non-functional
 try {
-    mapStore = new AscendMapStore(DatabaseManager.getInstance());
+    mapStore = new AscendMapStore(DatabaseManager.get());
     mapStore.syncLoad();
-    playerStore = new AscendPlayerStore(DatabaseManager.getInstance());
+    playerStore = new AscendPlayerStore(DatabaseManager.get());
     playerStore.syncLoad();
 } catch (Exception e) {
     LOGGER.atSevere().withCause(e).log("Failed to initialize core stores — plugin will not function");

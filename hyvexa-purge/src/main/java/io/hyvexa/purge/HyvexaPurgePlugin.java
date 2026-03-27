@@ -97,6 +97,13 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
     private PurgeClassManager classManager;
     private WeaponXpManager weaponXpManager;
     private PurgeSkinStore purgeSkinStore;
+    private DiscordLinkStore discordLinkStore;
+    private PurgeScrapStore scrapStore;
+    private PurgeWeaponUpgradeStore weaponUpgradeStore;
+    private PurgeClassStore classStore;
+    private WeaponXpStore weaponXpStore;
+    private PurgeMissionStore missionStore;
+    private PurgePlayerStore playerStore;
 
     public HyvexaPurgePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -131,40 +138,49 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
     protected void setup() {
         // Initialize database connection
         StoreInitializer.initialize(LOGGER,
-                () -> DatabaseManager.getInstance().initialize()
+                () -> DatabaseManager.get().initialize()
         );
 
         // Centralized table setup — all Purge tables and migrations
         PurgeDatabaseSetup.ensureTables();
 
+        // Create stores in dependency order
+        var db = DatabaseManager.get();
+        scrapStore = PurgeScrapStore.createAndRegister(db);
+        weaponUpgradeStore = PurgeWeaponUpgradeStore.createAndRegister(db, scrapStore);
+        classStore = PurgeClassStore.createAndRegister(db, scrapStore);
+        weaponXpStore = WeaponXpStore.createAndRegister(db);
+        missionStore = PurgeMissionStore.createAndRegister(db);
+        playerStore = PurgePlayerStore.createAndRegister(db);
+
         // Initialize stores (tables already exist)
         StoreInitializer.initialize(LOGGER,
-                () -> VexaStore.getInstance().initialize(),
-                () -> DiscordLinkStore.getInstance().initialize(),
-                () -> AnalyticsStore.getInstance().initialize(),
-                () -> PurgeScrapStore.getInstance().initialize(),
+                () -> VexaStore.get().initialize(),
+                () -> { discordLinkStore = DiscordLinkStore.get(); discordLinkStore.initialize(); },
+                () -> AnalyticsStore.get().initialize(),
+                () -> scrapStore.initialize(),
                 // PurgePlayerStore: no init needed (BasePlayerStore handles lazy loading)
-                () -> PurgeWeaponUpgradeStore.getInstance().initialize(),
-                () -> { purgeSkinStore = PurgeSkinStore.getInstance(); purgeSkinStore.initialize(); },
-                () -> WeaponXpStore.getInstance().initialize(),
-                () -> PurgeClassStore.getInstance().initialize(),
-                () -> PurgeMissionStore.getInstance().initialize()
+                () -> weaponUpgradeStore.initialize(),
+                () -> { purgeSkinStore = PurgeSkinStore.createAndRegister(db); purgeSkinStore.initialize(); },
+                () -> weaponXpStore.initialize(),
+                () -> classStore.initialize(),
+                () -> missionStore.initialize()
         );
 
         // Create managers
         instanceManager = new PurgeInstanceManager();
         instanceManager.loadConfiguredInstances();
-        variantConfigManager = new PurgeVariantConfigManager(DatabaseManager.getInstance());
-        waveConfigManager = new PurgeWaveConfigManager(DatabaseManager.getInstance(), variantConfigManager);
-        weaponConfigManager = new PurgeWeaponConfigManager(DatabaseManager.getInstance());
-        hudManager = new PurgeHudManager(VexaStore.getInstance());
-        waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, variantConfigManager, hudManager, weaponConfigManager, this);
+        variantConfigManager = new PurgeVariantConfigManager(db);
+        waveConfigManager = new PurgeWaveConfigManager(db, variantConfigManager);
+        weaponConfigManager = new PurgeWeaponConfigManager(db);
+        hudManager = new PurgeHudManager(VexaStore.get(), scrapStore, weaponXpStore);
+        waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, variantConfigManager, hudManager, weaponConfigManager, this, scrapStore);
         partyManager = new PurgePartyManager();
-        sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager, weaponConfigManager, this);
-        upgradeManager = new PurgeUpgradeManager();
-        weaponXpManager = new WeaponXpManager();
-        classManager = new PurgeClassManager(upgradeManager);
-        PurgeMissionManager missionManager = new PurgeMissionManager();
+        upgradeManager = new PurgeUpgradeManager(weaponXpStore);
+        weaponXpManager = new WeaponXpManager(weaponXpStore);
+        classManager = new PurgeClassManager(upgradeManager, classStore);
+        sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager, weaponConfigManager, this, scrapStore, playerStore);
+        PurgeMissionManager missionManager = new PurgeMissionManager(missionStore, scrapStore);
 
         PurgeManagerRegistry.builder()
                 .sessionManager(sessionManager)
@@ -182,13 +198,13 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
 
         // Register commands
         this.getCommandRegistry().registerCommand(
-                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager, this, VexaStore.getInstance(), purgeSkinStore));
+                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager, this, VexaStore.get(), purgeSkinStore, scrapStore, weaponUpgradeStore, classStore, playerStore));
         this.getCommandRegistry().registerCommand(new SetAmmoCommand());
         this.getCommandRegistry().registerCommand(new CamTestCommand());
 
         // Configure interaction bridge for codec-instantiated handlers
         PurgeInteractionBridge.configure(new PurgeInteractionBridge.Services(
-                sessionManager, partyManager, weaponConfigManager, this, purgeSkinStore));
+                sessionManager, partyManager, weaponConfigManager, this, purgeSkinStore, weaponUpgradeStore));
 
         // Register item interaction codecs
         registerInteractionCodecs();
@@ -215,10 +231,10 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
                 return;
             }
             // Evict stale skin cache (wardrobe purchases happen in a different classloader)
-            PurgeSkinStore.getInstance().evictPlayer(playerId);
+            purgeSkinStore.evictPlayer(playerId);
             ensurePurgeIdleState(playerRef, player);
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
-            DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
+            DiscordLinkStore linkStore = discordLinkStore;
             linkStore.checkAndRewardVexaOnLoginAsync(playerId)
                     .thenAcceptAsync(rewarded -> {
                         if (rewarded && ref.isValid()) {
@@ -245,7 +261,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
             if (ModeGate.isPurgeWorld(world)) {
                 // Evict stale skin cache (wardrobe purchases happen in a different classloader)
                 if (playerId != null) {
-                    PurgeSkinStore.getInstance().evictPlayer(playerId);
+                    purgeSkinStore.evictPlayer(playerId);
                 }
                 Player player = holder.getComponent(Player.getComponentType());
                 if (playerRef != null && player != null) {
@@ -276,15 +292,15 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
             partyManager.cleanupPlayer(playerId);
             hudManager.removePlayer(playerId);
             PlayerCleanupHelper.cleanup(playerId, LOGGER,
-                    id -> VexaStore.getInstance().evictPlayer(id),
-                    id -> DiscordLinkStore.getInstance().evictPlayer(id),
-                    id -> PurgePlayerStore.getInstance().evict(id),
-                    id -> PurgeScrapStore.getInstance().evictPlayer(id),
-                    id -> PurgeWeaponUpgradeStore.getInstance().evictPlayer(id),
-                    id -> PurgeSkinStore.getInstance().evictPlayer(id),
-                    id -> WeaponXpStore.getInstance().evictPlayer(id),
-                    id -> PurgeClassStore.getInstance().evictPlayer(id),
-                    id -> PurgeMissionStore.getInstance().evictPlayer(id),
+                    id -> VexaStore.get().evictPlayer(id),
+                    id -> discordLinkStore.evictPlayer(id),
+                    id -> playerStore.evict(id),
+                    id -> scrapStore.evictPlayer(id),
+                    id -> weaponUpgradeStore.evictPlayer(id),
+                    id -> purgeSkinStore.evictPlayer(id),
+                    id -> weaponXpStore.evictPlayer(id),
+                    id -> classStore.evictPlayer(id),
+                    id -> missionStore.evictPlayer(id),
                     id -> MultiHudBridge.evictPlayer(id)
             );
         });
@@ -324,9 +340,9 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
             comboTickTask.cancel(false);
             comboTickTask = null;
         }
-        try { PurgeScrapStore.getInstance().shutdown(); }
+        try { if (scrapStore != null) scrapStore.shutdown(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: PurgeScrapStore"); }
-        try { DatabaseManager.getInstance().shutdown(); }
+        try { DatabaseManager.get().shutdown(); }
         catch (Exception e) { /* Purge DB shutdown */ }
     }
 
@@ -515,7 +531,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
             return;
         }
         hudManager.attach(playerRef, player);
-        PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
+        weaponUpgradeStore.initializeDefaults(
                 playerId, weaponConfigManager.getDefaultWeaponIds());
         if (sessionManager != null && sessionManager.getSessionByPlayer(playerId) != null) {
             return;
@@ -552,7 +568,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
             registry.registerEntityEventType(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class);
         }
         if (!registry.hasSystemClass(PurgeDamageModifierSystem.class)) {
-            PurgeDamageModifierSystem dmgSystem = new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager, weaponXpManager, classManager, hudManager);
+            PurgeDamageModifierSystem dmgSystem = new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager, weaponXpManager, classManager, hudManager, weaponUpgradeStore);
             registry.registerSystem(dmgSystem);
         }
     }

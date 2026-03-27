@@ -68,7 +68,7 @@ public class RunOrFallQueueCommand extends AbstractAsyncCommand {
         }
 
         String worldName = world.getName() != null ? world.getName() : "unknown";
-        RunOrFallQueueStore queueStore = RunOrFallQueueStore.getInstance();
+        RunOrFallQueueStore queueStore = RunOrFallQueueStore.get();
 
         if (args.length > 0 && "leave".equalsIgnoreCase(args[0])) {
             if (queueStore.dequeue(playerId)) {

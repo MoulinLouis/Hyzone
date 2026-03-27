@@ -39,10 +39,6 @@ abstract class CachedCurrencyStore implements CurrencyStore {
         this.db = db;
     }
 
-    protected CachedCurrencyStore() {
-        this(DatabaseManager.getInstance());
-    }
-
     protected abstract HytaleLogger logger();
 
     /** SQL table name (e.g. "player_vexa"). */

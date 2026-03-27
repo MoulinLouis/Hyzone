@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class CosmeticManager {
 
-    private static final CosmeticManager INSTANCE = new CosmeticManager();
+    private static volatile CosmeticManager instance;
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final float PREVIEW_DURATION_SECONDS = 5f;
     private static final long APPLY_DELAY_MS = 100;
@@ -55,16 +55,27 @@ public class CosmeticManager {
 
     private CosmeticManager() {}
 
-    public static CosmeticManager getInstance() {
-        return INSTANCE;
+    public static CosmeticManager createAndRegister(TrailManager trailManager,
+                                                     ModelParticleTrailManager modelParticleTrailManager) {
+        if (instance != null) {
+            throw new IllegalStateException("CosmeticManager already initialized");
+        }
+        instance = new CosmeticManager();
+        instance.trailManager = trailManager;
+        instance.modelParticleTrailManager = modelParticleTrailManager;
+        return instance;
     }
 
-    public void setTrailManager(TrailManager trailManager) {
-        this.trailManager = trailManager;
+    public static CosmeticManager get() {
+        CosmeticManager ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("CosmeticManager not yet initialized — check plugin load order");
+        }
+        return ref;
     }
 
-    public void setModelParticleTrailManager(ModelParticleTrailManager modelParticleTrailManager) {
-        this.modelParticleTrailManager = modelParticleTrailManager;
+    public static void destroy() {
+        instance = null;
     }
 
     public void setCosmeticStore(CosmeticStore cosmeticStore) {

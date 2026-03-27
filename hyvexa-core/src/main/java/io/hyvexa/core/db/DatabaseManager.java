@@ -32,15 +32,31 @@ public class DatabaseManager implements ConnectionProvider {
             "duel_category_prefs",
             "duel_player_stats"
     );
-    private static final DatabaseManager INSTANCE = new DatabaseManager();
+    private static volatile DatabaseManager instance;
     private static final Object INIT_LOCK = new Object();
     private volatile HikariDataSource dataSource;
 
     private DatabaseManager() {
     }
 
-    public static DatabaseManager getInstance() {
-        return INSTANCE;
+    public static DatabaseManager createAndRegister() {
+        if (instance != null) {
+            throw new IllegalStateException("DatabaseManager already initialized");
+        }
+        instance = new DatabaseManager();
+        return instance;
+    }
+
+    public static DatabaseManager get() {
+        DatabaseManager ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("DatabaseManager not yet initialized — check plugin load order");
+        }
+        return ref;
+    }
+
+    public static void destroy() {
+        instance = null;
     }
 
     /**

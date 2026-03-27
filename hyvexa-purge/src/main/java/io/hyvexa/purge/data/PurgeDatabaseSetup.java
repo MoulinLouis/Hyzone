@@ -17,12 +17,12 @@ public final class PurgeDatabaseSetup {
     }
 
     public static void ensureTables() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!DatabaseManager.get().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, skipping Purge table setup");
             return;
         }
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+        try (Connection conn = DatabaseManager.get().getConnection()) {
             if (conn == null) {
                 LOGGER.atWarning().log("Failed to acquire database connection for Purge table setup");
                 return;
@@ -256,7 +256,7 @@ public final class PurgeDatabaseSetup {
         LOGGER.atInfo().log("Migrating purge_waves from old slow/normal/fast columns to variant counts table");
         String selectSql = "SELECT wave_number, slow_count, normal_count, fast_count FROM purge_waves";
         String insertSql = "INSERT IGNORE INTO purge_wave_variant_counts (wave_number, variant_key, count) VALUES (?, ?, ?)";
-        boolean migrated = DatabaseManager.getInstance().withTransaction(txConn -> {
+        boolean migrated = DatabaseManager.get().withTransaction(txConn -> {
             try (PreparedStatement selectStmt = txConn.prepareStatement(selectSql);
                  ResultSet rs = selectStmt.executeQuery()) {
                 try (PreparedStatement insertStmt = txConn.prepareStatement(insertSql)) {

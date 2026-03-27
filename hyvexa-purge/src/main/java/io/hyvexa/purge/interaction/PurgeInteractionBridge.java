@@ -1,6 +1,7 @@
 package io.hyvexa.purge.interaction;
 
 import io.hyvexa.purge.PurgeLoadoutService;
+import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
@@ -33,6 +34,7 @@ public final class PurgeInteractionBridge {
         PurgePartyManager partyManager,
         PurgeWeaponConfigManager weaponConfigManager,
         PurgeLoadoutService loadoutService,
-        io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore
+        io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore,
+        PurgeWeaponUpgradeStore weaponUpgradeStore
     ) {}
 }

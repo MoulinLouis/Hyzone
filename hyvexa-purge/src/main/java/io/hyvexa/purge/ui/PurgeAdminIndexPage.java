@@ -14,6 +14,9 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.purge.data.PurgePlayerStore;
+import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
@@ -93,13 +96,14 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
             player.getPageManager().openCustomPage(ref, store,
                     new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.ADMIN, null,
                             weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager,
-                            null, null, purgeSkinStore));
+                            null, null, purgeSkinStore, null, null));
         } else if (BUTTON_SKINS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
                     new PurgeSkinAdminPage(playerRef, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager, purgeSkinStore));
         } else if (BUTTON_SETTINGS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeSettingsPage(playerRef, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager, purgeSkinStore));
+                    new PurgeSettingsPage(playerRef, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager, purgeSkinStore,
+                            PurgeScrapStore.get(), PurgeWeaponUpgradeStore.get(), PurgePlayerStore.get()));
         }
     }
 

@@ -74,6 +74,8 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     private final PurgeSessionManager sessionManager;
     private final PurgeLoadoutService loadoutService;
     private final PurgeSkinStore purgeSkinStore;
+    private final PurgeWeaponUpgradeStore weaponUpgradeStore;
+    private final WeaponXpStore weaponXpStore;
 
     // Track selected weapon for inline detail panel
     private String selectedWeaponId;
@@ -91,7 +93,9 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                                  PurgeVariantConfigManager variantConfigManager,
                                  PurgeSessionManager sessionManager,
                                  PurgeLoadoutService loadoutService,
-                                 PurgeSkinStore purgeSkinStore) {
+                                 PurgeSkinStore purgeSkinStore,
+                                 PurgeWeaponUpgradeStore weaponUpgradeStore,
+                                 WeaponXpStore weaponXpStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWeaponSelectData.CODEC);
         this.mode = mode;
         this.playerId = playerId;
@@ -102,6 +106,8 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         this.sessionManager = sessionManager;
         this.loadoutService = loadoutService;
         this.purgeSkinStore = purgeSkinStore;
+        this.weaponUpgradeStore = weaponUpgradeStore;
+        this.weaponXpStore = weaponXpStore;
     }
 
     @Override
@@ -184,7 +190,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         Player player = store.getComponent(ref, Player.getComponentType());
         long unlockCost = weaponConfigManager.getUnlockCost(selectedWeaponId);
         PurgeWeaponUpgradeStore.PurchaseResult result =
-                PurgeWeaponUpgradeStore.getInstance().purchaseWeapon(playerId, selectedWeaponId, unlockCost);
+                weaponUpgradeStore.purchaseWeapon(playerId, selectedWeaponId, unlockCost);
 
         String displayName = weaponConfigManager.getDisplayName(selectedWeaponId);
         if (player != null) {
@@ -253,13 +259,13 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
 
         Player player = store.getComponent(ref, Player.getComponentType());
         PurgeWeaponUpgradeStore.UpgradeResult result =
-                PurgeWeaponUpgradeStore.getInstance().tryUpgrade(playerId, selectedWeaponId, weaponConfigManager);
+                weaponUpgradeStore.tryUpgrade(playerId, selectedWeaponId, weaponConfigManager);
 
         String displayName = weaponConfigManager.getDisplayName(selectedWeaponId);
         if (player != null) {
             switch (result) {
                 case SUCCESS -> {
-                    int newLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, selectedWeaponId);
+                    int newLevel = weaponUpgradeStore.getLevel(playerId, selectedWeaponId);
                     String stars = weaponConfigManager.getStarDisplay(newLevel);
                     int dmg = weaponConfigManager.getDamage(selectedWeaponId, newLevel);
                     player.sendMessage(Message.raw(displayName + " upgraded to " + stars + " star (" + dmg + " dmg)!"));
@@ -315,7 +321,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DetailCloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE_DETAIL), false);
 
-        int currentLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, selectedWeaponId);
+        int currentLevel = weaponUpgradeStore.getLevel(playerId, selectedWeaponId);
         int maxLevel = weaponConfigManager.getMaxLevel();
 
         if (currentLevel < 1) {
@@ -368,7 +374,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         }
 
         // Weapon XP mastery section (only shown for owned weapons)
-        boolean isOwned = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, selectedWeaponId) >= 1;
+        boolean isOwned = weaponUpgradeStore.getLevel(playerId, selectedWeaponId) >= 1;
         commandBuilder.set("#XpSection.Visible", isOwned);
         if (isOwned) {
             populateXpSection(commandBuilder);
@@ -376,7 +382,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     }
 
     private void populateXpSection(UICommandBuilder commandBuilder) {
-        int[] xpData = WeaponXpStore.getInstance().getXpData(playerId, selectedWeaponId);
+        int[] xpData = weaponXpStore.getXpData(playerId, selectedWeaponId);
         int xp = xpData[0];
         int xpLevel = xpData[1];
         int maxXpLevel = WeaponXpManager.MAX_LEVEL;
@@ -421,7 +427,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         for (String weaponId : weaponIds) {
             int playerLevel = 0;
             if (playerId != null && (mode == Mode.PLAYER || mode == Mode.SHOP)) {
-                playerLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId);
+                playerLevel = weaponUpgradeStore.getLevel(playerId, weaponId);
             }
 
             // PLAYER mode: only show owned weapons
@@ -487,7 +493,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         List<String> unowned = new ArrayList<>();
         for (String weaponId : weaponIds) {
             int level = playerId != null
-                    ? PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId)
+                    ? weaponUpgradeStore.getLevel(playerId, weaponId)
                     : 0;
             if (level >= 1) {
                 owned.add(weaponId);
@@ -509,7 +515,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             commandBuilder.set(root + " #WeaponName.Visible", true);
             commandBuilder.set(root + " #WeaponName.Text", getWeaponLabel(weaponId));
 
-            int playerLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId);
+            int playerLevel = weaponUpgradeStore.getLevel(playerId, weaponId);
             commandBuilder.set(root + " #StarBar.Visible", true);
             updateCardStarDisplay(commandBuilder, root, playerLevel);
 
@@ -589,7 +595,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         if (playerId == null || weaponId == null) {
             return;
         }
-        if (PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId) < 1) {
+        if (weaponUpgradeStore.getLevel(playerId, weaponId) < 1) {
             return;
         }
         if (sessionManager == null || loadoutService == null) {

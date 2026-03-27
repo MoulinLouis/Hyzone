@@ -16,9 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PurgeClassStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final PurgeClassStore INSTANCE = new PurgeClassStore();
+    private static volatile PurgeClassStore instance;
 
     private final ConnectionProvider db;
+    private final PurgeScrapStore scrapStore;
     private final ConcurrentHashMap<UUID, Set<PurgeClass>> unlockedCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeClass> selectedCache = new ConcurrentHashMap<>();
     // Track which players we've loaded selected class for (to distinguish "loaded null" from "not loaded")
@@ -30,13 +31,24 @@ public class PurgeClassStore {
         NOT_ENOUGH_SCRAP
     }
 
-    private PurgeClassStore() {
-        this.db = DatabaseManager.getInstance();
+    private PurgeClassStore(ConnectionProvider db, PurgeScrapStore scrapStore) {
+        this.db = db;
+        this.scrapStore = scrapStore;
     }
 
-    public static PurgeClassStore getInstance() {
-        return INSTANCE;
+    public static PurgeClassStore createAndRegister(ConnectionProvider db, PurgeScrapStore scrapStore) {
+        if (instance != null) throw new IllegalStateException("PurgeClassStore already initialized");
+        instance = new PurgeClassStore(db, scrapStore);
+        return instance;
     }
+
+    public static PurgeClassStore get() {
+        PurgeClassStore ref = instance;
+        if (ref == null) throw new IllegalStateException("PurgeClassStore not yet initialized");
+        return ref;
+    }
+
+    public static void destroy() { instance = null; }
 
     public void initialize() {
         if (!this.db.isInitialized()) {
@@ -101,29 +113,28 @@ public class PurgeClassStore {
 
         if (!this.db.isInitialized()) {
             // In-memory fallback (dev/testing)
-            long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+            long scrap = this.scrapStore.getScrap(playerId);
             if (scrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
             }
-            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
+            this.scrapStore.removeScrap(playerId, cost);
             unlockClass(playerId, purgeClass);
             return PurchaseResult.SUCCESS;
         }
 
-        PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
         long[] scrapSnapshot = new long[1]; // [currentScrap]
         PurchaseResult result = this.db.withTransaction(conn -> {
-            long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+            long currentScrap = this.scrapStore.selectScrapForUpdate(conn, playerId);
             if (currentScrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
             }
-            scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+            this.scrapStore.updateScrap(conn, playerId, currentScrap - cost);
             insertClassUnlock(conn, playerId, purgeClass);
             scrapSnapshot[0] = currentScrap;
             return PurchaseResult.SUCCESS;
         }, PurchaseResult.NOT_ENOUGH_SCRAP);
         if (result == PurchaseResult.SUCCESS) {
-            scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
+            this.scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
             unlockedCache.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet()).add(purgeClass);
         }
         return result;

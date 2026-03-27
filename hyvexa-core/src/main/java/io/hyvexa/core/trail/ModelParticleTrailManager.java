@@ -21,13 +21,8 @@ import java.util.UUID;
 public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticleTrailManager.TrailState> {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final ModelParticleTrailManager INSTANCE = new ModelParticleTrailManager();
 
-    private ModelParticleTrailManager() {}
-
-    public static ModelParticleTrailManager getInstance() {
-        return INSTANCE;
-    }
+    public ModelParticleTrailManager() {}
 
     @Override
     protected HytaleLogger logger() {

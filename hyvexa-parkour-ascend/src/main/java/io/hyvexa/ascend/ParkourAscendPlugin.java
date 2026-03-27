@@ -151,6 +151,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AscendPlayerEventHandler eventHandler;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
+    private DiscordLinkStore discordLinkStore;
     private ScheduledFuture<?> tickTask;
     private ScheduledFuture<?> mineTickTask;
     private int tickCounter;
@@ -170,24 +171,25 @@ public class ParkourAscendPlugin extends JavaPlugin {
     protected void setup() {
         // Ensure database is initialized (may already be done by main plugin, but order is not guaranteed)
         try {
-            DatabaseManager.getInstance().initialize();
+            DatabaseManager.get().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize database for Ascend");
         }
 
         AscendDatabaseSetup.ensureTables();
         try {
-            VexaStore.getInstance().initialize();
+            VexaStore.get().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore for Ascend");
         }
         try {
-            DiscordLinkStore.getInstance().initialize();
+            this.discordLinkStore = DiscordLinkStore.get();
+            discordLinkStore.initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Ascend");
         }
         try {
-            AnalyticsStore.getInstance().initialize();
+            AnalyticsStore.get().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore for Ascend");
         }
@@ -205,13 +207,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Core stores — fail fast if any fails
         try {
-            mapStore = new AscendMapStore(DatabaseManager.getInstance());
+            mapStore = new AscendMapStore(DatabaseManager.get());
             mapStore.syncLoad();
 
-            playerStore = new AscendPlayerStore(DatabaseManager.getInstance());
+            playerStore = new AscendPlayerStore(DatabaseManager.get());
             playerStore.syncLoad();
 
-            settingsStore = new AscendSettingsStore(DatabaseManager.getInstance());
+            settingsStore = new AscendSettingsStore(DatabaseManager.get());
             settingsStore.syncLoad();
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize core stores for Ascend — plugin will not function");
@@ -220,7 +222,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Mine config stores
         try {
-            var db = DatabaseManager.getInstance();
+            var db = DatabaseManager.get();
             mineHierarchyStore = new MineHierarchyStore(db);
             blockConfigStore = new BlockConfigStore(db);
             tierConfigStore = new TierConfigStore(db);
@@ -254,7 +256,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Mine player store + manager + gate checker
         if (mineHierarchyStore != null) {
             try {
-                minePlayerStore = new MinePlayerStore(DatabaseManager.getInstance());
+                minePlayerStore = new MinePlayerStore(DatabaseManager.get());
                 mineManager = new MineManager(mineHierarchyStore, blockConfigStore, this::getPlayerRef);
                 mineGateChecker = new MineGateChecker(gateConfigStore, mineHierarchyStore, playerStore, minePlayerStore);
             } catch (Exception e) {
@@ -273,7 +275,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         // Mine achievement tracker
-        mineAchievementTracker = new MineAchievementTracker(minePlayerStore, playerStore, this::getPlayerRef, DatabaseManager.getInstance());
+        mineAchievementTracker = new MineAchievementTracker(minePlayerStore, playerStore, this::getPlayerRef, DatabaseManager.get());
 
         // Mine robot manager (automated miners)
         if (mineHierarchyStore != null && minePlayerStore != null) {
@@ -289,7 +291,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Ghost system
         try {
-            ghostStore = new GhostStore("ascend_ghost_recordings", "ascend", DatabaseManager.getInstance());
+            ghostStore = new GhostStore("ascend_ghost_recordings", "ascend", DatabaseManager.get());
             ghostStore.syncLoad();
 
             ghostRecorder = new GhostRecorder(ghostStore, this::getPlayerRef);
@@ -299,7 +301,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         // Pass ghost dependencies to managers
-        analytics = AnalyticsStore.getInstance();
+        analytics = AnalyticsStore.get();
         runTracker = new AscendRunTracker(
             mapStore,
             playerStore,
@@ -312,7 +314,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         mapStore.setOnChangeListener(runTracker::onMapStoreChanged);
         ascensionManager = new AscensionManager(playerStore, runTracker, analytics);
         transcendenceManager = new TranscendenceManager(playerStore, runTracker, analytics);
-        challengeManager = new ChallengeManager(playerStore, mapStore, runTracker, analytics, DatabaseManager.getInstance());
+        challengeManager = new ChallengeManager(playerStore, mapStore, runTracker, analytics, DatabaseManager.get());
         summitManager = new SummitManager(
             playerStore,
             mapStore,
@@ -336,7 +338,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineBonusCalculator,
             minePlayerStore
         );
-        hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager, VexaStore.getInstance());
+        hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager, VexaStore.get());
         if (mineGateChecker != null) {
             mineGateChecker.setHudManagers(hudManager, mineHudManager);
         }
@@ -610,7 +612,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         AscendInventoryUtils.giveMenuItems(player);
                     }
                     AscendMusicPage.applyStoredMusic(playerRef);
-                    DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
+                    DiscordLinkStore linkStore = discordLinkStore;
                     linkStore.checkAndRewardVexaOnLoginAsync(playerId)
                             .thenAcceptAsync(rewarded -> {
                                 if (rewarded && ref.isValid()) {
@@ -720,9 +722,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: mineAchievementTracker");
             runSafe(() -> { if (mineGateChecker != null) mineGateChecker.evict(playerId); },
                     "Disconnect cleanup: mineGateChecker");
-            runSafe(() -> VexaStore.getInstance().evictPlayer(playerId),
+            runSafe(() -> VexaStore.get().evictPlayer(playerId),
                     "Disconnect cleanup: VexaStore");
-            runSafe(() -> DiscordLinkStore.getInstance().evictPlayer(playerId),
+            runSafe(() -> discordLinkStore.evictPlayer(playerId),
                     "Disconnect cleanup: DiscordLinkStore");
             runSafe(() -> EggRouletteAnimation.cancelIfActive(playerId),
                     "Disconnect cleanup: eggRoulette");

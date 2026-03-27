@@ -54,7 +54,7 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
 
         commandContext.sendMessage(Message.raw("Testing database connection..."));
 
-        DatabaseManager db = DatabaseManager.getInstance();
+        DatabaseManager db = DatabaseManager.get();
 
         // Initialize if not already done
         if (!db.isInitialized()) {

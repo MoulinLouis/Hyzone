@@ -22,7 +22,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class CosmeticStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final CosmeticStore INSTANCE = new CosmeticStore();
+    private static volatile CosmeticStore instance;
 
     /** Per-player cache: list of owned cosmetic IDs. */
     private final ConcurrentHashMap<UUID, List<String>> ownedCache = new ConcurrentHashMap<>();
@@ -35,16 +35,33 @@ public class CosmeticStore {
     private final ConnectionProvider db;
     private volatile PlayerAnalytics analytics;
 
-    private CosmeticStore() {
-        this.db = DatabaseManager.getInstance();
+    private CosmeticStore(ConnectionProvider db) {
+        this.db = db;
     }
 
     public void setAnalytics(PlayerAnalytics analytics) {
         this.analytics = analytics;
     }
 
-    public static CosmeticStore getInstance() {
-        return INSTANCE;
+    public static CosmeticStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) {
+            throw new IllegalStateException("CosmeticStore already initialized");
+        }
+        instance = new CosmeticStore(db);
+        instance.initialize();
+        return instance;
+    }
+
+    public static CosmeticStore get() {
+        CosmeticStore ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("CosmeticStore not yet initialized — check plugin load order");
+        }
+        return ref;
+    }
+
+    public static void destroy() {
+        instance = null;
     }
 
     public record PurchaseResult(boolean success, String message) {

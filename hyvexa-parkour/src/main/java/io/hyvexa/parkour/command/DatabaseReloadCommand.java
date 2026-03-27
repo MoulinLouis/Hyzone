@@ -55,7 +55,7 @@ public class DatabaseReloadCommand extends AbstractAsyncCommand {
 
         commandContext.sendMessage(Message.raw("Reloading database config...").color("#ffaa00"));
 
-        DatabaseManager db = DatabaseManager.getInstance();
+        DatabaseManager db = DatabaseManager.get();
         try {
             DatabaseConfig config = DatabaseConfig.load();
             if (db.isInitialized()) {

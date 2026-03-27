@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
-import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.ui.PurgeLootboxRollPage;
 
@@ -48,7 +47,7 @@ public class PurgeLootboxInteraction extends SimpleInteraction {
         }
 
         // Get owned weapons, exclude current gun + melee.
-        Set<String> owned = PurgeWeaponUpgradeStore.getInstance().getOwnedWeaponIds(ctx.playerId());
+        Set<String> owned = ctx.services().weaponUpgradeStore().getOwnedWeaponIds(ctx.playerId());
         String currentWeapon = playerState.getCurrentWeaponId();
         String currentMeleeWeapon = playerState.getCurrentMeleeWeaponId();
         List<String> candidates = new ArrayList<>();
@@ -84,6 +83,6 @@ public class PurgeLootboxInteraction extends SimpleInteraction {
         // Open lootbox UI
         ctx.player().getPageManager().openCustomPage(ref, ctx.store(),
                 new PurgeLootboxRollPage(ctx.playerRef(), ctx.playerId(), playerState, rolledWeapon, candidates,
-                        ctx.services().weaponConfigManager(), ctx.services().loadoutService()));
+                        ctx.services().weaponConfigManager(), ctx.services().loadoutService(), ctx.services().weaponUpgradeStore()));
     }
 }

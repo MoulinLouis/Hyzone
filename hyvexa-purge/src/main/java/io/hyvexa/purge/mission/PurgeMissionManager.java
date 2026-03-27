@@ -17,17 +17,25 @@ public class PurgeMissionManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
+    private final PurgeMissionStore missionStore;
+    private final PurgeScrapStore scrapStore;
+
+    public PurgeMissionManager(PurgeMissionStore missionStore, PurgeScrapStore scrapStore) {
+        this.missionStore = missionStore;
+        this.scrapStore = scrapStore;
+    }
+
     public void recordSessionResult(UUID playerId, int waveReached, int kills, int bestCombo) {
         if (playerId == null) {
             return;
         }
-        PurgeMissionStore.getInstance().updateAfterSession(playerId, kills, waveReached, bestCombo);
+        missionStore.updateAfterSession(playerId, kills, waveReached, bestCombo);
         checkAndClaimMissions(playerId);
     }
 
     public MissionStatus[] getMissionStatus(UUID playerId) {
         List<MissionDefinition> missions = DailyMissionRotation.getTodaysMissions();
-        DailyMissionProgress progress = PurgeMissionStore.getInstance().getProgress(playerId);
+        DailyMissionProgress progress = missionStore.getProgress(playerId);
         MissionStatus[] statuses = new MissionStatus[3];
         for (int i = 0; i < missions.size(); i++) {
             MissionDefinition mission = missions.get(i);
@@ -40,15 +48,15 @@ public class PurgeMissionManager {
 
     private void checkAndClaimMissions(UUID playerId) {
         List<MissionDefinition> missions = DailyMissionRotation.getTodaysMissions();
-        DailyMissionProgress progress = PurgeMissionStore.getInstance().getProgress(playerId);
+        DailyMissionProgress progress = missionStore.getProgress(playerId);
         for (MissionDefinition mission : missions) {
             if (progress.isClaimed(mission.category())) {
                 continue;
             }
             int current = progress.getProgressValue(mission.category());
             if (current >= mission.target()) {
-                PurgeMissionStore.getInstance().markClaimed(playerId, mission.category());
-                PurgeScrapStore.getInstance().addScrap(playerId, mission.scrapReward());
+                missionStore.markClaimed(playerId, mission.category());
+                scrapStore.addScrap(playerId, mission.scrapReward());
                 sendMissionCompleteMessage(playerId, mission);
             }
         }

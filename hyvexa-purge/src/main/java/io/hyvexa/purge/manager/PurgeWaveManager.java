@@ -77,14 +77,15 @@ public class PurgeWaveManager {
                             PurgeVariantConfigManager variantConfigManager,
                             PurgeHudManager hudManager,
                             PurgeWeaponConfigManager weaponConfigManager,
-                            PurgeLoadoutService loadoutService) {
+                            PurgeLoadoutService loadoutService,
+                            io.hyvexa.purge.data.PurgeScrapStore scrapStore) {
         this.instanceManager = instanceManager;
         this.waveConfigManager = waveConfigManager;
         this.variantConfigManager = variantConfigManager;
         this.hudManager = hudManager;
         this.weaponConfigManager = weaponConfigManager;
         this.loadoutService = loadoutService;
-        this.deathTracker = new WaveDeathTracker(variantConfigManager, hudManager, weaponConfigManager, loadoutService);
+        this.deathTracker = new WaveDeathTracker(variantConfigManager, hudManager, weaponConfigManager, loadoutService, scrapStore);
         this.progressionController = new WaveProgressionController(this, waveConfigManager, hudManager);
         try {
             this.npcPlugin = NPCPlugin.get();

@@ -8,6 +8,12 @@ public class WeaponXpManager {
 
     public static final int MAX_LEVEL = 20;
 
+    private final WeaponXpStore weaponXpStore;
+
+    public WeaponXpManager(WeaponXpStore weaponXpStore) {
+        this.weaponXpStore = weaponXpStore;
+    }
+
     /**
      * Grants 1 kill XP. Returns the new level if a level-up occurred, or -1 if no level-up.
      */
@@ -15,7 +21,7 @@ public class WeaponXpManager {
         if (playerId == null || weaponId == null) {
             return -1;
         }
-        int[] data = WeaponXpStore.getInstance().getXpData(playerId, weaponId);
+        int[] data = weaponXpStore.getXpData(playerId, weaponId);
         int currentXp = data[0];
         int currentLevel = data[1];
         if (currentLevel >= MAX_LEVEL) {
@@ -23,7 +29,7 @@ public class WeaponXpManager {
         }
         int newXp = currentXp + 1;
         int newLevel = levelFromXp(newXp);
-        WeaponXpStore.getInstance().incrementXp(playerId, weaponId, newXp, newLevel);
+        weaponXpStore.incrementXp(playerId, weaponId, newXp, newLevel);
         if (newLevel > currentLevel) {
             return newLevel;
         }
@@ -49,7 +55,7 @@ public class WeaponXpManager {
         if (playerId == null || weaponId == null) {
             return 0;
         }
-        return WeaponXpStore.getInstance().getXpData(playerId, weaponId)[1];
+        return weaponXpStore.getXpData(playerId, weaponId)[1];
     }
 
     // --- XP formulas ---

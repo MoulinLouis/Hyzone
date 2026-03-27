@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class PurgeSkinStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final PurgeSkinStore INSTANCE = new PurgeSkinStore();
+    private static volatile PurgeSkinStore instance;
 
     // Cache: playerId -> (weaponId -> list of owned skinIds)
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, List<String>>> ownedCache = new ConcurrentHashMap<>();
@@ -34,16 +34,32 @@ public class PurgeSkinStore {
     private final ConnectionProvider db;
     private volatile CurrencyStore vexaStore;
 
-    private PurgeSkinStore() {
-        this.db = DatabaseManager.getInstance();
+    private PurgeSkinStore(ConnectionProvider db) {
+        this.db = db;
     }
 
     public void setVexaStore(CurrencyStore vexaStore) {
         this.vexaStore = vexaStore;
     }
 
-    public static PurgeSkinStore getInstance() {
-        return INSTANCE;
+    public static PurgeSkinStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) {
+            throw new IllegalStateException("PurgeSkinStore already initialized");
+        }
+        instance = new PurgeSkinStore(db);
+        return instance;
+    }
+
+    public static PurgeSkinStore get() {
+        PurgeSkinStore ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("PurgeSkinStore not yet initialized — check plugin load order");
+        }
+        return ref;
+    }
+
+    public static void destroy() {
+        instance = null;
     }
 
     public void initialize() {

@@ -2,7 +2,6 @@ package io.hyvexa.purge.data;
 
 import io.hyvexa.core.db.BasePlayerStore;
 import io.hyvexa.core.db.ConnectionProvider;
-import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,15 +10,25 @@ import java.util.UUID;
 
 public class PurgePlayerStore extends BasePlayerStore<PurgePlayerStats> {
 
-    private static final PurgePlayerStore INSTANCE = new PurgePlayerStore(DatabaseManager.getInstance());
+    private static volatile PurgePlayerStore instance;
 
-    public PurgePlayerStore(ConnectionProvider db) {
+    private PurgePlayerStore(ConnectionProvider db) {
         super(db);
     }
 
-    public static PurgePlayerStore getInstance() {
-        return INSTANCE;
+    public static PurgePlayerStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) throw new IllegalStateException("PurgePlayerStore already initialized");
+        instance = new PurgePlayerStore(db);
+        return instance;
     }
+
+    public static PurgePlayerStore get() {
+        PurgePlayerStore ref = instance;
+        if (ref == null) throw new IllegalStateException("PurgePlayerStore not yet initialized");
+        return ref;
+    }
+
+    public static void destroy() { instance = null; }
 
     @Override
     protected String loadSql() {
