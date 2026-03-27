@@ -5,7 +5,6 @@ import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.parkour.ParkourConstants;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -61,91 +60,78 @@ public class MapStore {
             FROM map_checkpoints ORDER BY map_id, checkpoint_index
             """;
 
+        // Load maps and checkpoints outside the write lock
+        List<Map> loadedMaps = DatabaseManager.queryList(this.db, mapSql, rs -> {
+            Map map = new Map();
+            map.setId(rs.getString("id"));
+            map.setName(rs.getString("name"));
+            map.setCategory(rs.getString("category"));
+            map.setWorld(rs.getString("world"));
+            map.setDifficulty(rs.getInt("difficulty"));
+            map.setOrder(rs.getInt("display_order"));
+            map.setFirstCompletionXp(rs.getLong("first_completion_xp"));
+            map.setMithrilSwordEnabled(rs.getBoolean("mithril_sword_enabled"));
+            map.setMithrilDaggersEnabled(rs.getBoolean("mithril_daggers_enabled"));
+            map.setGliderEnabled(rs.getBoolean("glider_enabled"));
+            map.setFreeFallEnabled(rs.getBoolean("free_fall_enabled"));
+            map.setDuelEnabled(rs.getBoolean("duel_enabled"));
+            map.setActive(rs.getBoolean("active"));
+
+            map.setStart(readTransform(rs, "start_"));
+            map.setFinish(readTransform(rs, "finish_"));
+            map.setStartTrigger(readTransform(rs, "start_trigger_"));
+            map.setLeaveTrigger(readTransform(rs, "leave_trigger_"));
+            map.setLeaveTeleport(readTransform(rs, "leave_teleport_"));
+
+            map.setFlyZoneMinX(rs.getObject("fly_zone_min_x", Double.class));
+            map.setFlyZoneMinY(rs.getObject("fly_zone_min_y", Double.class));
+            map.setFlyZoneMinZ(rs.getObject("fly_zone_min_z", Double.class));
+            map.setFlyZoneMaxX(rs.getObject("fly_zone_max_x", Double.class));
+            map.setFlyZoneMaxY(rs.getObject("fly_zone_max_y", Double.class));
+            map.setFlyZoneMaxZ(rs.getObject("fly_zone_max_z", Double.class));
+
+            map.setBronzeTimeMs(rs.getObject("bronze_time_ms", Long.class));
+            map.setSilverTimeMs(rs.getObject("silver_time_ms", Long.class));
+            map.setGoldTimeMs(rs.getObject("gold_time_ms", Long.class));
+            map.setEmeraldTimeMs(rs.getObject("emerald_time_ms", Long.class));
+
+            java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+            java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
+            map.setCreatedAt(createdAt != null ? createdAt.getTime() : 0L);
+            map.setUpdatedAt(updatedAt != null ? updatedAt.getTime() : map.getCreatedAt());
+            return map;
+        });
+
+        List<java.util.Map.Entry<String, TransformData>> loadedCheckpoints = DatabaseManager.queryList(
+                this.db, checkpointSql, rs -> {
+                    String mapId = rs.getString("map_id");
+                    TransformData checkpoint = new TransformData();
+                    checkpoint.setX(rs.getDouble("x"));
+                    checkpoint.setY(rs.getDouble("y"));
+                    checkpoint.setZ(rs.getDouble("z"));
+                    checkpoint.setRotX(rs.getFloat("rot_x"));
+                    checkpoint.setRotY(rs.getFloat("rot_y"));
+                    checkpoint.setRotZ(rs.getFloat("rot_z"));
+                    return java.util.Map.entry(mapId, checkpoint);
+                });
+
         fileLock.writeLock().lock();
         try {
             maps.clear();
             activeStartTriggerMapsByWorld.clear();
 
-            try (Connection conn = this.db.getConnection()) {
-                if (conn == null) {
-                    LOGGER.atWarning().log("Failed to acquire database connection");
-                    return;
-                }
-                // Load all maps
-                try (PreparedStatement stmt = conn.prepareStatement(mapSql)) {
-                    DatabaseManager.applyQueryTimeout(stmt);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        while (rs.next()) {
-                            Map map = new Map();
-                            map.setId(rs.getString("id"));
-                            map.setName(rs.getString("name"));
-                            map.setCategory(rs.getString("category"));
-                            map.setWorld(rs.getString("world"));
-                            map.setDifficulty(rs.getInt("difficulty"));
-                            map.setOrder(rs.getInt("display_order"));
-                            map.setFirstCompletionXp(rs.getLong("first_completion_xp"));
-                            map.setMithrilSwordEnabled(rs.getBoolean("mithril_sword_enabled"));
-                            map.setMithrilDaggersEnabled(rs.getBoolean("mithril_daggers_enabled"));
-                            map.setGliderEnabled(rs.getBoolean("glider_enabled"));
-                            map.setFreeFallEnabled(rs.getBoolean("free_fall_enabled"));
-                            map.setDuelEnabled(rs.getBoolean("duel_enabled"));
-                            map.setActive(rs.getBoolean("active"));
-
-                            map.setStart(readTransform(rs, "start_"));
-                            map.setFinish(readTransform(rs, "finish_"));
-                            map.setStartTrigger(readTransform(rs, "start_trigger_"));
-                            map.setLeaveTrigger(readTransform(rs, "leave_trigger_"));
-                            map.setLeaveTeleport(readTransform(rs, "leave_teleport_"));
-
-                            map.setFlyZoneMinX(rs.getObject("fly_zone_min_x", Double.class));
-                            map.setFlyZoneMinY(rs.getObject("fly_zone_min_y", Double.class));
-                            map.setFlyZoneMinZ(rs.getObject("fly_zone_min_z", Double.class));
-                            map.setFlyZoneMaxX(rs.getObject("fly_zone_max_x", Double.class));
-                            map.setFlyZoneMaxY(rs.getObject("fly_zone_max_y", Double.class));
-                            map.setFlyZoneMaxZ(rs.getObject("fly_zone_max_z", Double.class));
-
-                            map.setBronzeTimeMs(rs.getObject("bronze_time_ms", Long.class));
-                            map.setSilverTimeMs(rs.getObject("silver_time_ms", Long.class));
-                            map.setGoldTimeMs(rs.getObject("gold_time_ms", Long.class));
-                            map.setEmeraldTimeMs(rs.getObject("emerald_time_ms", Long.class));
-
-                            java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
-                            java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
-                            map.setCreatedAt(createdAt != null ? createdAt.getTime() : 0L);
-                            map.setUpdatedAt(updatedAt != null ? updatedAt.getTime() : map.getCreatedAt());
-
-                            maps.put(map.getId(), map);
-                        }
-                    }
-                }
-
-                // Load all checkpoints
-                try (PreparedStatement stmt = conn.prepareStatement(checkpointSql)) {
-                    DatabaseManager.applyQueryTimeout(stmt);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        while (rs.next()) {
-                            String mapId = rs.getString("map_id");
-                            Map map = maps.get(mapId);
-                            if (map != null) {
-                                TransformData checkpoint = new TransformData();
-                                checkpoint.setX(rs.getDouble("x"));
-                                checkpoint.setY(rs.getDouble("y"));
-                                checkpoint.setZ(rs.getDouble("z"));
-                                checkpoint.setRotX(rs.getFloat("rot_x"));
-                                checkpoint.setRotY(rs.getFloat("rot_y"));
-                                checkpoint.setRotZ(rs.getFloat("rot_z"));
-                                map.getCheckpoints().add(checkpoint);
-                            }
-                        }
-                    }
-                }
-
-                LOGGER.atInfo().log("MapStore loaded " + maps.size() + " maps from database");
-                rebuildRuntimeIndexesLocked();
-
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to load MapStore from database: " + e.getMessage());
+            for (Map map : loadedMaps) {
+                maps.put(map.getId(), map);
             }
+            for (var entry : loadedCheckpoints) {
+                Map map = maps.get(entry.getKey());
+                if (map != null) {
+                    map.getCheckpoints().add(entry.getValue());
+                }
+            }
+
+            LOGGER.atInfo().log("MapStore loaded " + maps.size() + " maps from database");
+            rebuildRuntimeIndexesLocked();
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -396,13 +382,9 @@ public class MapStore {
             """;
 
         this.db.withTransaction(conn -> {
-            try (PreparedStatement mapStmt = conn.prepareStatement(mapSql);
-                 PreparedStatement deleteStmt = conn.prepareStatement(deleteCheckpointsSql);
-                 PreparedStatement cpStmt = conn.prepareStatement(insertCheckpointSql)) {
-                DatabaseManager.applyQueryTimeout(mapStmt);
-                DatabaseManager.applyQueryTimeout(deleteStmt);
-                DatabaseManager.applyQueryTimeout(cpStmt);
-
+            try (PreparedStatement mapStmt = DatabaseManager.prepare(conn, mapSql);
+                 PreparedStatement deleteStmt = DatabaseManager.prepare(conn, deleteCheckpointsSql);
+                 PreparedStatement cpStmt = DatabaseManager.prepare(conn, insertCheckpointSql)) {
                 // Insert/update map
                 int idx = 1;
                 mapStmt.setString(idx++, map.getId());
