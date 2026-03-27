@@ -54,7 +54,8 @@ public class MedalStore {
                 "ALTER TABLE player_medals MODIFY COLUMN medal VARCHAR(8) NOT NULL");
         // Migrate old AUTHOR/PLATINUM medal values to EMERALD
         int migrated = DatabaseManager.executeCount(connectionProvider,
-                "UPDATE player_medals SET medal = 'EMERALD' WHERE medal IN ('AUTHOR', 'PLATINUM', 'PLATIN', 'EMERAL')");
+                "UPDATE player_medals SET medal = 'EMERALD' WHERE medal IN ('AUTHOR', 'PLATINUM', 'PLATIN', 'EMERAL')",
+                stmt -> {});
         if (migrated > 0) {
             LOGGER.atInfo().log("Migrated " + migrated + " AUTHOR/PLATINUM medals to EMERALD");
         }
