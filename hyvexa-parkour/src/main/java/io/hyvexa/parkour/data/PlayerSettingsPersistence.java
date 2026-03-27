@@ -6,9 +6,6 @@ import io.hyvexa.core.db.DatabaseManager;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -77,22 +74,7 @@ public class PlayerSettingsPersistence {
     }
 
     public void ensureTable() {
-        if (!this.db.isInitialized()) {
-            LOGGER.atWarning().log("Database not initialized, player_settings table will not be created");
-            return;
-        }
-        try (Connection conn = this.db.getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to create player_settings table: " + e.getMessage());
-        }
+        DatabaseManager.execute(this.db, CREATE_TABLE_SQL);
     }
 
     @Nonnull
