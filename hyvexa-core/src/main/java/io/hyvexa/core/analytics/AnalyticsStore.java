@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class AnalyticsStore implements PlayerAnalytics {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final AnalyticsStore INSTANCE = new AnalyticsStore();
+    private static volatile AnalyticsStore instance;
     private static final Gson GSON = new Gson();
     private static final int FLUSH_BATCH_LIMIT = 500;
     private final ConnectionProvider db;
@@ -36,12 +36,29 @@ public class AnalyticsStore implements PlayerAnalytics {
 
     private record PendingEvent(long timestampMs, UUID playerId, String eventType, String dataJson) {}
 
-    private AnalyticsStore() {
-        this.db = DatabaseManager.getInstance();
+    private AnalyticsStore(ConnectionProvider db) {
+        this.db = db;
     }
 
-    public static AnalyticsStore getInstance() {
-        return INSTANCE;
+    public static AnalyticsStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) {
+            throw new IllegalStateException("AnalyticsStore already initialized");
+        }
+        instance = new AnalyticsStore(db);
+        instance.initialize();
+        return instance;
+    }
+
+    public static AnalyticsStore get() {
+        AnalyticsStore ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("AnalyticsStore not yet initialized — check plugin load order");
+        }
+        return ref;
+    }
+
+    public static void destroy() {
+        instance = null;
     }
 
     public record DailyStats(LocalDate date, int dau, int newPlayers, long avgSessionMs,

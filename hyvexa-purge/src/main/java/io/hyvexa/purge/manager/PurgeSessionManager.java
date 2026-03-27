@@ -61,6 +61,8 @@ public class PurgeSessionManager {
     private final PurgeHudManager hudManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeLoadoutService loadoutService;
+    private final PurgeScrapStore scrapStore;
+    private final PurgePlayerStore playerStore;
     private final AtomicInteger sessionCounter = new AtomicInteger(0);
     private PurgeManagerRegistry registry;
 
@@ -69,13 +71,17 @@ public class PurgeSessionManager {
                                PurgeWaveManager waveManager,
                                PurgeHudManager hudManager,
                                PurgeWeaponConfigManager weaponConfigManager,
-                               PurgeLoadoutService loadoutService) {
+                               PurgeLoadoutService loadoutService,
+                               PurgeScrapStore scrapStore,
+                               PurgePlayerStore playerStore) {
         this.partyManager = partyManager;
         this.instanceManager = instanceManager;
         this.waveManager = waveManager;
         this.hudManager = hudManager;
         this.weaponConfigManager = weaponConfigManager;
         this.loadoutService = loadoutService;
+        this.scrapStore = scrapStore;
+        this.playerStore = playerStore;
     }
 
     void initRegistry(PurgeManagerRegistry registry) {
@@ -415,16 +421,16 @@ public class PurgeSessionManager {
         PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
         int kills = playerState != null ? playerState.getKills() : 0;
 
-        PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrLoad(playerId);
+        PurgePlayerStats stats = playerStore.getOrLoad(playerId);
         stats.updateBestWave(session.getCurrentWave());
         stats.incrementKills(kills);
         stats.incrementSessions();
-        PurgePlayerStore.getInstance().save(playerId, stats);
+        playerStore.save(playerId, stats);
 
         int totalScrap = calculateTotalScrap(session.getCurrentWave(), playerState);
         if (totalScrap > 0) {
-            PurgeScrapStore.getInstance().addScrap(playerId, totalScrap);
-            PurgeScrapStore.getInstance().flushPlayerAsync(playerId);
+            scrapStore.addScrap(playerId, totalScrap);
+            scrapStore.flushPlayerAsync(playerId);
         }
 
         int bestCombo = playerState != null ? playerState.getBestCombo() : 0;

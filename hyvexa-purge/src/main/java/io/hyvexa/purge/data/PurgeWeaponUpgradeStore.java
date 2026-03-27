@@ -18,9 +18,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PurgeWeaponUpgradeStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final PurgeWeaponUpgradeStore INSTANCE = new PurgeWeaponUpgradeStore();
+    private static volatile PurgeWeaponUpgradeStore instance;
 
     private final ConnectionProvider db;
+    private final PurgeScrapStore scrapStore;
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, Integer>> cache = new ConcurrentHashMap<>();
 
     public enum UpgradeResult {
@@ -36,13 +37,24 @@ public class PurgeWeaponUpgradeStore {
         NOT_ENOUGH_SCRAP
     }
 
-    private PurgeWeaponUpgradeStore() {
-        this.db = DatabaseManager.getInstance();
+    private PurgeWeaponUpgradeStore(ConnectionProvider db, PurgeScrapStore scrapStore) {
+        this.db = db;
+        this.scrapStore = scrapStore;
     }
 
-    public static PurgeWeaponUpgradeStore getInstance() {
-        return INSTANCE;
+    public static PurgeWeaponUpgradeStore createAndRegister(ConnectionProvider db, PurgeScrapStore scrapStore) {
+        if (instance != null) throw new IllegalStateException("PurgeWeaponUpgradeStore already initialized");
+        instance = new PurgeWeaponUpgradeStore(db, scrapStore);
+        return instance;
     }
+
+    public static PurgeWeaponUpgradeStore get() {
+        PurgeWeaponUpgradeStore ref = instance;
+        if (ref == null) throw new IllegalStateException("PurgeWeaponUpgradeStore not yet initialized");
+        return ref;
+    }
+
+    public static void destroy() { instance = null; }
 
     public void initialize() {
         if (!this.db.isInitialized()) {
@@ -118,29 +130,28 @@ public class PurgeWeaponUpgradeStore {
         }
 
         if (!this.db.isInitialized()) {
-            long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+            long scrap = this.scrapStore.getScrap(playerId);
             if (scrap < cost) {
                 return UpgradeResult.NOT_ENOUGH_SCRAP;
             }
-            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
+            this.scrapStore.removeScrap(playerId, cost);
             setLevel(playerId, weaponId, nextLevel);
             return UpgradeResult.SUCCESS;
         }
 
-        PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
         long[] scrapSnapshot = new long[1]; // [currentScrap]
         UpgradeResult result = this.db.withTransaction(conn -> {
-            long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+            long currentScrap = this.scrapStore.selectScrapForUpdate(conn, playerId);
             if (currentScrap < cost) {
                 return UpgradeResult.NOT_ENOUGH_SCRAP;
             }
-            scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+            this.scrapStore.updateScrap(conn, playerId, currentScrap - cost);
             upsertWeaponLevel(conn, playerId, weaponId, nextLevel);
             scrapSnapshot[0] = currentScrap;
             return UpgradeResult.SUCCESS;
         }, UpgradeResult.NOT_ENOUGH_SCRAP);
         if (result == UpgradeResult.SUCCESS) {
-            scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
+            this.scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
             cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, nextLevel);
         }
         return result;
@@ -157,29 +168,28 @@ public class PurgeWeaponUpgradeStore {
         }
 
         if (!this.db.isInitialized()) {
-            long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+            long scrap = this.scrapStore.getScrap(playerId);
             if (scrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
             }
-            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
+            this.scrapStore.removeScrap(playerId, cost);
             setLevel(playerId, weaponId, 1);
             return PurchaseResult.SUCCESS;
         }
 
-        PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
         long[] scrapSnapshot = new long[1]; // [currentScrap]
         PurchaseResult result = this.db.withTransaction(conn -> {
-            long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+            long currentScrap = this.scrapStore.selectScrapForUpdate(conn, playerId);
             if (currentScrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
             }
-            scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+            this.scrapStore.updateScrap(conn, playerId, currentScrap - cost);
             upsertWeaponLevel(conn, playerId, weaponId, 1);
             scrapSnapshot[0] = currentScrap;
             return PurchaseResult.SUCCESS;
         }, PurchaseResult.NOT_ENOUGH_SCRAP);
         if (result == PurchaseResult.SUCCESS) {
-            scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
+            this.scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
             cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, 1);
         }
         return result;

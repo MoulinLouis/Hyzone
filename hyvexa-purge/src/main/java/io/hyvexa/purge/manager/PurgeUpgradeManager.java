@@ -34,6 +34,12 @@ public class PurgeUpgradeManager {
     private static final String PURGE_HP_UPGRADE_MODIFIER = "purge_upgrade_hp";
     private static final short SLOT_WEAPON = 0;
 
+    private final WeaponXpStore weaponXpStore;
+
+    public PurgeUpgradeManager(WeaponXpStore weaponXpStore) {
+        this.weaponXpStore = weaponXpStore;
+    }
+
     public List<PurgeUpgradeOffer> selectRandomOffers(int count, int luck, PurgeUpgradeState state) {
         List<PurgeUpgradeType> pool = new ArrayList<>(List.of(PurgeUpgradeType.values()));
         if (state != null) {
@@ -188,7 +194,7 @@ public class PurgeUpgradeManager {
         // Apply weapon XP ammo multiplier to base magazine size
         int effectiveBase = defaultMax;
         if (playerId != null && weaponId != null) {
-            int xpLevel = WeaponXpStore.getInstance().getXpData(playerId, weaponId)[1];
+            int xpLevel = weaponXpStore.getXpData(playerId, weaponId)[1];
             effectiveBase = (int) (defaultMax * (1.0 + 0.05 * xpLevel));
         }
         int newMax = effectiveBase + bonusAmmo;

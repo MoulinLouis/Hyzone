@@ -1,6 +1,7 @@
 package io.hyvexa.core.economy;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 
 import java.util.UUID;
 
@@ -10,14 +11,31 @@ import java.util.UUID;
 public class FeatherStore extends CachedCurrencyStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final FeatherStore INSTANCE = new FeatherStore();
+    private static volatile FeatherStore instance;
 
-    private FeatherStore() {
-        super();
+    private FeatherStore(ConnectionProvider db) {
+        super(db);
     }
 
-    public static FeatherStore getInstance() {
-        return INSTANCE;
+    public static FeatherStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) {
+            throw new IllegalStateException("FeatherStore already initialized");
+        }
+        instance = new FeatherStore(db);
+        instance.initialize();
+        return instance;
+    }
+
+    public static FeatherStore get() {
+        FeatherStore ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("FeatherStore not yet initialized — check plugin load order");
+        }
+        return ref;
+    }
+
+    public static void destroy() {
+        instance = null;
     }
 
     @Override

@@ -60,6 +60,7 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
     private final WeaponXpManager weaponXpManager;
     private final PurgeClassManager classManager;
     private final PurgeHudManager hudManager;
+    private final PurgeWeaponUpgradeStore weaponUpgradeStore;
     private volatile SystemGroup<EntityStore> cachedGroup;
 
     public PurgeDamageModifierSystem(PurgeSessionManager sessionManager,
@@ -67,13 +68,15 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
                                       PurgeWeaponConfigManager weaponConfigManager,
                                       WeaponXpManager weaponXpManager,
                                       PurgeClassManager classManager,
-                                      PurgeHudManager hudManager) {
+                                      PurgeHudManager hudManager,
+                                      PurgeWeaponUpgradeStore weaponUpgradeStore) {
         this.sessionManager = sessionManager;
         this.variantConfigManager = variantConfigManager;
         this.weaponConfigManager = weaponConfigManager;
         this.weaponXpManager = weaponXpManager;
         this.classManager = classManager;
         this.hudManager = hudManager;
+        this.weaponUpgradeStore = weaponUpgradeStore;
     }
 
     @Override
@@ -209,7 +212,7 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
                     + " melee=" + meleeAttack + " aliveZombies=" + session.getAliveZombieCount());
             return;
         }
-        int level = PurgeWeaponUpgradeStore.getInstance().getLevel(sourceId, playerWeapon);
+        int level = weaponUpgradeStore.getLevel(sourceId, playerWeapon);
         int effectiveLevel = Math.max(level, 1);
         int baseDamage = weaponConfigManager.getDamage(playerWeapon, effectiveLevel);
         float damage = (float) (baseDamage * weaponXpManager.getDamageMultiplier(sourceId, playerWeapon));

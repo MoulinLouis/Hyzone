@@ -34,9 +34,11 @@ public class PurgeClassManager {
     private static final String PURGE_HEAL_TEMP_MODIFIER = "purge_heal_temp";
 
     private final PurgeUpgradeManager upgradeManager;
+    private final PurgeClassStore classStore;
 
-    public PurgeClassManager(PurgeUpgradeManager upgradeManager) {
+    public PurgeClassManager(PurgeUpgradeManager upgradeManager, PurgeClassStore classStore) {
         this.upgradeManager = upgradeManager;
+        this.classStore = classStore;
     }
 
     /**
@@ -47,7 +49,7 @@ public class PurgeClassManager {
         PurgeSessionPlayerState ps = session.getPlayerState(playerId);
         if (ps == null) return;
 
-        PurgeClass activeClass = PurgeClassStore.getInstance().getSelectedClass(playerId);
+        PurgeClass activeClass = classStore.getSelectedClass(playerId);
         ps.setActiveClass(activeClass);
         if (activeClass == null) return;
 

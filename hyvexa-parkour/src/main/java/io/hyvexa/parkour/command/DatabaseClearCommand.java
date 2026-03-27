@@ -51,7 +51,7 @@ public class DatabaseClearCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        DatabaseManager db = DatabaseManager.getInstance();
+        DatabaseManager db = DatabaseManager.get();
         if (!db.isInitialized()) {
             try {
                 db.initialize();

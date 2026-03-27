@@ -12,18 +12,28 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PurgeMissionStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final PurgeMissionStore INSTANCE = new PurgeMissionStore();
+    private static volatile PurgeMissionStore instance;
 
     private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, DailyMissionProgress> cache = new ConcurrentHashMap<>();
 
-    private PurgeMissionStore() {
-        this.db = DatabaseManager.getInstance();
+    private PurgeMissionStore(ConnectionProvider db) {
+        this.db = db;
     }
 
-    public static PurgeMissionStore getInstance() {
-        return INSTANCE;
+    public static PurgeMissionStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) throw new IllegalStateException("PurgeMissionStore already initialized");
+        instance = new PurgeMissionStore(db);
+        return instance;
     }
+
+    public static PurgeMissionStore get() {
+        PurgeMissionStore ref = instance;
+        if (ref == null) throw new IllegalStateException("PurgeMissionStore not yet initialized");
+        return ref;
+    }
+
+    public static void destroy() { instance = null; }
 
     public void initialize() {
         if (!this.db.isInitialized()) {

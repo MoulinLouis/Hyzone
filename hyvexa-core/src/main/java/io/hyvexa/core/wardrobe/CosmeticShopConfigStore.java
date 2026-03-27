@@ -18,17 +18,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CosmeticShopConfigStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final CosmeticShopConfigStore INSTANCE = new CosmeticShopConfigStore();
 
     private final ConnectionProvider db;
     private final ConcurrentHashMap<String, CosmeticConfig> configs = new ConcurrentHashMap<>();
 
-    private CosmeticShopConfigStore() {
-        this.db = DatabaseManager.getInstance();
-    }
-
-    public static CosmeticShopConfigStore getInstance() {
-        return INSTANCE;
+    public CosmeticShopConfigStore(ConnectionProvider db) {
+        this.db = db;
     }
 
     public void initialize() {

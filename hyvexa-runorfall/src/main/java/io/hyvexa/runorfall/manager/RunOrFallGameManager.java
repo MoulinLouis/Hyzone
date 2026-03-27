@@ -90,6 +90,7 @@ public class RunOrFallGameManager {
     private final RunOrFallStatsStore statsStore;
     private final PluginCallbacks pluginCallbacks;
     private final RunOrFallFeatherBridge featherBridge;
+    private final RunOrFallQueueStore queueStore;
     private final Set<UUID> lobbyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> alivePlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> spectatingPlayers = ConcurrentHashMap.newKeySet();
@@ -128,12 +129,14 @@ public class RunOrFallGameManager {
     private final Map<UUID, Long> pendingFeatherRewards = new ConcurrentHashMap<>();
 
     public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore,
-                               PluginCallbacks pluginCallbacks, RunOrFallFeatherBridge featherBridge) {
+                               PluginCallbacks pluginCallbacks, RunOrFallFeatherBridge featherBridge,
+                               RunOrFallQueueStore queueStore) {
         this.configStore = configStore;
         this.statsStore = statsStore;
         this.pluginCallbacks = pluginCallbacks;
         this.featherBridge = featherBridge;
-        RunOrFallQueueStore.getInstance().setOnQueueChanged(() -> {
+        this.queueStore = queueStore;
+        this.queueStore.setOnQueueChanged(() -> {
             dispatchToWorld(() -> {
                 synchronized (this) {
                     if (state == GameState.IDLE) {
@@ -145,9 +148,9 @@ public class RunOrFallGameManager {
                 }
             });
         });
-        RunOrFallQueueStore.getInstance().setLobbyInfoProvider(new RunOrFallQueueStore.LobbyInfoProvider() {
+        this.queueStore.setLobbyInfoProvider(new RunOrFallQueueStore.LobbyInfoProvider() {
             @Override public int getLobbySize() { return lobbyPlayers.size(); }
-            @Override public int getQueueSize() { return RunOrFallQueueStore.getInstance().getQueueSize(); }
+            @Override public int getQueueSize() { return queueStore.getQueueSize(); }
             @Override public String getGameState() { return state.name(); }
         });
     }
@@ -237,7 +240,7 @@ public class RunOrFallGameManager {
     }
 
     private int getTotalPendingPlayerCount() {
-        return lobbyPlayers.size() + RunOrFallQueueStore.getInstance().getQueueSize();
+        return lobbyPlayers.size() + this.queueStore.getQueueSize();
     }
 
     public synchronized String statusLine() {
@@ -245,7 +248,7 @@ public class RunOrFallGameManager {
         return "state=" + state.name()
                 + ", map=" + mapId
                 + ", lobby=" + lobbyPlayers.size()
-                + ", queue=" + RunOrFallQueueStore.getInstance().getQueueSize()
+                + ", queue=" + this.queueStore.getQueueSize()
                 + ", alive=" + alivePlayers.size()
                 + ", countdown=" + countdownRemaining
                 + "s";
@@ -292,7 +295,7 @@ public class RunOrFallGameManager {
         if (state == GameState.RUNNING) {
             sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
         }
-        int queueSize = RunOrFallQueueStore.getInstance().getQueueSize();
+        int queueSize = this.queueStore.getQueueSize();
         if (queueSize > 0) {
             broadcastLobby("Lobby: " + lobbyPlayers.size() + " in lobby, " + queueSize + " in queue.");
         } else {
@@ -394,7 +397,7 @@ public class RunOrFallGameManager {
         if (playerId == null) {
             return;
         }
-        RunOrFallQueueStore.getInstance().dequeue(playerId);
+        this.queueStore.dequeue(playerId);
         assemblingPlayerIds.remove(playerId);
         PlayerRemovalResult result = removePlayerInternal(playerId);
         if (!result.wasInLobby() && !result.wasAlive()) {
@@ -422,7 +425,7 @@ public class RunOrFallGameManager {
             broadcastEliminationInternal(playerId, eliminationReason);
             checkWinnerInternal();
         }
-        if (lobbyPlayers.isEmpty() && RunOrFallQueueStore.getInstance().getQueueSize() == 0) {
+        if (lobbyPlayers.isEmpty() && this.queueStore.getQueueSize() == 0) {
             activeWorld = null;
         }
     }
@@ -558,7 +561,7 @@ public class RunOrFallGameManager {
             countdownRemaining--;
             if (countdownRemaining <= 0) {
                 cancelCountdownTask();
-                int queueSize = RunOrFallQueueStore.getInstance().getQueueSize();
+                int queueSize = this.queueStore.getQueueSize();
                 if (queueSize > 0) {
                     beginAssemblingPhase();
                 } else {
@@ -839,7 +842,7 @@ public class RunOrFallGameManager {
         assemblingStartedAtMs = System.currentTimeMillis();
 
         assemblingPlayerIds.clear();
-        Set<UUID> queuedIds = RunOrFallQueueStore.getInstance().getQueuedPlayerIds();
+        Set<UUID> queuedIds = this.queueStore.getQueuedPlayerIds();
         assemblingPlayerIds.addAll(queuedIds);
 
         for (UUID playerId : assemblingPlayerIds) {
@@ -895,7 +898,7 @@ public class RunOrFallGameManager {
             if (assemblingPlayerIds.isEmpty() || timedOut) {
                 for (UUID stuckId : assemblingPlayerIds) {
                     sendToPlayer(stuckId, "Failed to arrive in time. Removed from queue.");
-                    RunOrFallQueueStore.getInstance().dequeue(stuckId);
+                    this.queueStore.dequeue(stuckId);
                 }
                 assemblingPlayerIds.clear();
                 cancelAssemblingTask();
@@ -912,7 +915,7 @@ public class RunOrFallGameManager {
     private void cancelAssemblingInternal(String reason) {
         cancelAssemblingTask();
         for (UUID playerId : assemblingPlayerIds) {
-            RunOrFallQueueStore.getInstance().dequeue(playerId);
+            this.queueStore.dequeue(playerId);
         }
         assemblingPlayerIds.clear();
         state = GameState.IDLE;

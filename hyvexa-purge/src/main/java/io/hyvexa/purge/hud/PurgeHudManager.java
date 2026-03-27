@@ -34,14 +34,18 @@ public class PurgeHudManager extends AbstractHudManager<PurgeHud> {
 
     private static final long STREAK_WINDOW_MS = 3000L;
     private final CurrencyStore vexaStore;
+    private final PurgeScrapStore scrapStore;
+    private final WeaponXpStore weaponXpStore;
     private final ConcurrentHashMap<UUID, PurgeSessionPlayerState> comboPlayers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeSession> killMeterPlayers = new ConcurrentHashMap<>();
     private volatile long lastKillMeterTickMs;
     private PurgeManagerRegistry registry;
 
-    public PurgeHudManager(CurrencyStore vexaStore) {
+    public PurgeHudManager(CurrencyStore vexaStore, PurgeScrapStore scrapStore, WeaponXpStore weaponXpStore) {
         super(1500L);
         this.vexaStore = vexaStore;
+        this.scrapStore = scrapStore;
+        this.weaponXpStore = weaponXpStore;
     }
 
     public void initRegistry(PurgeManagerRegistry registry) {
@@ -161,7 +165,7 @@ public class PurgeHudManager extends AbstractHudManager<PurgeHud> {
     private void updateXpHud(UUID playerId, String weaponId, String displayName, XpHudUpdater updater) {
         PurgeHud hud = getHud(playerId);
         if (hud == null || weaponId == null) return;
-        int[] xpData = WeaponXpStore.getInstance().getXpData(playerId, weaponId);
+        int[] xpData = weaponXpStore.getXpData(playerId, weaponId);
         int xp = xpData[0];
         int level = xpData[1];
 
@@ -299,7 +303,7 @@ public class PurgeHudManager extends AbstractHudManager<PurgeHud> {
             PurgeHud hud = entry.getValue();
             hud.updatePlayerCount(playerCount);
             hud.updateVexa(vexaStore.getBalance(playerId));
-            hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
+            hud.updateScrap(scrapStore.getScrap(playerId));
             // Update mission panel for idle players (not in a session)
             if (!comboPlayers.containsKey(playerId)) {
                 updateMissionHud(hud, registry.getMissionManager(), playerId);

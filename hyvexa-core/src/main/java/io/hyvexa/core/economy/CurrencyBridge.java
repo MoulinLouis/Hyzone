@@ -43,5 +43,15 @@ public class CurrencyBridge {
         return provider.deductIfSufficient(playerId, amount);
     }
 
+    public static void unregister(String name) {
+        if (providers.remove(name) != null) {
+            LOGGER.atInfo().log("CurrencyBridge: unregistered provider '" + name + "'");
+        }
+    }
+
+    public static void clear() {
+        providers.clear();
+    }
+
     private CurrencyBridge() {}
 }

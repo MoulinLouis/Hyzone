@@ -58,6 +58,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
     private final ConcurrentHashMap<UUID, HudLifecycle> hubHudLifecycles = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hubHudTask;
     private ScheduledFuture<?> playerCountTask;
+    private DiscordLinkStore discordLinkStore;
 
     private enum HudPhase { PENDING, ATTACHING, READY }
 
@@ -88,18 +89,19 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (!folder.exists()) {
             folder.mkdirs();
         }
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!DatabaseManager.get().isInitialized()) {
             try {
-                DatabaseManager.getInstance().initialize();
+                DatabaseManager.get().initialize();
             } catch (Exception e) {
                 LOGGER.atSevere().log("Failed to initialize database: " + e.getMessage());
                 databaseAvailable = false;
             }
         }
-        initStore("VexaStore", () -> VexaStore.getInstance().initialize());
-        initStore("DiscordLinkStore", () -> DiscordLinkStore.getInstance().initialize());
-        initStore("AnalyticsStore", () -> AnalyticsStore.getInstance().initialize());
-        router = new HubRouter(AnalyticsStore.getInstance());
+        initStore("VexaStore", () -> VexaStore.get().initialize());
+        this.discordLinkStore = DiscordLinkStore.get();
+        initStore("DiscordLinkStore", () -> discordLinkStore.initialize());
+        initStore("AnalyticsStore", () -> AnalyticsStore.get().initialize());
+        router = new HubRouter(AnalyticsStore.get());
         preloadWorlds();
 
         registerInteractionCodecs();
@@ -137,7 +139,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 InventoryUtils.clearAllContainers(player);
                 giveHubItems(player);
                 requestHubHudAttach(ref, store, playerRef);
-                DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
+                DiscordLinkStore linkStore = discordLinkStore;
                 linkStore.checkAndRewardVexaOnLoginAsync(playerRef.getUuid())
                         .thenAcceptAsync(rewarded -> {
                             if (rewarded && ref.isValid()) {
@@ -194,9 +196,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             hubHudLifecycles.remove(playerId);
             MultiHudBridge.evictPlayer(playerId);
-            try { VexaStore.getInstance().evictPlayer(playerId); }
+            try { VexaStore.get().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
-            try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
+            try { discordLinkStore.evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
         });
 
@@ -247,7 +249,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             if (now >= lifecycle.readyAt()) {
                 lifecycle.hud().updatePlayerCount();
-                lifecycle.hud().updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
+                lifecycle.hud().updateVexa(VexaStore.get().getCachedVexa(playerId));
             }
         }
         for (UUID playerId : toRemove) {
@@ -400,7 +402,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             playerCountTask = null;
         }
         hubHudLifecycles.clear();
-        try { DatabaseManager.getInstance().shutdown(); }
+        try { DatabaseManager.get().shutdown(); }
         catch (Exception e) { /* Hub DB shutdown */ }
     }
 }

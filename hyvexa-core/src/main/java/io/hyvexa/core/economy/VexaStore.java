@@ -1,6 +1,7 @@
 package io.hyvexa.core.economy;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -15,14 +16,31 @@ import java.util.UUID;
 public class VexaStore extends CachedCurrencyStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final VexaStore INSTANCE = new VexaStore();
+    private static volatile VexaStore instance;
 
-    private VexaStore() {
-        super();
+    private VexaStore(ConnectionProvider db) {
+        super(db);
     }
 
-    public static VexaStore getInstance() {
-        return INSTANCE;
+    public static VexaStore createAndRegister(ConnectionProvider db) {
+        if (instance != null) {
+            throw new IllegalStateException("VexaStore already initialized");
+        }
+        instance = new VexaStore(db);
+        instance.initialize();
+        return instance;
+    }
+
+    public static VexaStore get() {
+        VexaStore ref = instance;
+        if (ref == null) {
+            throw new IllegalStateException("VexaStore not yet initialized — check plugin load order");
+        }
+        return ref;
+    }
+
+    public static void destroy() {
+        instance = null;
     }
 
     @Override

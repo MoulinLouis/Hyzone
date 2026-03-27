@@ -60,6 +60,16 @@ public final class GameModeBridge {
         return true;
     }
 
+    public static void unregister(String key) {
+        if (handlers.remove(key) != null) {
+            LOGGER.atInfo().log("GameModeBridge: unregistered handler '" + key + "'");
+        }
+    }
+
+    public static void clear() {
+        handlers.clear();
+    }
+
     private GameModeBridge() {
     }
 }

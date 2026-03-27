@@ -38,7 +38,6 @@ public class VoteManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Gson GSON = new Gson();
-    private static final VoteManager INSTANCE = new VoteManager();
     private static final int IO_THREAD_COUNT = 4;
     private static final int REWARD_THREAD_COUNT = 2;
     private static final int MAX_POLL_CONCURRENCY = 4;
@@ -59,11 +58,7 @@ public class VoteManager {
     private final AtomicInteger consecutiveBackendFailures = new AtomicInteger();
     private volatile long pollBackoffUntilMs;
 
-    private VoteManager() {
-    }
-
-    public static VoteManager getInstance() {
-        return INSTANCE;
+    public VoteManager() {
     }
 
     public synchronized void initialize(VoteConfig config, VoteStore voteStore, CurrencyStore featherStore) {

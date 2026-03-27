@@ -21,14 +21,9 @@ import java.util.UUID;
 public class TrailManager extends AbstractTrailManager<TrailManager.TrailState> {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final TrailManager INSTANCE = new TrailManager();
     private static final Color WHITE = new Color((byte) 255, (byte) 255, (byte) 255);
 
-    private TrailManager() {}
-
-    public static TrailManager getInstance() {
-        return INSTANCE;
-    }
+    public TrailManager() {}
 
     @Override
     protected HytaleLogger logger() {

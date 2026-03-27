@@ -77,6 +77,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private RunOrFallGameManager gameManager;
     private RunOrFallFeatherBridge featherBridge;
     private RunOrFallCommand runOrFallCommand;
+    private RunOrFallQueueStore queueStore;
     private static final long HUD_READY_DELAY_MS = 1500L;
     private final ConcurrentHashMap<UUID, RunOrFallHud> runOrFallHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, HiddenRunOrFallHud> hiddenRunOrFallHuds = new ConcurrentHashMap<>();
@@ -113,14 +114,15 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             folder.mkdirs();
         }
         StoreInitializer.initialize(LOGGER,
-                () -> { if (!DatabaseManager.getInstance().isInitialized()) DatabaseManager.getInstance().initialize(); },
-                () -> VexaStore.getInstance().initialize()
+                () -> { if (!DatabaseManager.get().isInitialized()) DatabaseManager.get().initialize(); },
+                () -> VexaStore.get().initialize()
         );
         RunOrFallDatabaseSetup.ensureTables();
 
-        configStore = new RunOrFallConfigStore(DatabaseManager.getInstance(), new File(folder, "config.json"));
-        statsStore = new RunOrFallStatsStore(DatabaseManager.getInstance());
-        featherBridge = new RunOrFallFeatherBridge(FeatherStore.getInstance());
+        configStore = new RunOrFallConfigStore(DatabaseManager.get(), new File(folder, "config.json"));
+        statsStore = new RunOrFallStatsStore(DatabaseManager.get());
+        featherBridge = new RunOrFallFeatherBridge(FeatherStore.get());
+        this.queueStore = RunOrFallQueueStore.createAndRegister();
 
         RunOrFallGameManager.PluginCallbacks callbacks = new RunOrFallGameManager.PluginCallbacks() {
             @Override public void refreshRunOrFallHotbar(UUID playerId) {
@@ -136,7 +138,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 HyvexaRunOrFallPlugin.this.updateBlinkChargesHud(playerId, blinkCharges);
             }
         };
-        gameManager = new RunOrFallGameManager(configStore, statsStore, callbacks, featherBridge);
+        gameManager = new RunOrFallGameManager(configStore, statsStore, callbacks, featherBridge, queueStore);
 
         RunOrFallInteractionBridge.configure(new RunOrFallInteractionBridge.Services(
                 gameManager, statsStore,
@@ -153,7 +155,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 }
         ));
 
-        runOrFallCommand = new RunOrFallCommand(configStore, gameManager);
+        runOrFallCommand = new RunOrFallCommand(configStore, gameManager, queueStore);
         this.getCommandRegistry().registerCommand(runOrFallCommand);
         this.getCommandRegistry().registerCommand(new RunOrFallQueueCommand());
 
@@ -207,12 +209,12 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                     }, 3000L, TimeUnit.MILLISECONDS);
                 }
                 if (gameManager.isAssemblingPlayer(playerId)) {
-                    RunOrFallQueueStore.getInstance().dequeue(playerId);
+                    queueStore.dequeue(playerId);
                     if (gameManager.joinLobbyFromQueue(playerId, world)) {
                         gameManager.markAssemblingPlayerArrived(playerId);
                     }
-                } else if (RunOrFallQueueStore.getInstance().isQueued(playerId)) {
-                    RunOrFallQueueStore.getInstance().dequeue(playerId);
+                } else if (queueStore.isQueued(playerId)) {
+                    queueStore.dequeue(playerId);
                     gameManager.joinLobby(playerId, world);
                 }
                 Ref<EntityStore> ref = playerRef.getReference();
@@ -246,7 +248,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             if (runOrFallCommand != null) {
                 runOrFallCommand.clearSelection(playerId);
             }
-            VexaStore.getInstance().evictPlayer(playerId);
+            VexaStore.get().evictPlayer(playerId);
         });
 
         registerBridgeHandlers();
@@ -481,7 +483,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         int blinkCharges = gameManager != null ? gameManager.getBlinkCharges(playerId) : 0;
         hud.updateBlinkCharges(blinkCharges, showBrokenBlocks);
         hud.updatePlayerCount();
-        hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
+        hud.updateVexa(VexaStore.get().getCachedVexa(playerId));
         hud.updateFeathers(featherBridge.getCachedFeathers(playerId));
     }
 
@@ -580,7 +582,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             RunOrFallHud hud = entry.getValue();
             hud.updatePlayerCount();
-            hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
+            hud.updateVexa(VexaStore.get().getCachedVexa(playerId));
             hud.updateFeathers(featherBridge.getCachedFeathers(playerId));
             int brokenBlocks = gameManager != null ? gameManager.getBrokenBlocksCount(playerId) : 0;
             boolean showBrokenBlocks = gameManager != null && gameManager.isInActiveRound(playerId);
@@ -607,7 +609,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         if (gameManager != null) {
             gameManager.shutdown();
         }
-        try { DatabaseManager.getInstance().shutdown(); }
+        try { DatabaseManager.get().shutdown(); }
         catch (Exception e) { /* RunOrFall DB shutdown */ }
     }
 }

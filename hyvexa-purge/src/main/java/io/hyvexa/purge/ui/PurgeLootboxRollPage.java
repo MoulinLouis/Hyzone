@@ -53,6 +53,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
     private final List<String> candidateWeapons;
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeLoadoutService loadoutService;
+    private final PurgeWeaponUpgradeStore weaponUpgradeStore;
 
     private volatile ScheduledFuture<?> spinTask;
     private volatile ScheduledFuture<?> timeoutTask;
@@ -65,7 +66,8 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
                                 String rolledWeaponId,
                                 List<String> candidateWeapons,
                                 PurgeWeaponConfigManager weaponConfigManager,
-                                PurgeLoadoutService loadoutService) {
+                                PurgeLoadoutService loadoutService,
+                                PurgeWeaponUpgradeStore weaponUpgradeStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, LootboxEventData.CODEC);
         this.playerId = playerId;
         this.playerState = playerState;
@@ -73,6 +75,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
         this.candidateWeapons = candidateWeapons;
         this.weaponConfigManager = weaponConfigManager;
         this.loadoutService = loadoutService;
+        this.weaponUpgradeStore = weaponUpgradeStore;
     }
 
     @Override
@@ -133,7 +136,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
                     loadoutService.switchWeapon(player, playerState, rolledWeaponId);
                 }
                 String displayName = weaponConfigManager.getDisplayName(rolledWeaponId);
-                int level = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, rolledWeaponId);
+                int level = weaponUpgradeStore.getLevel(playerId, rolledWeaponId);
                 int effectiveLevel = Math.max(level, 1);
                 int dmg = weaponConfigManager.getDamage(rolledWeaponId, effectiveLevel);
                 player.sendMessage(Message.raw("Weapon switched to " + displayName + " (" + dmg + " dmg)!"));
@@ -192,7 +195,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
 
     private void showFinalResult() {
         String displayName = weaponConfigManager != null ? weaponConfigManager.getDisplayName(rolledWeaponId) : rolledWeaponId;
-        int level = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, rolledWeaponId);
+        int level = weaponUpgradeStore.getLevel(playerId, rolledWeaponId);
         int effectiveLevel = Math.max(level, 1);
         int dmg = weaponConfigManager != null ? weaponConfigManager.getDamage(rolledWeaponId, effectiveLevel) : 0;
 

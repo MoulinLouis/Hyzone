@@ -34,16 +34,19 @@ public class WaveDeathTracker {
     private final PurgeHudManager hudManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeLoadoutService loadoutService;
+    private final PurgeScrapStore scrapStore;
     private PurgeManagerRegistry registry;
 
     public WaveDeathTracker(PurgeVariantConfigManager variantConfigManager,
                             PurgeHudManager hudManager,
                             PurgeWeaponConfigManager weaponConfigManager,
-                            PurgeLoadoutService loadoutService) {
+                            PurgeLoadoutService loadoutService,
+                            PurgeScrapStore scrapStore) {
         this.variantConfigManager = variantConfigManager;
         this.hudManager = hudManager;
         this.weaponConfigManager = weaponConfigManager;
         this.loadoutService = loadoutService;
+        this.scrapStore = scrapStore;
     }
 
     void initRegistry(PurgeManagerRegistry registry) {
@@ -137,10 +140,10 @@ public class WaveDeathTracker {
                 int bonusScrap = registry.getWeaponXpManager().getBonusScrap(playerId, ps.getCurrentWeaponId()) * deadCount;
                 int reward = baseScrapReward + bonusScrap;
                 if (reward > 0) {
-                    PurgeScrapStore.getInstance().addScrap(playerId, reward);
+                    scrapStore.addScrap(playerId, reward);
                     PurgeHud hud = hudManager.getHud(playerId);
                     if (hud != null) {
-                        hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
+                        hud.updateScrap(scrapStore.getScrap(playerId));
                     }
                 }
             });
