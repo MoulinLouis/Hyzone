@@ -516,7 +516,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 // Cache PlayerRef for O(1) lookups
                 UUID playerId = playerRef.getUuid();
                 if (playerId != null) {
-                    tickHandler.playersInAscendWorld().add(playerId);
+                    tickHandler.addPlayerInAscendWorld(playerId);
                     tickHandler.cacheTickPlayer(playerRef);
                 }
                 // Register player as online for robot spawning
@@ -618,7 +618,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 UUID playerId = playerRef != null ? playerRef.getUuid() : null;
                 if (isAscendWorld(world)) {
                     if (playerId != null) {
-                        tickHandler.playersInAscendWorld().add(playerId);
+                        tickHandler.addPlayerInAscendWorld(playerId);
                     }
                     tickHandler.cacheTickPlayer(playerRef);
                     // If joining Ascend world, ensure items are present
@@ -638,7 +638,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 }
 
                 // Clean up Ascend state on true Ascend -> non-Ascend transitions
-                if (playerId != null && tickHandler.playersInAscendWorld().remove(playerId)) {
+                if (playerId != null && tickHandler.removePlayerFromAscendWorld(playerId)) {
                     // Pass event's Player/PlayerRef — PlayerRef.getReference() is null during transitions
                     Player player = holder.getComponent(Player.getComponentType());
                     cleanupAscendState(playerId, player, playerRef);
@@ -666,7 +666,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 return;
             }
 
-            tickHandler.playersInAscendWorld().remove(playerId);
+            tickHandler.removePlayerFromAscendWorld(playerId);
             cleanupAscendState(playerId, null, null);
 
             // Clean up event handler state
@@ -704,7 +704,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     Store<EntityStore> store = ref.getStore();
                     World world = store != null && store.getExternalData() != null ? store.getExternalData().getWorld() : null;
                     if (isAscendWorld(world)) {
-                        tickHandler.playersInAscendWorld().add(playerId);
+                        tickHandler.addPlayerInAscendWorld(playerId);
                         tickHandler.cacheTickPlayer(playerRef);
                     }
                 }

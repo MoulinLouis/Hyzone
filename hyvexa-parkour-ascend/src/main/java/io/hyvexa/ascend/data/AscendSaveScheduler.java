@@ -34,18 +34,6 @@ class AscendSaveScheduler {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
-    /** Child tables deleted during per-player reset. Order does not matter (no FK constraints). */
-    static final String[] CHILD_TABLES = {
-        "ascend_player_maps",
-        "ascend_player_summit",
-        "ascend_player_skills",
-        "ascend_player_achievements",
-        "ascend_player_cats",
-        "ascend_ghost_recordings",
-        "ascend_challenges",
-        "ascend_challenge_records"
-    };
-
     private final ConnectionProvider db;
     private final Map<UUID, AscendPlayerProgress> players;
     private final Map<UUID, String> playerNames;

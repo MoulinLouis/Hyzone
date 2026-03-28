@@ -98,6 +98,7 @@ class AscendLeaderboardQueries {
             WHERE total_volt_earned_exp10 > 0 OR total_volt_earned_mantissa > 0
                OR ascension_count > 0 OR total_manual_runs > 0 OR fastest_ascension_ms IS NOT NULL
             ORDER BY total_volt_earned_exp10 DESC, total_volt_earned_mantissa DESC
+            LIMIT 200
             """;
 
         List<AscendPlayerStore.LeaderboardEntry> entries = new ArrayList<>();
@@ -214,6 +215,7 @@ class AscendLeaderboardQueries {
             JOIN ascend_players p ON p.uuid = m.player_uuid
             WHERE m.map_id = ? AND m.best_time_ms IS NOT NULL
             ORDER BY m.best_time_ms ASC
+            LIMIT 200
             """;
 
         List<AscendPlayerStore.MapLeaderboardEntry> entries = new ArrayList<>();

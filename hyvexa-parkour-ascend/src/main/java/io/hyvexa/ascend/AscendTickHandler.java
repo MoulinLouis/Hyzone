@@ -244,8 +244,12 @@ class AscendTickHandler {
         return playerRefCache.get(playerId);
     }
 
-    Set<UUID> playersInAscendWorld() {
-        return playersInAscendWorld;
+    void addPlayerInAscendWorld(UUID playerId) {
+        if (playerId != null) playersInAscendWorld.add(playerId);
+    }
+
+    boolean removePlayerFromAscendWorld(UUID playerId) {
+        return playerId != null && playersInAscendWorld.remove(playerId);
     }
 
     /** Clears all tick state. Called during plugin shutdown. */

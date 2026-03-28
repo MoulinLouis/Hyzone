@@ -304,30 +304,9 @@ final class AscendMineSchema {
     }
 
     private static void ensureLayerGachaColumns(Connection conn) {
-        if (!AscendDatabaseSetup.columnExists(conn, "mine_zone_layers", "egg_drop_chance")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE mine_zone_layers ADD COLUMN egg_drop_chance DOUBLE NOT NULL DEFAULT 0.5");
-                LOGGER.atInfo().log("Added egg_drop_chance column to mine_zone_layers");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add egg_drop_chance column: " + e.getMessage());
-            }
-        }
-        if (!AscendDatabaseSetup.columnExists(conn, "mine_zone_layers", "display_name")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE mine_zone_layers ADD COLUMN display_name VARCHAR(64) NOT NULL DEFAULT ''");
-                LOGGER.atInfo().log("Added display_name column to mine_zone_layers");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add display_name column: " + e.getMessage());
-            }
-        }
-        if (!AscendDatabaseSetup.columnExists(conn, "mine_zone_layers", "egg_item_id")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE mine_zone_layers ADD COLUMN egg_item_id VARCHAR(64) DEFAULT NULL");
-                LOGGER.atInfo().log("Added egg_item_id column to mine_zone_layers");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add egg_item_id column: " + e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "mine_zone_layers", "egg_drop_chance", "DOUBLE NOT NULL DEFAULT 0.5");
+        AscendDatabaseSetup.ensureColumn(conn, "mine_zone_layers", "display_name", "VARCHAR(64) NOT NULL DEFAULT ''");
+        AscendDatabaseSetup.ensureColumn(conn, "mine_zone_layers", "egg_item_id", "VARCHAR(64) DEFAULT NULL");
     }
 
     /**
@@ -393,13 +372,7 @@ final class AscendMineSchema {
             {"upgrade_cashback", "INT NOT NULL DEFAULT 0"}
         };
         for (String[] col : columns) {
-            if (!AscendDatabaseSetup.columnExists(conn, "mine_players", col[0])) {
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN " + col[0] + " " + col[1]);
-                } catch (SQLException e) {
-                    LOGGER.atSevere().log("Failed to add %s column to mine_players: %s", col[0], e.getMessage());
-                }
-            }
+            AscendDatabaseSetup.ensureColumn(conn, "mine_players", col[0], col[1]);
         }
     }
 
@@ -411,34 +384,16 @@ final class AscendMineSchema {
             {"conveyor_speed", "DOUBLE NOT NULL DEFAULT 2.0"},
         };
         for (String[] col : columns) {
-            if (!AscendDatabaseSetup.columnExists(conn, "mine_miner_slots", col[0])) {
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.executeUpdate("ALTER TABLE mine_miner_slots ADD COLUMN " + col[0] + " " + col[1]);
-                } catch (SQLException e) {
-                    LOGGER.atSevere().log("Failed to add " + col[0] + " column: " + e.getMessage());
-                }
-            }
+            AscendDatabaseSetup.ensureColumn(conn, "mine_miner_slots", col[0], col[1]);
         }
     }
 
     private static void ensureMineInMineColumn(Connection conn) {
-        if (!AscendDatabaseSetup.columnExists(conn, "mine_players", "in_mine")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN in_mine TINYINT(1) NOT NULL DEFAULT 0");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add in_mine column to mine_players: %s", e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "mine_players", "in_mine", "TINYINT(1) NOT NULL DEFAULT 0");
     }
 
     private static void ensurePickaxeTierColumn(Connection conn) {
-        if (!AscendDatabaseSetup.columnExists(conn, "mine_players", "pickaxe_tier")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN pickaxe_tier INT NOT NULL DEFAULT 0");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add pickaxe_tier column to mine_players: %s", e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "mine_players", "pickaxe_tier", "INT NOT NULL DEFAULT 0");
     }
 
     /**
@@ -539,22 +494,10 @@ final class AscendMineSchema {
     }
 
     private static void ensurePickaxeEnhancementColumn(Connection conn) {
-        if (!AscendDatabaseSetup.columnExists(conn, "mine_players", "pickaxe_enhancement")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN pickaxe_enhancement INT NOT NULL DEFAULT 0");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add pickaxe_enhancement column to mine_players: %s", e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "mine_players", "pickaxe_enhancement", "INT NOT NULL DEFAULT 0");
     }
 
     private static void ensureManualBlocksMinedColumn(Connection conn) {
-        if (!AscendDatabaseSetup.columnExists(conn, "mine_player_stats", "manual_blocks_mined")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE mine_player_stats ADD COLUMN manual_blocks_mined BIGINT NOT NULL DEFAULT 0");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add manual_blocks_mined column to mine_player_stats: %s", e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "mine_player_stats", "manual_blocks_mined", "BIGINT NOT NULL DEFAULT 0");
     }
 }

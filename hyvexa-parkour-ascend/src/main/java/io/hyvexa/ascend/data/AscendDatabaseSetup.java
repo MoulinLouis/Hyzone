@@ -55,4 +55,19 @@ public final class AscendDatabaseSetup {
             return false;
         }
     }
+
+    /**
+     * Add a column if it doesn't exist yet. Logs success or failure.
+     */
+    static void ensureColumn(Connection conn, String table, String column, String definition) {
+        if (columnExists(conn, table, column)) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
+            LOGGER.atInfo().log("Added " + column + " column to " + table);
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to add " + column + " column to " + table + ": " + e.getMessage());
+        }
+    }
 }

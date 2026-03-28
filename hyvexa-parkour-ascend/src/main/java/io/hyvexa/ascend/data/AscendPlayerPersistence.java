@@ -34,6 +34,18 @@ class AscendPlayerPersistence {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
+    /** Child tables deleted during per-player reset. Order does not matter (no FK constraints). */
+    static final String[] CHILD_TABLES = {
+        "ascend_player_maps",
+        "ascend_player_summit",
+        "ascend_player_skills",
+        "ascend_player_achievements",
+        "ascend_player_cats",
+        "ascend_ghost_recordings",
+        "ascend_challenges",
+        "ascend_challenge_records"
+    };
+
     private final ConnectionProvider db;
     private final Map<UUID, AscendPlayerProgress> players;
     private final Map<UUID, String> playerNames;
@@ -51,10 +63,6 @@ class AscendPlayerPersistence {
         this.leaderboardQueries = new AscendLeaderboardQueries(db, players, playerNames);
         this.saveScheduler = new AscendSaveScheduler(db, players, playerNames, resetPendingPlayers);
     }
-
-    // ========================================
-    // Delegation — Dirty Tracking (AscendSaveScheduler)
-    // ========================================
 
     void markDirty(UUID playerId) {
         saveScheduler.markDirty(playerId);
@@ -75,10 +83,6 @@ class AscendPlayerPersistence {
     void clearDirtyState() {
         saveScheduler.clearDirtyState();
     }
-
-    // ========================================
-    // Delegation — Save Scheduling (AscendSaveScheduler)
-    // ========================================
 
     void queueSave() {
         saveScheduler.queueSave();
@@ -103,10 +107,6 @@ class AscendPlayerPersistence {
     boolean savePlayerSync(UUID playerId) {
         return saveScheduler.savePlayerSync(playerId);
     }
-
-    // ========================================
-    // Delegation — Leaderboard (AscendLeaderboardQueries)
-    // ========================================
 
     List<AscendPlayerStore.LeaderboardEntry> getLeaderboardEntries() {
         return leaderboardQueries.getLeaderboardEntries();
@@ -417,7 +417,7 @@ class AscendPlayerPersistence {
 
         String playerIdStr = playerId.toString();
         this.db.withTransaction(conn -> {
-            for (String table : AscendSaveScheduler.CHILD_TABLES) {
+            for (String table : CHILD_TABLES) {
                 try (PreparedStatement stmt = conn.prepareStatement(
                     "DELETE FROM " + table + " WHERE player_uuid = ?")) {
                     DatabaseManager.applyQueryTimeout(stmt);
@@ -440,7 +440,7 @@ class AscendPlayerPersistence {
         }
 
         boolean wiped = this.db.withTransaction(conn -> {
-            for (String table : AscendSaveScheduler.CHILD_TABLES) {
+            for (String table : CHILD_TABLES) {
                 try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + table)) {
                     DatabaseManager.applyQueryTimeout(stmt);
                     stmt.executeUpdate();
@@ -453,7 +453,7 @@ class AscendPlayerPersistence {
         });
         if (wiped) {
             LOGGER.atInfo().log("All player progress wiped from database (%d tables cleared)",
-                    AscendSaveScheduler.CHILD_TABLES.length + 1);
+                    CHILD_TABLES.length + 1);
         }
         return wiped;
     }

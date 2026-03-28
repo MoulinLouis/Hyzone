@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -15,13 +16,13 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ParkourLeaderboardCache {
 
-    private final java.util.Map<UUID, ProgressStore.PlayerProgress> progress;
-    private final java.util.Map<UUID, String> lastKnownNames;
-    private final java.util.Map<String, LeaderboardEntry> leaderboardCache = new ConcurrentHashMap<>();
-    private final java.util.Map<String, Long> leaderboardVersions = new ConcurrentHashMap<>();
+    private final Map<UUID, ProgressStore.PlayerProgress> progress;
+    private final Map<UUID, String> lastKnownNames;
+    private final Map<String, LeaderboardEntry> leaderboardCache = new ConcurrentHashMap<>();
+    private final Map<String, Long> leaderboardVersions = new ConcurrentHashMap<>();
 
-    ParkourLeaderboardCache(java.util.Map<UUID, ProgressStore.PlayerProgress> progress,
-                            java.util.Map<UUID, String> lastKnownNames) {
+    ParkourLeaderboardCache(Map<UUID, ProgressStore.PlayerProgress> progress,
+                            Map<UUID, String> lastKnownNames) {
         this.progress = progress;
         this.lastKnownNames = lastKnownNames;
     }
@@ -39,15 +40,15 @@ public class ParkourLeaderboardCache {
         leaderboardVersions.clear();
     }
 
-    java.util.Map<UUID, Long> getBestTimesForMap(String mapId) {
+    Map<UUID, Long> getBestTimesForMap(String mapId) {
         if (mapId == null) {
-            return java.util.Map.of();
+            return Map.of();
         }
         LeaderboardEntry cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
         return new HashMap<>(cache.timesByPlayer);
     }
 
-    List<java.util.Map.Entry<UUID, Long>> getLeaderboardEntries(String mapId) {
+    List<Map.Entry<UUID, Long>> getLeaderboardEntries(String mapId) {
         if (mapId == null) {
             return List.of();
         }
@@ -93,22 +94,22 @@ public class ParkourLeaderboardCache {
         if (mapId == null) {
             return LeaderboardEntry.empty();
         }
-        List<java.util.Map.Entry<UUID, Long>> entries = new ArrayList<>();
-        for (java.util.Map.Entry<UUID, ProgressStore.PlayerProgress> entry : progress.entrySet()) {
+        List<Map.Entry<UUID, Long>> entries = new ArrayList<>();
+        for (Map.Entry<UUID, ProgressStore.PlayerProgress> entry : progress.entrySet()) {
             Long best = entry.getValue().bestMapTimes.get(mapId);
             if (best != null) {
-                entries.add(java.util.Map.entry(entry.getKey(), best));
+                entries.add(Map.entry(entry.getKey(), best));
             }
         }
-        entries.sort(Comparator.comparingLong(java.util.Map.Entry::getValue));
-        java.util.Map<UUID, Integer> positions = new HashMap<>();
-        java.util.Map<UUID, Integer> ordinalPositions = new HashMap<>();
-        java.util.Map<UUID, Long> timesByPlayer = new HashMap<>(entries.size());
+        entries.sort(Comparator.comparingLong(Map.Entry::getValue));
+        Map<UUID, Integer> positions = new HashMap<>();
+        Map<UUID, Integer> ordinalPositions = new HashMap<>();
+        Map<UUID, Long> timesByPlayer = new HashMap<>(entries.size());
         Long worldRecordMs = entries.isEmpty() ? null : entries.get(0).getValue();
         long lastTime = Long.MIN_VALUE;
         int rank = 0;
         for (int i = 0; i < entries.size(); i++) {
-            java.util.Map.Entry<UUID, Long> leaderboardEntry = entries.get(i);
+            Map.Entry<UUID, Long> leaderboardEntry = entries.get(i);
             long time = toDisplayedCentiseconds(leaderboardEntry.getValue());
             if (i == 0 || time > lastTime) {
                 rank = i + 1;
@@ -120,8 +121,8 @@ public class ParkourLeaderboardCache {
             timesByPlayer.put(entryPlayerId, leaderboardEntry.getValue());
         }
         long version = leaderboardVersions.getOrDefault(mapId, 0L);
-        return new LeaderboardEntry(List.copyOf(entries), java.util.Map.copyOf(positions),
-                java.util.Map.copyOf(ordinalPositions), java.util.Map.copyOf(timesByPlayer),
+        return new LeaderboardEntry(List.copyOf(entries), Map.copyOf(positions),
+                Map.copyOf(ordinalPositions), Map.copyOf(timesByPlayer),
                 buildTopRows(entries), worldRecordMs, version);
     }
 
@@ -129,11 +130,11 @@ public class ParkourLeaderboardCache {
         return Math.round(durationMs / 10.0);
     }
 
-    private List<LeaderboardHudRow> buildTopRows(List<java.util.Map.Entry<UUID, Long>> entries) {
+    private List<LeaderboardHudRow> buildTopRows(List<Map.Entry<UUID, Long>> entries) {
         List<LeaderboardHudRow> topRows = new ArrayList<>(5);
         for (int i = 0; i < 5; i++) {
             if (i < entries.size()) {
-                java.util.Map.Entry<UUID, Long> entry = entries.get(i);
+                Map.Entry<UUID, Long> entry = entries.get(i);
                 topRows.add(new LeaderboardHudRow(String.valueOf(i + 1), getDisplayPlayerName(entry.getKey()),
                         FormatUtils.formatDuration(entry.getValue())));
             } else {
@@ -154,16 +155,16 @@ public class ParkourLeaderboardCache {
     // ---- Inner data classes ----
 
     static final class LeaderboardEntry {
-        final List<java.util.Map.Entry<UUID, Long>> entries;
-        final java.util.Map<UUID, Integer> positions;
-        final java.util.Map<UUID, Integer> ordinalPositions;
-        final java.util.Map<UUID, Long> timesByPlayer;
+        final List<Map.Entry<UUID, Long>> entries;
+        final Map<UUID, Integer> positions;
+        final Map<UUID, Integer> ordinalPositions;
+        final Map<UUID, Long> timesByPlayer;
         final List<LeaderboardHudRow> topRows;
         final Long worldRecordMs;
         final long version;
 
-        LeaderboardEntry(List<java.util.Map.Entry<UUID, Long>> entries, java.util.Map<UUID, Integer> positions,
-                         java.util.Map<UUID, Integer> ordinalPositions, java.util.Map<UUID, Long> timesByPlayer,
+        LeaderboardEntry(List<Map.Entry<UUID, Long>> entries, Map<UUID, Integer> positions,
+                         Map<UUID, Integer> ordinalPositions, Map<UUID, Long> timesByPlayer,
                          List<LeaderboardHudRow> topRows, Long worldRecordMs, long version) {
             this.entries = entries;
             this.positions = positions;
@@ -175,7 +176,7 @@ public class ParkourLeaderboardCache {
         }
 
         private static LeaderboardEntry empty() {
-            return new LeaderboardEntry(List.of(), java.util.Map.of(), java.util.Map.of(), java.util.Map.of(),
+            return new LeaderboardEntry(List.of(), Map.of(), Map.of(), Map.of(),
                     List.of(
                             LeaderboardHudRow.empty(1),
                             LeaderboardHudRow.empty(2),

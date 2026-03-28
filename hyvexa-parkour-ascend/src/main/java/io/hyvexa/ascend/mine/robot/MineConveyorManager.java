@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -45,7 +46,8 @@ class MineConveyorManager {
     private final MinePlayerStore playerStore;
     private final MineAchievementTracker achievementTracker;
 
-    // Active conveyor items per player
+    // Active conveyor items per player — CopyOnWriteArrayList because spawnConveyorItem (miner tick)
+    // and tickConveyorItems (conveyor tick) run on different scheduled executors
     private final Map<UUID, List<ConveyorItemState>> conveyorItems = new ConcurrentHashMap<>();
 
     private ScheduledFuture<?> conveyorTickTask;
@@ -120,7 +122,7 @@ class MineConveyorManager {
 
         ConveyorItemState itemState = new ConveyorItemState(ownerId, mineId, worldName, blockType, speed, waypoints);
 
-        conveyorItems.computeIfAbsent(ownerId, k -> new ArrayList<>()).add(itemState);
+        conveyorItems.computeIfAbsent(ownerId, k -> new CopyOnWriteArrayList<>()).add(itemState);
 
         double startX = waypoints[0][0];
         double startY = waypoints[0][1];
@@ -198,9 +200,7 @@ class MineConveyorManager {
             List<ConveyorItemState> items = entry.getValue();
             if (items.isEmpty()) continue;
 
-            var it = items.iterator();
-            while (it.hasNext()) {
-                ConveyorItemState item = it.next();
+            items.removeIf(item -> {
                 Ref<EntityStore> ref = item.getEntityRef();
                 String worldName = item.getWorldName();
                 World world = worldName != null ? Universe.get().getWorld(worldName) : null;
@@ -226,8 +226,7 @@ class MineConveyorManager {
                             }
                         });
                     }
-                    it.remove();
-                    continue;
+                    return true;
                 }
 
                 if (ref != null && ref.isValid() && world != null) {
@@ -257,7 +256,8 @@ class MineConveyorManager {
                         }
                     });
                 }
-            }
+                return false;
+            });
         }
     }
 

@@ -395,23 +395,23 @@ public class ProgressStore {
 
         return this.db.withTransaction(conn -> {
             try (PreparedStatement completionStmt = DatabaseManager.prepare(conn, completionSql)) {
-                completionStmt.setString(1, request.playerId.toString());
-                completionStmt.setString(2, request.mapId);
-                completionStmt.setLong(3, request.timeMs);
+                completionStmt.setString(1, request.getPlayerId().toString());
+                completionStmt.setString(2, request.getMapId());
+                completionStmt.setLong(3, request.getTimeMs());
                 completionStmt.executeUpdate();
 
-                if (!request.checkpointTimes.isEmpty()) {
+                if (!request.getCheckpointTimes().isEmpty()) {
                     try (PreparedStatement deleteStmt = DatabaseManager.prepare(conn, deleteCheckpointSql);
                          PreparedStatement insertStmt = DatabaseManager.prepare(conn, insertCheckpointSql)) {
-                        deleteStmt.setString(1, request.playerId.toString());
-                        deleteStmt.setString(2, request.mapId);
+                        deleteStmt.setString(1, request.getPlayerId().toString());
+                        deleteStmt.setString(2, request.getMapId());
                         deleteStmt.executeUpdate();
 
-                        for (int i = 0; i < request.checkpointTimes.size(); i++) {
-                            insertStmt.setString(1, request.playerId.toString());
-                            insertStmt.setString(2, request.mapId);
+                        for (int i = 0; i < request.getCheckpointTimes().size(); i++) {
+                            insertStmt.setString(1, request.getPlayerId().toString());
+                            insertStmt.setString(2, request.getMapId());
                             insertStmt.setInt(3, i);
-                            insertStmt.setLong(4, request.checkpointTimes.get(i));
+                            insertStmt.setLong(4, request.getCheckpointTimes().get(i));
                             insertStmt.addBatch();
                         }
                         insertStmt.executeBatch();

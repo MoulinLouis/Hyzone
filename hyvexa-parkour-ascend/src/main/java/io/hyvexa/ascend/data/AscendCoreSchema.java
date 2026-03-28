@@ -106,14 +106,7 @@ final class AscendCoreSchema {
     }
 
     private static void ensureElevationColumn(Connection conn) {
-        if (AscendDatabaseSetup.columnExists(conn, "ascend_players", "elevation_multiplier")) {
-            return;
-        }
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN elevation_multiplier INT NOT NULL DEFAULT 1");
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add elevation_multiplier column: " + e.getMessage());
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "elevation_multiplier", "INT NOT NULL DEFAULT 1");
     }
 
     private static void migrateToNewMultiplierSchema(Connection conn) {
@@ -147,26 +140,11 @@ final class AscendCoreSchema {
     }
 
     private static void ensureRobotTimeReductionColumn(Connection conn) {
-        if (AscendDatabaseSetup.columnExists(conn, "ascend_maps", "robot_time_reduction_ms")) {
-            return;
-        }
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_maps ADD COLUMN robot_time_reduction_ms BIGINT NOT NULL DEFAULT 0");
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add robot_time_reduction_ms column: " + e.getMessage());
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_maps", "robot_time_reduction_ms", "BIGINT NOT NULL DEFAULT 0");
     }
 
     private static void ensureRobotStarsColumn(Connection conn) {
-        if (AscendDatabaseSetup.columnExists(conn, "ascend_player_maps", "robot_stars")) {
-            return;
-        }
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN robot_stars INT NOT NULL DEFAULT 0");
-            LOGGER.atInfo().log("Added robot_stars column to ascend_player_maps");
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add robot_stars column: " + e.getMessage());
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_player_maps", "robot_stars", "INT NOT NULL DEFAULT 0");
     }
 
     /**
@@ -344,14 +322,6 @@ final class AscendCoreSchema {
     }
 
     private static void ensurePlayerNameColumn(Connection conn) {
-        if (AscendDatabaseSetup.columnExists(conn, "ascend_players", "player_name")) {
-            return;
-        }
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN player_name VARCHAR(32) DEFAULT NULL");
-            LOGGER.atInfo().log("Added player_name column to ascend_players");
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add player_name column: " + e.getMessage());
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "player_name", "VARCHAR(32) DEFAULT NULL");
     }
 }

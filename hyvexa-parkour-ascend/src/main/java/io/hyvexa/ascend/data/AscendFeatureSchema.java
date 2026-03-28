@@ -172,95 +172,31 @@ final class AscendFeatureSchema {
     }
 
     private static void ensureProgressColumns(Connection conn) {
-        // Ascension count
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "ascension_count")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN ascension_count INT NOT NULL DEFAULT 0");
-                LOGGER.atInfo().log("Added ascension_count column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add ascension_count column: " + e.getMessage());
-            }
-        }
-
-        // Skill tree points
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "skill_tree_points")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN skill_tree_points INT NOT NULL DEFAULT 0");
-                LOGGER.atInfo().log("Added skill_tree_points column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add skill_tree_points column: " + e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "ascension_count", "INT NOT NULL DEFAULT 0");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "skill_tree_points", "INT NOT NULL DEFAULT 0");
 
         // Total volt earned (lifetime) — legacy column for pre-scientific-notation DBs
         if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "total_coins_earned")
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "total_coins_earned_mantissa")
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "total_vexa_earned_mantissa")
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "total_volt_earned_mantissa")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_coins_earned DOUBLE NOT NULL DEFAULT 0");
-                LOGGER.atInfo().log("Added total_coins_earned column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add total_coins_earned column: " + e.getMessage());
-            }
+            AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "total_coins_earned", "DOUBLE NOT NULL DEFAULT 0");
         }
 
-        // Migrate volt columns from BIGINT to DOUBLE for decimal precision
         migrateCoinsToDouble(conn);
-
-        // Migrate volt columns from DOUBLE to DECIMAL for exact precision
         migrateCoinsToDecimal(conn);
 
-        // Total manual runs
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "total_manual_runs")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_manual_runs INT NOT NULL DEFAULT 0");
-                LOGGER.atInfo().log("Added total_manual_runs column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add total_manual_runs column: " + e.getMessage());
-            }
-        }
-
-        // Active title
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "active_title")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN active_title VARCHAR(64) DEFAULT NULL");
-                LOGGER.atInfo().log("Added active_title column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add active_title column: " + e.getMessage());
-            }
-        }
-
-        // Ascension timer columns (for stats tracking)
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "ascension_started_at")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN ascension_started_at BIGINT DEFAULT NULL");
-                LOGGER.atInfo().log("Added ascension_started_at column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add ascension_started_at column: " + e.getMessage());
-            }
-        }
-
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "fastest_ascension_ms")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN fastest_ascension_ms BIGINT DEFAULT NULL");
-                LOGGER.atInfo().log("Added fastest_ascension_ms column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add fastest_ascension_ms column: " + e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "total_manual_runs", "INT NOT NULL DEFAULT 0");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "active_title", "VARCHAR(64) DEFAULT NULL");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "ascension_started_at", "BIGINT DEFAULT NULL");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "fastest_ascension_ms", "BIGINT DEFAULT NULL");
 
         // Summit accumulated volt (volt earned since last Summit/Elevation)
         if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "summit_accumulated_coins")
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "summit_accumulated_coins_mantissa")
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "summit_accumulated_vexa_mantissa")
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "summit_accumulated_volt_mantissa")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN summit_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0");
-                LOGGER.atInfo().log("Added summit_accumulated_coins column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add summit_accumulated_coins column: " + e.getMessage());
-            }
+            AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "summit_accumulated_coins", "DECIMAL(65,2) NOT NULL DEFAULT 0");
         }
 
         // Elevation accumulated volt (volt earned since last Elevation/Summit/Ascension)
@@ -268,43 +204,12 @@ final class AscendFeatureSchema {
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "elevation_accumulated_coins_mantissa")
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "elevation_accumulated_vexa_mantissa")
                 && !AscendDatabaseSetup.columnExists(conn, "ascend_players", "elevation_accumulated_volt_mantissa")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN elevation_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0");
-                LOGGER.atInfo().log("Added elevation_accumulated_coins column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add elevation_accumulated_coins column: " + e.getMessage());
-            }
+            AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "elevation_accumulated_coins", "DECIMAL(65,2) NOT NULL DEFAULT 0");
         }
 
-        // Auto-upgrade toggle
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "auto_upgrade_enabled")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_upgrade_enabled BOOLEAN NOT NULL DEFAULT FALSE");
-                LOGGER.atInfo().log("Added auto_upgrade_enabled column");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add auto_upgrade_enabled: " + e.getMessage());
-            }
-        }
-
-        // Auto-evolution toggle
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "auto_evolution_enabled")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_evolution_enabled BOOLEAN NOT NULL DEFAULT FALSE");
-                LOGGER.atInfo().log("Added auto_evolution_enabled column");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add auto_evolution_enabled: " + e.getMessage());
-            }
-        }
-
-        // Hide other runners toggle
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "hide_other_runners")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN hide_other_runners BOOLEAN NOT NULL DEFAULT FALSE");
-                LOGGER.atInfo().log("Added hide_other_runners column");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add hide_other_runners: " + e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "auto_upgrade_enabled", "BOOLEAN NOT NULL DEFAULT FALSE");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "auto_evolution_enabled", "BOOLEAN NOT NULL DEFAULT FALSE");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "hide_other_runners", "BOOLEAN NOT NULL DEFAULT FALSE");
     }
 
     private static void migrateCoinsToDouble(Connection conn) {
@@ -384,15 +289,7 @@ final class AscendFeatureSchema {
     }
 
     private static void ensureTutorialColumn(Connection conn) {
-        if (AscendDatabaseSetup.columnExists(conn, "ascend_players", "seen_tutorials")) {
-            return;
-        }
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN seen_tutorials INT NOT NULL DEFAULT 0");
-            LOGGER.atInfo().log("Added seen_tutorials column to ascend_players");
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add seen_tutorials column: " + e.getMessage());
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "seen_tutorials", "INT NOT NULL DEFAULT 0");
     }
 
     private static void ensureGhostRecordingTable(Connection conn) {
@@ -416,45 +313,20 @@ final class AscendFeatureSchema {
     }
 
     private static void ensureBestTimeColumn(Connection conn) {
-        if (AscendDatabaseSetup.columnExists(conn, "ascend_player_maps", "best_time_ms")) {
-            return;
-        }
-
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN best_time_ms BIGINT DEFAULT NULL");
-            LOGGER.atInfo().log("Added best_time_ms column to ascend_player_maps");
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add best_time_ms column: " + e.getMessage());
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_player_maps", "best_time_ms", "BIGINT DEFAULT NULL");
     }
 
     private static void ensureSpawnColumns(Connection conn) {
-        // Add spawn columns if they don't exist (for existing databases)
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_settings", "spawn_x")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_x DOUBLE NOT NULL DEFAULT 0");
-                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_y DOUBLE NOT NULL DEFAULT 0");
-                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_z DOUBLE NOT NULL DEFAULT 0");
-                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_rot_x FLOAT NOT NULL DEFAULT 0");
-                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_rot_y FLOAT NOT NULL DEFAULT 0");
-                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_rot_z FLOAT NOT NULL DEFAULT 0");
-                LOGGER.atInfo().log("Added spawn columns to ascend_settings");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add spawn columns: " + e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_settings", "spawn_x", "DOUBLE NOT NULL DEFAULT 0");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_settings", "spawn_y", "DOUBLE NOT NULL DEFAULT 0");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_settings", "spawn_z", "DOUBLE NOT NULL DEFAULT 0");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_settings", "spawn_rot_x", "FLOAT NOT NULL DEFAULT 0");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_settings", "spawn_rot_y", "FLOAT NOT NULL DEFAULT 0");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_settings", "spawn_rot_z", "FLOAT NOT NULL DEFAULT 0");
     }
 
     private static void ensureVoidYThresholdColumn(Connection conn) {
-        if (AscendDatabaseSetup.columnExists(conn, "ascend_settings", "void_y_threshold")) {
-            return;
-        }
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN void_y_threshold DOUBLE DEFAULT NULL");
-            LOGGER.atInfo().log("Added void_y_threshold column to ascend_settings");
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add void_y_threshold column: " + e.getMessage());
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_settings", "void_y_threshold", "DOUBLE DEFAULT NULL");
     }
 
     private static void ensureMapLeaderboardIndex(Connection conn) {
@@ -499,22 +371,8 @@ final class AscendFeatureSchema {
     }
 
     private static void ensurePlayerSettingsColumns(Connection conn) {
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "hud_hidden")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN hud_hidden BOOLEAN NOT NULL DEFAULT FALSE");
-                LOGGER.atInfo().log("Added hud_hidden column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add hud_hidden column: " + e.getMessage());
-            }
-        }
-        if (!AscendDatabaseSetup.columnExists(conn, "ascend_players", "players_hidden")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN players_hidden BOOLEAN NOT NULL DEFAULT FALSE");
-                LOGGER.atInfo().log("Added players_hidden column to ascend_players");
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to add players_hidden column: " + e.getMessage());
-            }
-        }
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "hud_hidden", "BOOLEAN NOT NULL DEFAULT FALSE");
+        AscendDatabaseSetup.ensureColumn(conn, "ascend_players", "players_hidden", "BOOLEAN NOT NULL DEFAULT FALSE");
     }
 
     /**
