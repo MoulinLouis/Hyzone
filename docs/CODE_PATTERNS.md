@@ -593,9 +593,29 @@ Core singleton currency stores follow the same cache -> persist -> evict shape, 
 
 Stores depend on `ConnectionProvider` / MySQL and cannot be unit-tested in isolation. Pure-logic value objects (e.g. `PurgePlayerStats`) are testable — put assertions on mutation methods there. For the store itself, verify correctness through integration testing or manual gameplay.
 
+#### When NOT to Use BasePlayerStore
+
+- Data needs TTL expiration or periodic refresh → use `CachedCurrencyStore` pattern (see `VexaStore`, `FeatherStore`)
+- Data is complex/nested with debounced saves or domain facades → use a custom store (see `AscendPlayerStore`)
+- Data is not per-player → use a plain manager with manual cache
+
 ## Cross-Module Communication
 
-**Rule:** Gameplay modules never import from each other. All cross-cutting communication goes through `hyvexa-core` bridges.
+**Rule:** Gameplay modules never import from each other. All cross-cutting communication goes through `hyvexa-core` bridges. Three distinct sub-patterns exist: **Static Registry** (producers register, consumers lookup by key), **Service Locator** (for codec-instantiated classes), and **Reflection Adapter** (optional third-party plugins).
+
+### Bridge Inventory
+
+| Bridge | Location | Pattern | Purpose |
+|--------|----------|---------|---------|
+| `CurrencyBridge` | `core/economy/` | Static registry | Currency operations by name ("vexa", "feathers") |
+| `GameModeBridge` | `core/bridge/` | Static registry | Cross-mode interaction dispatch by key |
+| `WardrobeBridge` | `core/wardrobe/` | Static facade | Cosmetic purchase operations (vexa deduction + permission grant) |
+| `ParkourInteractionBridge` | `parkour/interaction/` | Service locator | Parkour services for codec-instantiated interactions |
+| `AscendInteractionBridge` | `ascend/interaction/` | Service locator | Ascend services for interactions |
+| `RunOrFallInteractionBridge` | `runorfall/interaction/` | Service locator | RunOrFall services for interactions |
+| `PurgeInteractionBridge` | `purge/interaction/` | Service locator | Purge services for interactions |
+| `MultiHudBridge` | `common/util/` | Reflection adapter | Optional MultipleHUD plugin integration |
+| `HylogramsBridge` | `common/util/` | Reflection adapter | Optional Hylogram plugin integration |
 
 ### CurrencyBridge — Currency access from any module
 
@@ -660,6 +680,18 @@ GameModeBridge.invoke(GameModeBridge.PARKOUR_RESTART_CHECKPOINT, ...);
 ```
 
 If two modules need to share behavior, extract it into `hyvexa-core` as a bridge, utility, or shared store — never have one gameplay module import another.
+
+### Reflection Adapter — Optional third-party plugins
+
+`MultiHudBridge` and `HylogramsBridge` use reflection to detect an optional external plugin at runtime. If the plugin is loaded, calls go through its API; if not, operations fall back gracefully (no-op or direct alternative). Both live in `common/util/` and use the same structure: a `volatile boolean` availability flag, cached `Method` references, and try-catch around every reflective call.
+
+Do not create new reflection adapters without discussion — only two exist and they're stable. If you need a new optional plugin integration, follow the same `checked`/`available`/cached-method pattern.
+
+### Adding a New Bridge — Decision Tree
+
+- Need to call another module's service by key? → **Static Registry** (like `GameModeBridge`)
+- Need services in a codec-instantiated (no-arg constructor) class? → **Service Locator** (like `ParkourInteractionBridge`) — see [InteractionBridge](#interactionbridge-service-locator-for-codecs)
+- Need an optional external plugin? → **Reflection Adapter** (rare — ask before creating)
 
 ## Threading
 

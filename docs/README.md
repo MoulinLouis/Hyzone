@@ -13,6 +13,8 @@ Quick reference for AI agents. Find the right doc, know when to update it.
 | Database schema (per-module) | `<Module>/DATABASE.md` | Table/column added, removed, or renamed |
 | Economy & balance (Ascend) | `Ascend/ECONOMY_BALANCE.md` | Cost, reward, multiplier, formula, or progression change |
 | Code patterns & conventions | `CODE_PATTERNS.md` | New reusable pattern established |
+| New store (BasePlayerStore) | `CODE_PATTERNS.md` § Data Stores | New BasePlayerStore subclass created |
+| Cross-module communication (bridges) | `CODE_PATTERNS.md` § Cross-Module Communication | New bridge added or bridge pattern changed |
 | Hytale API gotchas | `HYTALE_API.md` | New API quirk discovered or workaround found |
 | Hytale Custom UI reference | `hytale-custom-ui/` | Hytale UI system changes (external reference) |
 | Release history (dev) | `../CHANGELOG.md` | Any player-visible change shipped |
