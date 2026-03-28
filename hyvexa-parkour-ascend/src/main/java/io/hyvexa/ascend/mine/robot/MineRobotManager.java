@@ -69,7 +69,8 @@ public class MineRobotManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String MINER_UUIDS_FILE = "miner_uuids.txt";
     private static final long TICK_INTERVAL_MS = 50L;
-    private static final long ANIM_REPLAY_MS = 500L;
+    private static final long ANIM_REPLAY_MS_BASE = 500L;
+    private static final long ANIM_REPLAY_MS_MIN = 200L;
     private static final long MOVEMENT_STOP_MS = 150L;
     private static final long STOPPED_RECHECK_MS = 2000L;
 
@@ -599,8 +600,10 @@ public class MineRobotManager {
             state.setLastMovStopTime(now);
         }
 
-        // --- Replay mine animation to keep it looping ---
-        if (state.isAnimating() && now - state.getLastAnimTime() >= ANIM_REPLAY_MS) {
+        // --- Replay mine animation to keep it looping (faster at higher speed levels) ---
+        long animReplayMs = Math.max(ANIM_REPLAY_MS_MIN,
+                ANIM_REPLAY_MS_BASE - (long) (state.getSpeedLevel() * 15));
+        if (state.isAnimating() && now - state.getLastAnimTime() >= animReplayMs) {
             replayMineAnimation(state);
             state.setLastAnimTime(now);
         }
