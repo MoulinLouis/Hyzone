@@ -420,6 +420,70 @@ public class MineHudManager extends AbstractHudManager<MineHudManager.MineHudSta
         state.hud.update(false, cb);
     }
 
+    // ── Quest Tracker ────────────────────────────────────────────────────
+
+    public void updateQuestTracker(UUID playerId, String title, String objectiveText, long current, long target) {
+        MineHudState state = getHud(playerId);
+        if (state == null) return;
+
+        float progress = target > 0 ? Math.min(1.0f, (float) current / target) : 0f;
+
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#QuestTracker.Visible", true);
+        cb.set("#QuestTitle.Text", title);
+        cb.set("#QuestObjective.Text", objectiveText);
+        cb.set("#QuestBar.Value", progress);
+        cb.set("#QuestCount.Text", current + "/" + target);
+        cb.set("#QuestCount.Style.TextColor", current >= target ? "#10b981" : "#10b981");
+        state.hud.update(false, cb);
+    }
+
+    public void showQuestTurnIn(UUID playerId, String title) {
+        MineHudState state = getHud(playerId);
+        if (state == null) return;
+
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#QuestTracker.Visible", true);
+        cb.set("#QuestTitle.Text", title);
+        cb.set("#QuestObjective.Text", "Talk to the Old Miner!");
+        cb.set("#QuestBar.Value", 1.0f);
+        cb.set("#QuestCount.Text", "DONE");
+        cb.set("#QuestCount.Style.TextColor", "#f59e0b");
+        state.hud.update(false, cb);
+    }
+
+    public void hideQuestTracker(UUID playerId) {
+        MineHudState state = getHud(playerId);
+        if (state == null) return;
+
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#QuestTracker.Visible", false);
+        state.hud.update(false, cb);
+    }
+
+    // ── Dialogue ───────────────────────────────────────────────────────
+
+    public void showDialogue(UUID playerId, String npcName, String text, boolean isLast) {
+        MineHudState state = getHud(playerId);
+        if (state == null) return;
+
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#DialogueBox.Visible", true);
+        cb.set("#DialogueNpcName.Text", npcName);
+        cb.set("#DialogueText.Text", text);
+        cb.set("#DialogueContinue.Text", isLast ? "[Click NPC to accept]" : "[Click NPC to continue]");
+        state.hud.update(false, cb);
+    }
+
+    public void hideDialogue(UUID playerId) {
+        MineHudState state = getHud(playerId);
+        if (state == null) return;
+
+        UICommandBuilder cb = new UICommandBuilder();
+        cb.set("#DialogueBox.Visible", false);
+        state.hud.update(false, cb);
+    }
+
     static final class MineHudState {
         final UUID playerId;
         final MineHud hud;

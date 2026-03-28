@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.mine.data.BlockConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -36,16 +37,24 @@ public class MineSellPage extends BaseAscendPage {
     private final BlockConfigStore configStore;
     private final MinePlayerStore minePlayerStore;
     private final MineAchievementTracker mineAchievementTracker;
+    private final MineQuestManager mineQuestManager;
 
     public MineSellPage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress,
                         BlockConfigStore configStore, MinePlayerStore minePlayerStore,
                         MineAchievementTracker mineAchievementTracker) {
+        this(playerRef, mineProgress, configStore, minePlayerStore, mineAchievementTracker, null);
+    }
+
+    public MineSellPage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress,
+                        BlockConfigStore configStore, MinePlayerStore minePlayerStore,
+                        MineAchievementTracker mineAchievementTracker, MineQuestManager mineQuestManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.mineProgress = mineProgress;
         this.configStore = configStore;
         this.minePlayerStore = minePlayerStore;
         this.mineAchievementTracker = mineAchievementTracker;
+        this.mineQuestManager = mineQuestManager;
     }
 
     @Override
@@ -118,6 +127,7 @@ public class MineSellPage extends BaseAscendPage {
             return;
         }
 
+        int totalBlocksSold = mineProgress.getInventoryTotal();
         Map<String, Long> prices = gatherAllPrices();
         long earned = mineProgress.sellAll(prices);
 
@@ -130,6 +140,12 @@ public class MineSellPage extends BaseAscendPage {
         // Track crystals earned for achievements
         if (earned > 0 && mineAchievementTracker != null) {
             mineAchievementTracker.incrementCrystalsEarned(playerRef.getUuid(), earned);
+        }
+
+        // Quest: blocks sold + crystals earned
+        if (mineQuestManager != null) {
+            if (totalBlocksSold > 0) mineQuestManager.onBlocksSold(playerRef.getUuid(), totalBlocksSold);
+            if (earned > 0) mineQuestManager.onCrystalsEarned(playerRef.getUuid(), earned);
         }
 
         sendRefresh(ref, store);

@@ -301,6 +301,17 @@ final class AscendMineSchema {
             """);
 
         ensureManualBlocksMinedColumn(conn);
+
+        // Quest progress tracking
+        stmt.executeUpdate("""
+            CREATE TABLE IF NOT EXISTS mine_quest_progress (
+                player_uuid VARCHAR(36) NOT NULL,
+                chain_id VARCHAR(32) NOT NULL,
+                quest_index INT NOT NULL DEFAULT 0,
+                objective_progress BIGINT NOT NULL DEFAULT 0,
+                PRIMARY KEY (player_uuid, chain_id)
+            ) ENGINE=InnoDB
+            """);
     }
 
     private static void ensureLayerGachaColumns(Connection conn) {

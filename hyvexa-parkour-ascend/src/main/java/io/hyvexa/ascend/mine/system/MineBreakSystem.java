@@ -19,6 +19,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 import io.hyvexa.common.util.PermissionUtils;
 
 import java.util.Map;
@@ -30,16 +31,19 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
     private final MinePlayerStore minePlayerStore;
     private final MineHudManager mineHudManager;
     private final MineAchievementTracker mineAchievementTracker;
+    private final MineQuestManager mineQuestManager;
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
 
     public MineBreakSystem(MineManager mineManager, MinePlayerStore minePlayerStore,
-                           MineHudManager mineHudManager, MineAchievementTracker mineAchievementTracker) {
+                           MineHudManager mineHudManager, MineAchievementTracker mineAchievementTracker,
+                           MineQuestManager mineQuestManager) {
         super(BreakBlockEvent.class);
         this.mineManager = mineManager;
         this.minePlayerStore = minePlayerStore;
         this.mineHudManager = mineHudManager;
         this.mineAchievementTracker = mineAchievementTracker;
+        this.mineQuestManager = mineQuestManager;
     }
 
     @Override
@@ -118,9 +122,14 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         int blocksGained = MineRewardHelper.rollFortune(fortuneLevel);
 
         boolean bagFull = MineRewardHelper.rewardBlock(playerId, mineProgress, blockTypeName, blocksGained,
-                zone.getMineId(), mineManager, minePlayerStore, mineHudManager, mineAchievementTracker);
+                zone.getMineId(), mineManager, minePlayerStore, mineHudManager, mineAchievementTracker, mineQuestManager);
         if (bagFull) {
             MineRewardHelper.sendBagFullMessageIfNeeded(playerId, player, lastBagFullMessage);
+        }
+
+        // Quest: blocks mined
+        if (mineQuestManager != null) {
+            mineQuestManager.onBlocksMined(playerId, blocksGained);
         }
 
         // Momentum combo

@@ -6,6 +6,7 @@ import io.hyvexa.ascend.mine.data.CollectedMiner;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MinerRarity;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -27,10 +28,15 @@ public class EggOpenService {
 
     private final MinePlayerStore store;
     private final MineAchievementTracker achievementTracker;
+    private MineQuestManager questManager;
 
     public EggOpenService(MinePlayerStore store, MineAchievementTracker achievementTracker) {
         this.store = store;
         this.achievementTracker = achievementTracker;
+    }
+
+    public void setQuestManager(MineQuestManager questManager) {
+        this.questManager = questManager;
     }
 
     /**
@@ -51,6 +57,12 @@ public class EggOpenService {
         // Check legendary achievement
         if (rarity == MinerRarity.LEGENDARY && achievementTracker != null) {
             achievementTracker.checkAchievement(playerId, MineAchievement.FIRST_LEGENDARY);
+        }
+
+        // Quest: egg opened + miner collected
+        if (questManager != null) {
+            questManager.onEggOpened(playerId);
+            questManager.onMinerCollected(playerId, rarity);
         }
 
         return miner;

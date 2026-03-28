@@ -16,6 +16,7 @@ import io.hyvexa.ascend.mine.data.TierConfigStore;
 import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.egg.EggOpenService;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.robot.RunnerSpeedCalculator;
@@ -76,6 +77,7 @@ public final class AscendInteractionBridge {
         AscendMenuNavigator menuNavigator,
         PlayerAnalytics analytics,
         AscendPlayerEventHandler eventHandler,
-        MineHierarchyStore mineHierarchyStore
+        MineHierarchyStore mineHierarchyStore,
+        MineQuestManager mineQuestManager
     ) {}
 }

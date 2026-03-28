@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.util.ModeGate;
 
@@ -33,6 +34,7 @@ class AscendTickHandler {
     private final AscendHudManager hudManager;
     private final MineHudManager mineHudManager;
     private final MineGateChecker mineGateChecker;
+    private volatile MineQuestManager mineQuestManager;
 
     private int tickCounter;
     private final ConcurrentHashMap<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
@@ -49,6 +51,10 @@ class AscendTickHandler {
         this.hudManager = hudManager;
         this.mineHudManager = mineHudManager;
         this.mineGateChecker = mineGateChecker;
+    }
+
+    void setMineQuestManager(MineQuestManager mineQuestManager) {
+        this.mineQuestManager = mineQuestManager;
     }
 
     /**
@@ -121,6 +127,8 @@ class AscendTickHandler {
                             mineHudManager.updateToasts(playerId);
                             mineHudManager.tickBlockHealth(playerId);
                             mineHudManager.tickCombo(playerId);
+                            MineQuestManager mqm = mineQuestManager;
+                            if (mqm != null) mqm.tickDialogue(playerId);
                         } else {
                             if (fullTick) {
                                 runTracker.checkPlayer(ref, store);

@@ -27,6 +27,7 @@ import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.common.ui.AccentOverlayUtils;
@@ -88,6 +89,7 @@ public class MinePage extends BaseAscendPage {
     private final MineGateChecker mineGateChecker;
     private final MineAchievementTracker mineAchievementTracker;
     private final MineHierarchyStore mineHierarchyStore;
+    private final MineQuestManager mineQuestManager;
     private String activeTab = "Upgrade";
     private int pickerSlotIndex = -1;
 
@@ -97,6 +99,16 @@ public class MinePage extends BaseAscendPage {
                     MineRobotManager mineRobotManager, MineGateChecker mineGateChecker,
                     MineAchievementTracker mineAchievementTracker,
                     MineHierarchyStore mineHierarchyStore) {
+        this(playerRef, mineProgress, minerConfigStore, tierConfigStore, minePlayerStore,
+             mineRobotManager, mineGateChecker, mineAchievementTracker, mineHierarchyStore, null);
+    }
+
+    public MinePage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress,
+                    MinerConfigStore minerConfigStore, TierConfigStore tierConfigStore,
+                    MinePlayerStore minePlayerStore,
+                    MineRobotManager mineRobotManager, MineGateChecker mineGateChecker,
+                    MineAchievementTracker mineAchievementTracker,
+                    MineHierarchyStore mineHierarchyStore, MineQuestManager mineQuestManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.mineProgress = mineProgress;
@@ -107,6 +119,7 @@ public class MinePage extends BaseAscendPage {
         this.mineGateChecker = mineGateChecker;
         this.mineAchievementTracker = mineAchievementTracker;
         this.mineHierarchyStore = mineHierarchyStore;
+        this.mineQuestManager = mineQuestManager;
     }
 
     @Override
@@ -648,6 +661,12 @@ public class MinePage extends BaseAscendPage {
 
         markDirty();
         swapPickaxeItem(player);
+
+        // Quest: pickaxe tier upgraded
+        if (mineQuestManager != null) {
+            mineQuestManager.onPickaxeUpgraded(playerRef.getUuid(), next.getTier());
+        }
+
         player.sendMessage(Message.raw("Upgraded to " + next.getDisplayName() + "!"));
         sendRefresh(ref, store);
     }
@@ -700,6 +719,11 @@ public class MinePage extends BaseAscendPage {
 
         markDirty();
 
+        // Quest: upgrade purchased
+        if (mineQuestManager != null) {
+            mineQuestManager.onUpgradePurchased(playerRef.getUuid(), type, mineProgress.getUpgradeLevel(type));
+        }
+
         boolean allMaxed = true;
         for (MineUpgradeType t : MineUpgradeType.values()) {
             if (mineProgress.getUpgradeLevel(t) < t.getMaxLevel()) { allMaxed = false; break; }
@@ -749,8 +773,13 @@ public class MinePage extends BaseAscendPage {
             }
         }
 
+        // Reset quests
+        if (mineQuestManager != null) {
+            mineQuestManager.resetQuests(uuid);
+        }
+
         markDirty();
-        player.sendMessage(Message.raw("All upgrades, miners, and eggs have been reset."));
+        player.sendMessage(Message.raw("All upgrades, miners, eggs, and quests have been reset."));
         sendRefresh(ref, store);
     }
 

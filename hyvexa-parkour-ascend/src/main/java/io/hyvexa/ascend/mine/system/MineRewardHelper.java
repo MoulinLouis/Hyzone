@@ -9,6 +9,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -49,6 +50,14 @@ public final class MineRewardHelper {
                                        int blocksGained, String mineId, MineManager mineManager,
                                        MinePlayerStore minePlayerStore, MineHudManager mineHudManager,
                                        MineAchievementTracker achievementTracker) {
+        return rewardBlock(playerId, mineProgress, blockTypeName, blocksGained, mineId,
+            mineManager, minePlayerStore, mineHudManager, achievementTracker, null);
+    }
+
+    public static boolean rewardBlock(UUID playerId, MinePlayerProgress mineProgress, String blockTypeName,
+                                       int blocksGained, String mineId, MineManager mineManager,
+                                       MinePlayerStore minePlayerStore, MineHudManager mineHudManager,
+                                       MineAchievementTracker achievementTracker, MineQuestManager questManager) {
         int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
         boolean bagFull = false;
         if (stored < blocksGained) {
@@ -59,6 +68,13 @@ public final class MineRewardHelper {
             mineProgress.addCrystals(fallbackCrystals);
             if (stored == 0) {
                 bagFull = true;
+            }
+            // Quest: auto-sold overflow
+            if (questManager != null && overflow > 0) {
+                questManager.onBlocksSold(playerId, overflow);
+                if (fallbackCrystals > 0) {
+                    questManager.onCrystalsEarned(playerId, fallbackCrystals);
+                }
             }
         }
         int cashbackLevel = mineProgress.getUpgradeLevel(MineUpgradeType.CASHBACK);

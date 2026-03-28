@@ -45,6 +45,7 @@ import io.hyvexa.ascend.interaction.ConveyorChestInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.interaction.MineChestInteraction;
 import io.hyvexa.ascend.interaction.MineEggChestInteraction;
+import io.hyvexa.ascend.interaction.MineQuestNpcInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -65,6 +66,12 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.ascend.mine.quest.MineQuestDialogueManager;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
+import io.hyvexa.ascend.mine.quest.MineQuestStore;
+import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
+import com.hypixel.hytale.server.core.modules.interaction.Interactions;
+import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import io.hyvexa.ascend.mine.system.BlockVisualHelper;
 import io.hyvexa.ascend.mine.system.MineBreakSystem;
 import io.hyvexa.ascend.mine.system.MineDamageSystem;
@@ -142,6 +149,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private MineHudManager mineHudManager;
     private MineAchievementTracker mineAchievementTracker;
     private io.hyvexa.ascend.mine.egg.EggOpenService eggOpenService;
+    private MineQuestManager mineQuestManager;
     private AscendPlayerEventHandler eventHandler;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
@@ -249,6 +257,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Mine robot manager (automated miners)
         if (mineHierarchyStore != null && minePlayerStore != null) {
             eggOpenService = new io.hyvexa.ascend.mine.egg.EggOpenService(minePlayerStore, mineAchievementTracker);
+
+            // Quest system
+            MineQuestStore questStore = new MineQuestStore(DatabaseManager.get());
+            MineQuestDialogueManager questDialogueManager = new MineQuestDialogueManager(mineHudManager);
+            mineQuestManager = new MineQuestManager(questStore, minePlayerStore, mineHudManager, questDialogueManager);
+            eggOpenService.setQuestManager(mineQuestManager);
+
             try {
                 mineRobotManager = new MineRobotManager(mineHierarchyStore, minerConfigStore,
                     conveyorConfigStore, minePlayerStore, mineManager, mineAchievementTracker);
@@ -313,6 +328,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         tickHandler = new AscendTickHandler(runTracker, hudManager, mineHudManager, mineGateChecker);
+        if (mineQuestManager != null) tickHandler.setMineQuestManager(mineQuestManager);
 
         try {
             robotManager = new RobotManager(
@@ -449,7 +465,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             createMenuNavigator(),
             analytics,
             eventHandler,
-            mineHierarchyStore
+            mineHierarchyStore,
+            mineQuestManager
         ));
         registerInteractionCodecs();
 
@@ -471,7 +488,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             }
             if (!registry.hasSystemClass(MineBreakSystem.class)) {
                 mineBreakSystem = new MineBreakSystem(mineManager, minePlayerStore,
-                    mineHudManager, mineAchievementTracker);
+                    mineHudManager, mineAchievementTracker, mineQuestManager);
                 registry.registerSystem(mineBreakSystem);
             }
             // Mine damage system — scales block damage by mining speed upgrade
@@ -480,7 +497,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             }
             if (!registry.hasSystemClass(MineDamageSystem.class)) {
                 mineDamageSystem = new MineDamageSystem(mineManager, minePlayerStore,
-                    blockConfigStore, mineHudManager, mineAchievementTracker);
+                    blockConfigStore, mineHudManager, mineAchievementTracker, mineQuestManager);
                 registry.registerSystem(mineDamageSystem);
             }
         }
@@ -504,7 +521,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 if (mineManager != null) {
                     mineManager.setWorld(world);
                     if (mineZonesGenerated.compareAndSet(false, true)) {
-                        world.execute(() -> mineManager.generateAllZones(world));
+                        world.execute(() -> {
+                            mineManager.generateAllZones(world);
+                            configureQuestNpcs(world);
+                        });
+                    } else if (mineQuestManager != null) {
+                        // World already generated — still configure any newly spawned quest NPCs
+                        world.execute(() -> configureQuestNpcs(world));
                     }
                 }
                 if (mineRobotManager != null) {
@@ -527,6 +550,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 // Spawn automated miners for this player
                 if (playerId != null && mineRobotManager != null) {
                     mineRobotManager.onPlayerJoin(playerId, world);
+                }
+                // Load quest progress
+                if (playerId != null && mineQuestManager != null) {
+                    mineQuestManager.onPlayerJoin(playerId);
                 }
                 // Reset session-specific tracking
                 if (playerId != null && playerStore != null) {
@@ -691,6 +718,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: mineDamageSystem");
             runSafe(() -> { if (mineAchievementTracker != null) mineAchievementTracker.evict(playerId); },
                     "Disconnect cleanup: mineAchievementTracker");
+            runSafe(() -> { if (mineQuestManager != null) mineQuestManager.evict(playerId); },
+                    "Disconnect cleanup: mineQuestManager");
             runSafe(() -> { if (mineGateChecker != null) mineGateChecker.evict(playerId); },
                     "Disconnect cleanup: mineGateChecker");
             runSafe(() -> EggRouletteAnimation.cancelIfActive(playerId),
@@ -743,6 +772,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> { if (mineRobotManager != null) mineRobotManager.stop(); }, "Shutdown: mineRobotManager stop");
         runSafe(() -> { if (playerStore != null) playerStore.flushPendingSave(); }, "Shutdown: playerStore flush");
         runSafe(() -> { if (minePlayerStore != null) minePlayerStore.flushAll(); }, "Shutdown: minePlayerStore flush");
+        runSafe(() -> { if (mineQuestManager != null) mineQuestManager.flushAll(); }, "Shutdown: mineQuestManager flush");
         runSafe(() -> WhitelistRegistry.unregister(), "Shutdown: whitelist unregister");
     }
 
@@ -901,13 +931,16 @@ public class ParkourAscendPlugin extends JavaPlugin {
             ConveyorChestInteraction.class, ConveyorChestInteraction.CODEC);
         registry.register("Mine_Egg_Chest_Interaction",
             MineEggChestInteraction.class, MineEggChestInteraction.CODEC);
+        registry.register("Mine_Quest_Npc_Interaction",
+            MineQuestNpcInteraction.class, MineQuestNpcInteraction.CODEC);
         // Mine Sell -> MineSellPage
         registry.register("Mine_Sell_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
                 (ref, store, playerRef, services) -> {
                     MinePlayerProgress progress = services.minePlayerStore().getOrCreatePlayer(playerRef.getUuid());
                     return new io.hyvexa.ascend.mine.ui.MineSellPage(playerRef, progress,
-                        services.blockConfigStore(), services.minePlayerStore(), services.mineAchievementTracker());
+                        services.blockConfigStore(), services.minePlayerStore(), services.mineAchievementTracker(),
+                        services.mineQuestManager());
                 },
                 (services, player) -> services.minePlayerStore() != null,
                 true, true)));
@@ -920,7 +953,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         services.minerConfigStore(), services.tierConfigStore(),
                         services.minePlayerStore(), services.mineRobotManager(),
                         services.mineGateChecker(), services.mineAchievementTracker(),
-                        services.mineHierarchyStore());
+                        services.mineHierarchyStore(), services.mineQuestManager());
                 },
                 (services, player) -> services.minePlayerStore() != null && services.minerConfigStore() != null,
                 true, true)));
@@ -931,6 +964,73 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     playerRef, services.mineAchievementTracker()),
                 (services, player) -> services.mineAchievementTracker() != null,
                 false, true)));
+    }
+
+    private static final String QUEST_NPC_ROLE = "Klops_QuestMiner_Friendly_Immobile";
+    private static final String QUEST_NPC_INTERACTION_ID = "Mine_Quest_Npc";
+
+    /**
+     * Scans NPC entities in the world and configures the Interactions component
+     * on quest NPCs so the "Press X to interact" prompt appears.
+     * Must be called on the world thread.
+     */
+    /**
+     * Scans all entities in the world for quest NPCs and configures the
+     * Interactable + Interactions components so "Press X to interact" appears.
+     * Mirrors the NPCDialog pattern: CommandBuffer for component writes.
+     * Must be called on the world thread.
+     */
+    private void configureQuestNpcs(World world) {
+        try {
+            var entityStore = world.getEntityStore();
+            if (entityStore == null) return;
+            Store<EntityStore> store = entityStore.getStore();
+            if (store == null) return;
+
+            store.forEachEntityParallel((int entityId, com.hypixel.hytale.component.ArchetypeChunk<EntityStore> chunk,
+                                         com.hypixel.hytale.component.CommandBuffer<EntityStore> buffer) -> {
+                try {
+                    NPCEntity npcEntity = chunk.getComponent(entityId, NPCEntity.getComponentType());
+                    if (npcEntity == null) return;
+                    if (!QUEST_NPC_ROLE.equals(npcEntity.getRoleName())) return;
+
+                    Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
+                    if (ref == null || !ref.isValid()) return;
+
+                    // Add Interactable component if missing (required for "Press X" prompt)
+                    if (buffer.getComponent(ref, Interactable.getComponentType()) == null) {
+                        buffer.putComponent(ref, Interactable.getComponentType(), Interactable.INSTANCE);
+                    }
+
+                    // Get or create Interactions component
+                    Interactions interactions = (Interactions) buffer.getComponent(ref, Interactions.getComponentType());
+                    if (interactions == null) {
+                        interactions = new Interactions();
+                        buffer.putComponent(ref, Interactions.getComponentType(), interactions);
+                    }
+
+                    // Set interaction ID and hint
+                    String currentId = interactions.getInteractionId(com.hypixel.hytale.protocol.InteractionType.Use);
+                    if (!QUEST_NPC_INTERACTION_ID.equals(currentId)) {
+                        // Clear any existing non-quest interactions on Use slot
+                        for (com.hypixel.hytale.protocol.InteractionType it : com.hypixel.hytale.protocol.InteractionType.values()) {
+                            if (it == com.hypixel.hytale.protocol.InteractionType.Use) continue;
+                            String existingId = interactions.getInteractionId(it);
+                            if (existingId != null && !QUEST_NPC_INTERACTION_ID.equals(existingId)) {
+                                interactions.setInteractionId(it, null);
+                            }
+                        }
+                        interactions.setInteractionId(com.hypixel.hytale.protocol.InteractionType.Use, QUEST_NPC_INTERACTION_ID);
+                        interactions.setInteractionHint("Press F to interact");
+                        LOGGER.atInfo().log("Configured quest NPC interaction");
+                    }
+                } catch (Exception e) {
+                    LOGGER.atFine().log("Failed to configure quest NPC entity: " + e.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to configure quest NPCs: " + e.getMessage());
+        }
     }
 
     private AscendMenuNavigator createMenuNavigator() {

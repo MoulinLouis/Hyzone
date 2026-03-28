@@ -237,6 +237,70 @@ $C.@PageOverlay {
       }
     }
 
+    Group #QuestTracker {
+      Anchor: (Left: 20, Top: 420, Width: 260, Height: 100);
+      Visible: false;
+      LayoutMode: Left;
+
+      Group #QuestAccentBar {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #10b981;
+      }
+
+      Group #QuestBox {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+        Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
+
+        Label #QuestLabel {
+          Style: (FontSize: 12, TextColor: #10b981(0.7), RenderUppercase: true, LetterSpacing: 2, RenderBold: true);
+          Text: "QUEST";
+        }
+
+        Group #QuestSep {
+          Anchor: (Left: 0, Width: 30, Height: 2, Top: 4);
+          Background: #10b981;
+        }
+
+        Label #QuestTitle {
+          Anchor: (Top: 6);
+          Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true);
+          Text: "";
+        }
+
+        Label #QuestObjective {
+          Anchor: (Top: 4);
+          Style: (FontSize: 14, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Group #QuestBarRow {
+          Anchor: (Left: 0, Right: 0, Top: 6, Height: 14);
+          LayoutMode: Left;
+
+          ProgressBar #QuestBar {
+            FlexWeight: 1;
+            Anchor: (Top: 0, Bottom: 0);
+            Bar: #10b981;
+            Background: #ffffff(0.08);
+            Value: 0;
+          }
+
+          Group { Anchor: (Width: 8); }
+
+          Label #QuestCount {
+            Anchor: (Top: 0, Bottom: 0);
+            Style: (FontSize: 12, TextColor: #10b981, RenderBold: true, VerticalAlignment: Center);
+            Text: "0/0";
+          }
+        }
+      }
+    }
+
     Group #ComboHud {
       Anchor: (Width: 180, Height: 36, Bottom: 170);
       Visible: false;
@@ -470,6 +534,40 @@ $C.@PageOverlay {
             Value: 1;
           }
         }
+      }
+    }
+
+    Group #DialogueBox {
+      Anchor: (Bottom: 220, Width: 500, Height: 100);
+      Visible: false;
+      Background: #0d1620(0.95);
+      OutlineColor: #10b981(0.3);
+      OutlineSize: 1;
+      LayoutMode: Top;
+      Padding: (Left: 20, Right: 20, Top: 14, Bottom: 14);
+
+      Label #DialogueNpcName {
+        Style: (FontSize: 14, TextColor: #10b981, RenderBold: true, RenderUppercase: true, LetterSpacing: 2);
+        Text: "";
+      }
+
+      Group #DialogueTextSep {
+        Anchor: (Left: 0, Width: 40, Height: 2, Top: 6);
+        Background: #10b981(0.4);
+      }
+
+      Label #DialogueText {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        Style: (FontSize: 18, TextColor: #f0f4f8);
+        Text: "";
+      }
+
+      Group { FlexWeight: 1; }
+
+      Label #DialogueContinue {
+        Anchor: (Right: 0);
+        Style: (FontSize: 12, TextColor: #9fb0ba(0.6));
+        Text: "[Click NPC to continue]";
       }
     }
 

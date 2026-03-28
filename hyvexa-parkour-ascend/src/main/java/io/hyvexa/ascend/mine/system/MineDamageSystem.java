@@ -20,6 +20,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 
 import java.util.Map;
 import java.util.UUID;
@@ -36,19 +37,22 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
     private final BlockConfigStore configStore;
     private final MineHudManager mineHudManager;
     private final MineAchievementTracker mineAchievementTracker;
+    private final MineQuestManager mineQuestManager;
     private final BlockDamageTracker damageTracker;
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
 
     public MineDamageSystem(MineManager mineManager, MinePlayerStore minePlayerStore,
                             BlockConfigStore configStore, MineHudManager mineHudManager,
-                            MineAchievementTracker mineAchievementTracker) {
+                            MineAchievementTracker mineAchievementTracker,
+                            MineQuestManager mineQuestManager) {
         super(DamageBlockEvent.class);
         this.mineManager = mineManager;
         this.minePlayerStore = minePlayerStore;
         this.configStore = configStore;
         this.mineHudManager = mineHudManager;
         this.mineAchievementTracker = mineAchievementTracker;
+        this.mineQuestManager = mineQuestManager;
         this.damageTracker = mineManager.getBlockDamageTracker();
     }
 
@@ -141,7 +145,12 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
 
         // Reward
         boolean bagFull = MineRewardHelper.rewardBlock(playerId, mineProgress, blockTypeName, blocksGained,
-                zone.getMineId(), mineManager, minePlayerStore, mineHudManager, mineAchievementTracker);
+                zone.getMineId(), mineManager, minePlayerStore, mineHudManager, mineAchievementTracker, mineQuestManager);
+
+        // Quest: blocks mined
+        if (mineQuestManager != null) {
+            mineQuestManager.onBlocksMined(playerId, blocksGained);
+        }
         if (bagFull) {
             MineRewardHelper.sendBagFullMessageIfNeeded(playerId, player, lastBagFullMessage);
         }

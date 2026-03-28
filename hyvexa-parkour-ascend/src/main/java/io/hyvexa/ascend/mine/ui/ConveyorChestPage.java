@@ -24,6 +24,7 @@ import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
+import io.hyvexa.ascend.mine.quest.MineQuestManager;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.ui.PageRefreshScheduler;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -41,6 +42,7 @@ public class ConveyorChestPage extends BaseAscendPage {
     private final MinePlayerProgress progress;
     private final PlayerRef playerRef;
     private final MinePlayerStore minePlayerStore;
+    private final MineQuestManager mineQuestManager;
 
     private volatile ScheduledFuture<?> refreshTask;
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
@@ -50,10 +52,16 @@ public class ConveyorChestPage extends BaseAscendPage {
 
     public ConveyorChestPage(@Nonnull PlayerRef playerRef, MinePlayerProgress progress,
                               MinePlayerStore minePlayerStore) {
+        this(playerRef, progress, minePlayerStore, null);
+    }
+
+    public ConveyorChestPage(@Nonnull PlayerRef playerRef, MinePlayerProgress progress,
+                              MinePlayerStore minePlayerStore, MineQuestManager mineQuestManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.progress = progress;
         this.minePlayerStore = minePlayerStore;
+        this.mineQuestManager = mineQuestManager;
     }
 
     @Override
@@ -177,6 +185,12 @@ public class ConveyorChestPage extends BaseAscendPage {
         }
 
         minePlayerStore.markDirty(playerRef.getUuid());
+
+        // Quest: conveyor capacity upgrade
+        if (mineQuestManager != null) {
+            mineQuestManager.onUpgradePurchased(playerRef.getUuid(), type, progress.getUpgradeLevel(type));
+        }
+
         player.sendMessage(Message.raw("Conveyor Capacity upgraded to Lv " + progress.getUpgradeLevel(type) + "!"));
         sendRefresh(ref, store);
     }

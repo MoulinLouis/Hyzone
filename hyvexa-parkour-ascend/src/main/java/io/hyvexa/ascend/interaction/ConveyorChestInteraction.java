@@ -34,6 +34,6 @@ public class ConveyorChestInteraction extends AbstractAscendPageInteraction {
             }
             return null;
         }
-        return new ConveyorChestPage(playerRef, progress, services.minePlayerStore());
+        return new ConveyorChestPage(playerRef, progress, services.minePlayerStore(), services.mineQuestManager());
     }
 }
