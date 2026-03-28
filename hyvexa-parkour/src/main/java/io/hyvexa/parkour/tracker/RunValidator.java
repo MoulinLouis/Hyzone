@@ -23,6 +23,7 @@ import io.hyvexa.parkour.data.Medal;
 import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
+import io.hyvexa.parkour.data.ProgressionResult;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
@@ -139,7 +140,7 @@ public class RunValidator {
         Long previousBestMs = progressStore.getBestTimeMs(playerId, map.getId());
         int oldRank = progressStore.getCompletionRank(playerId, mapStore);
 
-        ProgressStore.ProgressionResult result = recordCompletion(run, map, playerId, playerName,
+        ProgressionResult result = recordCompletion(run, map, playerId, playerName,
                 durationMs, ref, store);
 
         refreshHolograms(result, map, playerId, playerName, store);
@@ -169,7 +170,7 @@ public class RunValidator {
         InventoryUtils.giveMenuItems(player);
     }
 
-    private ProgressStore.ProgressionResult recordCompletion(RunTracker.ActiveRun run, Map map,
+    private ProgressionResult recordCompletion(RunTracker.ActiveRun run, Map map,
                                                               UUID playerId, String playerName,
                                                               long durationMs, Ref<EntityStore> ref,
                                                               Store<EntityStore> store) {
@@ -180,7 +181,7 @@ public class RunValidator {
             Long time = run.checkpointTouchTimes.get(i);
             checkpointTimes.add(time != null ? time : 0L);
         }
-        ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
+        ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
                 map.getId(), durationMs, mapStore, checkpointTimes,
                 completionSaved -> {
                     if (!completionSaved) {
@@ -196,7 +197,7 @@ public class RunValidator {
         return result;
     }
 
-    private void refreshHolograms(ProgressStore.ProgressionResult result,
+    private void refreshHolograms(ProgressionResult result,
                                    Map map, UUID playerId, String playerName, Store<EntityStore> store) {
         if (result.firstCompletion && leaderboardHologramRefresher != null) {
             leaderboardHologramRefresher.accept(store);
@@ -206,7 +207,7 @@ public class RunValidator {
         }
     }
 
-    private void broadcastFinish(ProgressStore.ProgressionResult result,
+    private void broadcastFinish(ProgressionResult result,
                                   UUID playerId, String playerName, Map map, long durationMs,
                                   int leaderboardPosition, int oldRank, int newRank) {
         if (!result.newBest) {

@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MapPurgeResult;
 import io.hyvexa.parkour.data.ProgressStore;
 
 import javax.annotation.Nonnull;
@@ -113,7 +114,7 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
             sendRefresh(ref, store);
             return;
         }
-        ProgressStore.MapPurgeResult result = progressStore.purgeMapProgress(mapId, mapStore);
+        MapPurgeResult result = progressStore.purgeMapProgress(mapId, mapStore);
         if (result.playersUpdated == 0) {
             purgeStatusText = "No progress found for map '" + mapId + "'.";
         } else {

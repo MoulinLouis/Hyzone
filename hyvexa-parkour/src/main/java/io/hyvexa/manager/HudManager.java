@@ -19,6 +19,7 @@ import io.hyvexa.parkour.tracker.RunHud;
 import io.hyvexa.parkour.tracker.RunRecordsHud;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.ParkourLeaderboardCache;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.parkour.data.PlayerSettingsPersistence;
@@ -339,7 +340,7 @@ public class HudManager extends AbstractHudManager<HudManager.PlayerHudState> {
         if (recordsHud == null || state == null || progressStore == null) {
             return;
         }
-        ProgressStore.LeaderboardHudSnapshot snapshot = progressStore.getLeaderboardHudSnapshot(mapId, playerId);
+        ParkourLeaderboardCache.LeaderboardHudSnapshot snapshot = progressStore.getLeaderboardHudSnapshot(mapId, playerId);
         if (snapshot.getVersion() == state.recordsLeaderboardVersion
                 && ((mapId == null && state.recordsMapId == null)
                 || (mapId != null && mapId.equals(state.recordsMapId)))) {
@@ -350,15 +351,15 @@ public class HudManager extends AbstractHudManager<HudManager.PlayerHudState> {
         state.recordsLeaderboardVersion = snapshot.getVersion();
     }
 
-    private List<RunRecordsHud.RecordLine> toRecordLines(ProgressStore.LeaderboardHudSnapshot snapshot) {
+    private List<RunRecordsHud.RecordLine> toRecordLines(ParkourLeaderboardCache.LeaderboardHudSnapshot snapshot) {
         if (snapshot == null) {
             return List.of();
         }
         List<RunRecordsHud.RecordLine> lines = new java.util.ArrayList<>(6);
-        for (ProgressStore.LeaderboardHudRow row : snapshot.getTopRows()) {
+        for (ParkourLeaderboardCache.LeaderboardHudRow row : snapshot.getTopRows()) {
             lines.add(new RunRecordsHud.RecordLine(row.getRank(), row.getName(), row.getTime()));
         }
-        ProgressStore.LeaderboardHudRow selfRow = snapshot.getSelfRow();
+        ParkourLeaderboardCache.LeaderboardHudRow selfRow = snapshot.getSelfRow();
         if (selfRow != null) {
             lines.add(new RunRecordsHud.RecordLine(selfRow.getRank(), selfRow.getName(), selfRow.getTime()));
         }

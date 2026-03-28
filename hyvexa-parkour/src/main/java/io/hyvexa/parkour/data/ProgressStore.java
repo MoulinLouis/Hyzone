@@ -5,15 +5,12 @@ import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import com.hypixel.hytale.server.core.HytaleServer;
-import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.ParkourConstants;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -40,8 +37,7 @@ public class ProgressStore {
     private final ConnectionProvider db;
     private final java.util.Map<UUID, PlayerProgress> progress = new ConcurrentHashMap<>();
     private final java.util.Map<UUID, String> lastKnownNames = new ConcurrentHashMap<>();
-    private final java.util.Map<String, LeaderboardCache> leaderboardCache = new ConcurrentHashMap<>();
-    private final java.util.Map<String, Long> leaderboardVersions = new ConcurrentHashMap<>();
+    private final ParkourLeaderboardCache leaderboardCache;
     private final java.util.Map<UUID, Long> dirtyPlayerVersions = new ConcurrentHashMap<>();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
@@ -52,6 +48,7 @@ public class ProgressStore {
 
     public ProgressStore(ConnectionProvider db) {
         this.db = db;
+        this.leaderboardCache = new ParkourLeaderboardCache(progress, lastKnownNames);
     }
 
     public void setAnalytics(PlayerAnalytics analytics) {
@@ -72,8 +69,7 @@ public class ProgressStore {
         try {
             progress.clear();
             lastKnownNames.clear();
-            leaderboardCache.clear();
-            leaderboardVersions.clear();
+            leaderboardCache.clearAll();
             dirtyPlayerVersions.clear();
 
             long totalStart = System.nanoTime();
@@ -348,7 +344,7 @@ public class ProgressStore {
             fileLock.writeLock().unlock();
         }
         if (newBest) {
-            invalidateLeaderboardCache(mapId);
+            leaderboardCache.invalidateLeaderboardCache(mapId);
         }
         queueSave();
         persistCompletionAsync(completionPersistenceRequest, completionSavedCallback);
@@ -446,55 +442,29 @@ public class ProgressStore {
         return counts;
     }
 
+    // ---- Leaderboard delegation ----
+
     public java.util.Map<UUID, Long> getBestTimesForMap(String mapId) {
-        if (mapId == null) {
-            return java.util.Map.of();
-        }
-        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
-        return new HashMap<>(cache.timesByPlayer);
+        return leaderboardCache.getBestTimesForMap(mapId);
     }
 
     public List<java.util.Map.Entry<UUID, Long>> getLeaderboardEntries(String mapId) {
-        if (mapId == null) {
-            return List.of();
-        }
-        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
-        return cache.entries;
+        return leaderboardCache.getLeaderboardEntries(mapId);
     }
 
     public int getLeaderboardPosition(String mapId, UUID playerId) {
-        if (mapId == null || playerId == null) {
-            return -1;
-        }
-        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
-        Integer position = cache.positions.get(playerId);
-        return position != null ? position : -1;
+        return leaderboardCache.getLeaderboardPosition(mapId, playerId);
     }
 
     public Long getWorldRecordTimeMs(String mapId) {
-        if (mapId == null) {
-            return null;
-        }
-        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
-        return cache.worldRecordMs;
+        return leaderboardCache.getWorldRecordTimeMs(mapId);
     }
 
-    public LeaderboardHudSnapshot getLeaderboardHudSnapshot(String mapId, UUID playerId) {
-        if (mapId == null) {
-            return LeaderboardHudSnapshot.empty();
-        }
-        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
-        LeaderboardHudRow selfRow = LeaderboardHudRow.empty();
-        if (playerId != null) {
-            Integer ordinalPosition = cache.ordinalPositions.get(playerId);
-            Long selfTime = cache.timesByPlayer.get(playerId);
-            if (ordinalPosition != null && selfTime != null) {
-                selfRow = new LeaderboardHudRow(String.valueOf(ordinalPosition),
-                        getDisplayPlayerName(playerId), FormatUtils.formatDuration(selfTime));
-            }
-        }
-        return new LeaderboardHudSnapshot(cache.version, cache.topRows, selfRow);
+    public ParkourLeaderboardCache.LeaderboardHudSnapshot getLeaderboardHudSnapshot(String mapId, UUID playerId) {
+        return leaderboardCache.getLeaderboardHudSnapshot(mapId, playerId);
     }
+
+    // ---- XP / Level ----
 
     public long getXp(UUID playerId) {
         PlayerProgress playerProgress = progress.get(playerId);
@@ -588,7 +558,7 @@ public class ProgressStore {
         }
         if (removed) {
             for (String mapId : removedProgress.bestMapTimes.keySet()) {
-                invalidateLeaderboardCache(mapId);
+                leaderboardCache.invalidateLeaderboardCache(mapId);
             }
             deletePlayerFromDatabase(playerId);
             if (rankCacheInvalidator != null) {
@@ -639,7 +609,7 @@ public class ProgressStore {
         }
 
         if (!affectedPlayers.isEmpty()) {
-            invalidateLeaderboardCache(trimmedId);
+            leaderboardCache.invalidateLeaderboardCache(trimmedId);
             purgeMapFromDatabase(trimmedId);
             queueSave();
             if (rankCacheInvalidator != null) {
@@ -678,7 +648,7 @@ public class ProgressStore {
         }
         if (removed) {
             deletePlayerMapCompletion(playerId, trimmedId);
-            invalidateLeaderboardCache(trimmedId);
+            leaderboardCache.invalidateLeaderboardCache(trimmedId);
             queueSave();
             if (rankCacheInvalidator != null) {
                 rankCacheInvalidator.accept(playerId);
@@ -843,7 +813,7 @@ public class ProgressStore {
             return;
         }
         for (String mapId : playerProgress.bestMapTimes.keySet()) {
-            invalidateLeaderboardCache(mapId);
+            leaderboardCache.invalidateLeaderboardCache(mapId);
         }
     }
 
@@ -950,77 +920,7 @@ public class ProgressStore {
         }
     }
 
-    private void invalidateLeaderboardCache(String mapId) {
-        if (mapId == null) {
-            return;
-        }
-        leaderboardVersions.merge(mapId, 1L, Long::sum);
-        leaderboardCache.remove(mapId);
-    }
-
-    private LeaderboardCache buildLeaderboardCache(String mapId) {
-        if (mapId == null) {
-            return LeaderboardCache.empty();
-        }
-        List<java.util.Map.Entry<UUID, Long>> entries = new ArrayList<>();
-        for (java.util.Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
-            Long best = entry.getValue().bestMapTimes.get(mapId);
-            if (best != null) {
-                entries.add(java.util.Map.entry(entry.getKey(), best));
-            }
-        }
-        entries.sort(Comparator.comparingLong(java.util.Map.Entry::getValue));
-        java.util.Map<UUID, Integer> positions = new HashMap<>();
-        java.util.Map<UUID, Integer> ordinalPositions = new HashMap<>();
-        java.util.Map<UUID, Long> timesByPlayer = new HashMap<>(entries.size());
-        Long worldRecordMs = entries.isEmpty() ? null : entries.get(0).getValue();
-        long lastTime = Long.MIN_VALUE;
-        int rank = 0;
-        for (int i = 0; i < entries.size(); i++) {
-            java.util.Map.Entry<UUID, Long> leaderboardEntry = entries.get(i);
-            long time = toDisplayedCentiseconds(leaderboardEntry.getValue());
-            if (i == 0 || time > lastTime) {
-                rank = i + 1;
-                lastTime = time;
-            }
-            UUID playerId = leaderboardEntry.getKey();
-            positions.put(playerId, rank);
-            ordinalPositions.put(playerId, i + 1);
-            timesByPlayer.put(playerId, leaderboardEntry.getValue());
-        }
-        long version = leaderboardVersions.getOrDefault(mapId, 0L);
-        return new LeaderboardCache(List.copyOf(entries), java.util.Map.copyOf(positions),
-                java.util.Map.copyOf(ordinalPositions), java.util.Map.copyOf(timesByPlayer),
-                buildTopRows(entries), worldRecordMs, version);
-    }
-
-    private static long toDisplayedCentiseconds(long durationMs) {
-        return Math.round(durationMs / 10.0);
-    }
-
-    private List<LeaderboardHudRow> buildTopRows(List<java.util.Map.Entry<UUID, Long>> entries) {
-        List<LeaderboardHudRow> topRows = new ArrayList<>(5);
-        for (int i = 0; i < 5; i++) {
-            if (i < entries.size()) {
-                java.util.Map.Entry<UUID, Long> entry = entries.get(i);
-                topRows.add(new LeaderboardHudRow(String.valueOf(i + 1), getDisplayPlayerName(entry.getKey()),
-                        FormatUtils.formatDuration(entry.getValue())));
-            } else {
-                topRows.add(LeaderboardHudRow.empty(i + 1));
-            }
-        }
-        return List.copyOf(topRows);
-    }
-
-    private String getDisplayPlayerName(UUID playerId) {
-        String name = getPlayerName(playerId);
-        if (name == null || name.isBlank()) {
-            return "Player";
-        }
-        return FormatUtils.truncate(name, 14);
-    }
-
-    private static class PlayerProgress {
+    static class PlayerProgress {
         final Set<String> completedMaps = new java.util.HashSet<>();
         final java.util.Map<String, Long> bestMapTimes = new HashMap<>();
         final java.util.Map<String, List<Long>> checkpointTimes = new HashMap<>();
@@ -1032,151 +932,5 @@ public class ProgressStore {
         boolean founder;
         int teleportItemUseCount = 0;
         long jumpCount = 0L;
-    }
-
-    private static class LeaderboardCache {
-        final List<java.util.Map.Entry<UUID, Long>> entries;
-        final java.util.Map<UUID, Integer> positions;
-        final java.util.Map<UUID, Integer> ordinalPositions;
-        final java.util.Map<UUID, Long> timesByPlayer;
-        final List<LeaderboardHudRow> topRows;
-        final Long worldRecordMs;
-        final long version;
-
-        LeaderboardCache(List<java.util.Map.Entry<UUID, Long>> entries, java.util.Map<UUID, Integer> positions,
-                         java.util.Map<UUID, Integer> ordinalPositions, java.util.Map<UUID, Long> timesByPlayer,
-                         List<LeaderboardHudRow> topRows, Long worldRecordMs, long version) {
-            this.entries = entries;
-            this.positions = positions;
-            this.ordinalPositions = ordinalPositions;
-            this.timesByPlayer = timesByPlayer;
-            this.topRows = topRows;
-            this.worldRecordMs = worldRecordMs;
-            this.version = version;
-        }
-
-        private static LeaderboardCache empty() {
-            return new LeaderboardCache(List.of(), java.util.Map.of(), java.util.Map.of(), java.util.Map.of(),
-                    List.of(
-                            LeaderboardHudRow.empty(1),
-                            LeaderboardHudRow.empty(2),
-                            LeaderboardHudRow.empty(3),
-                            LeaderboardHudRow.empty(4),
-                            LeaderboardHudRow.empty(5)
-                    ), null, 0L);
-        }
-    }
-
-    public static final class LeaderboardHudSnapshot {
-        private static final LeaderboardHudSnapshot EMPTY =
-                new LeaderboardHudSnapshot(0L, List.of(), LeaderboardHudRow.empty());
-
-        private final long version;
-        private final List<LeaderboardHudRow> topRows;
-        private final LeaderboardHudRow selfRow;
-
-        private LeaderboardHudSnapshot(long version, List<LeaderboardHudRow> topRows, LeaderboardHudRow selfRow) {
-            this.version = version;
-            this.topRows = topRows;
-            this.selfRow = selfRow;
-        }
-
-        public static LeaderboardHudSnapshot empty() {
-            return EMPTY;
-        }
-
-        public long getVersion() {
-            return version;
-        }
-
-        public List<LeaderboardHudRow> getTopRows() {
-            return topRows;
-        }
-
-        public LeaderboardHudRow getSelfRow() {
-            return selfRow;
-        }
-    }
-
-    public static final class LeaderboardHudRow {
-        private static final LeaderboardHudRow EMPTY_SELF = new LeaderboardHudRow("", "", "");
-        private final String rank;
-        private final String name;
-        private final String time;
-
-        private LeaderboardHudRow(String rank, String name, String time) {
-            this.rank = rank;
-            this.name = name;
-            this.time = time;
-        }
-
-        public static LeaderboardHudRow empty(int rank) {
-            return new LeaderboardHudRow(String.valueOf(rank), "", "");
-        }
-
-        public static LeaderboardHudRow empty() {
-            return EMPTY_SELF;
-        }
-
-        public String getRank() {
-            return rank;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getTime() {
-            return time;
-        }
-    }
-
-    private static final class CompletionPersistenceRequest {
-        private final UUID playerId;
-        private final String mapId;
-        private final long timeMs;
-        private final List<Long> checkpointTimes;
-
-        private CompletionPersistenceRequest(UUID playerId, String mapId, long timeMs, List<Long> checkpointTimes) {
-            this.playerId = playerId;
-            this.mapId = mapId;
-            this.timeMs = timeMs;
-            this.checkpointTimes = checkpointTimes != null ? checkpointTimes : List.of();
-        }
-    }
-
-    public static class ProgressionResult {
-        public final boolean firstCompletion;
-        public final boolean newBest;
-        public final boolean personalBest;
-        public final long xpAwarded;
-        public final int oldLevel;
-        public final int newLevel;
-        /**
-         * True when completion persistence was queued/attempted.
-         * This is not a confirmation of durable DB success.
-         */
-        public final boolean completionSaved;
-
-        public ProgressionResult(boolean firstCompletion, boolean newBest, boolean personalBest, long xpAwarded,
-                                 int oldLevel, int newLevel, boolean completionSaved) {
-            this.firstCompletion = firstCompletion;
-            this.newBest = newBest;
-            this.personalBest = personalBest;
-            this.xpAwarded = xpAwarded;
-            this.oldLevel = oldLevel;
-            this.newLevel = newLevel;
-            this.completionSaved = completionSaved;
-        }
-    }
-
-    public static class MapPurgeResult {
-        public final int playersUpdated;
-        public final long totalXpRemoved;
-
-        public MapPurgeResult(int playersUpdated, long totalXpRemoved) {
-            this.playersUpdated = playersUpdated;
-            this.totalXpRemoved = totalXpRemoved;
-        }
     }
 }
