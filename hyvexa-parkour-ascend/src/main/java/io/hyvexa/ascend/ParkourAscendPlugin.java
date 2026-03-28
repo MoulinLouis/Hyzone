@@ -80,7 +80,6 @@ import io.hyvexa.ascend.ui.AscendAdminNavigator;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscendMenuNavigator;
 import io.hyvexa.ascend.ui.AscendMusicPage;
-import io.hyvexa.ascend.ui.AscendProfilePage;
 import io.hyvexa.ascend.ui.AutomationPage;
 import io.hyvexa.ascend.ui.AscendSettingsPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
@@ -96,10 +95,7 @@ import io.hyvexa.ascend.system.AscendFinishDetectionSystem;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 
 import javax.annotation.Nonnull;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -109,7 +105,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ParkourAscendPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final int FULL_TICK_INTERVAL = 4; // every 4th tick = 200ms at 50ms interval
     private static final long MENU_SYNC_RETRY_DELAY_MS = 50L;
     private static final int MENU_SYNC_MAX_ATTEMPTS = 5;
     private static ParkourAscendPlugin INSTANCE;
@@ -151,15 +146,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private DiscordLinkStore discordLinkStore;
+    private AscendTickHandler tickHandler;
     private ScheduledFuture<?> tickTask;
     private ScheduledFuture<?> mineTickTask;
-    private int tickCounter;
     private final AtomicBoolean mineZonesGenerated = new AtomicBoolean(false);
-    private final ConcurrentHashMap<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<World, AtomicBoolean> worldTickInFlight = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<World, Set<UUID>> tickPlayersByWorld = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, World> playerTickWorlds = new ConcurrentHashMap<>();
-    private final Set<UUID> playersInAscendWorld = ConcurrentHashMap.newKeySet();
 
     public ParkourAscendPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -321,6 +311,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (mineGateChecker != null) {
             mineGateChecker.setHudManagers(hudManager, mineHudManager);
         }
+
+        tickHandler = new AscendTickHandler(runTracker, hudManager, mineHudManager, mineGateChecker);
 
         try {
             robotManager = new RobotManager(
@@ -524,8 +516,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 // Cache PlayerRef for O(1) lookups
                 UUID playerId = playerRef.getUuid();
                 if (playerId != null) {
-                    playersInAscendWorld.add(playerId);
-                    cacheTickPlayer(playerRef);
+                    tickHandler.playersInAscendWorld().add(playerId);
+                    tickHandler.cacheTickPlayer(playerRef);
                 }
                 // Register player as online for robot spawning
                 if (playerId != null && robotManager != null) {
@@ -577,7 +569,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     // Restore persisted players_hidden state
                     if (playerStore != null && playerStore.settings().isPlayersHidden(playerId)) {
                         Universe.get().getWorlds().forEach((wId, w) ->
-                                w.execute(() -> applyHiddenStateForPlayer(playerRef, w)));
+                                w.execute(() -> tickHandler.applyHiddenStateForPlayer(playerRef, w)));
                     }
                     if (restoreToMine) {
                         mineGateChecker.giveMineItems(player, playerId);
@@ -626,9 +618,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 UUID playerId = playerRef != null ? playerRef.getUuid() : null;
                 if (isAscendWorld(world)) {
                     if (playerId != null) {
-                        playersInAscendWorld.add(playerId);
+                        tickHandler.playersInAscendWorld().add(playerId);
                     }
-                    cacheTickPlayer(playerRef);
+                    tickHandler.cacheTickPlayer(playerRef);
                     // If joining Ascend world, ensure items are present
                     Player player = holder.getComponent(Player.getComponentType());
                     if (player == null) {
@@ -646,7 +638,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 }
 
                 // Clean up Ascend state on true Ascend -> non-Ascend transitions
-                if (playerId != null && playersInAscendWorld.remove(playerId)) {
+                if (playerId != null && tickHandler.playersInAscendWorld().remove(playerId)) {
                     // Pass event's Player/PlayerRef — PlayerRef.getReference() is null during transitions
                     Player player = holder.getComponent(Player.getComponentType());
                     cleanupAscendState(playerId, player, playerRef);
@@ -674,7 +666,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 return;
             }
 
-            playersInAscendWorld.remove(playerId);
+            tickHandler.playersInAscendWorld().remove(playerId);
             cleanupAscendState(playerId, null, null);
 
             // Clean up event handler state
@@ -712,15 +704,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     Store<EntityStore> store = ref.getStore();
                     World world = store != null && store.getExternalData() != null ? store.getExternalData().getWorld() : null;
                     if (isAscendWorld(world)) {
-                        playersInAscendWorld.add(playerId);
-                        cacheTickPlayer(playerRef);
+                        tickHandler.playersInAscendWorld().add(playerId);
+                        tickHandler.cacheTickPlayer(playerRef);
                     }
                 }
             }
         }
 
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
-            this::tick,
+            tickHandler::tick,
             50, 50, TimeUnit.MILLISECONDS
         );
 
@@ -742,11 +734,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 "Shutdown: tickTask cancel");
         runSafe(() -> { if (mineTickTask != null) { mineTickTask.cancel(false); mineTickTask = null; } },
                 "Shutdown: mineTickTask cancel");
-        runSafe(() -> worldTickInFlight.clear(), "Shutdown: worldTickInFlight clear");
-        runSafe(() -> tickPlayersByWorld.clear(), "Shutdown: tickPlayersByWorld clear");
-        runSafe(() -> playerTickWorlds.clear(), "Shutdown: playerTickWorlds clear");
-        runSafe(() -> playerRefCache.clear(), "Shutdown: playerRefCache clear");
-        runSafe(() -> playersInAscendWorld.clear(), "Shutdown: playersInAscendWorld clear");
+        runSafe(() -> { if (tickHandler != null) tickHandler.clearAll(); },
+                "Shutdown: tickHandler clear");
         runSafe(AscendInteractionBridge::clear, "Shutdown: interaction bridge clear");
         runSafe(() -> { if (ghostRecorder != null) ghostRecorder.stop(); }, "Shutdown: ghostRecorder stop");
         runSafe(() -> { if (robotManager != null) robotManager.stop(); }, "Shutdown: robotManager stop");
@@ -773,190 +762,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
      * Uses a cache populated on PlayerReadyEvent for O(1) lookup.
      */
     public PlayerRef getPlayerRef(UUID playerId) {
-        if (playerId == null) {
-            return null;
-        }
-        return playerRefCache.get(playerId);
-    }
-
-    private void applyHiddenStateForPlayer(PlayerRef viewerRef, World world) {
-        if (viewerRef == null || viewerRef.getReference() == null || !viewerRef.getReference().isValid()) {
-            return;
-        }
-        for (PlayerRef targetRef : world.getPlayerRefs()) {
-            if (viewerRef.equals(targetRef)) {
-                continue;
-            }
-            Ref<EntityStore> targetEntityRef = targetRef.getReference();
-            if (targetEntityRef == null || !targetEntityRef.isValid()) {
-                continue;
-            }
-            Store<EntityStore> targetStore = targetEntityRef.getStore();
-            if (targetStore == null) {
-                continue;
-            }
-            com.hypixel.hytale.server.core.entity.UUIDComponent uuidComponent =
-                    targetStore.getComponent(targetEntityRef, com.hypixel.hytale.server.core.entity.UUIDComponent.getComponentType());
-            if (uuidComponent != null) {
-                io.hyvexa.common.visibility.EntityVisibilityManager.get().hideEntity(
-                        viewerRef.getUuid(), uuidComponent.getUuid());
-            }
-        }
-    }
-
-    private void cacheTickPlayer(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
-        }
-        playerRefCache.put(playerId, playerRef);
-        syncTickPlayerWorld(playerRef, playerId);
-    }
-
-    private void syncTickPlayerWorld(PlayerRef playerRef, UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
-        if (ref == null || !ref.isValid()) {
-            removeTickPlayerFromWorld(playerId);
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        if (store == null || store.getExternalData() == null) {
-            removeTickPlayerFromWorld(playerId);
-            return;
-        }
-        World world = store.getExternalData().getWorld();
-        if (!isAscendWorld(world)) {
-            removeTickPlayerFromWorld(playerId);
-            return;
-        }
-        World previousWorld = playerTickWorlds.put(playerId, world);
-        if (previousWorld != null && previousWorld != world) {
-            removeTickPlayerFromWorld(previousWorld, playerId);
-        }
-        tickPlayersByWorld.computeIfAbsent(world, ignored -> ConcurrentHashMap.newKeySet()).add(playerId);
-    }
-
-    private void removeTickPlayer(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        playerRefCache.remove(playerId);
-        removeTickPlayerFromWorld(playerId);
-    }
-
-    private void removeTickPlayerFromWorld(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        World previousWorld = playerTickWorlds.remove(playerId);
-        if (previousWorld != null) {
-            removeTickPlayerFromWorld(previousWorld, playerId);
-        }
-    }
-
-    private void removeTickPlayerFromWorld(World world, UUID playerId) {
-        if (world == null || playerId == null) {
-            return;
-        }
-        Set<UUID> playerIds = tickPlayersByWorld.get(world);
-        if (playerIds == null) {
-            return;
-        }
-        playerIds.remove(playerId);
-        if (playerIds.isEmpty()) {
-            tickPlayersByWorld.remove(world, playerIds);
-        }
-    }
-
-    private void tick() {
-        if (runTracker == null) {
-            return;
-        }
-        tickCounter++;
-        boolean fullTick = tickCounter % FULL_TICK_INTERVAL == 0;
-
-        for (Map.Entry<World, Set<UUID>> entry : tickPlayersByWorld.entrySet()) {
-            World world = entry.getKey();
-            if (!isAscendWorld(world)) {
-                continue;
-            }
-            Set<UUID> playerIds = entry.getValue();
-            if (playerIds == null) {
-                continue;
-            }
-            if (playerIds.isEmpty()) {
-                tickPlayersByWorld.remove(world, playerIds);
-                continue;
-            }
-            AtomicBoolean inFlight = worldTickInFlight.computeIfAbsent(world, key -> new AtomicBoolean(false));
-            if (!inFlight.compareAndSet(false, true)) {
-                continue;
-            }
-            CompletableFuture.runAsync(() -> {
-                try {
-                    for (UUID playerId : playerIds) {
-                        PlayerRef playerRef = playerRefCache.get(playerId);
-                        if (playerRef == null) {
-                            removeTickPlayer(playerId);
-                            continue;
-                        }
-                        Ref<EntityStore> ref = playerRef.getReference();
-                        if (ref == null || !ref.isValid()) {
-                            removeTickPlayerFromWorld(playerId);
-                            continue;
-                        }
-                        Store<EntityStore> store = ref.getStore();
-                        if (store == null || store.getExternalData() == null) {
-                            removeTickPlayerFromWorld(playerId);
-                            continue;
-                        }
-                        World playerWorld = store.getExternalData().getWorld();
-                        if (playerWorld != world) {
-                            syncTickPlayerWorld(playerRef, playerId);
-                            continue;
-                        }
-                        // Gate check every tick (50ms) to prevent fast players from passing through
-                        if (mineGateChecker != null) {
-                            mineGateChecker.checkPlayer(playerId, ref, store);
-                        }
-                        // Always update the Ascend HUD (info panel always visible; economy skipped in mine mode)
-                        if (fullTick) {
-                            hudManager.updateFull(ref, store, playerRef);
-                        }
-                        // Mine HUD updates when in mine mode, run tracker when not
-                        if (mineHudManager != null && mineHudManager.hasHud(playerId)) {
-                            if (fullTick) {
-                                mineHudManager.updateFull(playerId);
-                            }
-                            if (tickCounter % 20 == 0) {
-                                mineHudManager.updateCooldowns(playerId);
-                            }
-                            mineHudManager.updateToasts(playerId);
-                            mineHudManager.tickBlockHealth(playerId);
-                            mineHudManager.tickCombo(playerId);
-                        } else {
-                            if (fullTick) {
-                                runTracker.checkPlayer(ref, store);
-                            }
-                            hudManager.updateTimer(playerRef);
-                            hudManager.updateRunnerBars(playerRef);
-                            hudManager.updateToasts(playerRef.getUuid());
-                        }
-                    }
-                } finally {
-                    inFlight.set(false);
-                }
-            }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
-                LOGGER.atWarning().withCause(ex).log("Exception in tick async task");
-                return null;
-            });
-        }
+        return tickHandler != null ? tickHandler.getPlayerRef(playerId) : null;
     }
 
     public boolean isAscendWorld(World world) {
@@ -1002,7 +808,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> { if (mineHudManager != null) mineHudManager.removePlayer(playerId, player, playerRef); },
                 "Leave cleanup: mineHudManager");
         runSafe(() -> hudManager.removePlayer(playerId), "Leave cleanup: hudManager");
-        runSafe(() -> removeTickPlayer(playerId), "Leave cleanup: playerRefCache");
+        runSafe(() -> tickHandler.removeTickPlayer(playerId), "Leave cleanup: tickHandler");
         runSafe(() -> BaseAscendPage.removeCurrentPage(playerId), "Leave cleanup: removeCurrentPage");
         runSafe(() -> AscendLeaveInteraction.clearPendingLeave(playerId), "Leave cleanup: clearPendingLeave");
         runSafe(() -> AscendSettingsPage.clearPlayer(playerId), "Leave cleanup: AscendSettingsPage");
