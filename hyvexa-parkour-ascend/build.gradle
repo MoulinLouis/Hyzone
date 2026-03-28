@@ -7,7 +7,8 @@ hyvexa {
 }
 
 dependencies {
-    implementation project(':hyvexa-core')
+    compileOnly project(':hyvexa-core')
+    testImplementation project(':hyvexa-core')
     compileOnly hytaleServerJar
     runtimeOnly hytaleServerJar
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'

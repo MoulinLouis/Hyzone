@@ -254,8 +254,13 @@ public class HyvexaPlugin extends JavaPlugin {
         cosmeticStore.setAnalytics(analytics);
         discordLinkStore.setAnalytics(analytics);
         discordLinkStore.setVexaStore(vexaStore);
+        initSafe("CosmeticManager", () -> CosmeticManager.createAndRegister(
+                new io.hyvexa.core.trail.TrailManager(),
+                new io.hyvexa.core.trail.ModelParticleTrailManager()));
 
-        PurgeSkinStore.get().setVexaStore(vexaStore);
+        if (PurgeSkinStore.isInitialized()) {
+            PurgeSkinStore.get().setVexaStore(vexaStore);
+        }
         this.progressStore = new ProgressStore(DatabaseManager.get());
         this.progressStore.setAnalytics(analytics);
         this.progressStore.syncLoad();

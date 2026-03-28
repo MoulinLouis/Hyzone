@@ -50,6 +50,8 @@ public class PurgeSkinStore {
 
     public static PurgeSkinStore get() { return SHARED.get(); }
 
+    public static boolean isInitialized() { return SHARED.isInitialized(); }
+
     public static void destroy() { SHARED.destroy(); }
 
     public void initialize() {

@@ -90,19 +90,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (!folder.exists()) {
             folder.mkdirs();
         }
-        if (!DatabaseManager.get().isInitialized()) {
-            try {
-                DatabaseManager.get().initialize();
-            } catch (Exception e) {
-                LOGGER.atSevere().log("Failed to initialize database: " + e.getMessage());
-                databaseAvailable = false;
-            }
-        }
-        initStore("VexaStore", () -> VexaStore.get().initialize());
+        databaseAvailable = DatabaseManager.get().isInitialized();
         this.vexaStore = VexaStore.get();
         this.discordLinkStore = DiscordLinkStore.get();
-        initStore("DiscordLinkStore", () -> discordLinkStore.initialize());
-        initStore("AnalyticsStore", () -> AnalyticsStore.get().initialize());
         router = new HubRouter(AnalyticsStore.get());
         preloadWorlds();
 
@@ -314,14 +304,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 "player=" + playerIdText + ", world=" + worldName);
     }
 
-    private void initStore(String name, Runnable init) {
-        try {
-            init.run();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize " + name + " for Hub");
-        }
-    }
-
     private void registerInteractionCodecs() {
         var registry = this.getCodecRegistry(Interaction.CODEC);
         registry.register("Hub_Menu_Interaction", HubMenuInteraction.class, HubMenuInteraction.CODEC);
@@ -404,7 +386,5 @@ public class HyvexaHubPlugin extends JavaPlugin {
             playerCountTask = null;
         }
         hubHudLifecycles.clear();
-        try { DatabaseManager.get().shutdown(); }
-        catch (Exception e) { /* Hub DB shutdown */ }
     }
 }

@@ -11,6 +11,7 @@
     "Website": "",
     "ServerVersion": "*",
     "Dependencies": {
+        "io.hyvexa:Hyvexa": "*",
         "io.hyvexa:HyvexaWardrobe": "*"
     },
     "OptionalDependencies": {

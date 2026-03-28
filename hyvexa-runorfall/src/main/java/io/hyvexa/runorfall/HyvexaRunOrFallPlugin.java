@@ -21,7 +21,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
-import io.hyvexa.common.util.StoreInitializer;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.bridge.GameModeBridge;
 import io.hyvexa.core.db.DatabaseManager;
@@ -113,10 +112,6 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         if (!folder.exists()) {
             folder.mkdirs();
         }
-        StoreInitializer.initialize(LOGGER,
-                () -> { if (!DatabaseManager.get().isInitialized()) DatabaseManager.get().initialize(); },
-                () -> VexaStore.get().initialize()
-        );
         RunOrFallDatabaseSetup.ensureTables();
 
         configStore = new RunOrFallConfigStore(DatabaseManager.get(), new File(folder, "config.json"));
@@ -609,7 +604,5 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         if (gameManager != null) {
             gameManager.shutdown();
         }
-        try { DatabaseManager.get().shutdown(); }
-        catch (Exception e) { /* RunOrFall DB shutdown */ }
     }
 }

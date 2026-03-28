@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTabRegistry;
 import io.hyvexa.common.util.PlayerCleanupHelper;
-import io.hyvexa.common.util.StoreInitializer;
 import io.hyvexa.common.skin.PurgeSkinStore;
 import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
@@ -60,29 +59,20 @@ public class WardrobePlugin extends JavaPlugin {
         wardrobeBridge = new WardrobeBridge(DatabaseManager.get());
         wardrobeBridge.initialize();
 
-        StoreInitializer.initialize(LOGGER,
-                () -> DatabaseManager.get().initialize(),
-                () -> VexaStore.get().initialize(),
-                () -> FeatherStore.get().initialize(),
-                () -> CosmeticStore.get().initialize(),
-                () -> PurgeSkinStore.get().initialize(),
-                () -> { cosmeticShopConfigStore = new CosmeticShopConfigStore(DatabaseManager.get()); cosmeticShopConfigStore.initialize(); },
-                () -> AnalyticsStore.get().initialize()
-        );
+        cosmeticShopConfigStore = new CosmeticShopConfigStore(DatabaseManager.get());
+        cosmeticShopConfigStore.initialize();
 
         cosmeticStore = CosmeticStore.get();
         vexaStore = VexaStore.get();
         featherStore = FeatherStore.get();
-        purgeSkinStore = PurgeSkinStore.get();
+        purgeSkinStore = PurgeSkinStore.isInitialized() ? PurgeSkinStore.get() : null;
 
         wardrobeBridge.setCosmeticStore(cosmeticStore);
         wardrobeBridge.setCosmeticShopConfigStore(cosmeticShopConfigStore);
         wardrobeBridge.setCurrencyStores(vexaStore, featherStore);
         wardrobeBridge.setAnalytics(AnalyticsStore.get());
 
-        cosmeticManager = CosmeticManager.createAndRegister(
-                new io.hyvexa.core.trail.TrailManager(),
-                new io.hyvexa.core.trail.ModelParticleTrailManager());
+        cosmeticManager = CosmeticManager.get();
         cosmeticManager.setCosmeticStore(cosmeticStore);
 
         wardrobeShopTab = new WardrobeShopTab(wardrobeBridge, cosmeticStore, cosmeticShopConfigStore);
@@ -144,8 +134,6 @@ public class WardrobePlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Shutdown: CosmeticManager");
         }
-        try { DatabaseManager.get().shutdown(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: DatabaseManager"); }
         super.shutdown();
     }
 }
