@@ -18,6 +18,7 @@ import io.hyvexa.ascend.mine.data.TierConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.mine.ui.MineAchievementsPage;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
@@ -42,12 +43,14 @@ public class MineCommand extends AbstractAsyncCommand {
     private final TierConfigStore tierConfigStore;
     private final MineAchievementTracker mineAchievementTracker;
     private final MineRobotManager mineRobotManager;
+    private final MineHierarchyStore mineHierarchyStore;
 
     public MineCommand(MineGateChecker mineGateChecker, MinePlayerStore minePlayerStore,
                        BlockConfigStore blockConfigStore, MinerConfigStore minerConfigStore,
                        TierConfigStore tierConfigStore,
                        MineAchievementTracker mineAchievementTracker,
-                       MineRobotManager mineRobotManager) {
+                       MineRobotManager mineRobotManager,
+                       MineHierarchyStore mineHierarchyStore) {
         super("mine", "Mine commands");
         this.mineGateChecker = mineGateChecker;
         this.minePlayerStore = minePlayerStore;
@@ -56,6 +59,7 @@ public class MineCommand extends AbstractAsyncCommand {
         this.tierConfigStore = tierConfigStore;
         this.mineAchievementTracker = mineAchievementTracker;
         this.mineRobotManager = mineRobotManager;
+        this.mineHierarchyStore = mineHierarchyStore;
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -119,7 +123,8 @@ public class MineCommand extends AbstractAsyncCommand {
                 case "upgrades" -> {
                     MinePage page = new MinePage(playerRef, progress,
                         minerConfigStore, tierConfigStore, minePlayerStore,
-                        mineRobotManager, mineGateChecker, mineAchievementTracker);
+                        mineRobotManager, mineGateChecker, mineAchievementTracker,
+                        mineHierarchyStore);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "achievements" -> {

@@ -13,6 +13,7 @@ import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.BlockConfigStore;
 import io.hyvexa.ascend.mine.data.MinerConfigStore;
 import io.hyvexa.ascend.mine.data.TierConfigStore;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.egg.EggOpenService;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
@@ -74,6 +75,7 @@ public final class AscendInteractionBridge {
         MineGateChecker mineGateChecker,
         AscendMenuNavigator menuNavigator,
         PlayerAnalytics analytics,
-        AscendPlayerEventHandler eventHandler
+        AscendPlayerEventHandler eventHandler,
+        MineHierarchyStore mineHierarchyStore
     ) {}
 }

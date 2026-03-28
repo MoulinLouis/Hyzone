@@ -65,25 +65,18 @@ Group {
       }
 
       Group #InfoBanner {
-        Anchor: (Left: 0, Right: 0, Height: 28);
+        Anchor: (Left: 0, Right: 0, Height: 24);
         Background: #0a1018(0.8);
-        LayoutMode: Top;
-        Padding: (Left: 4, Right: 4, Top: 2);
+        LayoutMode: CenterMiddle;
 
-        Label #MinerName {
-          Style: (FontSize: 11, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center);
-          Text: "";
-          Visible: false;
-        }
-
-        Label #MinerStats {
-          Style: (FontSize: 10, TextColor: #9fb0ba, HorizontalAlignment: Center);
+        Label #MinerLevel {
+          Style: (FontSize: 15, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center);
           Text: "";
           Visible: false;
         }
 
         Label #SlotLabel {
-          Style: (FontSize: 11, TextColor: #4a5568, HorizontalAlignment: Center);
+          Style: (FontSize: 11, TextColor: #4a5568, HorizontalAlignment: Center, VerticalAlignment: Center);
           Text: "Slot #1";
         }
       }
@@ -158,6 +151,26 @@ Group {
         }
       }
     }
+  }
+
+  TextButton #TooltipButton {
+    Anchor: (Left: 0, Top: 0, Width: 146, Height: 130);
+    Text: "";
+    Visible: false;
+    TooltipText: " ";
+    TextTooltipShowDelay: 0.01;
+    TextTooltipStyle: (
+      Background: #0d1620(0.95),
+      Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10),
+      MaxWidth: 320,
+      LabelStyle: (FontSize: 14, TextColor: #9fb0ba),
+      Alignment: TopRight,
+    );
+    Style: TextButtonStyle(
+      Default: (Background: #00000000),
+      Hovered: (Background: #ffffff(0.08)),
+      Pressed: (Background: #ffffff(0.04)),
+    );
   }
 
   TextButton #SlotButton {

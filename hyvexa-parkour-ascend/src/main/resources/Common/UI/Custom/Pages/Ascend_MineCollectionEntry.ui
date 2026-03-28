@@ -82,4 +82,23 @@ Group {
       }
     }
   }
+
+  TextButton #TooltipButton {
+    Anchor: (Left: 0, Top: 0, Width: 108, Height: 130);
+    Text: "";
+    TooltipText: " ";
+    TextTooltipShowDelay: 0.01;
+    TextTooltipStyle: (
+      Background: #0d1620(0.95),
+      Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10),
+      MaxWidth: 320,
+      LabelStyle: (FontSize: 14, TextColor: #9fb0ba),
+      Alignment: TopRight,
+    );
+    Style: TextButtonStyle(
+      Default: (Background: #00000000),
+      Hovered: (Background: #ffffff(0.08)),
+      Pressed: (Background: #ffffff(0.04)),
+    );
+  }
 }

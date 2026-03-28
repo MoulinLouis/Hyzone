@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.ui.PageRefreshScheduler;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -33,6 +34,7 @@ public class ConveyorChestPage extends BaseAscendPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_COLLECT_ALL = "CollectAll";
     private static final String BUTTON_EMPTY_OP = "EmptyOp";
+    private static final String BUTTON_UPGRADE_CAPACITY = "UpgradeCapacity";
     private static final String TAKE_PREFIX = "Take:";
     private static final long REFRESH_INTERVAL_MS = 1000L;
 
@@ -70,6 +72,7 @@ public class ConveyorChestPage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EMPTY_OP), false);
         }
 
+        populateUpgradeBar(commandBuilder, eventBuilder);
         populateContent(commandBuilder, eventBuilder);
         lastKnownBufferCount = progress.getConveyorBufferCount();
         startAutoRefresh(ref, store);
@@ -120,11 +123,62 @@ public class ConveyorChestPage extends BaseAscendPage {
             this.close();
         } else if (BUTTON_COLLECT_ALL.equals(button)) {
             handleCollectAll(ref, store);
+        } else if (BUTTON_UPGRADE_CAPACITY.equals(button)) {
+            handleUpgradeCapacity(ref, store);
         } else if (BUTTON_EMPTY_OP.equals(button)) {
             handleEmptyOp(ref, store);
         } else if (button.startsWith(TAKE_PREFIX)) {
             handleTakeBlock(ref, store, button.substring(TAKE_PREFIX.length()));
         }
+    }
+
+    private void populateUpgradeBar(UICommandBuilder cmd, UIEventBuilder evt) {
+        MineUpgradeType type = MineUpgradeType.CONVEYOR_CAPACITY;
+        int level = progress.getUpgradeLevel(type);
+        int maxLevel = type.getMaxLevel();
+        boolean maxed = level >= maxLevel;
+
+        cmd.set("#UpgradeLevel.Text", maxed ? "MAX" : "Lv." + level);
+
+        if (maxed) {
+            cmd.set("#UpgradeBtn.Text", "Maxed");
+            cmd.set("#UpgradeBtnDisabled.Visible", true);
+            evt.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeBtn",
+                EventData.of(ButtonEventData.KEY_BUTTON, "Noop"), false);
+        } else {
+            long cost = type.getCost(level);
+            cmd.set("#UpgradeBtn.Text", "Upgrade \u2014 " + cost + " cryst");
+            boolean canAfford = progress.getCrystals() >= cost;
+            cmd.set("#UpgradeBtnDisabled.Visible", !canAfford);
+
+            int nextCapacity = (int) type.getEffect(level + 1);
+            cmd.set("#UpgradeBtn.TooltipText",
+                "Conveyor Capacity\n" + type.getDescription()
+                + "\n\nLevel " + level + "/" + maxLevel
+                + "\nCurrent: " + (int) type.getEffect(level) + " blocks"
+                + "\nNext: " + nextCapacity + " blocks"
+                + "\nCost: " + cost + " crystals");
+
+            evt.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeBtn",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UPGRADE_CAPACITY), false);
+        }
+    }
+
+    private void handleUpgradeCapacity(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+
+        MineUpgradeType type = MineUpgradeType.CONVEYOR_CAPACITY;
+        boolean success = progress.purchaseUpgrade(type);
+        if (!success) {
+            int level = progress.getUpgradeLevel(type);
+            player.sendMessage(Message.raw(level >= type.getMaxLevel() ? "Already maxed!" : "Not enough crystals!"));
+            return;
+        }
+
+        minePlayerStore.markDirty(playerRef.getUuid());
+        player.sendMessage(Message.raw("Conveyor Capacity upgraded to Lv " + progress.getUpgradeLevel(type) + "!"));
+        sendRefresh(ref, store);
     }
 
     private void handleTakeBlock(Ref<EntityStore> ref, Store<EntityStore> store, String blockTypeId) {
@@ -224,6 +278,7 @@ public class ConveyorChestPage extends BaseAscendPage {
         lastKnownBufferCount = progress.getConveyorBufferCount();
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
+        populateUpgradeBar(commandBuilder, eventBuilder);
         populateContent(commandBuilder, eventBuilder);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CollectAllButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_COLLECT_ALL), false);

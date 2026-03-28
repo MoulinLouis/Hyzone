@@ -417,7 +417,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         getCommandRegistry().registerCommand(new CatCommand(playerStore, hudManager, achievementManager));
         getCommandRegistry().registerCommand(new io.hyvexa.ascend.mine.command.MineCommand(
             mineGateChecker, minePlayerStore, blockConfigStore, minerConfigStore, tierConfigStore,
-            mineAchievementTracker, mineRobotManager));
+            mineAchievementTracker, mineRobotManager, mineHierarchyStore));
         if (runtimeConfig.isEnableTestCommands()) {
             getCommandRegistry().registerCommand(new CinematicTestCommand());
             getCommandRegistry().registerCommand(new HudPreviewCommand(hudManager));
@@ -448,7 +448,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineGateChecker,
             createMenuNavigator(),
             analytics,
-            eventHandler
+            eventHandler,
+            mineHierarchyStore
         ));
         registerInteractionCodecs();
 
@@ -918,7 +919,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     return new io.hyvexa.ascend.mine.ui.MinePage(playerRef, progress,
                         services.minerConfigStore(), services.tierConfigStore(),
                         services.minePlayerStore(), services.mineRobotManager(),
-                        services.mineGateChecker(), services.mineAchievementTracker());
+                        services.mineGateChecker(), services.mineAchievementTracker(),
+                        services.mineHierarchyStore());
                 },
                 (services, player) -> services.minePlayerStore() != null && services.minerConfigStore() != null,
                 true, true)));

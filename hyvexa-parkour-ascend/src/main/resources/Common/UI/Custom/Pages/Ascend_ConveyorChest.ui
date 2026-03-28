@@ -111,6 +111,73 @@ $C.@PageOverlay {
         }
       }
 
+      // === UPGRADE BAR ===
+      Group #UpgradeBar {
+        Anchor: (Left: 0, Right: 0, Height: 38, Top: 10);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #a78bfa;
+        }
+
+        Label {
+          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 80);
+          Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+          Text: "Capacity";
+        }
+
+        Label #UpgradeLevel {
+          Anchor: (Left: 96, Top: 0, Bottom: 0, Width: 60);
+          Style: (FontSize: 14, TextColor: #a78bfa, RenderBold: true, VerticalAlignment: Center);
+          Text: "Lv.0";
+        }
+
+        // Upgrade button
+        Group #UpgradeBtnWrap {
+          Anchor: (Right: 10, Top: 5, Width: 130, Height: 28);
+
+          TextButton #UpgradeBtn {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "Upgrade — 30 cryst";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #4c1d95(0.8),
+                LabelStyle: (FontSize: 12, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #5b21b6,
+                LabelStyle: (FontSize: 12, TextColor: #ede9fe, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #3b0764,
+                LabelStyle: (FontSize: 12, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+            TooltipText: " ";
+            TextTooltipShowDelay: 0.01;
+            TextTooltipStyle: (
+              Background: #0d1620(0.95),
+              Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10),
+              MaxWidth: 280,
+              LabelStyle: (FontSize: 13, TextColor: #9fb0ba),
+              Alignment: TopRight,
+            );
+          }
+
+          // Disabled overlay for can't-afford state
+          Group #UpgradeBtnDisabled {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #000000(0.5);
+            Visible: false;
+          }
+        }
+      }
+
       // Empty state
       Label #EmptyLabel {
         Anchor: (Left: 0, Right: 0, Top: 16);

@@ -24,6 +24,7 @@ import io.hyvexa.ascend.mine.data.MinerVariant;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
+import io.hyvexa.ascend.mine.data.MineHierarchyStore;
 import io.hyvexa.ascend.mine.data.MineZoneLayer;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
@@ -75,7 +76,6 @@ public class MinePage extends BaseAscendPage {
         MineUpgradeType.BLAST,
         MineUpgradeType.HASTE,
         MineUpgradeType.BAG_CAPACITY,
-        MineUpgradeType.CONVEYOR_CAPACITY,
         MineUpgradeType.CASHBACK
     };
 
@@ -87,6 +87,7 @@ public class MinePage extends BaseAscendPage {
     private final MineRobotManager mineRobotManager;
     private final MineGateChecker mineGateChecker;
     private final MineAchievementTracker mineAchievementTracker;
+    private final MineHierarchyStore mineHierarchyStore;
     private String activeTab = "Upgrade";
     private int pickerSlotIndex = -1;
 
@@ -94,7 +95,8 @@ public class MinePage extends BaseAscendPage {
                     MinerConfigStore minerConfigStore, TierConfigStore tierConfigStore,
                     MinePlayerStore minePlayerStore,
                     MineRobotManager mineRobotManager, MineGateChecker mineGateChecker,
-                    MineAchievementTracker mineAchievementTracker) {
+                    MineAchievementTracker mineAchievementTracker,
+                    MineHierarchyStore mineHierarchyStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerRef = playerRef;
         this.mineProgress = mineProgress;
@@ -104,6 +106,7 @@ public class MinePage extends BaseAscendPage {
         this.mineRobotManager = mineRobotManager;
         this.mineGateChecker = mineGateChecker;
         this.mineAchievementTracker = mineAchievementTracker;
+        this.mineHierarchyStore = mineHierarchyStore;
     }
 
     @Override
@@ -173,13 +176,9 @@ public class MinePage extends BaseAscendPage {
             // Portrait
             MinerVariant.applyPortrait(cmd, sel + " #PortraitZone", minerConfigStore, assigned);
 
-            // Info banner — show name + stats, hide slot label
-            cmd.set(sel + " #MinerName.Visible", true);
-            cmd.set(sel + " #MinerName.Text", MinerVariant.getDisplayName(minerConfigStore, assigned));
-            cmd.set(sel + " #MinerStats.Visible", true);
-            cmd.set(sel + " #MinerStats.Text",
-                "Lv." + assigned.getSpeedLevel() + " \u2014 " +
-                String.format("%.1f", assigned.getProductionRate()) + " b/m");
+            // Info banner — show level, hide slot label
+            cmd.set(sel + " #MinerLevel.Visible", true);
+            cmd.set(sel + " #MinerLevel.Text", "Lv. " + assigned.getSpeedLevel());
             cmd.set(sel + " #SlotLabel.Visible", false);
 
             // Button row
@@ -195,8 +194,19 @@ public class MinePage extends BaseAscendPage {
                 sel + " #RemoveButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_REMOVE_SLOT_PREFIX + slotIndex), false);
 
-            // Hide click overlay when assigned (buttons handle interaction)
+            // Tooltip with block drop percentages
+            String tooltip = buildBlockDropTooltip(assigned);
+            if (!tooltip.isEmpty()) {
+                cmd.set(sel + " #TooltipButton.Visible", true);
+                cmd.set(sel + " #TooltipButton.TooltipText", tooltip);
+            }
+
+            // Click card body opens picker to replace miner
             cmd.set(sel + " #SlotButton.Visible", false);
+            cmd.set(sel + " #TooltipButton.Visible", true);
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #TooltipButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASSIGN_SLOT_PREFIX + slotIndex), false);
         } else {
             // Empty slot — default template state is correct, just set label + click handler
             cmd.set(sel + " #SlotLabel.Text", "Slot #" + (slotIndex + 1));
@@ -247,6 +257,12 @@ public class MinePage extends BaseAscendPage {
             cmd.set(sel + " #StatsLabel.Text",
                 "Lv." + miner.getSpeedLevel() + " \u2014 " +
                 String.format("%.1f", miner.getProductionRate()) + " b/m");
+
+            // Tooltip with block drop percentages
+            String tooltip = buildBlockDropTooltip(miner);
+            if (!tooltip.isEmpty()) {
+                cmd.set(sel + " #TooltipButton.TooltipText", tooltip);
+            }
 
             // Assigned badge
             int assignedSlot = getAssignedSlotIndex(assignments, miner.getId());
@@ -318,6 +334,12 @@ public class MinePage extends BaseAscendPage {
                 cmd.set(sel + " #AssignedLabel.Text", "In Slot #" + (assignedSlot + 1));
             }
 
+            // Tooltip with block drop percentages
+            String tooltip = buildBlockDropTooltip(miner);
+            if (!tooltip.isEmpty()) {
+                cmd.set(sel + " #SelectButton.TooltipText", tooltip);
+            }
+
             evt.addEventBinding(CustomUIEventBindingType.Activating,
                 sel + " #SelectButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PICK_MINER_PREFIX + miner.getId()), false);
@@ -339,6 +361,29 @@ public class MinePage extends BaseAscendPage {
             if (entry.getValue() == minerId) return entry.getKey();
         }
         return -1;
+    }
+
+    private String buildBlockDropTooltip(CollectedMiner miner) {
+        if (mineHierarchyStore == null || miner.getLayerId() == null) return "";
+        MineZoneLayer layer = mineHierarchyStore.getLayerById(miner.getLayerId());
+        if (layer == null) return "";
+        Map<String, Double> table = layer.getBlockTableForRarity(miner.getRarity());
+        if (table == null || table.isEmpty()) return "";
+
+        double totalWeight = 0;
+        for (double w : table.values()) totalWeight += w;
+        if (totalWeight <= 0) return "";
+
+        List<Map.Entry<String, Double>> sorted = new java.util.ArrayList<>(table.entrySet());
+        sorted.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+
+        StringBuilder sb = new StringBuilder("Block Drops:");
+        for (Map.Entry<String, Double> entry : sorted) {
+            double pct = entry.getValue() / totalWeight * 100.0;
+            sb.append("\n- ").append(MineBlockDisplay.getDisplayName(entry.getKey()))
+              .append(": ").append(String.format("%.1f", pct)).append("%");
+        }
+        return sb.toString();
     }
 
     // ==================== Upgrade Tab ====================
