@@ -13,14 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * In-memory leaderboard cache built from player progress data.
  * Thread-safe: cache entries are lazily built and invalidated on best-time changes.
  */
-class ParkourLeaderboardCache {
+public class ParkourLeaderboardCache {
 
-    private final java.util.Map<UUID, PlayerProgress> progress;
+    private final java.util.Map<UUID, ProgressStore.PlayerProgress> progress;
     private final java.util.Map<UUID, String> lastKnownNames;
     private final java.util.Map<String, LeaderboardEntry> leaderboardCache = new ConcurrentHashMap<>();
     private final java.util.Map<String, Long> leaderboardVersions = new ConcurrentHashMap<>();
 
-    ParkourLeaderboardCache(java.util.Map<UUID, PlayerProgress> progress,
+    ParkourLeaderboardCache(java.util.Map<UUID, ProgressStore.PlayerProgress> progress,
                             java.util.Map<UUID, String> lastKnownNames) {
         this.progress = progress;
         this.lastKnownNames = lastKnownNames;
@@ -94,7 +94,7 @@ class ParkourLeaderboardCache {
             return LeaderboardEntry.empty();
         }
         List<java.util.Map.Entry<UUID, Long>> entries = new ArrayList<>();
-        for (java.util.Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
+        for (java.util.Map.Entry<UUID, ProgressStore.PlayerProgress> entry : progress.entrySet()) {
             Long best = entry.getValue().bestMapTimes.get(mapId);
             if (best != null) {
                 entries.add(java.util.Map.entry(entry.getKey(), best));
