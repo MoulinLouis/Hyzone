@@ -90,7 +90,8 @@ public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore));
+                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore,
+                                scrapStore, weaponUpgradeStore, playerStore));
             }
             return;
         }

@@ -6,6 +6,9 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.purge.data.PurgePlayerStore;
+import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
@@ -27,14 +30,18 @@ public final class PurgeAdminUtils {
                                        PurgeInstanceManager instanceManager,
                                        PurgeWeaponConfigManager weaponConfigManager,
                                        PurgeVariantConfigManager variantConfigManager,
-                                       io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore) {
+                                       io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore,
+                                       PurgeScrapStore scrapStore,
+                                       PurgeWeaponUpgradeStore weaponUpgradeStore,
+                                       PurgePlayerStore playerStore) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore,
+                        scrapStore, weaponUpgradeStore, playerStore));
     }
 
     /**

@@ -38,19 +38,28 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeVariantConfigManager variantConfigManager;
     private final io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore;
+    private final PurgeScrapStore scrapStore;
+    private final PurgeWeaponUpgradeStore weaponUpgradeStore;
+    private final PurgePlayerStore playerStore;
 
     public PurgeAdminIndexPage(@Nonnull PlayerRef playerRef,
                                PurgeWaveConfigManager waveConfigManager,
                                PurgeInstanceManager instanceManager,
                                PurgeWeaponConfigManager weaponConfigManager,
                                PurgeVariantConfigManager variantConfigManager,
-                               io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore) {
+                               io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore,
+                               PurgeScrapStore scrapStore,
+                               PurgeWeaponUpgradeStore weaponUpgradeStore,
+                               PurgePlayerStore playerStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeAdminIndexData.CODEC);
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
         this.weaponConfigManager = weaponConfigManager;
         this.variantConfigManager = variantConfigManager;
         this.purgeSkinStore = purgeSkinStore;
+        this.scrapStore = scrapStore;
+        this.weaponUpgradeStore = weaponUpgradeStore;
+        this.playerStore = playerStore;
     }
 
     @Override
@@ -85,25 +94,30 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
         }
         if (BUTTON_WAVES.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeWaveAdminPage(playerRef, waveConfigManager, variantConfigManager, instanceManager, weaponConfigManager, purgeSkinStore));
+                    new PurgeWaveAdminPage(playerRef, waveConfigManager, variantConfigManager, instanceManager, weaponConfigManager, purgeSkinStore,
+                            scrapStore, weaponUpgradeStore, playerStore));
         } else if (BUTTON_VARIANTS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeVariantAdminPage(playerRef, variantConfigManager, waveConfigManager, instanceManager, weaponConfigManager, purgeSkinStore));
+                    new PurgeVariantAdminPage(playerRef, variantConfigManager, waveConfigManager, instanceManager, weaponConfigManager, purgeSkinStore,
+                            scrapStore, weaponUpgradeStore, playerStore));
         } else if (BUTTON_INSTANCES.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeInstanceAdminPage(playerRef, instanceManager, waveConfigManager, weaponConfigManager, variantConfigManager, purgeSkinStore));
+                    new PurgeInstanceAdminPage(playerRef, instanceManager, waveConfigManager, weaponConfigManager, variantConfigManager, purgeSkinStore,
+                            scrapStore, weaponUpgradeStore, playerStore));
         } else if (BUTTON_WEAPONS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
                     new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.ADMIN, null,
                             weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager,
-                            null, null, purgeSkinStore, null, null));
+                            null, null, purgeSkinStore, null, null,
+                            scrapStore, playerStore));
         } else if (BUTTON_SKINS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeSkinAdminPage(playerRef, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager, purgeSkinStore));
+                    new PurgeSkinAdminPage(playerRef, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager, purgeSkinStore,
+                            scrapStore, weaponUpgradeStore, playerStore));
         } else if (BUTTON_SETTINGS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
                     new PurgeSettingsPage(playerRef, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager, purgeSkinStore,
-                            PurgeScrapStore.get(), PurgeWeaponUpgradeStore.get(), PurgePlayerStore.get()));
+                            scrapStore, weaponUpgradeStore, playerStore));
         }
     }
 

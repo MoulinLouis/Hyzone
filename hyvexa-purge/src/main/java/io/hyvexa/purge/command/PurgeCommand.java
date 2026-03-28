@@ -157,7 +157,8 @@ public class PurgeCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore,
+                        scrapStore, weaponUpgradeStore, playerStore));
     }
 
     private void handleStart(Player player, Ref<EntityStore> ref, World world, UUID playerId) {
@@ -218,7 +219,8 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.PLAYER, playerId,
-                        weaponConfigManager, null, null, null, null, null, purgeSkinStore, weaponUpgradeStore, null));
+                        weaponConfigManager, null, null, null, null, null, purgeSkinStore, weaponUpgradeStore, null,
+                        null, null));
     }
 
     private void handleLoadout(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
@@ -229,7 +231,8 @@ public class PurgeCommand extends AbstractAsyncCommand {
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.LOADOUT, playerId,
                         weaponConfigManager, null, null, null,
-                        sessionManager, loadoutService, purgeSkinStore, weaponUpgradeStore, null));
+                        sessionManager, loadoutService, purgeSkinStore, weaponUpgradeStore, null,
+                        null, null));
     }
 
     private void handleShop(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
@@ -239,7 +242,8 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.SHOP, playerId,
-                        weaponConfigManager, null, null, null, null, null, purgeSkinStore, weaponUpgradeStore, null));
+                        weaponConfigManager, null, null, null, null, null, purgeSkinStore, weaponUpgradeStore, null,
+                        null, null));
     }
 
     private void handleSkins(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {

@@ -16,6 +16,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.skin.PurgeSkinDefinition;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
+import io.hyvexa.purge.data.PurgePlayerStore;
+import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
@@ -34,19 +37,28 @@ public class PurgeSkinAdminPage extends InteractiveCustomUIPage<PurgeSkinAdminPa
     private final PurgeInstanceManager instanceManager;
     private final PurgeVariantConfigManager variantConfigManager;
     private final io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore;
+    private final PurgeScrapStore scrapStore;
+    private final PurgeWeaponUpgradeStore weaponUpgradeStore;
+    private final PurgePlayerStore playerStore;
 
     public PurgeSkinAdminPage(@Nonnull PlayerRef playerRef,
                                PurgeWeaponConfigManager weaponConfigManager,
                                PurgeWaveConfigManager waveConfigManager,
                                PurgeInstanceManager instanceManager,
                                PurgeVariantConfigManager variantConfigManager,
-                               io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore) {
+                               io.hyvexa.common.skin.PurgeSkinStore purgeSkinStore,
+                               PurgeScrapStore scrapStore,
+                               PurgeWeaponUpgradeStore weaponUpgradeStore,
+                               PurgePlayerStore playerStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, SkinAdminEventData.CODEC);
         this.weaponConfigManager = weaponConfigManager;
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
         this.variantConfigManager = variantConfigManager;
         this.purgeSkinStore = purgeSkinStore;
+        this.scrapStore = scrapStore;
+        this.weaponUpgradeStore = weaponUpgradeStore;
+        this.playerStore = playerStore;
     }
 
     @Override
@@ -70,7 +82,8 @@ public class PurgeSkinAdminPage extends InteractiveCustomUIPage<PurgeSkinAdminPa
         }
 
         if (BUTTON_BACK.equals(button)) {
-            PurgeAdminUtils.openAdminIndex(ref, store, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore);
+            PurgeAdminUtils.openAdminIndex(ref, store, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager, purgeSkinStore,
+                    scrapStore, weaponUpgradeStore, playerStore);
             return;
         }
 
