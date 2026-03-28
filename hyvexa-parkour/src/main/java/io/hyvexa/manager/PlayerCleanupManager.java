@@ -3,7 +3,6 @@ package io.hyvexa.manager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
-import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.interaction.LeaveInteraction;
 import io.hyvexa.parkour.tracker.RunTracker;
@@ -63,7 +62,6 @@ public class PlayerCleanupManager {
         if (runTracker != null) {
             runTracker.handleDisconnect(playerId);
         }
-        MultiHudBridge.evictPlayer(playerId);
     }
 
     public void tickStalePlayerSweep() {

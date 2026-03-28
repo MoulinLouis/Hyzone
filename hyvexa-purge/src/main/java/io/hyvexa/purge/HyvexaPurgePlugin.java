@@ -22,7 +22,6 @@ import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PlayerCleanupHelper;
 import io.hyvexa.common.util.StoreInitializer;
-import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.VexaStore;
@@ -45,7 +44,6 @@ import io.hyvexa.purge.interaction.PurgeLootboxInteraction;
 import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeStartInteraction;
-import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.purge.mission.PurgeMissionManager;
 import io.hyvexa.purge.mission.PurgeMissionStore;
 import io.hyvexa.purge.manager.PurgeClassManager;
@@ -136,10 +134,7 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
 
     @Override
     protected void setup() {
-        // Initialize database connection
-        StoreInitializer.initialize(LOGGER,
-                () -> DatabaseManager.get().initialize()
-        );
+        // No database init — core already initialized it
 
         // Centralized table setup — all Purge tables and migrations
         PurgeDatabaseSetup.ensureTables();
@@ -153,15 +148,17 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
         missionStore = PurgeMissionStore.createAndRegister(db);
         playerStore = PurgePlayerStore.createAndRegister(db);
 
-        // Initialize stores (tables already exist)
+        // Get shared store references (no initialize — core did that)
+        discordLinkStore = DiscordLinkStore.get();
+
+        // PurgeSkinStore: created by Purge (not shared), so createAndRegister outside StoreInitializer
+        purgeSkinStore = PurgeSkinStore.createAndRegister(db);
+
+        // Initialize local Purge stores only (all wrapped for error resilience)
         StoreInitializer.initialize(LOGGER,
-                () -> VexaStore.get().initialize(),
-                () -> { discordLinkStore = DiscordLinkStore.get(); discordLinkStore.initialize(); },
-                () -> AnalyticsStore.get().initialize(),
+                () -> purgeSkinStore.initialize(),
                 () -> scrapStore.initialize(),
-                // PurgePlayerStore: no init needed (BasePlayerStore handles lazy loading)
                 () -> weaponUpgradeStore.initialize(),
-                () -> { purgeSkinStore = PurgeSkinStore.createAndRegister(db); purgeSkinStore.initialize(); },
                 () -> weaponXpStore.initialize(),
                 () -> classStore.initialize(),
                 () -> missionStore.initialize()
@@ -292,16 +289,12 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
             partyManager.cleanupPlayer(playerId);
             hudManager.removePlayer(playerId);
             PlayerCleanupHelper.cleanup(playerId, LOGGER,
-                    id -> VexaStore.get().evictPlayer(id),
-                    id -> discordLinkStore.evictPlayer(id),
                     id -> playerStore.evict(id),
                     id -> scrapStore.evictPlayer(id),
                     id -> weaponUpgradeStore.evictPlayer(id),
-                    id -> purgeSkinStore.evictPlayer(id),
                     id -> weaponXpStore.evictPlayer(id),
                     id -> classStore.evictPlayer(id),
-                    id -> missionStore.evictPlayer(id),
-                    id -> MultiHudBridge.evictPlayer(id)
+                    id -> missionStore.evictPlayer(id)
             );
         });
 
@@ -342,8 +335,6 @@ public class HyvexaPurgePlugin extends JavaPlugin implements PurgeLoadoutService
         }
         try { if (scrapStore != null) scrapStore.shutdown(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: PurgeScrapStore"); }
-        try { DatabaseManager.get().shutdown(); }
-        catch (Exception e) { /* Purge DB shutdown */ }
     }
 
     // --- PurgeLoadoutService implementation ---

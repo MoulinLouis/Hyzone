@@ -17,9 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import io.hyvexa.core.analytics.AnalyticsStore;
-import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.discord.DiscordLinkStore;
-import io.hyvexa.core.economy.CurrencyStore;
 import io.hyvexa.core.trail.TrailManager;
 import io.hyvexa.core.vote.VoteManager;
 import io.hyvexa.core.vote.VoteStore;
@@ -82,9 +80,6 @@ class ParkourEventRouter {
     private final WorldMapManager worldMapManager;
     private final AnalyticsStore analyticsStore;
     private final DiscordLinkStore discordLinkStore;
-    private final CurrencyStore vexaStore;
-    private final CurrencyStore featherStore;
-    private final CosmeticStore cosmeticStore;
     private final TrailManager trailManager;
     private final VoteStore voteStore;
     private final VoteManager voteManager;
@@ -110,9 +105,6 @@ class ParkourEventRouter {
             WorldMapManager worldMapManager,
             AnalyticsStore analyticsStore,
             DiscordLinkStore discordLinkStore,
-            CurrencyStore vexaStore,
-            CurrencyStore featherStore,
-            CosmeticStore cosmeticStore,
             TrailManager trailManager,
             VoteStore voteStore,
             VoteManager voteManager,
@@ -137,9 +129,6 @@ class ParkourEventRouter {
         this.worldMapManager = worldMapManager;
         this.analyticsStore = analyticsStore;
         this.discordLinkStore = discordLinkStore;
-        this.vexaStore = vexaStore;
-        this.featherStore = featherStore;
-        this.cosmeticStore = cosmeticStore;
         this.trailManager = trailManager;
         this.voteStore = voteStore;
         this.voteManager = voteManager;
@@ -341,20 +330,8 @@ class ParkourEventRouter {
             try { cleanupManager.handleDisconnect(event.getPlayerRef()); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: cleanupManager"); }
 
-            try { if (vexaStore != null) { vexaStore.evictPlayer(playerId); } }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
-
-            try { if (featherStore != null) { featherStore.evictPlayer(playerId); } }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: FeatherStore"); }
-
             try { if (medalStore != null) { medalStore.evictPlayer(playerId); } }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MedalStore"); }
-
-            try { if (discordLinkStore != null) { discordLinkStore.evictPlayer(playerId); } }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
-
-            try { if (cosmeticStore != null) { cosmeticStore.evictPlayer(playerId); } }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore"); }
 
             try { if (trailManager != null) { trailManager.stopTrail(playerId); } }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: TrailManager"); }

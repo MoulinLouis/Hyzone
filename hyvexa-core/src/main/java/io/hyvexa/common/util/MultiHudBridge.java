@@ -44,9 +44,7 @@ public final class MultiHudBridge {
      * so MultipleHUD.setCustomHud sees an existing composite and preserves all keys
      * (including Hyguns) instead of creating a fresh one.
      *
-     * <p>Callers MUST call {@link #evictPlayer(UUID)} on player disconnect to prevent leaks
-     * and stale HUD state. Every module (parkour, hub, purge, ascend, runorfall) does this
-     * in its {@code PlayerDisconnectEvent} handler.
+     * <p>Evicted automatically on disconnect by {@link SharedStoreCleanup}.
      */
     private static final ConcurrentHashMap<UUID, CustomUIHud> compositeCache = new ConcurrentHashMap<>();
 
@@ -202,9 +200,8 @@ public final class MultiHudBridge {
      * Evicts cached composite for a disconnecting player to prevent memory leaks
      * and stale HUD state on reconnect.
      *
-     * <p><b>Every module's {@code PlayerDisconnectEvent} handler MUST call this.</b>
-     * Without it, the stale composite is restored on reconnect, causing UI crashes
-     * when the client receives commands targeting elements from the wrong HUD page.
+     * <p>Called automatically by {@link SharedStoreCleanup} on disconnect.
+     * Non-core modules no longer need to call this directly.
      *
      * <p>Do NOT call on world transitions — the cache is needed to preserve
      * other plugins' HUD slots (e.g. Hyguns) across teleports.

@@ -114,12 +114,7 @@ public class WardrobePlugin extends JavaPlugin {
                     id -> wardrobeShopTab.evictPlayer(id),
                     id -> shopConfigTab.evictPlayer(id),
                     id -> effectsShopTab.evictPlayer(id),
-                    id -> { if (purgeSkinShopTab != null) purgeSkinShopTab.evictPlayer(id); },
-                    id -> cosmeticManager.cleanupOnDisconnect(id),
-                    id -> cosmeticStore.evictPlayer(id),
-                    id -> { if (vexaStore != null) vexaStore.evictPlayer(id); },
-                    id -> { if (featherStore != null) featherStore.evictPlayer(id); },
-                    id -> { if (purgeSkinStore != null) purgeSkinStore.evictPlayer(id); }
+                    id -> { if (purgeSkinShopTab != null) purgeSkinShopTab.evictPlayer(id); }
             );
         });
 

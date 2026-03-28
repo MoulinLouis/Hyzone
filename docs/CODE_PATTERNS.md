@@ -48,6 +48,7 @@ Composition root rule:
 3. Business logic classes (stores, managers, services, pages) must never call `getInstance()` or access static singletons. Dependencies are passed via constructor. Only plugin `setup()` methods and interaction bridge `configure()` calls may use static accessors.
 4. If a page needs to open sibling pages, inject a small page factory/navigator rather than re-reading the plugin singleton inside the page.
 5. Cross-module stores use `SharedInstance<T>` (in `io.hyvexa.core`) — the owning plugin calls `createAndRegister()` in `setup()`, other plugins call `get()` in their `setup()`. The owning plugin must call `destroy()` in `shutdown()` for clean hot-reload.
+6. **Shared classloader constraint:** Non-core modules use `compileOnly project(':hyvexa-core')` so hyvexa-core classes are loaded once via Hytale's `PluginBridgeClassLoader`. This means all plugins share the same static fields (single `DatabaseManager`, single connection pool). **Never change `compileOnly` back to `implementation`** in non-core modules — it would re-bundle core classes and break shared state. Only `hyvexa-parkour` (the core plugin JAR) uses `implementation`.
 
 ## UI Pages
 
@@ -536,34 +537,30 @@ statsStore = new RunOrFallStatsStore(DatabaseManager.get());
 ```
 
 Rule of thumb:
-- If the store uses the shared-instance pattern (`createAndRegister()` + `get()`), the owning plugin calls `createAndRegister()` in `setup()` and other plugins call `get()`.
+- If the store uses the shared-instance pattern (`createAndRegister()` + `get()`), the owning plugin (HyvexaPlugin/core) calls `createAndRegister()` in `setup()` and non-core plugins just call `get()`. Non-core plugins must **never** call `initialize()` on shared stores — they're already initialized by core.
 - If the store is a plain `BasePlayerStore<V>` with no startup hook, instantiate it only after `DatabaseManager` and the relevant `*DatabaseSetup.ensureTables()` have run.
+- Only the core plugin (`HyvexaPlugin`) should call `DatabaseManager.get().shutdown()`. Non-core plugins must not shut down shared resources.
 
 #### 5. Evict on `PlayerDisconnectEvent`
 
 Every player-cached store needs explicit disconnect cleanup.
 
-Shared-instance stores (e.g. `VexaStore`, `DiscordLinkStore`) are accessed via `get()` during setup and stored as fields. Module-owned `BasePlayerStore` instances are held as fields on the plugin class — use whichever reference your module has.
+**Shared stores** (VexaStore, FeatherStore, CosmeticStore, DiscordLinkStore, CosmeticManager, MultiHudBridge, PurgeSkinStore) are automatically evicted by `SharedStoreCleanup.evictPlayer()`, which is registered as a global handler in `HyvexaPlugin.setup()`. Non-core plugins do **not** need to evict shared stores — only their own local stores.
 
-Example from `HyvexaPurgePlugin` (all accessed via fields):
+Example from `HyvexaPurgePlugin` (local stores only):
 
 ```java
 PlayerCleanupHelper.cleanup(playerId, LOGGER,
-        id -> vexaStore.evictPlayer(id),
-        id -> discordLinkStore.evictPlayer(id),
         id -> playerStore.evict(id),
-        id -> scrapStore.evictPlayer(id)
+        id -> scrapStore.evictPlayer(id),
+        id -> weaponUpgradeStore.evictPlayer(id),
+        id -> weaponXpStore.evictPlayer(id),
+        id -> classStore.evictPlayer(id),
+        id -> missionStore.evictPlayer(id)
 );
 ```
 
-Example from `HyvexaPlugin` (Parkour):
-
-```java
-try { if (vexaStore != null) { vexaStore.evictPlayer(playerId); } }
-catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
-```
-
-If you add a new store and forget the disconnect eviction path, reconnects can read stale in-memory state instead of the latest DB row.
+If you add a new **shared** store, add it to `SharedStoreCleanup.evictPlayer()`. If you add a new **local** store, add it to the owning plugin's disconnect handler. Forgetting eviction means reconnects can read stale in-memory state instead of the latest DB row.
 
 #### 6. Add the Schema to Docs
 
@@ -1150,14 +1147,22 @@ public final class AscendInteractionBridge {
 
 ## Player Disconnect Cleanup
 
-Every cleanup step on disconnect gets its own try-catch so one failure doesn't skip the rest.
+Disconnect cleanup is split into two layers:
 
-### Isolated Try-Catch (Parkour)
+### Shared Store Cleanup (centralized)
+
+`SharedStoreCleanup.evictPlayer()` runs once per disconnect via a global handler in `HyvexaPlugin.setup()`, registered before any module-specific handlers. It evicts all shared stores (VexaStore, FeatherStore, CosmeticStore, DiscordLinkStore, CosmeticManager, MultiHudBridge, PurgeSkinStore). Non-core plugins do not evict shared stores — they only clean up their own local state.
+
+### Local Cleanup (per-module)
+
+Each plugin's disconnect handler cleans up local state only. Every step gets its own try-catch so one failure doesn't skip the rest.
+
+**Isolated try-catch** (Parkour — `ParkourEventRouter`):
 
 ```java
-// ParkourEventRouter — each operation isolated
 private void handlePlayerDisconnect(PlayerDisconnectEvent event) {
     UUID playerId = event.getPlayerRef().getUuid();
+    // Shared stores already evicted by SharedStoreCleanup
 
     try { if (duelTracker != null) { duelTracker.handleDisconnect(playerId); } }
     catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: duelTracker"); }
@@ -1165,15 +1170,13 @@ private void handlePlayerDisconnect(PlayerDisconnectEvent event) {
     try { cleanupManager.handleDisconnect(event.getPlayerRef()); }
     catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: cleanupManager"); }
 
-    try { if (vexaStore != null) { vexaStore.evictPlayer(playerId); } }
-    catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
-    // ... one try-catch per operation
+    try { if (medalStore != null) { medalStore.evictPlayer(playerId); } }
+    catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MedalStore"); }
+    // ... one try-catch per local operation
 }
 ```
 
-### runSafe Helper (Ascend)
-
-A helper method reduces boilerplate for the same pattern:
+**runSafe helper** (Ascend):
 
 ```java
 private static void runSafe(Runnable action, String logMessage) {
@@ -1181,7 +1184,7 @@ private static void runSafe(Runnable action, String logMessage) {
     catch (Exception e) { LOGGER.atWarning().withCause(e).log(logMessage); }
 }
 
-// Usage in disconnect handler:
+// Usage in disconnect handler (local state only):
 runSafe(() -> { if (eventHandler != null) eventHandler.cleanupPlayer(playerId); },
         "Disconnect cleanup: eventHandler");
 runSafe(() -> { if (playerStore != null) playerStore.removePlayer(playerId); },
@@ -1190,15 +1193,28 @@ runSafe(() -> { if (minePlayerStore != null) minePlayerStore.evict(playerId); },
         "Disconnect cleanup: minePlayerStore");
 ```
 
+**PlayerCleanupHelper** (Purge, Wardrobe):
+
+```java
+PlayerCleanupHelper.cleanup(playerId, LOGGER,
+        id -> playerStore.evict(id),
+        id -> scrapStore.evictPlayer(id),
+        id -> weaponUpgradeStore.evictPlayer(id)
+);
+```
+
 ### Cleanup Order
 
-1. **Gameplay systems first** — trackers, managers, active sessions
-2. **Stores** — evict cached player data
-3. **Caches** — clear cooldowns, UI state
-4. **Analytics last** — fire disconnect event
+1. **SharedStoreCleanup** (automatic, runs first via registration order)
+2. **Gameplay systems** — trackers, managers, active sessions
+3. **Local stores** — evict module-owned cached player data
+4. **Caches** — clear cooldowns, UI state
+5. **Analytics last** — fire disconnect event
 
 ### Key Rules
 
+- **Shared stores: add to `SharedStoreCleanup`** — never evict them in non-core plugins
+- **Local stores: add to the owning plugin's disconnect handler**
 - **Null-check optional components** — `if (manager != null)` before calling cleanup
 - **Log at WARNING with player UUID context** — essential for debugging partial cleanup failures
 - **Never let one failure cascade** — the whole point is isolation

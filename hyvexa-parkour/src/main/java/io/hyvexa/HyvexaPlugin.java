@@ -2,6 +2,7 @@ package io.hyvexa;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -66,6 +67,7 @@ import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import io.hyvexa.manager.WorldMapManager;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.SharedStoreCleanup;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
@@ -402,12 +404,21 @@ public class HyvexaPlugin extends JavaPlugin {
         // to avoid blocking during plugin setup when those modules aren't ready yet
         HytaleServer.SCHEDULED_EXECUTOR.schedule(this::registerDeferredSystems, 1, TimeUnit.SECONDS);
 
+        // Centralized shared-store cleanup — runs for ALL disconnects before any module handler
+        this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
+            PlayerRef playerRef = event.getPlayerRef();
+            if (playerRef == null) return;
+            UUID playerId = playerRef.getUuid();
+            if (playerId == null) return;
+            SharedStoreCleanup.evictPlayer(playerId);
+        });
+
         this.eventRouter = new ParkourEventRouter(
                 mapStore, progressStore, runTracker, runStateStore, duelTracker,
                 hudManager, perksManager, chatFormatter,
                 playtimeManager, cleanupManager, collisionManager, inventorySyncManager,
-                worldMapManager, analyticsStore, discordLinkStore, vexaStore, featherStore,
-                cosmeticStore, trailManager, voteStore, voteManager, medalStore,
+                worldMapManager, analyticsStore, discordLinkStore,
+                trailManager, voteStore, voteManager, medalStore,
                 petManager, ghostNpcManager, playerSettingsPersistence,
                 this::shouldApplyParkourMode);
         this.eventRouter.registerAll(this.getEventRegistry());

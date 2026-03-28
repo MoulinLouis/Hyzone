@@ -187,11 +187,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 return;
             }
             hubHudLifecycles.remove(playerId);
-            MultiHudBridge.evictPlayer(playerId);
-            try { vexaStore.evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
-            try { discordLinkStore.evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
         });
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {

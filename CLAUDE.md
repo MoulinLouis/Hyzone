@@ -19,7 +19,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 
 | Module | Purpose | Entry Point |
 |--------|---------|-------------|
-| `hyvexa-core` | Shared DB, utilities, mode state | N/A (library) |
+| `hyvexa-core` | Shared DB, utilities, mode state (`compileOnly` in non-core modules — do NOT change to `implementation`) | N/A (library) |
 | `hyvexa-parkour` | Main parkour gameplay | `io.hyvexa.HyvexaPlugin` |
 | `hyvexa-parkour-ascend` | Ascend idle mode | `io.hyvexa.ascend.ParkourAscendPlugin` |
 | `hyvexa-hub` | Hub routing + mode selection | `io.hyvexa.hub.HyvexaHubPlugin` |
