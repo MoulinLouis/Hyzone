@@ -47,7 +47,7 @@ Composition root rule:
 2. Commands, interactions, and other framework-owned entry points may read dependencies from the plugin singleton once to bootstrap.
 3. Business logic classes (stores, managers, services, pages) must never call `getInstance()` or access static singletons. Dependencies are passed via constructor. Only plugin `setup()` methods and interaction bridge `configure()` calls may use static accessors.
 4. If a page needs to open sibling pages, inject a small page factory/navigator rather than re-reading the plugin singleton inside the page.
-5. Cross-module stores use the shared-instance pattern (`createAndRegister()` + `get()`) — the owning plugin calls `createAndRegister()` in `setup()`, other plugins call `get()` in their `setup()`.
+5. Cross-module stores use `SharedInstance<T>` (in `io.hyvexa.core`) — the owning plugin calls `createAndRegister()` in `setup()`, other plugins call `get()` in their `setup()`. The owning plugin must call `destroy()` in `shutdown()` for clean hot-reload.
 
 ## UI Pages
 
@@ -507,11 +507,25 @@ Older module stores such as `DuelStatsStore` and `RunOrFallStatsStore` still cal
 
 There are 2 valid startup paths in the current codebase:
 
-1. Shared-instance store created by the owning plugin via `createAndRegister()`:
+1. Shared-instance store (backed by `SharedInstance<T>`) created by the owning plugin via `createAndRegister()`:
 
 ```java
 initSafe("VexaStore", () -> VexaStore.createAndRegister(DatabaseManager.get()));
 this.vexaStore = VexaStore.get();
+```
+
+Inside the store class, the pattern is:
+
+```java
+private static final SharedInstance<VexaStore> SHARED = new SharedInstance<>("VexaStore");
+
+public static VexaStore createAndRegister(ConnectionProvider db) {
+    var store = new VexaStore(db);
+    store.initialize();
+    return SHARED.register(store);
+}
+public static VexaStore get()  { return SHARED.get(); }
+public static void destroy()   { SHARED.destroy(); }
 ```
 
 2. Module `BasePlayerStore` after DB setup and table creation:
