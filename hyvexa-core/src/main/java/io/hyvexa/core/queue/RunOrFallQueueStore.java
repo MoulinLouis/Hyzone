@@ -1,12 +1,14 @@
 package io.hyvexa.core.queue;
 
+import io.hyvexa.core.SharedInstance;
+
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RunOrFallQueueStore {
 
-    private static volatile RunOrFallQueueStore instance;
+    private static final SharedInstance<RunOrFallQueueStore> SHARED = new SharedInstance<>("RunOrFallQueueStore");
 
     public record QueueEntry(UUID playerId, long queuedAtMs, String sourceWorldName) {}
 
@@ -23,24 +25,13 @@ public class RunOrFallQueueStore {
     private RunOrFallQueueStore() {}
 
     public static RunOrFallQueueStore createAndRegister() {
-        if (instance != null) {
-            throw new IllegalStateException("RunOrFallQueueStore already initialized");
-        }
-        instance = new RunOrFallQueueStore();
-        return instance;
+        var store = new RunOrFallQueueStore();
+        return SHARED.register(store);
     }
 
-    public static RunOrFallQueueStore get() {
-        RunOrFallQueueStore ref = instance;
-        if (ref == null) {
-            throw new IllegalStateException("RunOrFallQueueStore not yet initialized — check plugin load order");
-        }
-        return ref;
-    }
+    public static RunOrFallQueueStore get() { return SHARED.get(); }
 
-    public static void destroy() {
-        instance = null;
-    }
+    public static void destroy() { SHARED.destroy(); }
 
     public boolean enqueue(UUID playerId, String sourceWorldName) {
         if (playerId == null) return false;

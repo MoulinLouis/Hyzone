@@ -23,9 +23,11 @@ import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
+import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
-import io.hyvexa.core.wardrobe.WardrobeBridge;
+
 import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.queue.RunOrFallQueueStore;
 import io.hyvexa.core.trail.TrailManager;
 
 
@@ -252,9 +254,7 @@ public class HyvexaPlugin extends JavaPlugin {
         cosmeticStore.setAnalytics(analytics);
         discordLinkStore.setAnalytics(analytics);
         discordLinkStore.setVexaStore(vexaStore);
-        WardrobeBridge wardrobeBridge = new WardrobeBridge(DatabaseManager.get());
-        wardrobeBridge.setAnalytics(analytics);
-        wardrobeBridge.setCurrencyStores(vexaStore, featherStore);
+
         PurgeSkinStore.get().setVexaStore(vexaStore);
         this.progressStore = new ProgressStore(DatabaseManager.get());
         this.progressStore.setAnalytics(analytics);
@@ -902,6 +902,17 @@ public class HyvexaPlugin extends JavaPlugin {
         shutdownSafe("analytics aggregation", () -> analyticsStore.computeDailyAggregates(java.time.LocalDate.now()));
         shutdownSafe("AdminPageUtils", AdminPageUtils::clear);
         shutdownSafe("DatabaseManager", () -> DatabaseManager.get().shutdown());
+
+        // Clear shared instances for clean hot-reload
+        VexaStore.destroy();
+        FeatherStore.destroy();
+        DiscordLinkStore.destroy();
+        CosmeticStore.destroy();
+        CosmeticManager.destroy();
+        AnalyticsStore.destroy();
+        PurgeSkinStore.destroy();
+        RunOrFallQueueStore.destroy();
+        DatabaseManager.destroy();
 
         super.shutdown();
     }

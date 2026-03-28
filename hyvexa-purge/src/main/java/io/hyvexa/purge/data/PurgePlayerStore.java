@@ -1,5 +1,6 @@
 package io.hyvexa.purge.data;
 
+import io.hyvexa.core.SharedInstance;
 import io.hyvexa.core.db.BasePlayerStore;
 import io.hyvexa.core.db.ConnectionProvider;
 
@@ -10,25 +11,19 @@ import java.util.UUID;
 
 public class PurgePlayerStore extends BasePlayerStore<PurgePlayerStats> {
 
-    private static volatile PurgePlayerStore instance;
+    private static final SharedInstance<PurgePlayerStore> SHARED = new SharedInstance<>("PurgePlayerStore");
 
     private PurgePlayerStore(ConnectionProvider db) {
         super(db);
     }
 
     public static PurgePlayerStore createAndRegister(ConnectionProvider db) {
-        if (instance != null) throw new IllegalStateException("PurgePlayerStore already initialized");
-        instance = new PurgePlayerStore(db);
-        return instance;
+        var store = new PurgePlayerStore(db);
+        return SHARED.register(store);
     }
 
-    public static PurgePlayerStore get() {
-        PurgePlayerStore ref = instance;
-        if (ref == null) throw new IllegalStateException("PurgePlayerStore not yet initialized");
-        return ref;
-    }
-
-    public static void destroy() { instance = null; }
+    public static PurgePlayerStore get() { return SHARED.get(); }
+    public static void destroy() { SHARED.destroy(); }
 
     @Override
     protected String loadSql() {

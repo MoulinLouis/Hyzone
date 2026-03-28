@@ -1,6 +1,7 @@
 package io.hyvexa.purge.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.SharedInstance;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PurgeClassStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static volatile PurgeClassStore instance;
+    private static final SharedInstance<PurgeClassStore> SHARED = new SharedInstance<>("PurgeClassStore");
 
     private final ConnectionProvider db;
     private final PurgeScrapStore scrapStore;
@@ -37,18 +38,12 @@ public class PurgeClassStore {
     }
 
     public static PurgeClassStore createAndRegister(ConnectionProvider db, PurgeScrapStore scrapStore) {
-        if (instance != null) throw new IllegalStateException("PurgeClassStore already initialized");
-        instance = new PurgeClassStore(db, scrapStore);
-        return instance;
+        var store = new PurgeClassStore(db, scrapStore);
+        return SHARED.register(store);
     }
 
-    public static PurgeClassStore get() {
-        PurgeClassStore ref = instance;
-        if (ref == null) throw new IllegalStateException("PurgeClassStore not yet initialized");
-        return ref;
-    }
-
-    public static void destroy() { instance = null; }
+    public static PurgeClassStore get() { return SHARED.get(); }
+    public static void destroy() { SHARED.destroy(); }
 
     public void initialize() {
         if (!this.db.isInitialized()) {

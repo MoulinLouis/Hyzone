@@ -1,6 +1,7 @@
 package io.hyvexa.purge.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.SharedInstance;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -12,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WeaponXpStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static volatile WeaponXpStore instance;
+    private static final SharedInstance<WeaponXpStore> SHARED = new SharedInstance<>("WeaponXpStore");
 
     private final ConnectionProvider db;
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, int[]>> cache = new ConcurrentHashMap<>();
@@ -22,18 +23,12 @@ public class WeaponXpStore {
     }
 
     public static WeaponXpStore createAndRegister(ConnectionProvider db) {
-        if (instance != null) throw new IllegalStateException("WeaponXpStore already initialized");
-        instance = new WeaponXpStore(db);
-        return instance;
+        var store = new WeaponXpStore(db);
+        return SHARED.register(store);
     }
 
-    public static WeaponXpStore get() {
-        WeaponXpStore ref = instance;
-        if (ref == null) throw new IllegalStateException("WeaponXpStore not yet initialized");
-        return ref;
-    }
-
-    public static void destroy() { instance = null; }
+    public static WeaponXpStore get() { return SHARED.get(); }
+    public static void destroy() { SHARED.destroy(); }
 
     public void initialize() {
         if (!this.db.isInitialized()) {

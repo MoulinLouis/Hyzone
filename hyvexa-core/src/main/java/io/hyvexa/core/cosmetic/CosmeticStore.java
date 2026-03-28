@@ -1,6 +1,7 @@
 package io.hyvexa.core.cosmetic;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.SharedInstance;
 import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
@@ -22,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class CosmeticStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static volatile CosmeticStore instance;
+    private static final SharedInstance<CosmeticStore> SHARED = new SharedInstance<>("CosmeticStore");
 
     /** Per-player cache: list of owned cosmetic IDs. */
     private final ConcurrentHashMap<UUID, List<String>> ownedCache = new ConcurrentHashMap<>();
@@ -44,25 +45,14 @@ public class CosmeticStore {
     }
 
     public static CosmeticStore createAndRegister(ConnectionProvider db) {
-        if (instance != null) {
-            throw new IllegalStateException("CosmeticStore already initialized");
-        }
-        instance = new CosmeticStore(db);
-        instance.initialize();
-        return instance;
+        var store = new CosmeticStore(db);
+        store.initialize();
+        return SHARED.register(store);
     }
 
-    public static CosmeticStore get() {
-        CosmeticStore ref = instance;
-        if (ref == null) {
-            throw new IllegalStateException("CosmeticStore not yet initialized — check plugin load order");
-        }
-        return ref;
-    }
+    public static CosmeticStore get() { return SHARED.get(); }
 
-    public static void destroy() {
-        instance = null;
-    }
+    public static void destroy() { SHARED.destroy(); }
 
     public record PurchaseResult(boolean success, String message) {
     }

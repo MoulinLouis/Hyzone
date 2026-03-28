@@ -3,6 +3,7 @@ package io.hyvexa.core.cosmetic;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.SharedInstance;
 import com.hypixel.hytale.protocol.EntityEffectUpdate;
 import com.hypixel.hytale.protocol.EntityEffectsUpdate;
 import com.hypixel.hytale.protocol.EntityUpdate;
@@ -33,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class CosmeticManager {
 
-    private static volatile CosmeticManager instance;
+    private static final SharedInstance<CosmeticManager> SHARED = new SharedInstance<>("CosmeticManager");
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final float PREVIEW_DURATION_SECONDS = 5f;
     private static final long APPLY_DELAY_MS = 100;
@@ -57,26 +58,15 @@ public class CosmeticManager {
 
     public static CosmeticManager createAndRegister(TrailManager trailManager,
                                                      ModelParticleTrailManager modelParticleTrailManager) {
-        if (instance != null) {
-            throw new IllegalStateException("CosmeticManager already initialized");
-        }
-        instance = new CosmeticManager();
-        instance.trailManager = trailManager;
-        instance.modelParticleTrailManager = modelParticleTrailManager;
-        return instance;
+        var manager = new CosmeticManager();
+        manager.trailManager = trailManager;
+        manager.modelParticleTrailManager = modelParticleTrailManager;
+        return SHARED.register(manager);
     }
 
-    public static CosmeticManager get() {
-        CosmeticManager ref = instance;
-        if (ref == null) {
-            throw new IllegalStateException("CosmeticManager not yet initialized — check plugin load order");
-        }
-        return ref;
-    }
+    public static CosmeticManager get() { return SHARED.get(); }
 
-    public static void destroy() {
-        instance = null;
-    }
+    public static void destroy() { SHARED.destroy(); }
 
     public void setCosmeticStore(CosmeticStore cosmeticStore) {
         this.cosmeticStore = cosmeticStore;

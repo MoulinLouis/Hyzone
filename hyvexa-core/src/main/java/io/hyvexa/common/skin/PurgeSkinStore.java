@@ -1,6 +1,7 @@
 package io.hyvexa.common.skin;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.SharedInstance;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.CurrencyStore;
@@ -16,7 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class PurgeSkinStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static volatile PurgeSkinStore instance;
+    private static final SharedInstance<PurgeSkinStore> SHARED = new SharedInstance<>("PurgeSkinStore");
 
     // Cache: playerId -> (weaponId -> list of owned skinIds)
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, List<String>>> ownedCache = new ConcurrentHashMap<>();
@@ -43,24 +44,13 @@ public class PurgeSkinStore {
     }
 
     public static PurgeSkinStore createAndRegister(ConnectionProvider db) {
-        if (instance != null) {
-            throw new IllegalStateException("PurgeSkinStore already initialized");
-        }
-        instance = new PurgeSkinStore(db);
-        return instance;
+        var store = new PurgeSkinStore(db);
+        return SHARED.register(store);
     }
 
-    public static PurgeSkinStore get() {
-        PurgeSkinStore ref = instance;
-        if (ref == null) {
-            throw new IllegalStateException("PurgeSkinStore not yet initialized — check plugin load order");
-        }
-        return ref;
-    }
+    public static PurgeSkinStore get() { return SHARED.get(); }
 
-    public static void destroy() {
-        instance = null;
-    }
+    public static void destroy() { SHARED.destroy(); }
 
     public void initialize() {
         if (!this.db.isInitialized()) {

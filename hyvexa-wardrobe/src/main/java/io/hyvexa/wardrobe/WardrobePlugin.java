@@ -15,6 +15,7 @@ import io.hyvexa.common.util.StoreInitializer;
 import io.hyvexa.common.skin.PurgeSkinStore;
 import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
+import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.core.economy.VexaStore;
@@ -65,7 +66,8 @@ public class WardrobePlugin extends JavaPlugin {
                 () -> FeatherStore.get().initialize(),
                 () -> CosmeticStore.get().initialize(),
                 () -> PurgeSkinStore.get().initialize(),
-                () -> { cosmeticShopConfigStore = new CosmeticShopConfigStore(DatabaseManager.get()); cosmeticShopConfigStore.initialize(); }
+                () -> { cosmeticShopConfigStore = new CosmeticShopConfigStore(DatabaseManager.get()); cosmeticShopConfigStore.initialize(); },
+                () -> AnalyticsStore.get().initialize()
         );
 
         cosmeticStore = CosmeticStore.get();
@@ -75,6 +77,8 @@ public class WardrobePlugin extends JavaPlugin {
 
         wardrobeBridge.setCosmeticStore(cosmeticStore);
         wardrobeBridge.setCosmeticShopConfigStore(cosmeticShopConfigStore);
+        wardrobeBridge.setCurrencyStores(vexaStore, featherStore);
+        wardrobeBridge.setAnalytics(AnalyticsStore.get());
 
         cosmeticManager = CosmeticManager.createAndRegister(
                 new io.hyvexa.core.trail.TrailManager(),

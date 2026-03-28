@@ -3,6 +3,7 @@ package io.hyvexa.core.db;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import io.hyvexa.core.SharedInstance;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -32,7 +33,7 @@ public class DatabaseManager implements ConnectionProvider {
             "duel_category_prefs",
             "duel_player_stats"
     );
-    private static volatile DatabaseManager instance;
+    private static final SharedInstance<DatabaseManager> SHARED = new SharedInstance<>("DatabaseManager");
     private static final Object INIT_LOCK = new Object();
     private volatile HikariDataSource dataSource;
 
@@ -40,24 +41,13 @@ public class DatabaseManager implements ConnectionProvider {
     }
 
     public static DatabaseManager createAndRegister() {
-        if (instance != null) {
-            throw new IllegalStateException("DatabaseManager already initialized");
-        }
-        instance = new DatabaseManager();
-        return instance;
+        var manager = new DatabaseManager();
+        return SHARED.register(manager);
     }
 
-    public static DatabaseManager get() {
-        DatabaseManager ref = instance;
-        if (ref == null) {
-            throw new IllegalStateException("DatabaseManager not yet initialized — check plugin load order");
-        }
-        return ref;
-    }
+    public static DatabaseManager get() { return SHARED.get(); }
 
-    public static void destroy() {
-        instance = null;
-    }
+    public static void destroy() { SHARED.destroy(); }
 
     /**
      * Initialize using credentials from config file (Parkour/database.json).

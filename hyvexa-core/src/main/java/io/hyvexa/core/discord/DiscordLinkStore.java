@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import io.hyvexa.core.SharedInstance;
 import io.hyvexa.core.analytics.PlayerAnalytics;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
@@ -27,7 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class DiscordLinkStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static volatile DiscordLinkStore instance;
+    private static final SharedInstance<DiscordLinkStore> SHARED = new SharedInstance<>("DiscordLinkStore");
 
     private static final int CODE_LENGTH = 6;
     private static final long CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
@@ -45,24 +46,13 @@ public class DiscordLinkStore {
     }
 
     public static DiscordLinkStore createAndRegister(ConnectionProvider db) {
-        if (instance != null) {
-            throw new IllegalStateException("DiscordLinkStore already initialized");
-        }
-        instance = new DiscordLinkStore(db);
-        return instance;
+        var store = new DiscordLinkStore(db);
+        return SHARED.register(store);
     }
 
-    public static DiscordLinkStore get() {
-        DiscordLinkStore ref = instance;
-        if (ref == null) {
-            throw new IllegalStateException("DiscordLinkStore not yet initialized — check plugin load order");
-        }
-        return ref;
-    }
+    public static DiscordLinkStore get() { return SHARED.get(); }
 
-    public static void destroy() {
-        instance = null;
-    }
+    public static void destroy() { SHARED.destroy(); }
 
     public void setAnalytics(PlayerAnalytics analytics) {
         this.analytics = analytics;

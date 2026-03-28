@@ -59,6 +59,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
     private ScheduledFuture<?> hubHudTask;
     private ScheduledFuture<?> playerCountTask;
     private DiscordLinkStore discordLinkStore;
+    private VexaStore vexaStore;
 
     private enum HudPhase { PENDING, ATTACHING, READY }
 
@@ -98,6 +99,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
         }
         initStore("VexaStore", () -> VexaStore.get().initialize());
+        this.vexaStore = VexaStore.get();
         this.discordLinkStore = DiscordLinkStore.get();
         initStore("DiscordLinkStore", () -> discordLinkStore.initialize());
         initStore("AnalyticsStore", () -> AnalyticsStore.get().initialize());
@@ -196,7 +198,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             hubHudLifecycles.remove(playerId);
             MultiHudBridge.evictPlayer(playerId);
-            try { VexaStore.get().evictPlayer(playerId); }
+            try { vexaStore.evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
             try { discordLinkStore.evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
@@ -249,7 +251,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             if (now >= lifecycle.readyAt()) {
                 lifecycle.hud().updatePlayerCount();
-                lifecycle.hud().updateVexa(VexaStore.get().getCachedVexa(playerId));
+                lifecycle.hud().updateVexa(vexaStore.getCachedVexa(playerId));
             }
         }
         for (UUID playerId : toRemove) {

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import io.hyvexa.core.SharedInstance;
 import io.hyvexa.core.db.ConnectionProvider;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 public class AnalyticsStore implements PlayerAnalytics {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static volatile AnalyticsStore instance;
+    private static final SharedInstance<AnalyticsStore> SHARED = new SharedInstance<>("AnalyticsStore");
     private static final Gson GSON = new Gson();
     private static final int FLUSH_BATCH_LIMIT = 500;
     private final ConnectionProvider db;
@@ -41,25 +42,14 @@ public class AnalyticsStore implements PlayerAnalytics {
     }
 
     public static AnalyticsStore createAndRegister(ConnectionProvider db) {
-        if (instance != null) {
-            throw new IllegalStateException("AnalyticsStore already initialized");
-        }
-        instance = new AnalyticsStore(db);
-        instance.initialize();
-        return instance;
+        var store = new AnalyticsStore(db);
+        store.initialize();
+        return SHARED.register(store);
     }
 
-    public static AnalyticsStore get() {
-        AnalyticsStore ref = instance;
-        if (ref == null) {
-            throw new IllegalStateException("AnalyticsStore not yet initialized — check plugin load order");
-        }
-        return ref;
-    }
+    public static AnalyticsStore get() { return SHARED.get(); }
 
-    public static void destroy() {
-        instance = null;
-    }
+    public static void destroy() { SHARED.destroy(); }
 
     public record DailyStats(LocalDate date, int dau, int newPlayers, long avgSessionMs,
                              int totalSessions, float parkourTimePct, float ascendTimePct,
